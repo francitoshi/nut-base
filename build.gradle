@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 
 group = 'com.github.francitoshi'
-version = '0.0.1'
+version = '0.0.2'
 
 sourceCompatibility = 1.8 // java 8
 targetCompatibility = 1.8
@@ -32,13 +32,13 @@ test
 
 publishing 
 {
-	publications 
+    publications 
+    {
+        maven(MavenPublication) 
 	{
-		maven(MavenPublication) 
-		{
-			from components.java
-        	}
-    	}
+            from components.java
+        }
+    }
 }
 
 wrapper 
