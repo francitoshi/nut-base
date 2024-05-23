@@ -1,0 +1,48 @@
+apply plugin: 'java'
+apply plugin: 'maven-publish'
+
+group = 'com.github.francitoshi'
+version = '0.0.1'
+
+sourceCompatibility = 1.8 // java 8
+targetCompatibility = 1.8
+
+repositories 
+{
+  mavenCentral()
+}
+
+dependencies 
+{
+    // Use JUnit Jupiter for testing.
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.1'
+}
+
+java 
+{
+	withSourcesJar()
+//	withJavadocJar()
+}
+
+test 
+{
+    // Use JUnit Platform for unit tests.
+    useJUnitPlatform()
+}
+
+publishing 
+{
+	publications 
+	{
+		maven(MavenPublication) 
+		{
+			from components.java
+        	}
+    	}
+}
+
+wrapper 
+{
+    gradleVersion = "7.3.3"
+    distributionType = Wrapper.DistributionType.ALL
+}
