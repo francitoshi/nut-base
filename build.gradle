@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 
 group = 'com.github.francitoshi'
-version = '0.0.4'
+version = '0.0.5'
 
 sourceCompatibility = 1.8 // java 8
 targetCompatibility = 1.8
