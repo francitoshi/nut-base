@@ -2876,4 +2876,55 @@ public class Utils
     {
         return items;
     }    
+    
+    public static ByteBuffer putBulk(ByteBuffer dst, int index, ByteBuffer src, int offset, int length)
+    {
+        for (int i = offset, j = index; i < offset + length; i++, j++)
+        {
+            dst.put(j, src.get(i));
+        }
+        return dst;
+    }
+    
+    public static ByteBuffer putBulk(ByteBuffer dst, byte[] src, int off, int len)    
+    {
+        for (int i = off; i < off + len; i++)
+        {
+            dst.put(src[i]);
+        }
+        return dst;
+    }
+
+    public static final ByteBuffer putBulk(ByteBuffer dst, byte[] src)
+    {
+        return putBulk(dst, src, 0, src.length);
+    }
+    
+    public static ByteBuffer putBulk(ByteBuffer dst, int index, byte[] src, int offset, int length)
+    {
+        for (int i = offset, j = index; i < offset + length; i++, j++)
+        {
+            dst.put(j, src[i]);
+        }
+        return dst;
+    }
+    public static ByteBuffer putBulk(ByteBuffer dst, int index, byte[] src)
+    {
+        return putBulk(dst, index, src, 0, src.length);
+    }
+    
+    public static ByteBuffer getBulk(ByteBuffer src, int index, byte[] dst, int offset, int length)
+    {
+        for (int i = offset, j = index; i < offset + length; i++, j++)
+        {
+            dst[i] = src.get(j);
+        }
+        return src;
+    }
+
+    public static ByteBuffer getBulk(ByteBuffer src, int index, byte[] dst)
+    {
+        return getBulk(src, index, dst, 0, dst.length);
+    }
+
 }
