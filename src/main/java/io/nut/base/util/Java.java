@@ -45,8 +45,10 @@ public class Java
     public static final String OS_NAME = System.getProperty("os.name",null);
     public static final String OS_ARCH = System.getProperty("os.arch",null);
     public static final String OS_VERSION = System.getProperty("os.version", null);
+    public static final String LINE_SEPARATOR = System.getProperty("line.separator", null);
     public static final String USER_NAME = System.getProperty("user.name", null);
     public static final String USER_HOME = System.getProperty("user.home", null);
+    public static final String USER_DIR = System.getProperty("user.dir", null);
     public static final String JAVA_CLASS_PATH = System.getProperty("java.class.path", null);
     
 }
