@@ -200,6 +200,20 @@ public class Utils
         return src;
     }
 
+    public static byte[] asBytes(BigInteger n, int minBytes)
+    {
+        if(n==null)
+        {
+            return null;
+        }
+        byte[] ret = n.toByteArray();
+        if(ret.length<minBytes)
+        {
+            ret = putBulk(ByteBuffer.allocate(minBytes), minBytes-ret.length, ret).array();
+        }
+        return ret;
+    }
+
     public static short[] asShorts(byte... src)
     {
         if (src == null)
