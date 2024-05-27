@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-package io.tea.base.crypto.otp;
+package io.nut.base.crypto.otp;
 
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
