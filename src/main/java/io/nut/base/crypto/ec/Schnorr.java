@@ -1,7 +1,7 @@
 /*
  *  Schnorr.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2024 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -169,11 +169,8 @@ public class Schnorr extends Sign
             return false;
         }
         
-        byte[] rr = Arrays.copyOfRange(signature, 0, curve.bytes);
-        byte[] ss = Arrays.copyOfRange(signature, curve.bytes, curve.bytes*2);
-        
-        BigInteger r = new BigInteger(1, rr);
-        BigInteger s = new BigInteger(1, ss);
+        BigInteger r = Utils.newBigInteger(1, signature, 0, curve.bytes);
+        BigInteger s = Utils.newBigInteger(1, signature, curve.bytes, curve.bytes);
         
         return verify(message, PK, r, s);
     }

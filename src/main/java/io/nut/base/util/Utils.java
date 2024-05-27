@@ -45,12 +45,14 @@ import java.security.InvalidKeyException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
@@ -770,6 +772,41 @@ public class Utils
     
     //----------------------------------------------------------------------------------------------
     
+    //java9 Arrays.compare(byte[] a, int aFromIndex, int aToIndex, byte[] b, int bFromIndex, int bToIndex)
+    public static int compare(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo)
+    {
+        if(a==null||b==null)
+        {
+            throw new NullPointerException();
+        }
+        if(aFrom > aTo || bFrom > bTo)
+        {
+            throw new IllegalArgumentException();
+        }
+        if(aFrom < 0 || aTo > a.length || bFrom < 0 || bTo > b.length)
+        {
+            throw new ArrayIndexOutOfBoundsException();
+        }
+        
+        int n = Math.min(aTo-aFrom, bTo-bFrom);
+        for (int i = 0; i < n; i++)
+        {
+            int cmp = Byte.compare(a[aFrom+i], b[bFrom+i]);
+            if (cmp != 0)
+            {
+                return cmp;
+            }
+        }
+        if (a.length < b.length)
+        {
+            return -1;
+        }
+        if (a.length > b.length)
+        {
+            return +1;
+        }
+        return 0;
+    }
     public static int compare(byte[] a, byte[] b)
     {
         int n = Math.min(a.length, b.length);
@@ -857,7 +894,7 @@ public class Utils
         }
         return 0;
     }
-    
+
     public static String getJavaHome()
     {
         return System.getProperty("java.home");
@@ -2941,4 +2978,25 @@ public class Utils
         return getBulk(src, index, dst, 0, dst.length);
     }
 
+    //java9 new BigInteger​​(int signum, byte[] magnitude, int off, int len)
+    public static BigInteger newBigInteger(int signum, byte[] magnitude, int off, int len)
+    {
+        return new BigInteger(signum, Arrays.copyOfRange(magnitude, off, off+len));
+    }
+    
+    //java9 new BigInteger​​(byte[] val, int off, int len)
+    public static BigInteger newBigInteger​(byte[] val, int off, int len)
+    {
+        return new BigInteger(Arrays.copyOfRange(val, off, off+len));
+    }
+    
+    //java9 List.of(E... e)
+    public static <E> List<E> listOf(E... e)
+    {
+        ArrayList<E> list = new ArrayList<>(e.length);
+        Collections.addAll(list, e);
+        return Collections.unmodifiableList(list);
+    }
+    
+    
 }

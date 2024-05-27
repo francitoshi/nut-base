@@ -1,0 +1,222 @@
+De  como usar stego,  WinStego y  otras hierbas.
+
+¿Qué  es stego? stego  es  un programa que  facilita  la  esteganografía
+(concretamente enviar  mensajes sobre texto plano  como por ejemplo este
+mismo).
+
+¿Qué es  WinStego?  WinStego es  en principio  un  front-end para  stego
+aunque  (parece  ser  que el  programador  que  lo  ha  desarrollado  es
+extremadamente  vago) no utiliza  stego sino  que ataca  directamente la
+libreria  ftk (que contiene  el código fuente  tanto para esteganografía
+como  para cifrado) para  evitarse el  código para  atacar al  programa.
+
+¿Bajo  que Licencia han  sido  liberados?  stego  y  WinStego  han  sido
+liberados bajo  la  licencia GPL (GNU  GENERAL PUBLIC LICENSE) versión 2
+por  lo tanto  se encuentran  en el  ambito del SoftWare  Libre.
+
+¿En  que  plataformas  están disponibles?  stego  está  disponible  para
+disponible para windows de 32 bits y para linux sobre máquinas intel, si
+bien puede compilarse para cualquier plataforma (el algoritmo de cifrado
+IDEA  en el  momento de  redactar  este  documento no  está  adaptado  a
+máquinas  BigEndian).  WinStego  en  el  el  momento  de  redactar  este
+documento solo existe en plataforma windows de 32bits y no es compilable
+por ahora en ninguna otra, aunque podría usarse con emuladores como wine
+o  similares (con  algún que  otro problemilla).
+
+¿Que pasa con las patentes  y restricciones USA sobre la exportación del
+SoftWare de cifrado fuerte? Pues  que nos las pasamos por el forro, dado
+que  el programador  es español, andaluz  por más  señas,  donde  dichas
+restricciones  de momento no  se  aplican.  Así  que puedes  exportarlos
+libremente teniendo  en cuenta que en (Francia, China y otros  paises no
+permiten  la utilización  de Criptografía).
+
+¿Y porque está en ingles si es software español? Por lo mismo que antes,
+el programador  es  extremadamente vago y  no  tiene ganas  de hacer dos
+versiones,  esperemos que  se anime  un día de  estos.
+
+¿Donde puede obtenerse stego y Winstego? En el  momento de redactar este
+documento se  encuentra disponible  (tanto en  formato binario  como  su
+código fuente)  en http://francyzone.onlywebs.com  y en  algún  que otro
+sitio  de  réplica,  (para  compilarlo  es  necesaria  la  libreria  ftk
+disponible en  el  mismo sitio web).
+
+Enviando mi  primer mensage  secreto  con WinStego.
+
+Para  enviar el  primer mensaje secreto con WinStego hemos de seguir las
+siguientes instrucciones:
+
+1º Escoger un texto plano que quede bien introduciendo espacios para que
+quede justificado  por  la derecha,  por ejemplo este  mismo.
+
+2º Pegar dicho texto en el cuadro de  edición marcado como TXT. WinStego
+dispone de un botón Paste que  quitará cualquier texto anterior de dicho
+cuadro  y pegará el  contenido del  protapapeles.
+
+3º Introducir  el  mensaje secreto  en el cuadro de edición marcado como
+MSG. Este  mensaje  es el que  se quiere  que sea  secreto, y  que nadie
+conozca. Además  el tamaño  que  admite depende de la longitud del texto
+introducido como  TXT.
+
+4º  Elegir el  método, por  ahora solo  hay una  posibilidad -tj  (texto
+simple justificado).
+
+5º Eligir el número de columnas que tendrá el texto y se introduce en el
+recuadro marcado  com BPL (bytes  por línea). Por defecto el programa lo
+fija  en 70, lo  cual es  adecuado para  enviar  el  mensaje por  correo
+electrónico.
+
+6º Para usar cifrado (lo más lógico) se marca la opción password, lo que
+hace  que nos  pida la clave de cifrado antes de codificar o decodificar
+el mensaje.  El  cifrado usado  por stego  es IDEA en modo CFB-8  lo que
+permite cifrar  mensajes  de cualquier longitud  múltiplo de un byte sin
+añadir bytes extras ( internamete no  usa la password proporcionada sino
+el  el resumen MD5  de  la misma  que se corresponde con los 128 bits de
+clave del  algoritmo IDEA).
+
+7º Pulsar el botón Encode, y ya tenemos el resultado en el recuadro TXT.
+
+8º  Copiar el texto resultante, para lo cual podemos usar el boton Copy.
+
+9º  Enviar el texto  resultante por  correo electrónico o cualquier otro
+método  que consideremos oportuno.
+
+Como puede  verse el  resultado es aparentemente inocuo,  simplemente se
+han insertado los espacios necesarios  para que quede justificado por la
+derecha  (salvo las últimas  líneas de  parrafo que  siguen otra regla).
+También podemos apreciar que dichos espacios no están apelotonados, sino
+ligeramente dispersos.  Cualquiera que conozca el  programa puede pensar
+que hay un mensaje oculto, pero este punto no puede ser demostrado si se
+cifra ya  que  no  hay  forma  de  distingirlo  de  un simple  uso  como
+formateador (es  decir  usarlo para  dejar bonito el  mensaje enviado).
+
+Recibiendo  mi primer mensage  secreto con  WinStego.
+
+Para recibir  el primer  mensaje secreto  tambien  con WinStego, haremos
+algo  parecido a  lo anterior:
+
+1º Pegar  el texto codificado en  el cuadro de edición marcado como TXT.
+
+2º  Elegir el  método, por ahora  no  se puede  ya que solo  hay uno.
+
+3º No es necesario modificar BPL ya no es necesario conocerlo para poder
+decodificar el  mensaje.
+
+4º Para  usar cifrado se  marca la opción password, lo cual hara que nos
+pida  la clave  usada en el  momento de  codificar el  mensaje.
+
+5º Pulsar  el  botón Decode, y  ya  tenemos  el mensaje  secreto  en  el
+recuadro MSG.
+
+Y como para  muestra un botón este texto contiene un mensaje oculto y la
+clave  es enigma  (como la  máquina de  cifrar alemana).
+
+El equivalente  con stego.
+
+supongamos  que tenemos este  texto en un archivo y queremos usarlo para
+enviar  un mensaje oculto:
+
+txt.txt  -> seria  este texto (el  que  queremos que se  vea)
+
+msg.txt  -> seria  mensage secreto  a enviar  (el que  queremos ocultar)
+
+stg.txt ->  seria el  resultado  de juntar  txt.txt y  msg.txt con stego
+
+La operación  seria  la siguiente  (sin clave)
+
+stego -e  -tj  --txt txt.txt --stg  stg.txt  --msg msg.txt
+
+ó  con clave
+
+stego  -e -tj  --txt txt.txt  --stg stg.txt --msg  msg.txt --pass
+
+Ya  disponemos del mensage  a enviar  en stg.txt
+
+El  destinatario del mensaje  solo tendría  que  hacer lo siguiente para
+obtener  el mensaje oculto.
+
+stego  -d -tj  --stg stg.txt  --msg msg.txt
+
+ó con  clave
+
+stego  -d -tj  --stg stg.txt  --msg msg.txt --pass
+
+y el  mensaje oculto  sera msg.txt.
+
+Hay que tener en cuenta que stego  trata msg.txt como un archivo binario
+con  lo cual puede  meterse texto o cualquier otra cosa  (doc, mp3, jpg,
+bmp,  ico,  ...  )  también  es  recomendable  asegurarse  del  correcto
+funcionamiento de  la  extracción antes de  enviar  algo ya  que  en  el
+momento  de escribir  esta versión  del documento esta una versión Beta.
+
+También  puede   probar  las   opciones  --txt-fd,  --stg-fd,  --msg-fd,
+--pass-fd  que permiten la  facil  creación de front-ends como pueda ser
+WinStego.  Si lo que  quiere utilizar de  clave es un archivo llamemoslo
+pass.txt,  puede utilizarlo  de la  siguiente manera
+
+stego  -e -tj --txt  txt.txt --stg  stg.txt --msg  msg.txt  --pass--fd 0
+<pass.txt
+
+stego  -d -tj  --stg stg.txt  --msg msg.txt --pass--fd  0 <pass.txt
+
+Recomendaciones.
+
+Dado que  no es demasiado frecuente  justificar los textos, es necesario
+ponerlo de  moda al  menos  en los  que nosotros enviamos, así no  podrá
+deducirse  que un mensaje concreto contenga un mensaje  secreto, pues lo
+tendrian  todos, esto  puede hacerse con el boton Justify. Esta utilidad
+le  permite justificar un  texto con  un  mensaje y clave aleatorios. Lo
+cual evita  que  se diferencie de  cualquier otro con un mensage oculto.
+
+También hay  otras  peculiaridades  que  serán limadas  en  las  futuras
+versiones del programa pero estas ya  son más filosóficas que otra cosa.
+
+Fundamentos  de stego.
+
+Ahora que  sabemos que  funciona,  la cuestión  es  ¿Cómo?  Realmente es
+bastante  sencillo, lo aparatoso  es  explicarlo, consite  en aprovechar
+esos  espacios de  más, que se introducen en los textos para que siempre
+tengan las mismas columnas (salvo al final de un parrafo, en ese caso se
+opta  por una  longitud más corta).
+
+Para  cada línea hemos de obtener el máximo número de palabras que junto
+con sus  espacios no  superen BPL  (el  número de columnas).
+
+Calculamos  n/h (  / no significa  dividir  ) donde:
+
+n es  el número  de  espacios necesarios  para completar las  columnas
+
+h  es el número  de  huecos que  dejan las palabras
+
+Una  línea con  10 palabras  y 3 letras  menos para estar justificada la
+expresaremos  como 3/10 y  podremos  subdividirla como:
+
+3/10  = 1/2  + 1/2 +  1/6
+
+Los 1/2  se usan  para guardar un bit de la siguiente forma (si se añade
+un espacio en el primer  hueco se toma como 0, si se añade un espacio en
+el  segundo hueco se  toma  como 1).
+
+Los 1/h para  h > 3 se toman de forma distinta, se forma un número entre
+0  y h-1  con los  siguientes bits  del  mensaje (es  decir  n<3-->1bit;
+h<8-->2bits; h<16-->3bits;  h<32-->4bits).  Cuando n>h/2  se toma n=h-n.
+
+Ejemplo
+
+_  = espacio
+
++  = espacio de  relleno
+
+Tenemos  la siguiente línea:
+
+uno_dos_tres_cuatro_cinco_seis_siete_ocho  --> n/h =  2/7  = 1/2 +  1/5
+
+Por  lo tanto  en esta línea  podemos introducir  3bits  de información,
+supongamos  que son  101, Por lo  tanto según  lo anterior  quedaría:
+
+uno_dos_+tres_cuatro_cinco_+seis_siete_ocho
+
+Llegado  el caso, cualquier  usuario  podría codificar  y decodificar un
+mensaje  de forma  manual, siempre  que no se  use cifrado.
+
+(c) Francisco  Gómez Carrasco
+
