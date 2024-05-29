@@ -51,7 +51,7 @@ public class JavaTime
     public static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
     public static final DateTimeFormatter YYYY_MM_DD = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     public static final DateTimeFormatter YYYY_M_D = DateTimeFormatter.ofPattern("yyyy-M-d");
-    public static final DateTimeFormatter DD_MMM_YY = new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd-MMM-yy").toFormatter(Locale.US);
+    public static final DateTimeFormatter D_MMM_YY = new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("d-MMM-yy").toFormatter(Locale.US);
     public static final DateTimeFormatter DD_MMM_YYYY = new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd-MMM-yyyy").toFormatter(Locale.US);
     public static final DateTimeFormatter YYYY_MM_DD_HH_MM = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     public static final DateTimeFormatter YYYY_MM_DD_HH_MM_SS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -221,7 +221,7 @@ public class JavaTime
             _b(YYYYMMDD,                  8,  8,  Parser.D,   "[0-9][0-9][0-9][0-9][0-1][0-9][0-3][0-9]"),   //yyyyMMdd => 20111203
             _b(YYYY_MM_DD,                10, 10, Parser.D,   "[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9]"), //yyyy-MM-dd => 2011-12-03
             _b(YYYY_M_D,                  8,  10, Parser.D,   "[0-9][0-9][0-9][0-9]-[0-1]?[0-9]-[0-3]?[0-9]"), //yyyy-M-d => 2011-2-3
-            _b(DD_MMM_YY,                 9,  9,  Parser.D,   "[0-3][0-9]-[A-Za-z][A-Za-z][A-Za-z]-[0-9][0-9]"), //dd-MMM-yy => 11-Ago-37
+            _b(D_MMM_YY,                  8,  9,  Parser.D,   "[0-3]?[0-9]-[A-Za-z][A-Za-z][A-Za-z]-[0-9][0-9]"), //d-MMM-yy => 8-Ago-37 19-Ago-37
             _b(DD_MMM_YYYY,               11, 11, Parser.D,   "[0-3][0-9]-[A-Za-z][A-Za-z][A-Za-z]-[0-9][0-9][0-9][0-9]"), //dd-MMM-yyyy => 11-Ago-2037
             _b(YYYY_MM_DD_HH_MM,          16, 16, Parser.DT,  "[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9] [0-2][0-9]:[0-5][0-9]"),         
             _b(YYYY_MM_DD_HH_MM_SS,       19, 19, Parser.DT,  "[0-9][0-9][0-9][0-9]-[0-1][0-9]-[0-3][0-9] [0-2][0-9]:[0-5][0-9]:[0-5][0-9]"),

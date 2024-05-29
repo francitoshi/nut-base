@@ -73,6 +73,8 @@ public class JavaTimeTest
     };
     static final String[] DT =
     {
+        "9-Aug-17", 
+        "09-Aug-17", 
         "31-Aug-17", 
         "31-Aug-2017", 
         "20111203", 
@@ -132,7 +134,8 @@ public class JavaTimeTest
         //test dates are properly parsed
         for (String item : DT)
         {
-            JavaTime.parseZonedDateTime(item, JavaTime.UTC, Locale.ROOT);
+            ZonedDateTime dt = JavaTime.parseZonedDateTime(item, JavaTime.UTC, Locale.ROOT);
+            System.out.println(item+" => "+dt.toString());
         }
         for (String item : DT_ES)
         {

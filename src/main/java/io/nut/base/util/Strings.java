@@ -36,10 +36,10 @@ import java.util.regex.Pattern;
  */
 public class Strings
 {
-    public static String EMPTY = "";
+    public static final String EMPTY = "";
             
-    public static String HORIZONTAL_ELLIPSIS = "…"; //U+2026
-    public static String VERTICAL_ELLIPSIS   = "⋮";  //U+22EE
+    public static final String HORIZONTAL_ELLIPSIS = "…"; //U+2026
+    public static final String VERTICAL_ELLIPSIS   = "⋮";  //U+22EE
 
     public static <T> String join(CharSequence delimiter, CharSequence prefix, CharSequence suffiex, Iterable<T> list, CharSequence nullValue)
     {

@@ -36,7 +36,7 @@ public class Coinage
     {
         INSTANCE;
         final String[] FIAT_COINS = "AUD,CAD,CHF,EUR,GBP,JPY,USD".split(",");
-        final String[] BASE_COINS = "ADA,BNB,ZEC,ETH,LTC,USDT,BTC,XMR,BEAM,DOGE".split(",");
+        final String[] BASE_COINS = "ADA,BEAM,BNB,BTC,DASH,DOGE,DOT,ETH,GRIN,LTC,MATIC,TRX,USDC,USDT,XMR,ZEC".split(",");
         final String[] COUNTER_COINS = "BTC,BNB,ETH,LTC,USDT".split(",");
     }
     
@@ -54,23 +54,23 @@ public class Coinage
     {
         Collections.addAll(this.fiatCoins, fiatCoins);
         Collections.addAll(this.cryptoCoins, baseCoins);
+        Collections.addAll(this.cryptoCoins, counterCoins);
+
         Collections.addAll(this.allCoins, fiatCoins);
         Collections.addAll(this.allCoins, baseCoins);
+        Collections.addAll(this.allCoins, counterCoins);
 
         for(String base : baseCoins)
         {
-            this.pairs.put(base, new String[]{base});
             for(String counter : fiatCoins)
             {
                 this.pairs.put(base+counter, new String[]{base,counter});
-                this.pairs.put(counter, new String[]{counter});
             }
             for(String counter : counterCoins)
             {
                 if(!counter.equalsIgnoreCase(base))
                 {
                     this.pairs.put(base+counter, new String[]{base,counter});
-                    this.pairs.put(counter, new String[]{counter});
                 }
             }
         }
