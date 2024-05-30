@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.tea.base.util.concurrent.atomic;
+package io.nut.base.util.concurrent.atomic;
 
 /**
  * A {@code double} value that may be updated atomically.  See the

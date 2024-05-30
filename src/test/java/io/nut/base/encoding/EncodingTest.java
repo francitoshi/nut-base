@@ -20,7 +20,6 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.encoding.Encoding;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
