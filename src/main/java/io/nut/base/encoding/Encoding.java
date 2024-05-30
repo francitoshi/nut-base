@@ -21,12 +21,6 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.encoding.Base32String;
-import io.nut.base.encoding.Base43;
-import io.nut.base.encoding.Base64;
-import io.nut.base.encoding.Base64DecoderException;
-import io.nut.base.encoding.Base91;
-import io.nut.base.encoding.Hex;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
@@ -44,12 +38,13 @@ public class Encoding
     public static final Encoding BASE32 = new Encoding(Type.Base32);
     public static final Encoding BASE43 = new Encoding(Type.Base43);
     public static final Encoding BASE58 = new Encoding(Type.Base58);
+    public static final Encoding BASE58CHECK = new Encoding(Type.Base58Check);
     public static final Encoding BASE64 = new Encoding(Type.Base64);
     public static final Encoding BASE91 = new Encoding(Type.Base91);
     
     public enum Type
     {         
-        Base16(16), Base32(32), Base43(43), Base58(58), Base64(64), Base91(91);
+        Base16(16), Base32(32), Base43(43), Base58(58), Base58Check(58), Base64(64), Base91(91);
         Type(int base)
         {
             this.base = base;
@@ -92,6 +87,8 @@ public class Encoding
                     return Base43.encode(src);
                 case Base58:
                     return Base58.encode(src);
+                case Base58Check:
+                    return Base58Check.bytesToBase58(src);
                 case Base91:
                     return Base91.encodeToString(src, UTF8);
                 case Base64:
@@ -124,6 +121,8 @@ public class Encoding
                     return Base43.decode(src);
                 case Base58:
                     return Base58.decode(src);
+                case Base58Check:
+                    return Base58Check.base58ToBytes(src);
                 case Base91:
                     return Base91.decodeFromString(src, UTF8);
                 case Base64:
@@ -131,7 +130,7 @@ public class Encoding
                     return Base64.decode(src);
             }
         }
-        catch (UnsupportedEncodingException | Base64DecoderException | Base58.FormatException | Base32String.DecodingException ex)
+        catch (IllegalArgumentException | UnsupportedEncodingException | Base64DecoderException | Base58.FormatException | Base32String.DecodingException ex)
         {
             Logger.getLogger(Encoding.class.getName()).log(Level.SEVERE, null, ex);
             return null;
