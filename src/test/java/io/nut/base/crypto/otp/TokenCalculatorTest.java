@@ -1,5 +1,5 @@
 /*
- * OneTimePasswordTest.java
+ * TokenCalculatorTest.java
  *
  * Copyright (c) 2021-2023 francitoshi@gmail.com
  *
@@ -20,6 +20,13 @@
  */
 package io.nut.base.crypto.otp;
 
+import io.nut.base.encoding.Base32String;
+import io.nut.base.encoding.Base64DecoderException;
+import io.nut.base.time.JavaTime;
+import java.io.UnsupportedEncodingException;
+import java.security.GeneralSecurityException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,10 +38,10 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class OneTimePasswordTest
+public class TokenCalculatorTest
 {
     
-    public OneTimePasswordTest()
+    public TokenCalculatorTest()
     {
     }
     
@@ -82,7 +89,7 @@ public class OneTimePasswordTest
     };
  
     /**
-     * Test of TOTP_RFC6238 method, of class OneTimePassword.
+     * Test of TOTP_RFC6238 method, of class TokenCalculator.
      */
     @Test
     public void testTOTP_RFC6238_5args()
@@ -92,15 +99,15 @@ public class OneTimePasswordTest
         {
             long time = Long.parseLong(TOTP_DATA[i][0]);
             long expe = Long.parseLong(TOTP_DATA[i][1]);
-            OneTimePassword.HashAlgorithm algorithm = OneTimePassword.HashAlgorithm.valueOf(TOTP_DATA[i][2]);
+            TokenCalculator.HashAlgorithm algorithm = TokenCalculator.HashAlgorithm.valueOf(TOTP_DATA[i][2]);
             
-            int result = OneTimePassword.TOTP_RFC6238(secret, 30, time, 8, algorithm);
+            int result = TokenCalculator.TOTP_RFC6238(secret, 30, time, 8, algorithm);
             assertEquals(expe, result, "i="+i);
         }
     }
 
     /**
-     * Test of HOTP method, of class OneTimePassword.
+     * Test of HOTP method, of class TokenCalculator.
      * https://tools.ietf.org/html/rfc4226
      */
     @Test
@@ -111,9 +118,23 @@ public class OneTimePasswordTest
         byte[] secret = "12345678901234567890".getBytes();
         for(int i=0;i<HOTP.length;i++)
         {
-            String result = OneTimePassword.HOTP(secret, i, 6, OneTimePassword.HashAlgorithm.SHA1);
+            String result = TokenCalculator.HOTP(secret, i, 6, TokenCalculator.HashAlgorithm.SHA1);
             assertEquals(HOTP[i], result);
         }
+    }
+    
+    @Test
+    public void howToUse() throws InvalidKeyException, Base32String.DecodingException, NoSuchAlgorithmException, GeneralSecurityException, Base64DecoderException, UnsupportedEncodingException
+    {
+        String sharedSecret = "JBSWY3DPEHPK3PXP";
+        sharedSecret = sharedSecret.replace('0', 'O').replace('1', 'I');
+        byte[] sharedSecretBytes = Base32String.decode(sharedSecret);
+        final long counter = JavaTime.epochSecond()/TokenCalculator.TOTP_DEFAULT_PERIOD;
+        
+        String otpResult = TokenCalculator.HOTP(sharedSecretBytes, counter, TokenCalculator.TOTP_DEFAULT_DIGITS, TokenCalculator.HashAlgorithm.SHA1);
+        
+        System.out.println(otpResult);
+        System.out.println(OTP.TOTP(sharedSecret, 30, JavaTime.epochSecond()));
     }
     
 }

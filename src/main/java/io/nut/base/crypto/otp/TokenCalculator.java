@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2019 franctoshi@gmail.com
- * Copyright (C) 2017-2018 Jakob Nixdorf
+ * Copyright (C) 2024 franctoshi@gmail.com
+ * Copyright (C) 2017-2020 Jakob Nixdorf
  * Copyright (C) 2015 Bruno Bierbaumer
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,38 +23,43 @@
  */
 package io.nut.base.crypto.otp;
 
+//copied from
+//https://github.com/andOTP/andOTP/blob/master/app/src/main/java/org/shadowice/flocke/andotp/Utilities/TokenCalculator.java
+
+import io.nut.base.encoding.Hex;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.NumberFormat;
 import java.util.Locale;
+
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-//copied here from https://github.com/andOTP/andOTP
-
-public class OneTimePassword 
+public class TokenCalculator
 {
+
     public static final int TOTP_DEFAULT_PERIOD = 30;
     public static final int TOTP_DEFAULT_DIGITS = 6;
     public static final int HOTP_INITIAL_COUNTER = 1;
     public static final int STEAM_DEFAULT_DIGITS = 5;
 
-    private static final char[] STEAMCHARS = new char[] 
+    private static final char[] STEAMCHARS = new char[]
     {
         '2', '3', '4', '5', '6', '7', '8', '9', 'B', 'C',
         'D', 'F', 'G', 'H', 'J', 'K', 'M', 'N', 'P', 'Q',
         'R', 'T', 'V', 'W', 'X', 'Y'
     };
 
-    public enum HashAlgorithm 
+    public enum HashAlgorithm
     {
         SHA1, SHA256, SHA512
     }
 
     public static final HashAlgorithm DEFAULT_ALGORITHM = HashAlgorithm.SHA1;
 
-    private static byte[] generateHash(HashAlgorithm algorithm, byte[] key, byte[] data) throws NoSuchAlgorithmException, InvalidKeyException 
+    private static byte[] generateHash(HashAlgorithm algorithm, byte[] key, byte[] data) throws NoSuchAlgorithmException, InvalidKeyException
     {
         String algo = "Hmac" + algorithm.toString();
 
@@ -64,26 +69,33 @@ public class OneTimePassword
         return mac.doFinal(data);
     }
 
-    public static int TOTP_RFC6238(byte[] secret, int period, long time, int digits, HashAlgorithm algorithm) 
+    // TODO: Rewrite tests so this compatibility wrapper can be removed
+    public static int TOTP_RFC6238(byte[] secret, int period, long time, int digits, HashAlgorithm algorithm)
     {
-        int fullToken = TOTP(secret, period, time, algorithm);
+        return TOTP_RFC6238(secret, period, time, digits, algorithm, 0);
+    }
+
+    public static int TOTP_RFC6238(byte[] secret, int period, long time, int digits, HashAlgorithm algorithm, int offset)
+    {
+        int fullToken = TOTP(secret, period, time, algorithm, offset);
         int div = (int) Math.pow(10, digits);
 
         return fullToken % div;
     }
 
-    public static String TOTP_RFC6238(byte[] secret, int period, int digits, HashAlgorithm algorithm) 
+    public static String TOTP_RFC6238(byte[] secret, int period, int digits, HashAlgorithm algorithm, int offset)
     {
-        return formatTokenString(TOTP_RFC6238(secret, period, System.currentTimeMillis() / 1000, digits, algorithm), digits);
+        return formatTokenString(TOTP_RFC6238(secret, period, System.currentTimeMillis() / 1000, digits, algorithm, offset), digits);
     }
 
-    public static String TOTP_Steam(byte[] secret, int period, int digits, HashAlgorithm algorithm) 
+    public static String TOTP_Steam(byte[] secret, int period, int digits, HashAlgorithm algorithm, int offset)
     {
-        int fullToken = TOTP(secret, period, System.currentTimeMillis() / 1000, algorithm);
+        int fullToken = TOTP(secret, period, System.currentTimeMillis() / 1000, algorithm, offset);
 
         StringBuilder tokenBuilder = new StringBuilder();
 
-        for (int i = 0; i < digits; i++) {
+        for (int i = 0; i < digits; i++)
+        {
             tokenBuilder.append(STEAMCHARS[fullToken % STEAMCHARS.length]);
             fullToken /= STEAMCHARS.length;
         }
@@ -91,7 +103,7 @@ public class OneTimePassword
         return tokenBuilder.toString();
     }
 
-    public static String HOTP(byte[] secret, long counter, int digits, HashAlgorithm algorithm) 
+    public static String HOTP(byte[] secret, long counter, int digits, HashAlgorithm algorithm)
     {
         int fullToken = HOTP(secret, counter, algorithm);
         int div = (int) Math.pow(10, digits);
@@ -99,16 +111,17 @@ public class OneTimePassword
         return formatTokenString(fullToken % div, digits);
     }
 
-    private static int TOTP(byte[] key, int period, long time, HashAlgorithm algorithm) 
+    private static int TOTP(byte[] key, int period, long time, HashAlgorithm algorithm, int offset)
     {
-        return HOTP(key, time / period, algorithm);
+        return HOTP(key, (time / period) + offset, algorithm);
     }
 
     private static int HOTP(byte[] key, long counter, HashAlgorithm algorithm)
     {
         int r = 0;
 
-        try {
+        try
+        {
             byte[] data = ByteBuffer.allocate(8).putLong(counter).array();
             byte[] hash = generateHash(algorithm, key, data);
 
@@ -120,13 +133,40 @@ public class OneTimePassword
             binary |= (hash[offset + 3] & 0xFF);
 
             r = binary;
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
         }
 
         return r;
     }
-    
+
+    public static String MOTP(String PIN, String secret, long epoch, int offset)
+    {
+        String epochText = String.valueOf((epoch / 10) + offset);
+        String hashText = epochText + secret + PIN;
+        String otp = "";
+
+        try
+        {
+            // Create MD5 Hash
+            MessageDigest digest = MessageDigest.getInstance("MD5");
+            digest.update(hashText.getBytes());
+            byte[] messageDigest = digest.digest();
+
+            // Create Hex String
+            String hexString = new String(Hex.encode(messageDigest));
+            otp = hexString.substring(0, 6);
+        }
+        catch (NoSuchAlgorithmException e)
+        {
+            e.printStackTrace();
+        }
+
+        return otp;
+    }
+
     private static String formatTokenString(int token, int digits) 
     {
         NumberFormat numberFormat = NumberFormat.getInstance(Locale.ENGLISH);
