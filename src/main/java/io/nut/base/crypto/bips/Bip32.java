@@ -1,7 +1,7 @@
 /*
  *  Bip32.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2024 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import io.nut.base.crypto.ec.ECDSA;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.crypto.ec.Sign;
 import io.nut.base.encoding.Base58;
+import io.nut.base.encoding.Hex;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -43,17 +44,12 @@ import java.util.Objects;
 public class Bip32
 {
     private static final BigInteger N = Secp256k1.INSTANCE.n; 
-    private static final ECDSA ECDSA = Sign.SECP256K1_ECDSA; 
-
-    static final String XPUB = "xpub";
-    static final String XPRV = "xprv";
-    static final String TPUB = "tpub";
-    static final String TPRV = "tprv";
-
-    static final int MAINNET_PUB = 0x0488B21E;
-    static final int MAINNET_PRV = 0x0488ADE4;
-    static final int TESTNET_PUB = 0x043587CF;
-    static final int TESTNET_PRV = 0x04358394;
+    private static final ECDSA ECDSA = Sign.SECP256K1_ECDSA;
+    
+    enum AddrType
+    {
+        P2PK, P2PKH, P2MS, P2SH, P2WPKH, P2WSH, P2TR
+    }
     
     public static final int HARDENED = 0x80000000;
     
@@ -73,20 +69,12 @@ public class Bip32
     
     public static int version2pub(int version)
     {
-        if(version == MAINNET_PRV)
-        {
-            version = MAINNET_PUB;
-        }
-        else if(version == TESTNET_PRV)
-        {
-            version = TESTNET_PUB;
-        }
-        return version;
+        return ExtKey.prv2pub(version);
     }
     
     private static final byte[] BITCOIN_SEED = "Bitcoin seed".getBytes();
     
-    public static ExtKey masterKeyGeneration(byte[] seed, boolean pubkey, boolean testnet) throws InvalidKeyException
+    public static ExtKey masterKeyGeneration(byte[] seed, int keyType, ExtKey.ScriptType scriptType, ExtKey.PolicyType policyType, ExtKey.Network network) throws InvalidKeyException
     {
         byte[] I = HMAC.hmacSHA512(BITCOIN_SEED,seed);
         byte[] IL = new byte[33];
@@ -103,10 +91,11 @@ public class Bip32
             throw new InvalidKeyException("masterChainCode >= n");
         }
 
-        int version = pubkey ? (testnet ? TESTNET_PUB : MAINNET_PUB) : (testnet ? TESTNET_PRV : MAINNET_PRV);
+        int version = ExtKey.getVersion(keyType, scriptType, policyType, network);
+        
         byte[] fingerprint = {0,0,0,0};
         
-        if(pubkey)
+        if(keyType==ExtKey.PUBKEY)
         {
             IL = ECDSA.getPubKey(Arrays.copyOfRange(IL, 1, 33));
         }        
@@ -230,17 +219,16 @@ public class Bip32
     private final ExtKey masterPub;
     private final ExtKey masterPrv;
     
-    public Bip32(byte[] seed, boolean testnet) throws InvalidKeyException
+    public Bip32(byte[] seed, ExtKey.ScriptType scriptType, ExtKey.PolicyType policyType, ExtKey.Network network) throws InvalidKeyException
     {
-        this.masterPub = Bip32.masterKeyGeneration(seed, true, testnet);
-        this.masterPrv = Bip32.masterKeyGeneration(seed, false, testnet);
+        this.masterPub = Bip32.masterKeyGeneration(seed, ExtKey.PUBKEY, scriptType, policyType, network);
+        this.masterPrv = Bip32.masterKeyGeneration(seed, ExtKey.PRVKEY, scriptType, policyType, network);
     }
     
-    public static Bip32 build(byte[] seed, boolean testnet, boolean cached) throws InvalidKeyException
+    public static Bip32 build(byte[] seed, ExtKey.ScriptType scriptType, ExtKey.PolicyType policyType, ExtKey.Network network, boolean cached) throws InvalidKeyException
     {
-        return cached ? new Bip32.Cached(seed, testnet) : new Bip32(seed, testnet);
+        return cached ? new Bip32.Cached(seed, scriptType, policyType, network) : new Bip32(seed, scriptType, policyType, network);
     }
-    
     public ExtKey xprv(int... childNumber) throws InvalidKeyException
     {
         if(childNumber.length==0)
@@ -272,10 +260,28 @@ public class Bip32
         Objects.requireNonNull(parent, "parent not accesible");
         return Bip32.ckdPub(parent, child);
     }
-    
-    public byte[] addr(int... childNumber) throws InvalidKeyException
+
+    public final ExtKey xprv(String path) throws InvalidKeyException
     {
-        return null;
+        return xprv(parsePath(path));
+    }
+    public final ExtKey xpub(String path) throws InvalidKeyException
+    {
+        return xpub(parsePath(path));
+    }
+    
+    public byte[] addr(int[] childNumber) throws InvalidKeyException
+    {
+        ExtKey key = xpub(childNumber);
+        return key.toAddressBytes();
+    }
+    public final byte[] addr(int[] childNumber, int child) throws InvalidKeyException
+    {
+        return addr(Utils.cat(childNumber,child));
+    }
+    public final byte[] addr(String path) throws InvalidKeyException
+    {
+        return addr(parsePath(path));
     }
     
     public static int[] getParent(int[] childNumber)
@@ -293,6 +299,7 @@ public class Bip32
    
     public static int[] parsePath(String path) throws NumberFormatException
     {
+        path = path.replace('\'', 'h').toLowerCase();
         String[] items = path.toLowerCase().split("/");
         int[] childNumbers = new int[items.length-1];
         for(int i=0;i<childNumbers.length;i++)
@@ -326,9 +333,9 @@ public class Bip32
         private final Map<String,ExtKey> pub = new HashMap<>();
         private final Map<String,ExtKey> prv = new HashMap<>();
 
-        public Cached(byte[] seed, boolean testnet) throws InvalidKeyException
+        public Cached(byte[] seed, ExtKey.ScriptType scriptType, ExtKey.PolicyType policyType, ExtKey.Network network) throws InvalidKeyException
         {
-            super(seed, testnet);
+            super(seed, scriptType, policyType, network);
         }
 
         @Override

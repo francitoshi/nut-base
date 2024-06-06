@@ -20,11 +20,7 @@
  */
 package io.nut.base.text;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -33,31 +29,7 @@ import org.junit.jupiter.api.Test;
  */
 public class TableTest
 {
-    
-    public TableTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-    
+  
     /**
      * Test of addRowHead method, of class Table.
      */
@@ -70,9 +42,10 @@ public class TableTest
         instance.setCell(1,0,"333");
         instance.setCell(1,1,"4444");
         
-        String expected = "T | AA|  BB|\n--+---+----+\naa|  1|  22|\n--+---+----+\naa|333|4444|\n--+---+----+\n";
+        String expected = "---+----+\n  1|  22|\n---+----+\n333|4444|\n---+----+\n";
         
-        System.out.println(instance.toString());
+//        System.out.println(expected);
+//        System.out.println(instance.toString());
         
         assertEquals(expected, instance.toString());
     }
@@ -96,7 +69,8 @@ public class TableTest
         
         String expected = "T | AA|  BB|\n--+---+----+\naa|  1|  22|\n--+---+----+\naa|333|4444|\n--+---+----+\n";
         
-        System.out.println(instance.toString());
+//        System.out.println(expected);
+//        System.out.println(instance.toString());
         
         assertEquals(expected, instance.toString());
     }

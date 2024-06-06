@@ -181,7 +181,7 @@ public class Bip32Test
             {
                 String seed = vector[0][0];
 
-                Bip32 bip32 = Bip32.build(Hex.decode(seed), false, cached);
+                Bip32 bip32 = Bip32.build(Hex.decode(seed), ExtKey.ScriptType.Legacy, ExtKey.PolicyType.SingleSig, ExtKey.Network.MainNet, cached);
 
                 for (int i = 1; i < vector.length; i++)
                 {
@@ -190,12 +190,11 @@ public class Bip32Test
                     String xprv = vector[i][2];
 
                     int[] childNumbers = Bip32.parsePath(path);
+                    assertEquals(xprv, bip32.xprv(childNumbers).toString(), "childNumbers "+path+" xprv");
+                    assertEquals(xpub, bip32.xpub(childNumbers).toString(), "childNumbers "+path+" xpub");
 
-                    ExtKey ekPub = bip32.xpub(childNumbers);
-                    assertEquals(xpub, ekPub.toString(), path+" xpub");
-
-                    ExtKey ekPrv = bip32.xprv(childNumbers);
-                    assertEquals(xprv, ekPrv.toString(), path+" xprv");
+                    assertEquals(xprv, bip32.xprv(path).toString(), "path "+path+" xprv");
+                    assertEquals(xpub, bip32.xpub(path).toString(), "path "+path+" xpub");
                 }
                 v++;
             }
@@ -291,7 +290,7 @@ public class Bip32Test
             {
                 for (String item : vector)
                 {
-                    if(item.startsWith("xpub") ||item.startsWith("xprv"))
+                    if(item.startsWith("xpub") || item.startsWith("xprv"))
                     {
                         ExtKey key = Bip32.parse(item);
                         assertEquals(item, key.toString());

@@ -252,27 +252,32 @@ public class Bip39
         return words.toArray(new String[0]);
     }
 
-    public void check(String words) throws MnemonicException
+    public String[] check(String words) throws MnemonicException
     {
-        check(split(words));
+        return check(split(words));
     }
     /**
      * Check to see if a mnemonic word list is valid.
      * @param words
+     * @return 
      * @throws MnemonicException
      */
-    public void check(String[] words) throws MnemonicException
+    public String[] check(String[] words) throws MnemonicException
     {
         entropy(words);
+        return words;
     }
     /**
      * Check to see if a mnemonic word list is valid.
      * @param words
+     * @return 
      * @throws MnemonicException
      */
-    public void check(List<String> words) throws MnemonicException
+    public String[] check(List<String> words) throws MnemonicException
     {
-        entropy(words.toArray(new String[0]));
+        String[] items = words.toArray(new String[0]);
+        entropy(items);
+        return items;
     }
 
     private static boolean[] bytesToBits(byte[] data)

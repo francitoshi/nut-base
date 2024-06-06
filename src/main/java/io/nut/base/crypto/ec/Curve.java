@@ -20,6 +20,7 @@
  */
 package io.nut.base.crypto.ec;
 
+import io.nut.base.compat.ByteBufferCompat;
 import io.nut.base.math.Nums;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
@@ -121,9 +122,8 @@ public abstract class Curve
         if(b.length < this.bytes) 
         {
             int index = this.bytes - b.length;
-            ByteBuffer buffer = ByteBuffer.allocate(this.bytes);
-            Utils.putBulk(buffer, index, b); // => buffer.put(index, b);
-            return buffer.array();
+            ByteBufferCompat buffer = new ByteBufferCompat(ByteBuffer.allocate(this.bytes));
+            return buffer.put(index, b).array();
         }
         if(b.length == this.bytes+1 && b[0]==0) 
         {
@@ -194,7 +194,7 @@ public abstract class Curve
     {
         Objects.requireNonNull(pubKey, "pubKey is null");
 
-        ByteBuffer buffer = ByteBuffer.wrap(pubKey);
+        ByteBufferCompat buffer = new ByteBufferCompat(ByteBuffer.wrap(pubKey));
 
         byte fmt = buffer.get();
         if(fmt==UNCOMPRESSED && pubKey.length==this.bytes*2+1)
@@ -215,16 +215,16 @@ public abstract class Curve
         {
             byte[] xbytes = new byte[pubKey.length/2];
             byte[] ybytes = new byte[pubKey.length/2];
-            Utils.getBulk(buffer, 0, xbytes);
-            Utils.getBulk(buffer, xbytes.length,ybytes);
+            buffer.get(0, xbytes);
+            buffer.get(xbytes.length,ybytes);
             return new Point(this, xbytes, ybytes);
         }
         if(pubKey.length==this.bytes*2)
         {
             byte[] xbytes = new byte[pubKey.length/2];
             byte[] ybytes = new byte[pubKey.length/2];
-            Utils.getBulk(buffer, 0, xbytes);
-            Utils.getBulk(buffer, xbytes.length,ybytes);
+            buffer.get(0, xbytes);
+            buffer.get(xbytes.length,ybytes);
             return new Point(this, xbytes, ybytes);
         }
         if(pubKey.length==this.bytes)

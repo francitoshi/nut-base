@@ -20,6 +20,7 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.compat.ByteBufferCompat;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
@@ -52,7 +53,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
@@ -75,8 +75,8 @@ import java.util.zip.Adler32;
  */
 public class Utils
 {
-    public static final long NANOS_PER_MILLIS=1_000_000L;
-    public static final long NANOS_PER_SECOND=1_000_000_000L;
+    public static final long NANOS_PER_MILLIS = 1_000_000L;
+    public static final long NANOS_PER_SECOND = 1_000_000_000L;
 
     // shorthand for some units of time
     public static final long SECOND_MILLIS = 1000L;
@@ -211,7 +211,8 @@ public class Utils
         byte[] ret = n.toByteArray();
         if(ret.length<minBytes)
         {
-            ret = putBulk(ByteBuffer.allocate(minBytes), minBytes-ret.length, ret).array();
+           
+            ret = new ByteBufferCompat(ByteBuffer.allocate(minBytes)).put(minBytes-ret.length, ret).array();
         }
         return ret;
     }
@@ -797,11 +798,11 @@ public class Utils
                 return cmp;
             }
         }
-        if (a.length < b.length)
+        if (a.length < b.length && a.length < n)
         {
             return -1;
         }
-        if (a.length > b.length)
+        if (a.length > b.length && b.length < n)
         {
             return +1;
         }
@@ -895,49 +896,45 @@ public class Utils
         return 0;
     }
 
+    @Deprecated
     public static String getJavaHome()
     {
-        return System.getProperty("java.home");
+        return Java.JAVA_HOME;
     }
-
+    @Deprecated
     public static String getTmpDir()
     {
-        return System.getProperty("java.io.tmpdir");
+        return Java.JAVA_IO_TMPDIR;
     }
-
+    @Deprecated
     public static String getOsName()
     {
-        return System.getProperty("os.name");
+        return Java.OS_NAME;
     }
-
+    @Deprecated
     public static String getOsArch()
     {
-        return System.getProperty("os.arch");
+        return Java.OS_ARCH;
     }
-
+    @Deprecated
     public static String getOsVersion()
     {
-        return System.getProperty("os.version");
+        return Java.OS_VERSION;
     }
-
+    @Deprecated
     public static String getUserName()
     {
-        return System.getProperty("user.name");
+        return Java.USER_NAME;
     }
-
+    @Deprecated
     public static String getUserHome()
     {
-        return System.getProperty("user.home");
-    }
-
-    public static String getJavaClassPath()
-    {
-        return System.getProperty("java.class.path");
+        return Java.USER_HOME;
     }
 
     public static String getJavaClassPathCommon()
     {
-        String[] cp = getJavaClassPath().split(File.pathSeparator);
+        String[] cp = Java.JAVA_CLASS_PATH.split(File.pathSeparator);
         if (cp.length == 0)
         {
             return null;
@@ -2926,58 +2923,8 @@ public class Utils
     public static <T> T[] toArray(final T... items) 
     {
         return items;
-    }    
-    
-    public static ByteBuffer putBulk(ByteBuffer dst, int index, ByteBuffer src, int offset, int length)
-    {
-        for (int i = offset, j = index; i < offset + length; i++, j++)
-        {
-            dst.put(j, src.get(i));
-        }
-        return dst;
-    }
-    
-    public static ByteBuffer putBulk(ByteBuffer dst, byte[] src, int off, int len)    
-    {
-        for (int i = off; i < off + len; i++)
-        {
-            dst.put(src[i]);
-        }
-        return dst;
-    }
-
-    public static final ByteBuffer putBulk(ByteBuffer dst, byte[] src)
-    {
-        return putBulk(dst, src, 0, src.length);
-    }
-    
-    public static ByteBuffer putBulk(ByteBuffer dst, int index, byte[] src, int offset, int length)
-    {
-        for (int i = offset, j = index; i < offset + length; i++, j++)
-        {
-            dst.put(j, src[i]);
-        }
-        return dst;
-    }
-    public static ByteBuffer putBulk(ByteBuffer dst, int index, byte[] src)
-    {
-        return putBulk(dst, index, src, 0, src.length);
-    }
-    
-    public static ByteBuffer getBulk(ByteBuffer src, int index, byte[] dst, int offset, int length)
-    {
-        for (int i = offset, j = index; i < offset + length; i++, j++)
-        {
-            dst[i] = src.get(j);
-        }
-        return src;
-    }
-
-    public static ByteBuffer getBulk(ByteBuffer src, int index, byte[] dst)
-    {
-        return getBulk(src, index, dst, 0, dst.length);
-    }
-
+    }       
+                              
     //java9 new BigInteger​​(int signum, byte[] magnitude, int off, int len)
     public static BigInteger newBigInteger(int signum, byte[] magnitude, int off, int len)
     {

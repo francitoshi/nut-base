@@ -28,10 +28,15 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -805,7 +810,7 @@ public class UtilsTest
      * Test of compare method, of class Utils.
      */
     @Test
-    public void testCompareByte()
+    public void testCompare_byteArr_byteArr()
     {
         
         byte[] b0 = {};
@@ -814,7 +819,13 @@ public class UtilsTest
         byte[] c2 = {2};
         byte[] b11 = {1,1};
         byte[] b20 = {2,0};
-        
+
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
         //test arrays of different size
         assertTrue(Utils.compare(b0, b1)<0);
         assertTrue(Utils.compare(b1, b0)>0);
@@ -834,7 +845,7 @@ public class UtilsTest
      * Test of compare method, of class Utils.
      */
     @Test
-    public void testCompareInt()
+    public void testCompare_intArr_intArr()
     {
         
         int[] b0 = {};
@@ -844,6 +855,12 @@ public class UtilsTest
         int[] b11 = {1,1};
         int[] b20 = {2,0};
         
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
         //test arrays of different size
         assertTrue(Utils.compare(b0, b1)<0);
         assertTrue(Utils.compare(b1, b0)>0);
@@ -865,7 +882,6 @@ public class UtilsTest
     @Test
     public void testCompareLong()
     {
-        
         long[] b0 = {};
         long[] b1 = {1};
         long[] b2 = {2};
@@ -873,6 +889,12 @@ public class UtilsTest
         long[] b11 = {1,1};
         long[] b20 = {2,0};
         
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
         //test arrays of different size
         assertTrue(Utils.compare(b0, b1)<0);
         assertTrue(Utils.compare(b1, b0)>0);
@@ -886,7 +908,6 @@ public class UtilsTest
         
         assertTrue(Utils.compare(b2, b11)>0);
         assertTrue(Utils.compare(b11, b2)<0);
-        
     }
     /**
      * Test of compare method, of class Utils.
@@ -902,6 +923,12 @@ public class UtilsTest
         double[] b11 = {1,1};
         double[] b20 = {2,0};
         
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
         //test arrays of different size
         assertTrue(Utils.compare(b0, b1)<0);
         assertTrue(Utils.compare(b1, b0)>0);
@@ -2159,12 +2186,15 @@ public class UtilsTest
         assertEquals("2", Utils.equivalent(2, keys, values, "0"));
         assertEquals("null", Utils.equivalent(null, keys, values, "0"));
         
-        String[] values2 = {"16","32","58","64","91"};
+        String[] values2 = {"16","32","43","58","58c","64","91"};
 
-        assertEquals("16", Utils.equivalent(Encoding.BASE16, Encoding.Type.values(), values2, "0"));
-        assertEquals("58", Utils.equivalent(Encoding.BASE58, Encoding.Type.values(), values2, "0"));
-        assertEquals("64", Utils.equivalent(Encoding.BASE64, Encoding.Type.values(), values2, "0"));
-        assertEquals("91", Utils.equivalent(Encoding.BASE91, Encoding.Type.values(), values2, "0"));
+        assertEquals("16", Utils.equivalent(Encoding.Type.Base16, Encoding.Type.values(), values2, "0"));
+        assertEquals("32", Utils.equivalent(Encoding.Type.Base32, Encoding.Type.values(), values2, "0"));
+        assertEquals("43", Utils.equivalent(Encoding.Type.Base43, Encoding.Type.values(), values2, "0"));
+        assertEquals("58", Utils.equivalent(Encoding.Type.Base58, Encoding.Type.values(), values2, "0"));
+        assertEquals("58c", Utils.equivalent(Encoding.Type.Base58Check, Encoding.Type.values(), values2, "0"));
+        assertEquals("64", Utils.equivalent(Encoding.Type.Base64, Encoding.Type.values(), values2, "0"));
+        assertEquals("91", Utils.equivalent(Encoding.Type.Base91, Encoding.Type.values(), values2, "0"));
     }
 
     /**
@@ -2181,13 +2211,16 @@ public class UtilsTest
         assertEquals("2", Utils.equivalent(2, keys, values));
         assertEquals("null", Utils.equivalent(null, keys, values));
         
-        String[] values2 = {"16","32","58","64","91"};
+        String[] values2 = {"16","32","43","58","58c","64","91"};
 
-        assertEquals("16", Utils.equivalent(Encoding.BASE16, Encoding.Type.values(), values2));
-        assertEquals("58", Utils.equivalent(Encoding.BASE58, Encoding.Type.values(), values2));
-        assertEquals("64", Utils.equivalent(Encoding.BASE64, Encoding.Type.values(), values2));
-        assertEquals("91", Utils.equivalent(Encoding.BASE91, Encoding.Type.values(), values2));
+        assertEquals("16", Utils.equivalent(Encoding.Type.Base16, Encoding.Type.values(), values2));
+        assertEquals("43", Utils.equivalent(Encoding.Type.Base43, Encoding.Type.values(), values2));
+        assertEquals("58", Utils.equivalent(Encoding.Type.Base58, Encoding.Type.values(), values2));
+        assertEquals("58c", Utils.equivalent(Encoding.Type.Base58Check, Encoding.Type.values(), values2));
+        assertEquals("64", Utils.equivalent(Encoding.Type.Base64, Encoding.Type.values(), values2));
+        assertEquals("91", Utils.equivalent(Encoding.Type.Base91, Encoding.Type.values(), values2));
     }
+    
     /**
      * Test of isPositive method, of class Utils.
      */
@@ -2654,8 +2687,5 @@ public class UtilsTest
         assertEquals(5, Utils.asBytes(BigInteger.ONE, 5).length);
         assertEquals(5, Utils.asBytes(BigInteger.TEN, 5).length);
         assertEquals(8, Utils.asBytes(BigInteger.valueOf(Long.MAX_VALUE), 5).length);
-        
-    }
-
- 
+    } 
 }
