@@ -20,8 +20,6 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.encoding.Base58;
-import io.nut.base.encoding.Base58.FormatException;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Random;
