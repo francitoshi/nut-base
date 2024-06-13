@@ -254,6 +254,17 @@ public class Utils
         return dst;
     }
 
+    /**
+     * Converts an array of {@link Integer} objects to an array of primitive {@code int}s.
+     *
+     * <p>If an element in the source array is {@code null}, the specified {@code whenNull} value will be used 
+     * in the destination array at the corresponding index.
+     *
+     * @param src the source array of {@link Integer} objects. If {@code null}, the method returns {@code null}.
+     * @param whenNull the value to be used in the destination array if a source array element is {@code null}.
+     * @return an array of primitive {@code int}s with the same length as the source array. If the source 
+     *         array is {@code null}, this method returns {@code null}.
+     */
     public static int[] asInts(Integer[] src, int whenNull)
     {
         if (src == null)
@@ -263,7 +274,8 @@ public class Utils
         int[] dst = new int[src.length];
         for (int i = 0; i < src.length; i++)
         {
-            dst[i] = src[i] != null ? src[i] : whenNull;
+            Integer item = src[i];
+            dst[i] = (item != null) ? item : whenNull;
         }
         return dst;
     }

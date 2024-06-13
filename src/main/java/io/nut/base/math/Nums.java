@@ -112,15 +112,6 @@ public class Nums
             public static final BigDecimal GOLDEN_RATIO = new BigDecimal("1.618033988749894848204586834365638117720309179805762862135");
         }
     }
-    private static abstract class Small
-    {
-        public static abstract class Int
-        {
-        }
-        public static abstract class Dec
-        {
-        }
-    }
     
     public static final MathContext MC2HD = new MathContext(2, RoundingMode.HALF_DOWN);
     public static final MathContext MC2HE = new MathContext(2, RoundingMode.HALF_EVEN);

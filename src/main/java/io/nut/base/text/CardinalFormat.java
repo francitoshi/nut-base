@@ -177,7 +177,7 @@ public class CardinalFormat
             }
             tokens.add(rule);
         }
-        this.rules = tokens.toArray(new NumberRule[tokens.size()]);
+        this.rules = tokens.toArray(new NumberRule[0]);
         Arrays.sort(rules,cmp);
     }
 
