@@ -999,6 +999,41 @@ public class Utils
         return "";
     }
 
+    public static <T> T firstNonNullOrPoison(T poison, T... t)
+    {
+        for (T item : t)
+        {
+            if (item != null && !item.equals(poison))
+            {
+                return item;
+            }
+        }
+        return null;
+    }
+    public static <T> T firstNonNullOrPoison(T[] poison, T... t)
+    {
+        for (T item : t)
+        {
+            if (item != null)
+            {
+                boolean poisoned = false;
+                for(T p : poison)
+                {
+                    if(item.equals(p))
+                    {
+                        poisoned = true;
+                        break;
+                    }
+                }
+                if(!poisoned)
+                {
+                    return item;
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      * Causes the currently executing thread to sleep (temporarily cease
      * execution) for the specified number of milliseconds, subject to the

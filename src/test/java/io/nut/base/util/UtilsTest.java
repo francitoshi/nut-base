@@ -22,8 +22,12 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
+import java.io.Closeable;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,6 +41,10 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -2688,4 +2696,28 @@ public class UtilsTest
         assertEquals(5, Utils.asBytes(BigInteger.TEN, 5).length);
         assertEquals(8, Utils.asBytes(BigInteger.valueOf(Long.MAX_VALUE), 5).length);
     } 
+
+    /**
+     * Test of firstNonNullOrPoison method, of class Utils.
+     */
+    @Test
+    public void testFirstNonNullOrPoison()
+    {
+        assertEquals(BigDecimal.ONE, Utils.firstNonNullOrPoison(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.TEN));
+        assertNull(Utils.firstNonNullOrPoison(BigDecimal.ZERO, BigDecimal.ZERO));
+        assertNull(Utils.firstNonNullOrPoison(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
+    }
+
+    /**
+     * Test of firstNonNullOrPoison method, of class Utils.
+     */
+    @Test
+    public void testFirstNonNullOrPoison_2args_1()
+    {
+        BigDecimal[] poison = {BigDecimal.ZERO, BigDecimal.ONE};
+        assertEquals(BigDecimal.TEN, Utils.firstNonNullOrPoison(poison, BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.TEN));
+        assertNull(Utils.firstNonNullOrPoison(poison));
+        assertNull(Utils.firstNonNullOrPoison(poison, BigDecimal.ZERO, BigDecimal.ONE));
+    }
+
 }
