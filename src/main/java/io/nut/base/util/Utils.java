@@ -1033,6 +1033,16 @@ public class Utils
         }
         return null;
     }
+    public static <T> T firstNonNullOrPoisonLenient(T poison, T... t)
+    {
+        T ret = firstNonNullOrPoison(poison, t);
+        return ret==null ? firstNonNull(t) : ret;
+    }
+    public static <T> T firstNonNullOrPoisonLenient(T[] poison, T... t)
+    {
+        T ret = firstNonNullOrPoison(poison, t);
+        return ret==null ? firstNonNull(t) : ret;
+    }
 
     /**
      * Causes the currently executing thread to sleep (temporarily cease

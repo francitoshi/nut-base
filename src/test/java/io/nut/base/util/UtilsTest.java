@@ -2701,7 +2701,7 @@ public class UtilsTest
      * Test of firstNonNullOrPoison method, of class Utils.
      */
     @Test
-    public void testFirstNonNullOrPoison()
+    public void testFirstNonNullOrPoison_2args_1()
     {
         assertEquals(BigDecimal.ONE, Utils.firstNonNullOrPoison(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.TEN));
         assertNull(Utils.firstNonNullOrPoison(BigDecimal.ZERO, BigDecimal.ZERO));
@@ -2712,12 +2712,35 @@ public class UtilsTest
      * Test of firstNonNullOrPoison method, of class Utils.
      */
     @Test
-    public void testFirstNonNullOrPoison_2args_1()
+    public void testFirstNonNullOrPoison_2args_2()
     {
         BigDecimal[] poison = {BigDecimal.ZERO, BigDecimal.ONE};
         assertEquals(BigDecimal.TEN, Utils.firstNonNullOrPoison(poison, BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.TEN));
         assertNull(Utils.firstNonNullOrPoison(poison));
         assertNull(Utils.firstNonNullOrPoison(poison, BigDecimal.ZERO, BigDecimal.ONE));
+    }
+    
+    /**
+     * Test of firstNonNullOrPoison method, of class Utils.
+     */
+    @Test
+    public void testFirstNonNullOrPoisonLenient_3args_1()
+    {
+        assertEquals(BigDecimal.ONE, Utils.firstNonNullOrPoisonLenient(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.TEN));
+        assertEquals(BigDecimal.ZERO, Utils.firstNonNullOrPoisonLenient(BigDecimal.ZERO, BigDecimal.ZERO));
+        assertEquals(BigDecimal.ZERO, Utils.firstNonNullOrPoisonLenient(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
+    }
+
+    /**
+     * Test of firstNonNullOrPoison method, of class Utils.
+     */
+    @Test
+    public void testFirstNonNullOrPoisonLenient_3args_2()
+    {
+        BigDecimal[] poison = {BigDecimal.ZERO, BigDecimal.ONE};
+        assertEquals(BigDecimal.TEN, Utils.firstNonNullOrPoisonLenient(poison, BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.TEN));
+        assertNull(Utils.firstNonNullOrPoisonLenient(poison));
+        assertEquals(BigDecimal.ZERO, Utils.firstNonNullOrPoisonLenient(poison, BigDecimal.ZERO, BigDecimal.ONE));
     }
 
 }
