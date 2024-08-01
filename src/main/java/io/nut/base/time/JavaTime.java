@@ -304,10 +304,41 @@ public class JavaTime
     public static LocalDate parseLocalDate(String s, ZoneId defaultZone)
     {
         return parseZonedDateTime(s, defaultZone).withZoneSameInstant(defaultZone).toLocalDate();
-    }    
-    
+    }
+
+    public static LocalDate parseLocalDate(String s)
+    {
+        int errors = 0;
+        DateTimeParseException cause = null;
+        for(Parser item : ParserHolder.INSTANCE.parsers)
+        {
+            if(s.length()<item.min || s.length()>item.max)
+            {
+                continue;
+            }
+            if(!item.matches(s))
+            {
+                continue;
+            }
+            try
+            {
+                if(item.type==Parser.D)
+                {
+                    return LocalDate.parse(s, item.dtf);
+                }
+            }
+            catch (DateTimeParseException ex)
+            {
+                Logger.getLogger(JavaTime.class.getName()).log(Level.SEVERE, s, cause);
+                errors++;
+                cause = ex;
+            }
+        }
+        throw new DateTimeParseException("Can't parse date " + s, s, errors, cause);
+    }
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -317,9 +348,9 @@ public class JavaTime
         other = other.withZoneSameInstant(today.getZone());
         return today.toLocalDate().equals(other.toLocalDate());
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -328,9 +359,9 @@ public class JavaTime
     {
         return today.toLocalDate().equals(other.toLocalDate());
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -339,9 +370,9 @@ public class JavaTime
     {
         return today.equals(other);
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -351,9 +382,9 @@ public class JavaTime
         other = other.withZoneSameInstant(today.getZone());
         return today.minusDays(1).toLocalDate().equals(other.toLocalDate());
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -362,9 +393,9 @@ public class JavaTime
     {
         return today.minusDays(1).toLocalDate().equals(other.toLocalDate());
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -373,9 +404,9 @@ public class JavaTime
     {
         return today.minusDays(1).equals(other);
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be tested
      * @return true if both dates contains the same day
@@ -385,9 +416,9 @@ public class JavaTime
         other = other.withZoneSameInstant(today.getZone());
         return today.plusDays(1).toLocalDate().equals(other.toLocalDate());
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -396,9 +427,9 @@ public class JavaTime
     {
         return today.plusDays(1).toLocalDate().equals(other.toLocalDate());
     }
-    
+
     /**
-     * 
+     *
      * @param today the date to be considered as today
      * @param other the date to be compared with
      * @return true if both dates contains the same day
@@ -408,66 +439,72 @@ public class JavaTime
         return today.plusDays(1).equals(other);
     }
 
-    public static ZonedDateTime atStartOfDay(ZonedDateTime dateTime) 
+    public static ZonedDateTime atStartOfDay(ZonedDateTime dateTime)
     {
         LocalDateTime localDateTime = dateTime.toLocalDateTime();
         LocalDateTime startOfDay = localDateTime.toLocalDate().atStartOfDay();
         return startOfDay.atZone(dateTime.getZone());
     }
-    
-    public static LocalDate atStartOfWeek(LocalDate date) 
+
+    public static LocalDate atStartOfWeek(LocalDate date)
     {
-        return date.minusDays(date.getDayOfWeek().getValue()-1);
+        return date.minusDays(date.getDayOfWeek().getValue() - 1);
     }
-    public static LocalDate atEndOfWeek(LocalDate date) 
+
+    public static LocalDate atEndOfWeek(LocalDate date)
     {
-        return date.plusDays(DayOfWeek.SUNDAY.getValue()-date.getDayOfWeek().getValue());
+        return date.plusDays(DayOfWeek.SUNDAY.getValue() - date.getDayOfWeek().getValue());
     }
-    
-    public static LocalDate atStartOfMonth(LocalDate date) 
+
+    public static LocalDate atStartOfMonth(LocalDate date)
     {
         return date.withDayOfMonth(1);
     }
-    public static LocalDate atEndOfMonth(LocalDate date) 
+
+    public static LocalDate atEndOfMonth(LocalDate date)
     {
         return date.withDayOfMonth(date.lengthOfMonth());
     }
-    
-    public static LocalDate atStartOfYear(LocalDate date) 
+
+    public static LocalDate atStartOfYear(LocalDate date)
     {
         return LocalDate.of(date.getYear(), 1, 1);
     }
-    public static ZonedDateTime atStartOfYear(ZonedDateTime zdt) 
+
+    public static ZonedDateTime atStartOfYear(ZonedDateTime zdt)
     {
         return ZonedDateTime.of(zdt.getYear(), 1, 1, 0, 0, 0, 0, zdt.getZone());
     }
-    public static ZonedDateTime atStartOfYear(int year, ZoneId zone) 
+
+    public static ZonedDateTime atStartOfYear(int year, ZoneId zone)
     {
         return ZonedDateTime.of(year, 1, 1, 0, 0, 0, 0, zone);
     }
-    
-    public static LocalDate atEndOfYear(LocalDate date) 
+
+    public static LocalDate atEndOfYear(LocalDate date)
     {
         return LocalDate.of(date.getYear(), 12, 31);
     }
-    public static ZonedDateTime atEndOfYear(ZonedDateTime zdt) 
+
+    public static ZonedDateTime atEndOfYear(ZonedDateTime zdt)
     {
         return ZonedDateTime.of(zdt.getYear(), 12, 31, 23, 59, 59, 999_999_999, zdt.getZone());
     }
-    public static ZonedDateTime atEndOfYear(int year, ZoneId zone) 
+
+    public static ZonedDateTime atEndOfYear(int year, ZoneId zone)
     {
         return ZonedDateTime.of(year, 12, 31, 23, 59, 59, 999_999_999, zone);
     }
-    
+
     public enum Periodicity
     {
         Daily, Weekly, Monthly, Yearly
     }
-    
-    private static LocalDate next(Periodicity type, LocalDate date, int skip, boolean after) 
+
+    private static LocalDate next(Periodicity type, LocalDate date, int skip, boolean after)
     {
         LocalDate date2;
-        switch(type)
+        switch (type)
         {
             case Daily:
                 return date.plusDays(skip);
@@ -493,31 +530,34 @@ public class JavaTime
     {
         ArrayList<LocalDate> items = new ArrayList<>();
         LocalDate date = startAt;
-        for(int i=1;date.isBefore(endAt) || date.isEqual(endAt);i++)
+        for(int i = 1; date.isBefore(endAt) || date.isEqual(endAt);i++)
         {
             items.add(date);
-            date = next(type, startAt, i*period, after);
+            date = next(type, startAt, i * period, after);
         }
         return items.toArray(new LocalDate[items.size()]);
     }
-    
+
     public static LocalDate[] schedule(Periodicity type, int period, LocalDate startAt, int count, boolean after)
     {
-        return schedule(type, period, startAt, next(type, startAt, period*(count-1), after), after);
+        return schedule(type, period, startAt, next(type, startAt, period * (count - 1), after), after);
     }
-    
+
     public static ZonedDateTime utc(ZonedDateTime zdt)
     {
         return zdt.withZoneSameInstant(UTC);
     }
+
     public static String utcMinutes(ZonedDateTime zdt)
     {
         return utc(zdt).format(YYYY_MM_DD_HH_MM);
     }
+
     public static String utcSeconds(ZonedDateTime zdt)
     {
         return utc(zdt).format(YYYY_MM_DD_HH_MM_SS);
     }
+
     public static String utcMilliSeconds(ZonedDateTime zdt)
     {
         return utc(zdt).format(YYYY_MM_DD_HH_MM_SS_SSS);
@@ -530,18 +570,18 @@ public class JavaTime
         long[] values = new long[]
         {
             duration.toDays(),
-            duration.toHours()%24,
-            duration.toMinutes()%60,
-            duration.getSeconds()%60,
-            duration.toMillis()%1000,
-            duration.toNanos()%1000_000
+            duration.toHours() % 24,
+            duration.toMinutes() % 60,
+            duration.getSeconds() % 60,
+            duration.toMillis() % 1000,
+            duration.toNanos() % 1000_000
         };
         boolean started = false;
         int count = 0;
         StringBuilder sb = new StringBuilder();
         for(int i=0;i<values.length && count<elements;i++)
         {
-            if(started || values[i]!=0 || i+elements>resolution.ordinal())
+            if(started || values[i]!=0 || i + elements>resolution.ordinal())
             {
                 sb.append(values[i]).append(DURATION_UNITS[i]);
                 started = true;
@@ -550,7 +590,7 @@ public class JavaTime
         }
         return sb.toString();
     }
-    
+
     public static long epochSecond()
     {
         return ZonedDateTime.now().toEpochSecond();

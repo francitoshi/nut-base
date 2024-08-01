@@ -160,13 +160,25 @@ public class JavaTimeTest
      * Test of parseLocalDate method, of class JavaTime.
      */
     @Test
-    public void testParseLocalDate()
+    public void testParseLocalDate_String_ZoneId()
     {
         LocalDate madrid  = JavaTime.parseLocalDate("2011-12-03T00:15:30+01:00[Europe/Madrid]", JavaTime.EuropeMadrid);
         LocalDate london = JavaTime.parseLocalDate("2011-12-02T23:15:30+00:00[Europe/London]", JavaTime.EuropeMadrid);
         LocalDate nozone  = JavaTime.parseLocalDate("2011-12-03T00:15:30", JavaTime.EuropeMadrid);
         assertEquals(madrid, london);
         assertEquals(madrid, nozone);
+    }
+    /**
+     * Test of parseLocalDate method, of class JavaTime.
+     */
+    @Test
+    public void testParseLocalDate_String()
+    {
+        LocalDate a  = JavaTime.parseLocalDate("2011-12-03");
+        LocalDate b = JavaTime.parseLocalDate("2011-12-03");
+        LocalDate c  = JavaTime.parseLocalDate("2011-12-03");
+        assertEquals(a, b);
+        assertEquals(a, c);
     }
 
     /**
