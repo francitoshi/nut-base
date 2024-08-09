@@ -22,6 +22,7 @@ package io.nut.base.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -107,6 +108,38 @@ public class RoundRobinTest
         {
             assertEquals(i%data.length, instance.next());
         }
+    }
+    
+    /**
+     * Test of getCounter method, of class RoundRobin.
+     */
+    @Test
+    public void testSet()
+    {
+        Integer[] data = {0,1,2,3,4,5};
+        HashSet<Integer> list = new HashSet<>(Arrays.asList(data));
+        
+        
+        RoundRobin<Integer> instance = RoundRobin.create(list);
+
+        //test roundrobin algorithm
+        HashSet<Integer> test = new HashSet<>();
+        for(int i=0;i<data.length;i++)
+        {
+            test.add(instance.next());
+        }
+        
+        assertEquals(data.length, test.size());
+        
+        //test it works with a copy and not the origin
+        list.clear();
+        test.clear();
+        for(int i=0;i<data.length;i++)
+        {
+            test.add(instance.next());
+        }
+
+        assertEquals(data.length, test.size());
     }
     
 }

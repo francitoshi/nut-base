@@ -22,6 +22,7 @@ package io.nut.base.util;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -39,7 +40,7 @@ public abstract class RoundRobin<E>
         {
             return new RoundRobinNull<>();
         }
-        return new RoundRobinArray<>(e);
+        return new RoundRobinArray<>(e.clone());
     }
     public static <E> RoundRobin<E> create(List<E> list)
     {
@@ -47,7 +48,15 @@ public abstract class RoundRobin<E>
         {
             return new RoundRobinNull<>();
         }
-        return new RoundRobinList<>(list);
+        return new RoundRobinList<>(new ArrayList<>(list));
+    }
+    public static <E> RoundRobin<E> create(Set<E> set)
+    {
+        if(set==null || set.isEmpty())
+        {
+            return new RoundRobinNull<>();
+        }
+        return new RoundRobinList<>(new ArrayList<>(set));
     }
     
     protected abstract E get(int index);
@@ -76,7 +85,7 @@ public abstract class RoundRobin<E>
         
         public RoundRobinArray(E[] e)
         {
-            this.e = e.clone();
+            this.e = e;
         }
         @Override
         protected E get(int index)
@@ -91,7 +100,7 @@ public abstract class RoundRobin<E>
         
         public RoundRobinList(List<E> list)
         {
-            this.list = new ArrayList<>(list);
+            this.list = list;
             this.size = this.list.size();
         }
         @Override
