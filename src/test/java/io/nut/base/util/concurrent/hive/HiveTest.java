@@ -32,9 +32,9 @@ import org.junit.jupiter.api.Test;
  */
 public class HiveTest
 {
-    final Hive hive = new Hive(10);
+    final Hive hive = new Hive();
 
-    final Bee<Integer> a = new Bee<Integer>(hive, 5) 
+    final Bee<Integer> a = new Bee<Integer>(hive, 1) 
     {
         @Override
         public void receive(Integer m)
@@ -49,7 +49,7 @@ public class HiveTest
             }
         }
     };
-    final Bee<String> b = new Bee<String>(hive, 5) 
+    final Bee<String> b = new Bee<String>(hive, 1) 
     {
         @Override
         public void receive(String m)
@@ -66,7 +66,7 @@ public class HiveTest
             
         }
     };
-    final Bee<String> c = new Bee<String>(hive, 5) 
+    final Bee<String> c = new Bee<String>(hive, 1) 
     {
         @Override
         public void receive(String m)
@@ -89,9 +89,14 @@ public class HiveTest
         a.send(2);
         a.send(3);
         
-        a.join();
-        b.join();
-        c.join();
+        a.shutdown();
+        a.awaitTermination(Integer.MAX_VALUE);
+        
+        b.shutdown();
+        b.awaitTermination(Integer.MAX_VALUE);
+        
+        c.shutdown();
+        c.awaitTermination(Integer.MAX_VALUE);
         
         hive.shutdown();
         hive.awaitTermination(100);
@@ -100,5 +105,5 @@ public class HiveTest
         assertTrue(hive.isShutdown(), "Shutdown");
         assertTrue(hive.isTerminated(), "Terminated");
     }
-    
+        
 }

@@ -21,8 +21,7 @@
 package io.nut.base.util.concurrent.hive;
 
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -31,31 +30,32 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hive
 {
-    public final int threads;
-    public final int queueSize;
-    
     private final ExecutorService executorService;
     
-    public Hive(int threads, int queueSize)
+    public Hive(ExecutorService executorService)
     {
-        this.threads = threads;
-        this.queueSize = queueSize;
-        this.executorService = new ThreadPoolExecutor(0, threads, 1234, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(queueSize));
+        this.executorService = executorService;
     }
-    
+    public Hive(int threads, boolean fixed)
+    {
+        this(fixed ? Executors.newFixedThreadPool(threads) : Executors.newWorkStealingPool(threads) );
+    }
     public Hive(int threads)
     {
-        this(threads, Integer.MAX_VALUE);
+        this(Executors.newWorkStealingPool(threads));
     }
-    
     public Hive()
     {
-        this(Runtime.getRuntime().availableProcessors(), Integer.MAX_VALUE);
+        this(Executors.newWorkStealingPool());
     }
-
+    
     void submit(Runnable task)
     {
-        this.executorService.submit(task);
+        this.executorService.execute(task);
+    }
+
+    protected void terminated()
+    {
     }
 
     public void shutdown()

@@ -20,12 +20,9 @@
  */
 package io.nut.base.util.concurrent.hive;
 
-import io.nut.base.util.RoundRobin;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -36,72 +33,143 @@ import java.util.logging.Logger;
  */
 public abstract class Bee<M>
 {
+    private static final int RUNNING    = 0; // Accept new tasks and process queued tasks
+    private static final int SHUTDOWN   = 1; // Don't accept new tasks, but process queued tasks
+    private static final int TERMINATED = 2; // terminated() has completed
+    
+    private final Object lock = new Object();
+    private volatile int status = RUNNING;
+    
     private final Hive hive;
     private final int threads;
-    private final RoundRobin<WorkerBee> rrWorkers;
-    
-    final BlockingQueue<M> queue = new LinkedBlockingQueue<>();
-    final AtomicInteger runningTasks = new AtomicInteger();
-    final ReentrantLock runningLock = new ReentrantLock();
-    final Condition runningCondition = runningLock.newCondition();
+    private final Semaphore semaphore;
+    private final BlockingQueue<M> queue = new LinkedBlockingQueue<>();
     
     public Bee(Hive hive, int threads)
     {
         this.hive = hive;
-        this.threads = threads;
-        WorkerBee[] workers = new WorkerBee[threads];
-        for(int i=0;i<threads;i++)
-        {
-            workers[i] = new WorkerBee<>(this);
-        }
-        this.rrWorkers = RoundRobin.create(workers);
+        this.threads = threads!=0 ? threads : Runtime.getRuntime().availableProcessors();
+        this.semaphore = new Semaphore(this.threads);
+    }
+    public Bee(Hive hive)
+    {
+        this(hive,0);
     }
     
     public void send(M message) throws InterruptedException
     {
-        this.queue.put(message);
-        if(this.runningTasks.get()<this.threads)
+        if(this.status==RUNNING)
         {
-            for(int i=0;i<this.threads;i++)
-            {
-                WorkerBee wb = rrWorkers.next();
-                if(!wb.isRunning())
-                {
-                    this.hive.submit(wb);
-                    wb.touchPendingData();
-                    break;
-                }
-            }
+            this.queue.put(message);
+            this.hive.submit(receiveTask);
         }
     }
 
-    public abstract void receive(M m);
- 
-    public boolean isRunning()
+    protected abstract void receive(M m);
+    protected void terminate()
     {
-        return runningTasks.get()>0;
     }
     
-    public boolean join()
+    private final Runnable receiveTask = new Runnable()
     {
-        runningLock.lock();
+        @Override
+        public void run()
+        {
+            if(!semaphore.tryAcquire())
+                return;
+            try
+            {
+                M m;
+                while ( (m = queue.poll()) != null)
+                {
+                    receive(m);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
+            }
+            finally
+            {
+                semaphore.release();
+                synchronized(lock)
+                {
+                    lock.notifyAll();
+                }
+            }
+        }
+    };
+    private final Runnable shutdownTask = new Runnable()
+    {
+        @Override
+        public void run()
+        {
+            semaphore.acquireUninterruptibly(threads);
+            try
+            {
+                synchronized(lock)
+                {
+                    while(status==SHUTDOWN)
+                    {
+                        if(queue.isEmpty())
+                        {
+                            status=TERMINATED;
+                            terminate();
+                            break;
+                        }
+                        lock.wait();
+                    }
+                    lock.notifyAll();
+                }
+            }
+            catch (InterruptedException ex)
+            {
+                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
+            }            
+            finally
+            {
+                semaphore.release(threads);
+            }
+        }
+    };
+        
+    public void shutdown()
+    {
+        synchronized(lock)
+        {
+            if(this.status==RUNNING)
+            {
+                this.status = SHUTDOWN; 
+                hive.submit(shutdownTask);
+            }
+        }
+    }
+    public boolean isShutdown()
+    {
+        return this.status!=RUNNING;
+    }
+    public boolean isTerminated()
+    {
+        return this.status==TERMINATED;
+    }
+    
+    public boolean awaitTermination(int millis)
+    {
         try
         {
-            while(runningTasks.get()>0 || !queue.isEmpty())
+            synchronized(lock)
             {
-                runningCondition.await();
+                while(!isTerminated())
+                {
+                    lock.wait(millis);
+                }
+                return true;
             }
-            return true;
         }
         catch (InterruptedException ex)
         {
             Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
             return false;
         }        
-        finally
-        {
-            runningLock.unlock();
-        }
     }
-    
 }
