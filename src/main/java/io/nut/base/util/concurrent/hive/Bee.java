@@ -23,6 +23,7 @@ package io.nut.base.util.concurrent.hive;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.SynchronousQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -43,17 +44,42 @@ public abstract class Bee<M>
     private final Hive hive;
     private final int threads;
     private final Semaphore semaphore;
-    private final BlockingQueue<M> queue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<M> queue;
     
-    public Bee(Hive hive, int threads)
+    /**
+     * Initializes a Bee system with the specified hive, thread pool size, and queue size.
+     *
+     * @param hive      the hive that manages and coordinates the Bee instances.
+     * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
+     *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
+     * @param queueSize the maximum number of messages waiting to be processed. If set to zero, threads will be used.
+     */    
+    public Bee(Hive hive, int threads, int queueSize)
     {
         this.hive = hive;
         this.threads = threads!=0 ? threads : Runtime.getRuntime().availableProcessors();
+        this.queue = queueSize!=0 ? new LinkedBlockingQueue<>(queueSize) : new LinkedBlockingQueue<>(this.threads);
         this.semaphore = new Semaphore(this.threads);
     }
+    /**
+     * Initializes a Bee system with the specified hive and thread pool size. The queue size will be the number of threads.
+     *
+     * @param hive      the hive that manages and coordinates the Bee instances.
+     * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
+     *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
+     */
+    public Bee(Hive hive, int threads)
+    {
+        this(hive, threads, 0);
+    }
+    /**
+     * Initializes a Bee system with the specified hive. The number of threads and queue size will be the number of processors.
+     *
+     * @param hive      the hive that manages and coordinates the Bee instances.
+     */
     public Bee(Hive hive)
     {
-        this(hive,0);
+        this(hive,0, Short.MAX_VALUE);
     }
     
     public void send(M message) throws InterruptedException

@@ -33,15 +33,44 @@ import org.junit.jupiter.api.Test;
 public class HiveTest
 {
     final Hive hive = new Hive();
-
-    final Bee<Integer> a = new Bee<Integer>(hive, 1) 
+    final Bee<Byte> beeByte = new Bee<Byte>(hive, 1) 
+    {
+        @Override
+        public void receive(Byte m)
+        {
+            try
+            {
+                beeShort.send(m.shortValue());
+            }
+            catch (InterruptedException ex)
+            {
+                Logger.getLogger(HiveTest.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    };
+    final Bee<Short> beeShort = new Bee<Short>(hive, 1) 
+    {
+        @Override
+        public void receive(Short m)
+        {
+            try
+            {
+                beeInteger.send(m.intValue());
+            }
+            catch (InterruptedException ex)
+            {
+                Logger.getLogger(HiveTest.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    };
+    final Bee<Integer> beeInteger = new Bee<Integer>(hive, 1) 
     {
         @Override
         public void receive(Integer m)
         {
             try
             {
-                b.send(m.toString());
+                beeLong.send(m.longValue());
             }
             catch (InterruptedException ex)
             {
@@ -49,24 +78,23 @@ public class HiveTest
             }
         }
     };
-    final Bee<String> b = new Bee<String>(hive, 1) 
+    final Bee<Long> beeLong = new Bee<Long>(hive, 1) 
     {
         @Override
-        public void receive(String m)
+        public void receive(Long m)
         {
             try
             {
-                c.send(m);
-                c.send(",");
+                beeString.send(m.toString());
+                beeString.send(",");
             }
             catch (InterruptedException ex)
             {
                 Logger.getLogger(HiveTest.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
         }
     };
-    final Bee<String> c = new Bee<String>(hive, 1) 
+    final Bee<String> beeString = new Bee<String>(hive, 1) 
     {
         @Override
         public void receive(String m)
@@ -82,26 +110,31 @@ public class HiveTest
      */
     @Test
     public void testSomeMethod1() throws InterruptedException
-    {
+    {   
+        for(int i=0;i<10;i++)
+        {
+            beeByte.send((byte)i);
+        }
         
-        a.send(0);
-        a.send(1);
-        a.send(2);
-        a.send(3);
+        beeByte.shutdown();
+        beeByte.awaitTermination(Integer.MAX_VALUE);
         
-        a.shutdown();
-        a.awaitTermination(Integer.MAX_VALUE);
+        beeShort.shutdown();
+        beeShort.awaitTermination(Integer.MAX_VALUE);
         
-        b.shutdown();
-        b.awaitTermination(Integer.MAX_VALUE);
+        beeInteger.shutdown();
+        beeInteger.awaitTermination(Integer.MAX_VALUE);
         
-        c.shutdown();
-        c.awaitTermination(Integer.MAX_VALUE);
+        beeLong.shutdown();
+        beeLong.awaitTermination(Integer.MAX_VALUE);
+        
+        beeString.shutdown();
+        beeString.awaitTermination(Integer.MAX_VALUE);
         
         hive.shutdown();
         hive.awaitTermination(100);
         
-        assertEquals("0,1,2,3,", s);
+        assertEquals("0,1,2,3,4,5,6,7,8,9,", s);
         assertTrue(hive.isShutdown(), "Shutdown");
         assertTrue(hive.isTerminated(), "Terminated");
     }

@@ -46,7 +46,7 @@ public class QueueBeeTest
     {
         Hive hive = new Hive();
         
-        QueueBee<Integer,String> instance = new QueueBee<Integer,String>(hive,0) 
+        QueueBee<Integer,String> instance = new QueueBee<Integer,String>(hive,1) 
         {
             @Override
             protected void receive(Integer m)
@@ -125,7 +125,7 @@ public class QueueBeeTest
     @Test
     public void testSomeMethod2() throws InterruptedException
     {
-        final int waitMillis = 1000;
+        final int waitMillis = 400;
         final int messages = 128;
         final int beeThreads = 64;
         Hive hive = new Hive(messages);
