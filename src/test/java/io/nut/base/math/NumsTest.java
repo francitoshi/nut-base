@@ -20,9 +20,47 @@
  */
 package io.nut.base.math;
 
-
-import static io.nut.base.math.Nums.Big.Dec;
-import static io.nut.base.math.Nums.Big.Int;
+import static io.nut.base.math.Nums.BIG_DEC_ATTO;
+import static io.nut.base.math.Nums.BIG_DEC_EXA;
+import static io.nut.base.math.Nums.BIG_DEC_EXBI;
+import static io.nut.base.math.Nums.BIG_DEC_FEMTO;
+import static io.nut.base.math.Nums.BIG_DEC_GIBI;
+import static io.nut.base.math.Nums.BIG_DEC_GIGA;
+import static io.nut.base.math.Nums.BIG_DEC_KIBI;
+import static io.nut.base.math.Nums.BIG_DEC_KILO;
+import static io.nut.base.math.Nums.BIG_DEC_MEBI;
+import static io.nut.base.math.Nums.BIG_DEC_MEGA;
+import static io.nut.base.math.Nums.BIG_DEC_MICRO;
+import static io.nut.base.math.Nums.BIG_DEC_MILI;
+import static io.nut.base.math.Nums.BIG_DEC_NANO;
+import static io.nut.base.math.Nums.BIG_DEC_PEBI;
+import static io.nut.base.math.Nums.BIG_DEC_PETA;
+import static io.nut.base.math.Nums.BIG_DEC_PICO;
+import static io.nut.base.math.Nums.BIG_DEC_TEBI;
+import static io.nut.base.math.Nums.BIG_DEC_TERA;
+import static io.nut.base.math.Nums.BIG_DEC_YOBI;
+import static io.nut.base.math.Nums.BIG_DEC_YOCTO;
+import static io.nut.base.math.Nums.BIG_DEC_YOTTA;
+import static io.nut.base.math.Nums.BIG_DEC_ZEBI;
+import static io.nut.base.math.Nums.BIG_DEC_ZEPTO;
+import static io.nut.base.math.Nums.BIG_DEC_ZETTA;
+import static io.nut.base.math.Nums.BIG_INT_EXA;
+import static io.nut.base.math.Nums.BIG_INT_EXBI;
+import static io.nut.base.math.Nums.BIG_INT_GIBI;
+import static io.nut.base.math.Nums.BIG_INT_GIGA;
+import static io.nut.base.math.Nums.BIG_INT_KIBI;
+import static io.nut.base.math.Nums.BIG_INT_KILO;
+import static io.nut.base.math.Nums.BIG_INT_MEBI;
+import static io.nut.base.math.Nums.BIG_INT_MEGA;
+import static io.nut.base.math.Nums.BIG_INT_PEBI;
+import static io.nut.base.math.Nums.BIG_INT_PETA;
+import static io.nut.base.math.Nums.BIG_INT_TEBI;
+import static io.nut.base.math.Nums.BIG_INT_TERA;
+import static io.nut.base.math.Nums.BIG_INT_TWO;
+import static io.nut.base.math.Nums.BIG_INT_YOBI;
+import static io.nut.base.math.Nums.BIG_INT_YOTTA;
+import static io.nut.base.math.Nums.BIG_INT_ZEBI;
+import static io.nut.base.math.Nums.BIG_INT_ZETTA;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -796,9 +834,9 @@ public class NumsTest
     @Test
     public void testSomeMethod()
     {
-        BigDecimal[] pow01 = {Dec.MILI, Dec.MICRO, Dec.NANO, Dec.PICO, Dec.FEMTO, Dec.ATTO, Dec.ZEPTO, Dec.YOCTO};	
-        BigDecimal[] pow10 = {Dec.KILO, Dec.MEGA, Dec.GIGA, Dec.TERA, Dec.PETA, Dec.EXA, Dec.ZETTA, Dec.YOTTA};	
-        BigDecimal[] pow2 = {Dec.KIBI, Dec.MEBI, Dec.GIBI, Dec.TEBI, Dec.PEBI, Dec.EXBI, Dec.ZEBI, Dec.YOBI};
+        BigDecimal[] pow01 = {BIG_DEC_MILI, BIG_DEC_MICRO, BIG_DEC_NANO, BIG_DEC_PICO, BIG_DEC_FEMTO, BIG_DEC_ATTO, BIG_DEC_ZEPTO, BIG_DEC_YOCTO};	
+        BigDecimal[] pow10 = {BIG_DEC_KILO, BIG_DEC_MEGA, BIG_DEC_GIGA, BIG_DEC_TERA, BIG_DEC_PETA, BIG_DEC_EXA, BIG_DEC_ZETTA, BIG_DEC_YOTTA};	
+        BigDecimal[] pow2 = {BIG_DEC_KIBI, BIG_DEC_MEBI, BIG_DEC_GIBI, BIG_DEC_TEBI, BIG_DEC_PEBI, BIG_DEC_EXBI, BIG_DEC_ZEBI, BIG_DEC_YOBI};
         
         BigDecimal k10 = new BigDecimal(1000);
         BigDecimal k2 = new BigDecimal(1024);
@@ -886,8 +924,8 @@ public class NumsTest
     @Test
     public void testSomeMethod_BigInteger()
     {
-        BigInteger[] pow10 = {Int.KILO, Int.MEGA, Int.GIGA, Int.TERA, Int.PETA, Int.EXA, Int.ZETTA, Int.YOTTA};	
-        BigInteger[] pow2 = {Int.KIBI, Int.MEBI, Int.GIBI, Int.TEBI, Int.PEBI, Int.EXBI, Int.ZEBI, Int.YOBI};
+        BigInteger[] pow10 = {BIG_INT_KILO, BIG_INT_MEGA, BIG_INT_GIGA, BIG_INT_TERA, BIG_INT_PETA, BIG_INT_EXA, BIG_INT_ZETTA, BIG_INT_YOTTA};	
+        BigInteger[] pow2 = {BIG_INT_KIBI, BIG_INT_MEBI, BIG_INT_GIBI, BIG_INT_TEBI, BIG_INT_PEBI, BIG_INT_EXBI, BIG_INT_ZEBI, BIG_INT_YOBI};
         
         BigInteger k10 = BigInteger.valueOf(1000);
         BigInteger k2 = BigInteger.valueOf(1024);
@@ -1052,7 +1090,7 @@ public class NumsTest
     {
         BigInteger p = Nums.safePrime(rnd, 512);
         assertTrue(p.isProbablePrime(100));
-        BigInteger q = p.subtract(BigInteger.ONE).divide(Nums.Big.Int.TWO);
+        BigInteger q = p.subtract(BigInteger.ONE).divide(BIG_INT_TWO);
         assertTrue(q.isProbablePrime(100));
         
         BigInteger g = Nums.safePrime(rnd, 512);

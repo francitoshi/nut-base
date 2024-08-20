@@ -37,7 +37,7 @@ import java.util.Objects;
  * @author franci
  */
 public abstract class Curve
-{    
+{        
     static BigInteger biHex(String hex)
     {
         return new BigInteger(hex.replace(" ", ""), 16);
@@ -90,7 +90,7 @@ public abstract class Curve
 
     public boolean isSquare(BigInteger x)
     {
-        return x.modPow(this.p.subtract(BigInteger.ONE).mod(Nums.Big.Int.TWO), this.p).longValue() == 1L;
+        return x.modPow(this.p.subtract(BigInteger.ONE).mod(Nums.BIG_INT_TWO), this.p).longValue() == 1L;
     }
     
     public final Point liftX(byte[] x)

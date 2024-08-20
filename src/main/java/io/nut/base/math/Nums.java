@@ -41,77 +41,69 @@ import java.util.logging.Logger;
  */
 public class Nums
 {
-    public static abstract class Big
-    {
-        public static abstract class Int
-        {
-            public static final BigInteger HECTO = BigInteger.valueOf(100);
+    public static final BigInteger BIG_INT_HECTO = BigInteger.valueOf(100);
 
-            public static final BigInteger KILO = BigInteger.valueOf(1000);
-            public static final BigInteger MEGA = BigInteger.valueOf(1000_000);	
-            public static final BigInteger GIGA = BigInteger.valueOf(1000_000_000);
-            public static final BigInteger TERA = BigInteger.valueOf(1000_000_000_000L);
-            public static final BigInteger PETA = BigInteger.valueOf(1000_000_000_000_000L);
-            public static final BigInteger EXA  = BigInteger.valueOf(1000_000_000_000_000_000L);
-            public static final BigInteger ZETTA = EXA.multiply(KILO);
-            public static final BigInteger YOTTA = ZETTA.multiply(KILO);	
+    public static final BigInteger BIG_INT_KILO = BigInteger.valueOf(1000);
+    public static final BigInteger BIG_INT_MEGA = BigInteger.valueOf(1000_000);	
+    public static final BigInteger BIG_INT_GIGA = BigInteger.valueOf(1000_000_000);
+    public static final BigInteger BIG_INT_TERA = BigInteger.valueOf(1000_000_000_000L);
+    public static final BigInteger BIG_INT_PETA = BigInteger.valueOf(1000_000_000_000_000L);
+    public static final BigInteger BIG_INT_EXA  = BigInteger.valueOf(1000_000_000_000_000_000L);
+    public static final BigInteger BIG_INT_ZETTA = BIG_INT_EXA.multiply(BIG_INT_KILO);
+    public static final BigInteger BIG_INT_YOTTA = BIG_INT_ZETTA.multiply(BIG_INT_KILO);	
 
-            public static final BigInteger KIBI = BigInteger.valueOf(1024);
-            public static final BigInteger MEBI = BigInteger.valueOf(1024*1024);
-            public static final BigInteger GIBI = BigInteger.valueOf(1024*1024*1024);
-            public static final BigInteger TEBI = BigInteger.valueOf(1024L*1024L*1024L*1024L);
-            public static final BigInteger PEBI = BigInteger.valueOf(1024L*1024L*1024L*1024L*1024L);
-            public static final BigInteger EXBI = BigInteger.valueOf(1024L*1024L*1024L*1024L*1024L*1024L);
-            public static final BigInteger ZEBI = EXBI.multiply(KIBI);
-            public static final BigInteger YOBI = ZEBI.multiply(KIBI);
+    public static final BigInteger BIG_INT_KIBI = BigInteger.valueOf(1024);
+    public static final BigInteger BIG_INT_MEBI = BigInteger.valueOf(1024*1024);
+    public static final BigInteger BIG_INT_GIBI = BigInteger.valueOf(1024*1024*1024);
+    public static final BigInteger BIG_INT_TEBI = BigInteger.valueOf(1024L*1024L*1024L*1024L);
+    public static final BigInteger BIG_INT_PEBI = BigInteger.valueOf(1024L*1024L*1024L*1024L*1024L);
+    public static final BigInteger BIG_INT_EXBI = BigInteger.valueOf(1024L*1024L*1024L*1024L*1024L*1024L);
+    public static final BigInteger BIG_INT_ZEBI = BIG_INT_EXBI.multiply(BIG_INT_KIBI);
+    public static final BigInteger BIG_INT_YOBI = BIG_INT_ZEBI.multiply(BIG_INT_KIBI);
 
-            public static final BigInteger TWO = BigInteger.valueOf(2);
-            public static final BigInteger HUNDRED = HECTO;
-            public static final BigInteger THOUSAND = KILO;
+    public static final BigInteger BIG_INT_TWO = BigInteger.valueOf(2);
+    public static final BigInteger HUNDRED = BIG_INT_HECTO;
+    public static final BigInteger THOUSAND = BIG_INT_KILO;
 
-        }
-        public static abstract class Dec
-        {
-            public static final BigDecimal DECI  = new BigDecimal("0.1");
-            public static final BigDecimal CENTI = new BigDecimal("0.01");	
-            public static final BigDecimal MILI  = new BigDecimal("0.001");
-            public static final BigDecimal MICRO = new BigDecimal("0.000001");
-            public static final BigDecimal NANO  = new BigDecimal("0.000000001");
-            public static final BigDecimal PICO  = new BigDecimal("0.000000000001");
-            public static final BigDecimal FEMTO = new BigDecimal("0.000000000000001");
-            public static final BigDecimal ATTO  = new BigDecimal("0.000000000000000001");
-            public static final BigDecimal ZEPTO = new BigDecimal("0.000000000000000000001");
-            public static final BigDecimal YOCTO = new BigDecimal("0.000000000000000000000001");
+    public static final BigDecimal BIG_DEC_DECI  = new BigDecimal("0.1");
+    public static final BigDecimal BIG_DEC_CENTI = new BigDecimal("0.01");	
+    public static final BigDecimal BIG_DEC_MILI  = new BigDecimal("0.001");
+    public static final BigDecimal BIG_DEC_MICRO = new BigDecimal("0.000001");
+    public static final BigDecimal BIG_DEC_NANO  = new BigDecimal("0.000000001");
+    public static final BigDecimal BIG_DEC_PICO  = new BigDecimal("0.000000000001");
+    public static final BigDecimal BIG_DEC_FEMTO = new BigDecimal("0.000000000000001");
+    public static final BigDecimal BIG_DEC_ATTO  = new BigDecimal("0.000000000000000001");
+    public static final BigDecimal BIG_DEC_ZEPTO = new BigDecimal("0.000000000000000000001");
+    public static final BigDecimal BIG_DEC_YOCTO = new BigDecimal("0.000000000000000000000001");
 
-            public static final BigDecimal HECTO = new BigDecimal(100);
+    public static final BigDecimal BIG_DEC_HECTO = new BigDecimal(100);
 
-            public static final BigDecimal KILO = new BigDecimal(1000);
-            public static final BigDecimal MEGA = new BigDecimal(1000_000);	
-            public static final BigDecimal GIGA = new BigDecimal(1000_000_000);
-            public static final BigDecimal TERA = new BigDecimal(1000_000_000_000L);
-            public static final BigDecimal PETA = new BigDecimal(1000_000_000_000_000L);
-            public static final BigDecimal EXA  = new BigDecimal(1000_000_000_000_000_000L);
-            public static final BigDecimal ZETTA = EXA.multiply(KILO);
-            public static final BigDecimal YOTTA = ZETTA.multiply(KILO);	
+    public static final BigDecimal BIG_DEC_KILO = new BigDecimal(1000);
+    public static final BigDecimal BIG_DEC_MEGA = new BigDecimal(1000_000);	
+    public static final BigDecimal BIG_DEC_GIGA = new BigDecimal(1000_000_000);
+    public static final BigDecimal BIG_DEC_TERA = new BigDecimal(1000_000_000_000L);
+    public static final BigDecimal BIG_DEC_PETA = new BigDecimal(1000_000_000_000_000L);
+    public static final BigDecimal BIG_DEC_EXA  = new BigDecimal(1000_000_000_000_000_000L);
+    public static final BigDecimal BIG_DEC_ZETTA = BIG_DEC_EXA.multiply(BIG_DEC_KILO);
+    public static final BigDecimal BIG_DEC_YOTTA = BIG_DEC_ZETTA.multiply(BIG_DEC_KILO);	
 
-            public static final BigDecimal KIBI = new BigDecimal(1024);
-            public static final BigDecimal MEBI = new BigDecimal(1024*1024);
-            public static final BigDecimal GIBI = new BigDecimal(1024*1024*1024);
-            public static final BigDecimal TEBI = new BigDecimal(1024L*1024L*1024L*1024L);
-            public static final BigDecimal PEBI = new BigDecimal(1024L*1024L*1024L*1024L*1024L);
-            public static final BigDecimal EXBI = new BigDecimal(1024L*1024L*1024L*1024L*1024L*1024L);
-            public static final BigDecimal ZEBI = EXBI.multiply(KIBI);
-            public static final BigDecimal YOBI = ZEBI.multiply(KIBI);
+    public static final BigDecimal BIG_DEC_KIBI = new BigDecimal(1024);
+    public static final BigDecimal BIG_DEC_MEBI = new BigDecimal(1024*1024);
+    public static final BigDecimal BIG_DEC_GIBI = new BigDecimal(1024*1024*1024);
+    public static final BigDecimal BIG_DEC_TEBI = new BigDecimal(1024L*1024L*1024L*1024L);
+    public static final BigDecimal BIG_DEC_PEBI = new BigDecimal(1024L*1024L*1024L*1024L*1024L);
+    public static final BigDecimal BIG_DEC_EXBI = new BigDecimal(1024L*1024L*1024L*1024L*1024L*1024L);
+    public static final BigDecimal BIG_DEC_ZEBI = BIG_DEC_EXBI.multiply(BIG_DEC_KIBI);
+    public static final BigDecimal BIG_DEC_YOBI = BIG_DEC_ZEBI.multiply(BIG_DEC_KIBI);
 
-            public static final BigDecimal HALF = new BigDecimal("0.5");
-            public static final BigDecimal TWO = BigDecimal.valueOf(2);
-            public static final BigDecimal FOUR = BigDecimal.valueOf(4);
-            public static final BigDecimal HUNDRED = HECTO;
-            public static final BigDecimal THOUSAND = KILO;
+    public static final BigDecimal BIG_DEC_HALF = new BigDecimal("0.5");
+    public static final BigDecimal BIG_DEC_TWO = BigDecimal.valueOf(2);
+    public static final BigDecimal BIG_DEC_FOUR = BigDecimal.valueOf(4);
+    public static final BigDecimal BIG_DEC_HUNDRED = BIG_DEC_HECTO;
+    public static final BigDecimal BIG_DEC_THOUSAND = BIG_DEC_KILO;
 
-            public static final BigDecimal GOLDEN_RATIO = new BigDecimal("1.618033988749894848204586834365638117720309179805762862135");
-        }
-    }
+    public static final BigDecimal BIG_DEC_GOLDEN_RATIO = new BigDecimal("1.618033988749894848204586834365638117720309179805762862135");
+    
     
     public static final MathContext MC2HD = new MathContext(2, RoundingMode.HALF_DOWN);
     public static final MathContext MC2HE = new MathContext(2, RoundingMode.HALF_EVEN);
@@ -1876,7 +1868,7 @@ public class Nums
         for (int i = 0; true; i++)
         {
             BigInteger q = BigInteger.probablePrime(bitLength - 1, random);
-            BigInteger p = q.multiply(Nums.Big.Int.TWO).add(BigInteger.ONE);
+            BigInteger p = q.multiply(BIG_INT_TWO).add(BigInteger.ONE);
             if (p.isProbablePrime(certainty))
             {
                 Logger.getLogger(Nums.class.getName()).log(Level.CONFIG, "BigInteger.safePrime (loops={})",new Object[]{i});
