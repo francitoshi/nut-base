@@ -1148,6 +1148,10 @@ public class Utils
     {
         return join(src, next);
     }
+    public static <E> E[] cat(E[] src, E... next)
+    {
+        return join(src, next);
+    }
     
     public static byte[] join(byte[]... src)
     {
@@ -1330,7 +1334,7 @@ public class Utils
         }
         return dst;
     }
-
+    @Deprecated
     public static <E> E[] join(Class<E> cls, E[]... src)
     {
         int count = 0;
@@ -1354,6 +1358,43 @@ public class Utils
         return dst;
     }
 
+    public static <E> E[] join(E[] ... src)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        int size = 0;
+        E[] dst = null;
+        for (E[] item : src)
+        {
+            if (item != null)
+            {
+                size += item.length;
+                if (dst==null)
+                {
+                    dst = Arrays.copyOf(item, 0);
+                }
+            }
+        }
+        if(dst ==null)
+        {
+            return null;
+        }
+        dst = Arrays.copyOf(dst,size);
+        for (int i = 0, w = 0; i < src.length; i++)
+        {
+            if (src[i] != null)
+            {
+                for (E item : src[i])
+                {
+                    dst[w++] = item;
+                }
+            }
+        }
+        return dst;
+    }
+    
     public static String join(String... src)
     {
         StringBuilder dst = new StringBuilder();

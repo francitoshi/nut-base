@@ -800,6 +800,29 @@ public class UtilsTest
         String[] result = Utils.join(String.class, src);
         assertArrayEquals(exp, result);
     }
+    /**
+     * Test of join method, of class Utils.
+     */
+    @Test
+    public void testJoin_GenericType2()
+    {
+        String[] src0 = {"1"};
+        String[] src1 = {"1","2"};
+        String[] src2 = {"1","2","3"};
+        String[] src3 = {};
+        String[] src4 = null;
+        String[] src5 = {"1","2","3","4"};
+        
+        String[][] src = {src0, src1, src2, src3, src4, src5};
+        
+        String[] exp = {"1","1","2","1","2","3","1","2","3","4"};
+        
+        String[] result1 = Utils.join(src0,src1,src2,src3,src4,src5);
+        String[] result2 = Utils.join(src);
+        
+        assertArrayEquals(exp, result1);
+        assertArrayEquals(exp, result2);
+    }
 
     /**
      * Test of join method, of class Utils.
