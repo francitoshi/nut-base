@@ -197,4 +197,12 @@ public abstract class Bee<M>
             return false;
         }        
     }
+    public static void shutdownAndAwaitTermination(Bee<?> ...bees)
+    {
+        for(Bee<?> item : bees)
+        {
+            item.shutdown();
+            item.awaitTermination(Integer.MAX_VALUE);
+        }
+    }
 }

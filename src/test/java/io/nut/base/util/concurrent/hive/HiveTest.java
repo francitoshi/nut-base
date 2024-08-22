@@ -116,23 +116,7 @@ public class HiveTest
             beeByte.send((byte)i);
         }
         
-        beeByte.shutdown();
-        beeByte.awaitTermination(Integer.MAX_VALUE);
-        
-        beeShort.shutdown();
-        beeShort.awaitTermination(Integer.MAX_VALUE);
-        
-        beeInteger.shutdown();
-        beeInteger.awaitTermination(Integer.MAX_VALUE);
-        
-        beeLong.shutdown();
-        beeLong.awaitTermination(Integer.MAX_VALUE);
-        
-        beeString.shutdown();
-        beeString.awaitTermination(Integer.MAX_VALUE);
-        
-        hive.shutdown();
-        hive.awaitTermination(100);
+        hive.shutdownAndAwaitTermination(beeByte, beeShort, beeInteger, beeLong, beeString);
         
         assertEquals("0,1,2,3,4,5,6,7,8,9,", s);
         assertTrue(hive.isShutdown(), "Shutdown");

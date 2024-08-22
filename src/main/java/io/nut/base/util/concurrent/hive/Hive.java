@@ -20,9 +20,11 @@
  */
 package io.nut.base.util.concurrent.hive;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -30,28 +32,25 @@ import java.util.concurrent.TimeUnit;
  */
 public class Hive
 {
-    private final ExecutorService executorService;
+    private final ThreadPoolExecutor threadPoolExecutor;
     
-    public Hive(ExecutorService executorService)
+    public Hive(int coreThreads, int maxThreads, int keepAliveMillis)
     {
-        this.executorService = executorService;
-    }
-    public Hive(int threads, boolean fixed)
-    {
-        this(fixed ? Executors.newFixedThreadPool(threads) : Executors.newWorkStealingPool(threads) );
+        this.threadPoolExecutor = new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveMillis, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
     }
     public Hive(int threads)
     {
-        this(Executors.newWorkStealingPool(threads));
+        this( threads, threads, 10_000);
     }
+
     public Hive()
     {
-        this(Executors.newWorkStealingPool());
+        this( Runtime.getRuntime().availableProcessors());
     }
     
     void submit(Runnable task)
     {
-        this.executorService.execute(task);
+        this.threadPoolExecutor.execute(task);
     }
 
     protected void terminated()
@@ -60,22 +59,46 @@ public class Hive
 
     public void shutdown()
     {
-        this.executorService.shutdown();
+        this.threadPoolExecutor.shutdown();
     }
 
     public boolean isShutdown()
     {
-        return executorService.isShutdown();
+        return threadPoolExecutor.isShutdown();
     }
 
     public boolean isTerminated()
     {
-        return executorService.isTerminated();
+        return threadPoolExecutor.isTerminated();
     }
 
     public boolean awaitTermination(int millis) throws InterruptedException
     {
-        return executorService.awaitTermination(millis, TimeUnit.MILLISECONDS);
+        return threadPoolExecutor.awaitTermination(millis, TimeUnit.MILLISECONDS);
+    }
+    
+    public void shutdownAndAwaitTermination(Bee<?> ...bees)
+    {
+        try
+        {
+            Bee.shutdownAndAwaitTermination(bees);
+            this.shutdown();
+            this.awaitTermination(Integer.MAX_VALUE);
+        }
+        catch (InterruptedException ex)
+        {
+            Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void setCorePoolSize(int i)
+    {
+        threadPoolExecutor.setCorePoolSize(i);
+    }
+
+    public void setMaximumPoolSize(int i)
+    {
+        threadPoolExecutor.setMaximumPoolSize(i);
     }
     
 }
