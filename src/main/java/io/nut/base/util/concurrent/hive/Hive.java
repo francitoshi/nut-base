@@ -40,7 +40,7 @@ public class Hive
     }
     public Hive(int threads)
     {
-        this( threads, threads, 10_000);
+        this( threads, threads, 60_000);
     }
 
     public Hive()
