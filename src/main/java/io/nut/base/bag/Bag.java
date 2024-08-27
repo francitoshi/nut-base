@@ -21,6 +21,7 @@
 package io.nut.base.bag;
 
 import io.nut.base.equalizer.Equalizer;
+import java.util.Comparator;
 
 
 /**
@@ -62,6 +63,15 @@ public abstract class Bag<E>
     public static <T> Bag<T> create(Equalizer<T> equalizer)
     {
         return new BagEqualizer<>(equalizer, false);
+    }
+    
+    public static <T> Bag<T> create(Comparator<T> comparator, boolean skipSame)
+    {
+        return new BagBase<>(comparator, skipSame);
+    }
+    public static <T> Bag<T> create(Comparator<T> comparator)
+    {
+        return new BagBase<>(comparator, false);
     }
     
     public static <T> Bag<T> synchronizedBag(Bag<T> bag)

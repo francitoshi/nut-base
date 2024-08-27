@@ -20,7 +20,6 @@
  */
 package io.nut.base.bag;
 
-import io.nut.base.util.Utils;
 import java.util.Arrays;
 import java.util.Comparator;
 import org.junit.jupiter.api.AfterAll;
@@ -34,7 +33,7 @@ import org.junit.jupiter.api.BeforeEach;
  *
  * @author franci
  */
-public class BagBaseTest
+public class BagComparatorTest
 {
 
     @BeforeAll
@@ -56,6 +55,7 @@ public class BagBaseTest
     public void tearDown() throws Exception
     {
     }
+    static final Comparator<String> CMP = Comparator.reverseOrder();
     /**
      * Test of add method, of class Bag.
      */
@@ -63,7 +63,7 @@ public class BagBaseTest
     public void testAdd()
     {
         {
-            Bag<String> instance = Bag.create();
+            Bag<String> instance = Bag.create(CMP);
 
             assertTrue(instance.add("a"));
             assertTrue(instance.add("a"));
@@ -72,7 +72,7 @@ public class BagBaseTest
         {
             String a = "a";
             String b = "b";
-            Bag<String> instance = Bag.create(true);
+            Bag<String> instance = Bag.create(CMP, true);
 
             assertTrue(instance.add(a));
             assertFalse(instance.add(a));
@@ -86,7 +86,7 @@ public class BagBaseTest
     @Test
     public void testSize()
     {
-        Bag<String> instance = Bag.create();
+        Bag<String> instance = Bag.create(CMP);
         
         assertEquals(0, instance.size());
         instance.add("a");
@@ -103,7 +103,7 @@ public class BagBaseTest
     @Test
     public void testIsEmpty()
     {
-        Bag<String> instance = Bag.create();
+        Bag<String> instance = Bag.create(CMP);
 
         assertTrue(instance.isEmpty());
 
@@ -118,7 +118,7 @@ public class BagBaseTest
     @Test
     public void testToArray_1args_1()
     {
-        Bag<String> instance = Bag.create();
+        Bag<String> instance = Bag.create(CMP);
         
         instance.add("a");
         instance.add("b");
@@ -146,7 +146,7 @@ public class BagBaseTest
     @Test
     public void testToArray_1args_2()
     {
-        Bag<String> instance = Bag.create();
+        Bag<String> instance = Bag.create(CMP);
         
         instance.add("a");
         instance.add("b");
@@ -175,7 +175,7 @@ public class BagBaseTest
     @Test
     public void testClear()
     {
-        Bag<String> instance = Bag.create();
+        Bag<String> instance = Bag.create(CMP);
 
         instance.add("a");
         instance.clear();        
@@ -197,7 +197,7 @@ public class BagBaseTest
         String b = "b";
 
         {
-            Bag<String> instance = Bag.create();
+            Bag<String> instance = Bag.create(CMP);
 
             assertEquals(0, instance.count(a));        
             instance.add(a);
@@ -210,7 +210,7 @@ public class BagBaseTest
             assertEquals(1, instance.count(b));        
         }
         {
-            Bag<String> instance = Bag.create(true);
+            Bag<String> instance = Bag.create(CMP, true);
 
             assertEquals(0, instance.count(a));        
             instance.add(a);
@@ -231,7 +231,7 @@ public class BagBaseTest
     public void testGet()
     {
         {
-            Bag<String> instance = Bag.create();
+            Bag<String> instance = Bag.create(CMP);
 
             assertNull(instance.get("a"));
 
@@ -247,7 +247,7 @@ public class BagBaseTest
             assertArrayEquals(exp2, instance.get("b"));
         }
         {        
-            Bag<String> instance = Bag.create(true);
+            Bag<String> instance = Bag.create(CMP, true);
 
             assertNull(instance.get("a"));
 

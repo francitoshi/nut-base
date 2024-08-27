@@ -27,7 +27,6 @@ package io.nut.base.equalizer;
  */
 public class EqualsProxy<T>
 {
-    
     public final Equalizer<T> equalizer;
     public final T data;
 
