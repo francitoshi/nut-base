@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.tea.base.io;
+package io.nut.base.io;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
