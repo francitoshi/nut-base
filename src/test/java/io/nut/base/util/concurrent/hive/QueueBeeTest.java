@@ -23,10 +23,6 @@ package io.nut.base.util.concurrent.hive;
 import io.nut.base.util.Utils;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -40,6 +36,7 @@ public class QueueBeeTest
     static final String POISON = "POISON";
     /**
      * Test of receive method, of class QueueBee.
+     * @throws java.lang.InterruptedException
      */
     @Test
     public void testSomeMethod1() throws InterruptedException
@@ -51,14 +48,7 @@ public class QueueBeeTest
             @Override
             protected void receive(Integer m)
             {
-                try
-                {
-                    beeLong.send(m.longValue());
-                }
-                catch (InterruptedException ex)
-                {
-                    Logger.getLogger(QueueBeeTest.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                beeLong.send(m.longValue());
             }
 
             @Override
@@ -73,14 +63,7 @@ public class QueueBeeTest
                 @Override
                 protected void receive(Long m)
                 {
-                    try
-                    {
-                        beeString.send(m.toString());
-                    }
-                    catch (InterruptedException ex)
-                    {
-                        Logger.getLogger(QueueBeeTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    beeString.send(m.toString());
                 }
                 @Override
                 protected void terminate()
@@ -135,16 +118,9 @@ public class QueueBeeTest
             @Override
             protected void receive(Byte m)
             {
-                try
-                {
-                    Utils.sleep(waitMillis);
-                    beeShort.send(m.shortValue());
-                    System.out.println(m+" "+m.getClass().getSimpleName());
-                }
-                catch (InterruptedException ex)
-                {
-                    Logger.getLogger(QueueBeeTest.class.getName()).log(Level.SEVERE, null, ex);
-                }
+                Utils.sleep(waitMillis);
+                beeShort.send(m.shortValue());
+                System.out.println(m+" "+m.getClass().getSimpleName());
             }
 
             @Override
@@ -159,16 +135,8 @@ public class QueueBeeTest
                 @Override
                 protected void receive(Short m)
                 {
-                    try
-                    {
-                        Utils.sleep(waitMillis);
-                        beeInteger.send(m.intValue());
-                    System.out.println(m+" "+m.getClass().getSimpleName());
-                    }
-                    catch (InterruptedException ex)
-                    {
-                        Logger.getLogger(QueueBeeTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    Utils.sleep(waitMillis);
+                    beeInteger.send(m.intValue());
                 }
                 @Override
                 protected void terminate()
@@ -182,16 +150,9 @@ public class QueueBeeTest
                 @Override
                 protected void receive(Integer m)
                 {
-                    try
-                    {
-                        Utils.sleep(waitMillis);
-                        beeLong.send(m.longValue());
-                        System.out.println(m+" "+m.getClass().getSimpleName());
-                    }
-                    catch (InterruptedException ex)
-                    {
-                        Logger.getLogger(QueueBeeTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    Utils.sleep(waitMillis);
+                    beeLong.send(m.longValue());
+                    System.out.println(m+" "+m.getClass().getSimpleName());
                 }
                 @Override
                 protected void terminate()
@@ -205,16 +166,9 @@ public class QueueBeeTest
                 @Override
                 protected void receive(Long m)
                 {
-                    try
-                    {
-                        Utils.sleep(waitMillis);
-                        beeString.send(m.toString());
-                        System.out.println(m+" "+m.getClass().getSimpleName());
-                    }
-                    catch (InterruptedException ex)
-                    {
-                        Logger.getLogger(QueueBeeTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    Utils.sleep(waitMillis);
+                    beeString.send(m.toString());
+                    System.out.println(m+" "+m.getClass().getSimpleName());
                 }
                 @Override
                 protected void terminate()

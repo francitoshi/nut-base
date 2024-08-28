@@ -32,6 +32,10 @@ import java.util.logging.Logger;
  */
 public class Hive
 {
+    public static final int CORES = Runtime.getRuntime().availableProcessors();
+    
+    public static final int KEEP_ALIVE_MILLIS = 30_000;
+
     private final ThreadPoolExecutor threadPoolExecutor;
     
     public Hive(int coreThreads, int maxThreads, int keepAliveMillis)
@@ -40,12 +44,12 @@ public class Hive
     }
     public Hive(int threads)
     {
-        this( threads, threads, 60_000);
+        this( threads, threads, KEEP_ALIVE_MILLIS);
     }
 
     public Hive()
     {
-        this( Runtime.getRuntime().availableProcessors());
+        this( CORES + 1, CORES*2 + 1, KEEP_ALIVE_MILLIS);
     }
     
     void submit(Runnable task)
@@ -91,6 +95,16 @@ public class Hive
         }
     }
 
+    public int getCorePoolSize()
+    {
+        return threadPoolExecutor.getCorePoolSize();
+    }
+
+    public int getMaximumPoolSize()
+    {
+        return threadPoolExecutor.getMaximumPoolSize();
+    }
+    
     public void setCorePoolSize(int i)
     {
         threadPoolExecutor.setCorePoolSize(i);

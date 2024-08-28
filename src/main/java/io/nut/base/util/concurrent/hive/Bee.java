@@ -81,14 +81,32 @@ public abstract class Bee<M>
         this(hive,0, Short.MAX_VALUE);
     }
     
-    public void send(M message) throws InterruptedException
+    private volatile InterruptedException interruptedException;
+
+    public InterruptedException getInterruptedException()
     {
-        if(this.status==RUNNING)
-        {
-            this.queue.put(message);
-            this.hive.submit(receiveTask);
-        }
+        return interruptedException;
     }
+    
+    public boolean send(M message)
+    {
+        try 
+        {
+            if(this.status==RUNNING)
+            {
+                this.queue.put(message);
+                this.hive.submit(receiveTask);
+                return true;
+            }
+        }
+        catch (InterruptedException ex) 
+        {
+            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
+            interruptedException = ex;
+        }
+        return false;
+    }
+    
 
     protected abstract void receive(M m);
     protected void terminate()

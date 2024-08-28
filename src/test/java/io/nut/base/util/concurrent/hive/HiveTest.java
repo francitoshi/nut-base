@@ -20,8 +20,6 @@
  */
 package io.nut.base.util.concurrent.hive;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
@@ -38,14 +36,7 @@ public class HiveTest
         @Override
         public void receive(Byte m)
         {
-            try
-            {
-                beeShort.send(m.shortValue());
-            }
-            catch (InterruptedException ex)
-            {
-                Logger.getLogger(HiveTest.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            beeShort.send(m.shortValue());
         }
     };
     final Bee<Short> beeShort = new Bee<Short>(hive, 1) 
@@ -53,14 +44,7 @@ public class HiveTest
         @Override
         public void receive(Short m)
         {
-            try
-            {
-                beeInteger.send(m.intValue());
-            }
-            catch (InterruptedException ex)
-            {
-                Logger.getLogger(HiveTest.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            beeInteger.send(m.intValue());
         }
     };
     final Bee<Integer> beeInteger = new Bee<Integer>(hive, 1) 
@@ -68,14 +52,7 @@ public class HiveTest
         @Override
         public void receive(Integer m)
         {
-            try
-            {
-                beeLong.send(m.longValue());
-            }
-            catch (InterruptedException ex)
-            {
-                Logger.getLogger(HiveTest.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            beeLong.send(m.longValue());
         }
     };
     final Bee<Long> beeLong = new Bee<Long>(hive, 1) 
@@ -83,15 +60,8 @@ public class HiveTest
         @Override
         public void receive(Long m)
         {
-            try
-            {
-                beeString.send(m.toString());
-                beeString.send(",");
-            }
-            catch (InterruptedException ex)
-            {
-                Logger.getLogger(HiveTest.class.getName()).log(Level.SEVERE, null, ex);
-            }
+            beeString.send(m.toString());
+            beeString.send(",");
         }
     };
     final Bee<String> beeString = new Bee<String>(hive, 1) 
