@@ -116,10 +116,17 @@ public class Hive implements AutoCloseable
     }
 
     @Override
-    public void close() throws Exception
+    public void close()
     {
-        this.shutdown();
-        this.awaitTermination(Integer.MAX_VALUE);
+        try
+        {
+            this.shutdown();
+            this.awaitTermination(Integer.MAX_VALUE);
+        }
+        catch (InterruptedException ex)
+        {
+            Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
     
 }
