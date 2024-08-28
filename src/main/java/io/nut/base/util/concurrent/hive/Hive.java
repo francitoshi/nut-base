@@ -38,6 +38,10 @@ public class Hive implements AutoCloseable
 
     private final ThreadPoolExecutor threadPoolExecutor;
     
+    protected Hive(ThreadPoolExecutor threadPoolExecutor)
+    {
+        this.threadPoolExecutor = threadPoolExecutor;
+    }
     public Hive(int coreThreads, int maxThreads, int keepAliveMillis)
     {
         this.threadPoolExecutor = new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveMillis, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
