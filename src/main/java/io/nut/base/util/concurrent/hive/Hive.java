@@ -30,7 +30,7 @@ import java.util.logging.Logger;
  *
  * @author franci
  */
-public class Hive
+public class Hive implements AutoCloseable
 {
     public static final int CORES = Runtime.getRuntime().availableProcessors();
     
@@ -113,6 +113,13 @@ public class Hive
     public void setMaximumPoolSize(int i)
     {
         threadPoolExecutor.setMaximumPoolSize(i);
+    }
+
+    @Override
+    public void close() throws Exception
+    {
+        this.shutdown();
+        this.awaitTermination(Integer.MAX_VALUE);
     }
     
 }
