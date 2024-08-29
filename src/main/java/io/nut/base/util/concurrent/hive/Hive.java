@@ -20,6 +20,7 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -30,7 +31,7 @@ import java.util.logging.Logger;
  *
  * @author franci
  */
-public class Hive implements AutoCloseable
+public class Hive implements AutoCloseable, Executor
 {
     public static final int CORES = Runtime.getRuntime().availableProcessors();
     
@@ -56,7 +57,16 @@ public class Hive implements AutoCloseable
         this( CORES + 1, CORES*2 + 1, KEEP_ALIVE_MILLIS);
     }
     
-    void submit(Runnable task)
+    public Hive add(Bee<?>... bees)
+    {
+        for(Bee<?> item : bees)
+        {
+            item.setHive(this);
+        }
+        return this;
+    }
+    @Override
+    public void execute(Runnable task)
     {
         this.threadPoolExecutor.execute(task);
     }

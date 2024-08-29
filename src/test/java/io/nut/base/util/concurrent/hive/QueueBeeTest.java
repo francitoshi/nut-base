@@ -43,7 +43,7 @@ public class QueueBeeTest
     {
         Hive hive = new Hive();
         
-        QueueBee<Integer,String> instance = new QueueBee<Integer,String>(hive,1) 
+        QueueBee<Integer,String> instance = new QueueBee<Integer,String>(1, hive) 
         {
             @Override
             protected void receive(Integer m)
@@ -58,7 +58,7 @@ public class QueueBeeTest
                 beeLong.shutdown();
             }
             
-            final Bee<Long> beeLong = new Bee<Long>(hive, 1)
+            final Bee<Long> beeLong = new Bee<Long>(1, hive)
             {
                 @Override
                 protected void receive(Long m)
@@ -72,7 +72,7 @@ public class QueueBeeTest
                     beeString.shutdown();
                 }
             };
-            final Bee<String> beeString = new Bee<String>(hive, 1)
+            final Bee<String> beeString = new Bee<String>(1, hive)
             {
                 @Override
                 protected void receive(String m)
@@ -113,7 +113,7 @@ public class QueueBeeTest
         final int beeThreads = 64;
         Hive hive = new Hive(messages);
         
-        QueueBee<Byte,String> instance = new QueueBee<Byte,String>(hive,beeThreads) 
+        QueueBee<Byte,String> instance = new QueueBee<Byte,String>(beeThreads, hive) 
         {
             @Override
             protected void receive(Byte m)
@@ -130,7 +130,7 @@ public class QueueBeeTest
                 beeShort.shutdown();
             }
             
-            final Bee<Short> beeShort = new Bee<Short>(hive, beeThreads)
+            final Bee<Short> beeShort = new Bee<Short>(beeThreads, hive)
             {
                 @Override
                 protected void receive(Short m)
@@ -145,7 +145,7 @@ public class QueueBeeTest
                     beeInteger.shutdown();
                 }
             };
-            final Bee<Integer> beeInteger = new Bee<Integer>(hive, beeThreads)
+            final Bee<Integer> beeInteger = new Bee<Integer>(beeThreads, hive)
             {
                 @Override
                 protected void receive(Integer m)
@@ -161,7 +161,7 @@ public class QueueBeeTest
                     beeLong.shutdown();
                 }
             };
-            final Bee<Long> beeLong = new Bee<Long>(hive, beeThreads)
+            final Bee<Long> beeLong = new Bee<Long>(beeThreads, hive)
             {
                 @Override
                 protected void receive(Long m)
@@ -177,7 +177,7 @@ public class QueueBeeTest
                     beeString.shutdown();
                 }
             };
-            final Bee<String> beeString = new Bee<String>(hive, beeThreads)
+            final Bee<String> beeString = new Bee<String>(beeThreads, hive)
             {
                 @Override
                 protected void receive(String m)

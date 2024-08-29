@@ -31,18 +31,20 @@ public abstract class QueueBee<M,R> extends Bee<M>
 {
     private final BlockingQueue<R> tail;
 
-    public QueueBee(Hive hive, int threads, BlockingQueue tail)
+    public QueueBee(int threads, Hive hive, BlockingQueue<R> tail)
     {
-        super(hive, threads);
+        super(threads, hive);
         this.tail = tail;
     }
+    
     public QueueBee(Hive hive, int threads, int capacity)
     {
-        this(hive, threads,new LinkedBlockingQueue<>(capacity));
+        this(threads, hive, new LinkedBlockingQueue<>(capacity));
     }
-    public QueueBee(Hive hive, int threads)
+    
+    public QueueBee(int threads, Hive hive)
     {
-        this(hive, threads,new LinkedBlockingQueue<>());
+        this(threads, hive, new LinkedBlockingQueue<>());
     }
 
     public BlockingQueue<R> getTail()

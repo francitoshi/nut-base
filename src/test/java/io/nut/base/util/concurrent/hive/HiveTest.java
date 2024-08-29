@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 public class HiveTest
 {
     final Hive hive = new Hive();
-    final Bee<Byte> beeByte = new Bee<Byte>(hive, 1) 
+    final Bee<Byte> beeByte = new Bee<Byte>(1, hive) 
     {
         @Override
         public void receive(Byte m)
@@ -39,7 +39,7 @@ public class HiveTest
             beeShort.send(m.shortValue());
         }
     };
-    final Bee<Short> beeShort = new Bee<Short>(hive, 1) 
+    final Bee<Short> beeShort = new Bee<Short>(1, hive) 
     {
         @Override
         public void receive(Short m)
@@ -47,7 +47,7 @@ public class HiveTest
             beeInteger.send(m.intValue());
         }
     };
-    final Bee<Integer> beeInteger = new Bee<Integer>(hive, 1) 
+    final Bee<Integer> beeInteger = new Bee<Integer>(1, hive) 
     {
         @Override
         public void receive(Integer m)
@@ -55,7 +55,7 @@ public class HiveTest
             beeLong.send(m.longValue());
         }
     };
-    final Bee<Long> beeLong = new Bee<Long>(hive, 1) 
+    final Bee<Long> beeLong = new Bee<Long>(1, hive) 
     {
         @Override
         public void receive(Long m)
@@ -64,7 +64,7 @@ public class HiveTest
             beeString.send(",");
         }
     };
-    final Bee<String> beeString = new Bee<String>(hive, 1) 
+    final Bee<String> beeString = new Bee<String>(1, hive) 
     {
         @Override
         public void receive(String m)
@@ -81,6 +81,10 @@ public class HiveTest
     @Test
     public void testSomeMethod1() throws InterruptedException
     {   
+        hive.add(beeByte, beeShort, beeInteger, beeLong, beeString);
+        
+        hive.add(beeByte).add(beeShort).add(beeInteger).add(beeLong).add(beeString);
+        
         for(int i=0;i<10;i++)
         {
             beeByte.send((byte)i);

@@ -39,9 +39,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    void submit(Runnable task)
+    public void execute(Runnable task)
     {
-        hive.submit(task);
+        hive.execute(task);
     }
 
     @Override

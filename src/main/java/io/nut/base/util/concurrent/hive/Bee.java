@@ -21,6 +21,7 @@
 package io.nut.base.util.concurrent.hive;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
@@ -37,10 +38,21 @@ public abstract class Bee<M>
     private static final int SHUTDOWN   = 1; // Don't accept new tasks, but process queued tasks
     private static final int TERMINATED = 2; // terminated() has completed
     
+    private static final int QUEUE_SIZE = Short.MAX_VALUE;
+    
+    private static final Executor EXECUTOR = new Executor()
+    {
+        @Override
+        public void execute(Runnable task)
+        {
+            task.run();
+        }
+    };
+    
     private final Object lock = new Object();
     private volatile int status = RUNNING;
     
-    private final Hive hive;
+    private volatile Executor hive;
     private final int threads;
     private final Semaphore semaphore;
     private final BlockingQueue<M> queue;
@@ -48,37 +60,46 @@ public abstract class Bee<M>
     /**
      * Initializes a Bee system with the specified hive, thread pool size, and queue size.
      *
-     * @param hive      the hive that manages and coordinates the Bee instances.
      * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
      *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
+     * @param hive      the hive that manages and coordinates the Bee instances.
      * @param queueSize the maximum number of messages waiting to be processed. If set to zero, threads will be used.
      */    
-    public Bee(Hive hive, int threads, int queueSize)
+    public Bee(int threads, Hive hive, int queueSize)
     {
-        this.hive = hive;
         this.threads = threads!=0 ? threads : Runtime.getRuntime().availableProcessors();
-        this.queue = queueSize!=0 ? new LinkedBlockingQueue<>(queueSize) : new LinkedBlockingQueue<>(this.threads);
+        this.hive = hive!=null ? hive : EXECUTOR;
+        this.queue = queueSize!=0 ? new LinkedBlockingQueue<>(queueSize) : new LinkedBlockingQueue<>(QUEUE_SIZE);
         this.semaphore = new Semaphore(this.threads);
+    }
+    /**
+     * Initializes a Bee system with the specified hive, thread pool size, and queue size.
+     *
+     * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
+     *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
+     * @param hive      the hive that manages and coordinates the Bee instances.
+     */    
+    public Bee(int threads, Hive hive)
+    {
+        this(threads, hive, QUEUE_SIZE);
     }
     /**
      * Initializes a Bee system with the specified hive and thread pool size. The queue size will be the number of threads.
      *
-     * @param hive      the hive that manages and coordinates the Bee instances.
      * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
      *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
      */
-    public Bee(Hive hive, int threads)
+    public Bee(int threads)
     {
-        this(hive, threads, 0);
+        this(threads, null, QUEUE_SIZE);
     }
     /**
      * Initializes a Bee system with the specified hive. The number of threads and queue size will be the number of processors.
      *
-     * @param hive      the hive that manages and coordinates the Bee instances.
      */
-    public Bee(Hive hive)
+    public Bee()
     {
-        this(hive,0, Short.MAX_VALUE);
+        this(0, null, QUEUE_SIZE);
     }
     
     private volatile InterruptedException interruptedException;
@@ -95,7 +116,7 @@ public abstract class Bee<M>
             if(this.status==RUNNING)
             {
                 this.queue.put(message);
-                this.hive.submit(receiveTask);
+                this.hive.execute(receiveTask);
                 return true;
             }
         }
@@ -106,7 +127,6 @@ public abstract class Bee<M>
         }
         return false;
     }
-    
 
     protected abstract void receive(M m);
     protected void terminate()
@@ -183,7 +203,7 @@ public abstract class Bee<M>
             if(this.status==RUNNING)
             {
                 this.status = SHUTDOWN; 
-                hive.submit(shutdownTask);
+                this.hive.execute(shutdownTask);
             }
         }
     }
@@ -222,5 +242,10 @@ public abstract class Bee<M>
             item.shutdown();
             item.awaitTermination(Integer.MAX_VALUE);
         }
+    }
+
+    public void setHive(Hive hive)
+    {
+        this.hive = hive;
     }
 }
