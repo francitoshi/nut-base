@@ -46,7 +46,9 @@ import java.security.InvalidKeyException;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -181,6 +183,51 @@ public class Utils
      */
     public static final String[] EMPTY_STRING_ARRAY = {};
 
+    public static final Comparator<Collection<?>> COLLECTION_SIZE_COMPARATOR = new Comparator<Collection<?>>() 
+    {
+        @Override
+        public int compare(Collection<?> a, Collection<?> b) 
+        {
+            return Integer.compare(a.size(), b.size());
+        }
+    };
+    
+    public static final Comparator<Object[]> ARRAY_SIZE_COMPARATOR = new Comparator<Object[]>() 
+    {
+        @Override
+        public int compare(Object[] a, Object[] b) 
+        {
+            return Integer.compare(a.length, b.length);
+        }
+    };
+    
+    public static final Comparator<byte[]> BYTE_ARRAY_SIZE_COMPARATOR = new Comparator<byte[]>() 
+    {
+        @Override
+        public int compare(byte[] a, byte[] b) 
+        {
+            return Integer.compare(a.length, b.length);
+        }
+    };
+    
+    public static final Comparator<int[]> INT_ARRAY_SIZE_COMPARATOR = new Comparator<int[]>() 
+    {
+        @Override
+        public int compare(int[] a, int[] b) 
+        {
+            return Integer.compare(a.length, b.length);
+        }
+    };
+    
+    public static final Comparator<long[]> LONG_ARRAY_SIZE_COMPARATOR = new Comparator<long[]>() 
+    {
+        @Override
+        public int compare(long[] a, long[] b) 
+        {
+            return Integer.compare(a.length, b.length);
+        }
+    };
+    
     public static byte[] asBytes(InputStream in) throws IOException
     {
         if (in == null)
@@ -2530,6 +2577,44 @@ public class Utils
         return count < items.length ? Arrays.copyOf(items, count) : items;
     }
 
+    public static <T> Set<T> union(Set<T>... sets)
+    {
+        HashSet<T> ret = new HashSet<>();
+        for(Set<T> item : sets)
+        {
+            ret.addAll(item);
+        }
+        return ret;
+    }
+    
+    public static <T> Set<T> intersection(Set<T>... sets)
+    {
+        HashSet<T> ret = new HashSet<>();
+        if(sets.length==0)
+        {
+            return ret;
+        }
+
+        sets = sets.clone();
+
+        Arrays.sort(sets, COLLECTION_SIZE_COMPARATOR);
+        
+        ret.addAll(sets[0]);
+
+        for(T item : sets[0])
+        {
+            for(int i=1;i<sets.length;i++)
+            {
+                if(!sets[i].contains(item))
+                {
+                    ret.remove(item);
+                    break;
+                }
+            }
+        }
+        return ret;
+    }
+    
     public static String getStringClipboard()
     {
         try

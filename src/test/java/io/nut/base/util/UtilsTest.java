@@ -22,16 +22,31 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
+import java.io.Closeable;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -2753,4 +2768,101 @@ public class UtilsTest
         assertEquals(BigDecimal.ZERO, Utils.firstNonNullOrPoisonLenient(poison, BigDecimal.ZERO, BigDecimal.ONE));
     }
 
+    /**
+     * Test of Comparator fields, of class Utils.
+     */
+    @Test
+    public void testComparators() throws Exception
+    {
+        {
+            List<String> a = Arrays.asList("a");
+            List<String> b = Arrays.asList("a","b");
+            List<String>[] array = new List[]{b,a};
+
+            Arrays.sort(array, Utils.COLLECTION_SIZE_COMPARATOR);
+
+            assertTrue(a==array[0]);
+            assertTrue(b==array[1]);
+        }
+        {
+            String[] a = {"a"};
+            String[] b = {"a","b"};
+            String[][] array = {b,a};
+
+            Arrays.sort(array, Utils.ARRAY_SIZE_COMPARATOR);
+
+            assertTrue(a==array[0]);
+            assertTrue(b==array[1]);
+        }
+        {
+            byte[] a = {1};
+            byte[] b = {1,1};
+            byte[][] array = {b,a};
+
+            Arrays.sort(array, Utils.BYTE_ARRAY_SIZE_COMPARATOR);
+
+            assertTrue(a==array[0]);
+            assertTrue(b==array[1]);
+        }
+        {
+            int[] a = {1};
+            int[] b = {1,1};
+            int[][] array = {b,a};
+
+            Arrays.sort(array, Utils.INT_ARRAY_SIZE_COMPARATOR);
+
+            assertTrue(a==array[0]);
+            assertTrue(b==array[1]);
+        }
+        {
+            long[] a = {1};
+            long[] b = {1,1};
+            long[][] array = {b,a};
+
+            Arrays.sort(array, Utils.LONG_ARRAY_SIZE_COMPARATOR);
+
+            assertTrue(a==array[0]);
+            assertTrue(b==array[1]);
+        }
+    }
+
+    @Test
+    public void testUnion()
+    {
+        HashSet<String>[] sets = new HashSet[10];
+        for(int i=0;i<10;i++)
+        {
+            sets[i] = new HashSet<>();
+            for(int j=0;j<=i;j++)
+            {
+                sets[i].add(Integer.toString(j));
+            }
+        }
+        Arrays.sort(sets, Utils.COLLECTION_SIZE_COMPARATOR);
+        
+        Set<String> result = Utils.union(sets);
+        assertEquals(sets.length, result.size());
+    }
+
+    /**
+     * Test of intersection method, of class Utils.
+     */
+    @Test
+    public void testIntersection()
+    {
+        HashSet<String>[] sets = new HashSet[10];
+        for(int i=0;i<10;i++)
+        {
+            sets[i] = new HashSet<>();
+            for(int j=0;j<=i;j++)
+            {
+                sets[i].add(Integer.toString(j));
+            }
+        }
+        Arrays.sort(sets, Utils.COLLECTION_SIZE_COMPARATOR);
+
+        Set<String> result = Utils.intersection(sets);
+        assertEquals(1, result.size());
+    }
+    
 }

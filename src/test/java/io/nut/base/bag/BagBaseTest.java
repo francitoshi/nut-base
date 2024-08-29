@@ -20,7 +20,6 @@
  */
 package io.nut.base.bag;
 
-import io.nut.base.util.Utils;
 import java.util.Arrays;
 import java.util.Comparator;
 import org.junit.jupiter.api.AfterAll;
