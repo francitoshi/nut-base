@@ -102,11 +102,11 @@ public abstract class Bee<M>
         this(0, null, QUEUE_SIZE);
     }
     
-    private volatile InterruptedException interruptedException;
+    private volatile Exception ex;
 
-    public InterruptedException getInterruptedException()
+    public Exception getException()
     {
-        return interruptedException;
+        return ex;
     }
     
     public boolean send(M message)
@@ -122,8 +122,8 @@ public abstract class Bee<M>
         }
         catch (InterruptedException ex) 
         {
-            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
-            interruptedException = ex;
+            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
+            this.ex = ex;
         }
         return false;
     }
@@ -131,6 +131,10 @@ public abstract class Bee<M>
     protected abstract void receive(M m);
     protected void terminate()
     {
+    }
+    protected void exception(Exception ex)
+    {
+        
     }
     
     private final Runnable receiveTask = new Runnable()
@@ -150,7 +154,9 @@ public abstract class Bee<M>
             }
             catch (Exception ex)
             {
-                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
+                Bee.this.ex = ex;
+                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.receiveTask.run()", ex);
+                exception(ex);
             }
             finally
             {
@@ -187,7 +193,9 @@ public abstract class Bee<M>
             }
             catch (InterruptedException ex)
             {
-                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
+                Bee.this.ex = ex;
+                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.shutdownTask.run()", ex);
+                exception(ex);
             }            
             finally
             {
@@ -207,10 +215,12 @@ public abstract class Bee<M>
             }
         }
     }
+    
     public boolean isShutdown()
     {
         return this.status!=RUNNING;
     }
+    
     public boolean isTerminated()
     {
         return this.status==TERMINATED;
@@ -231,10 +241,13 @@ public abstract class Bee<M>
         }
         catch (InterruptedException ex)
         {
-            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
+            Bee.this.ex = ex;
+            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.awaitTermination()", ex);
+            exception(ex);
             return false;
         }        
     }
+    
     public static void shutdownAndAwaitTermination(Bee<?> ...bees)
     {
         for(Bee<?> item : bees)
