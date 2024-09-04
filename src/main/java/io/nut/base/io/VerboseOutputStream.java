@@ -1,5 +1,5 @@
 /*
- * MultiOutputStream.java
+ *  VerboseOutputStream.java
  *
  *  Copyright (C) 2024 francitoshi@gmail.com
  *
@@ -20,62 +20,42 @@
  */
 package io.nut.base.io;
 
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
 /**
- * Created by franci on 30/12/14.
+ *
+ * @author franci
  */
-public class MultiOutputStream extends OutputStream
+public class VerboseOutputStream extends FilterOutputStream
 {
-    final OutputStream[] items;
-    public MultiOutputStream(OutputStream... items)
-    {
-        this.items = items;
-    }
+    private final OutputStream verbose;
     
+    public VerboseOutputStream(OutputStream out, OutputStream verbose)
+    {
+        super(out);
+        this.verbose = verbose;
+    }
+
     @Override
     public void write(int b) throws IOException
     {
-        for (OutputStream item : items)
-        {
-            item.write(b);
-        }
-    }
-
-    @Override
-    public void close() throws IOException
-    {
-        for (OutputStream item : items)
-        {
-            item.close();
-        }
-    }
-
-    @Override
-    public void flush() throws IOException
-    {
-        for (OutputStream item : items)
-        {
-            item.flush();
-        }
-    }
-
-    @Override
-    public void write(byte[] b, int off, int len) throws IOException
-    {
-        for (OutputStream item : items)
-        {
-            item.write(b, off, len);
-        }
+        super.write(b);
+        verbose.write(b);
     }
 
     @Override
     public void write(byte[] b) throws IOException
     {
-        for (OutputStream item : items)
-        {
-            item.write(b);
-        }
+        super.write(b);
+        verbose.write(b);
+    }
+
+    @Override
+    public void write(byte[] b, int off, int len) throws IOException
+    {
+        super.write(b, off, len);
+        verbose.write(b, off, len);
     }
 }

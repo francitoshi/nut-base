@@ -1,5 +1,5 @@
 /*
- * MultiOutputStream.java
+ *  VerboseInputStream.java
  *
  *  Copyright (C) 2024 francitoshi@gmail.com
  *
@@ -20,62 +20,55 @@
  */
 package io.nut.base.io;
 
+import java.io.FilterInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 
 /**
- * Created by franci on 30/12/14.
+ *
+ * @author franci
  */
-public class MultiOutputStream extends OutputStream
+public class VerboseInputStream extends FilterInputStream
 {
-    final OutputStream[] items;
-    public MultiOutputStream(OutputStream... items)
-    {
-        this.items = items;
-    }
+    private final OutputStream verbose;
     
-    @Override
-    public void write(int b) throws IOException
+    public VerboseInputStream(InputStream in, OutputStream verbose)
     {
-        for (OutputStream item : items)
-        {
-            item.write(b);
-        }
+        super(in);
+        this.verbose = verbose;
     }
 
     @Override
-    public void close() throws IOException
+    public int read() throws IOException
     {
-        for (OutputStream item : items)
+        int ret = super.read();
+        if(ret>=0)
         {
-            item.close();
+            verbose.write(ret);
         }
+        return ret;
     }
 
     @Override
-    public void flush() throws IOException
+    public int read(byte[] b) throws IOException
     {
-        for (OutputStream item : items)
+        int ret = super.read(b);
+        if(ret>0)
         {
-            item.flush();
+            verbose.write(b,0,ret);
         }
+        return ret;
     }
 
     @Override
-    public void write(byte[] b, int off, int len) throws IOException
+    public int read(byte[] b, int off, int len) throws IOException
     {
-        for (OutputStream item : items)
+        int ret = super.read(b, off, len);
+        if(ret>0)
         {
-            item.write(b, off, len);
+            verbose.write(b,off,ret);
         }
-    }
-
-    @Override
-    public void write(byte[] b) throws IOException
-    {
-        for (OutputStream item : items)
-        {
-            item.write(b);
-        }
-    }
+        return ret;
+    }   
 }
