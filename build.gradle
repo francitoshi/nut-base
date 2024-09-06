@@ -25,6 +25,12 @@ java
     withJavadocJar()
 }
 
+wrapper 
+{
+    gradleVersion = "8.2"
+    distributionType = Wrapper.DistributionType.ALL
+}
+
 test 
 {
     // Use JUnit Platform for unit tests.
@@ -40,10 +46,4 @@ publishing
             from components.java
         }
     }
-}
-
-wrapper 
-{
-    gradleVersion = "7.3.3"
-    distributionType = Wrapper.DistributionType.ALL
 }
