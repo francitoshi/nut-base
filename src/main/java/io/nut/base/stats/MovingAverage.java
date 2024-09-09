@@ -30,10 +30,7 @@ import java.security.InvalidParameterException;
  */
 public abstract class MovingAverage
 {
-    static public final int SMA=0; 
-    static public final int EMA=1; 
-    static public final int WMA=2;
-    static public final int CMA=3; 
+    public enum Type { SMA, EMA, WMA, CMA}; 
 
     public abstract BigDecimal next(BigDecimal value);
 
@@ -46,9 +43,9 @@ public abstract class MovingAverage
         return next(BigDecimal.valueOf(value));
     }
     
-    public static MovingAverage create(int mode, int period, int decimals, RoundingMode roundingMode)
+    public static MovingAverage create(Type type, int period, int decimals, RoundingMode roundingMode)
     {
-        switch(mode)
+        switch(type)
         {
             case SMA: 
                 return createSMA(period, decimals, roundingMode);
@@ -59,7 +56,7 @@ public abstract class MovingAverage
             case CMA: 
                 return createCMA(decimals, roundingMode);
             default: 
-                throw new InvalidParameterException("Unknown mode "+mode);
+                throw new InvalidParameterException("Unknown type "+type);
         }
     }
     public static SimpleMovingAverage createSMA(int period, int decimals, RoundingMode roundingMode)

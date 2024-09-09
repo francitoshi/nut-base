@@ -20,6 +20,7 @@
  */
 package io.nut.base.stats;
 
+import io.nut.base.stats.MovingAverage.Type;
 import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,9 +38,9 @@ public class MovingAverageTest
     @Test
     public void testNext0()
     {
-        int[] types = {MovingAverage.SMA, MovingAverage.EMA, MovingAverage.WMA, MovingAverage.CMA};
+        MovingAverage.Type[] types = {Type.SMA, Type.EMA, Type.WMA, Type.CMA};
 
-        for(int t : types)
+        for(MovingAverage.Type t : types)
         {
             for(int p=1;p<10;p++)
             {
@@ -48,13 +49,15 @@ public class MovingAverageTest
                 {
                     assertEquals(100.0, instance.next(100).doubleValue(), "t="+t+" p="+p+" i="+i);
                 }
-                if(t!=MovingAverage.EMA)
-                    continue;
-                for(int i=0;i<100;i++)
+                //CMA can't pass this proof
+                if(t!=Type.CMA)
                 {
-                    instance.next(101);
+                    for(int i=0;i<100;i++)
+                    {
+                        instance.next(101);
+                    }
+                    assertEquals(101.0, instance.next(101).doubleValue(), "t="+t+" p="+p);
                 }
-                assertEquals(101.0, instance.next(101).doubleValue(), "t="+t+" p="+p);
             }
         }
     }
