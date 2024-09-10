@@ -1,5 +1,5 @@
 /*
- *  SimpleMovingAverageTest.java
+ *  BigSimpleMovingAverageTest.java
  *
  *  Copyright (c) 2024 francitoshi@gmail.com
  *-
@@ -20,6 +20,8 @@
  */
 package io.nut.base.stats;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class SimpleMovingAverageTest
+public class BigSimpleMovingAverageTest
 {
     /**
      * Test of next method, of class MovingAverage.
@@ -37,19 +39,19 @@ public class SimpleMovingAverageTest
     {
         int[] data = {20, 22, 24, 25, 23, 26, 28, 26, 29, 27, 28, 30, 27, 29, 28};
         
-        double sma = 0;
-        MovingAverage instance = MovingAverage.createSMA(15);
+        BigDecimal sma = null;
+        BigMovingAverage instance = BigMovingAverage.createSMA(15, 2, RoundingMode.HALF_UP);
         
         for(int i=0;i<data.length;i++)
         {
-            sma = instance.next(data[i]);
+            sma = instance.next(BigDecimal.valueOf(data[i]));
         }
-        assertEquals(26.13, sma, 0.005);
+        assertEquals(new BigDecimal("26.13"), sma);
         for(int i=0;i<data.length;i++)
         {
             sma = instance.next(data[i]);
         }
-        assertEquals(26.13, sma, 0.005);
+        assertEquals(new BigDecimal("26.13"), sma);
     }
     
     /**
@@ -60,21 +62,21 @@ public class SimpleMovingAverageTest
     {
         int[] data = {10, 12, 9, 10, 15, 13, 18, 18, 20, 24};
         
-        double sma = 0;
+        BigDecimal sma = null;
         
-        MovingAverage instance = MovingAverage.createSMA(5);
+        BigMovingAverage instance = BigMovingAverage.createSMA(5, 2, RoundingMode.HALF_UP);
         for(int i=0;i<data.length;i++)
         {
             sma = instance.next(data[i]);
         }
-        assertEquals(18.60, sma, 0.005);
+        assertEquals(new BigDecimal("18.60"), sma);
         
-        instance = MovingAverage.createSMA(10);
+        instance = BigMovingAverage.createSMA(10, 2, RoundingMode.HALF_UP);
         for(int i=0;i<data.length;i++)
         {
             sma = instance.next(data[i]);
         }
-        assertEquals(14.90, sma, 0.005);
+        assertEquals(new BigDecimal("14.90"), sma);
     }
 
     /**
@@ -85,21 +87,21 @@ public class SimpleMovingAverageTest
     {
         int[] data = {1, 2, 3, 7, 9};
         
-        double sma;
+        BigDecimal sma;
         
-        MovingAverage instance = MovingAverage.createSMA(3);
+        BigMovingAverage instance = BigMovingAverage.createSMA(3, 2, RoundingMode.HALF_UP);
         int index=0;
         instance.next(data[index++]);
         instance.next(data[index++]);
         sma = instance.next(data[index++]);
 
-        assertEquals(2, sma, 0.005);
+        assertEquals(new BigDecimal("2").stripTrailingZeros(), sma.stripTrailingZeros());
         
         sma = instance.next(data[index++]);
 
-        assertEquals(4, sma, 0.005);
+        assertEquals(new BigDecimal("4").stripTrailingZeros(), sma.stripTrailingZeros());
         sma = instance.next(data[index++]);
         
-        assertEquals(6.33, sma, 0.005);
+        assertEquals(new BigDecimal("6.33").stripTrailingZeros(), sma.stripTrailingZeros());
     }   
 }

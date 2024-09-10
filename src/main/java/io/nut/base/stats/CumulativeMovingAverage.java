@@ -2,7 +2,7 @@
  *  CumulativeMovingAverage.java
  *
  *  Copyright (c) 2024 francitoshi@gmail.com
- *-
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -20,27 +20,20 @@
  */
 package io.nut.base.stats;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 public class CumulativeMovingAverage extends MovingAverage
 {
     private int count;
-    private final int scale;
-    private final RoundingMode roundingMode;
-    private BigDecimal sum;
+    private double sum;
     
-    public CumulativeMovingAverage(int scale, RoundingMode roundingMode)
+    public CumulativeMovingAverage()
     {
-        this.scale = scale;
-        this.roundingMode = roundingMode;
-        this.sum = BigDecimal.ZERO;
+        this.sum = 0.0;
     }
 
     @Override
-    public BigDecimal next(BigDecimal value)
+    public double next(double value)
     {
-        sum = sum.add(value);
-        return sum.divide(BigDecimal.valueOf(++count), scale, roundingMode);
+        sum += value;
+        return sum/++count;
     }
 }

@@ -20,6 +20,8 @@
  */
 package io.nut.base.stats;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
@@ -27,39 +29,46 @@ import java.util.concurrent.ArrayBlockingQueue;
  *
  * @author franci
  */
-public class SimpleMovingAverage extends MovingAverage 
+public class BigSimpleMovingAverage extends BigMovingAverage 
 {
     private int count;
     private final int period;
+    private final BigDecimal p;
+    private final int scale;
     
-    private double sum = 0.0;
-    private double sma;
-    private final Queue<Double> queue;
+    private final RoundingMode roundingMode;
+    private BigDecimal sum = BigDecimal.ZERO;
+    private BigDecimal sma;
+    private final Queue<BigDecimal> queue;
     
-    public SimpleMovingAverage(int period)
+    public BigSimpleMovingAverage(int period, int scale, RoundingMode roundingMode)
     {
         if (period <= 0)
         {
             throw new IllegalArgumentException("Period must be positive");
         }
         this.period = period;
+        this.p = BigDecimal.valueOf(period);
+        this.scale = scale;
+        this.roundingMode = roundingMode;
         this.queue = new ArrayBlockingQueue<>(period);
     }
 
     @Override
-    public double next(double value)
+    public BigDecimal next(BigDecimal value)
     {
-        if(count++ < period)
+        if(count<period)
         {
-            sum += value;
-            sma = sum/count;
+            sum = sum.add(value);
+            sma = sum.divide(BigDecimal.valueOf(count+1), scale, roundingMode);
         }
         else
         {
-            sum = sum + value - queue.remove();
-            sma = sum / period;
+            sum = sum.add(value).subtract(queue.remove());
+            sma = sum.divide(p, scale, roundingMode);
         }
         this.queue.add(value);
+        count++;
         return sma;
     }
     

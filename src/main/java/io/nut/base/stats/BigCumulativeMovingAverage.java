@@ -1,5 +1,5 @@
 /*
- *  SimpleMovingAverage.java
+ *  CumulativeMovingAverage.java
  *
  *  Copyright (c) 2024 francitoshi@gmail.com
  *
@@ -20,47 +20,27 @@
  */
 package io.nut.base.stats;
 
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
-/**
- *
- * @author franci
- */
-public class SimpleMovingAverage extends MovingAverage 
+public class BigCumulativeMovingAverage extends BigMovingAverage
 {
     private int count;
-    private final int period;
+    private final int scale;
+    private final RoundingMode roundingMode;
+    private BigDecimal sum;
     
-    private double sum = 0.0;
-    private double sma;
-    private final Queue<Double> queue;
-    
-    public SimpleMovingAverage(int period)
+    public BigCumulativeMovingAverage(int scale, RoundingMode roundingMode)
     {
-        if (period <= 0)
-        {
-            throw new IllegalArgumentException("Period must be positive");
-        }
-        this.period = period;
-        this.queue = new ArrayBlockingQueue<>(period);
+        this.scale = scale;
+        this.roundingMode = roundingMode;
+        this.sum = BigDecimal.ZERO;
     }
 
     @Override
-    public double next(double value)
+    public BigDecimal next(BigDecimal value)
     {
-        if(count++ < period)
-        {
-            sum += value;
-            sma = sum/count;
-        }
-        else
-        {
-            sum = sum + value - queue.remove();
-            sma = sum / period;
-        }
-        this.queue.add(value);
-        return sma;
+        sum = sum.add(value);
+        return sum.divide(BigDecimal.valueOf(++count), scale, roundingMode);
     }
-    
 }

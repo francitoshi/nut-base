@@ -20,8 +20,6 @@
  */
 package io.nut.base.stats;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -41,13 +39,13 @@ public class WeightedMovingAverageTest
     {
         int[] data = {23912, 22698, 22750, 24854, 25649};
 
-        MovingAverage instance = MovingAverage.createWMA(5, 2, RoundingMode.HALF_UP);
-        BigDecimal sma=null;
+        MovingAverage instance = MovingAverage.createWMA(5);
+        double sma=0;
         for(int i=0;i<data.length;i++)
         {
             sma = instance.next(data[i]);
         }
-        assertEquals(24347.93, sma.doubleValue(), 0.0000005);
+        assertEquals(24347.93, sma, 0.005);
     }
     
     /**
@@ -60,13 +58,13 @@ public class WeightedMovingAverageTest
     {
         double[] data = {50.25, 56.39, 58.91, 61.52, 59.32, 55.43, 54.65};
 
-        MovingAverage instance = MovingAverage.createWMA(7, 2, RoundingMode.HALF_UP);
-        BigDecimal sma=null;
+        MovingAverage instance = MovingAverage.createWMA(7);
+        double sma=0;
         for(int i=0;i<data.length;i++)
         {
             sma = instance.next(data[i]);
         }
-        assertEquals(57.06, sma.doubleValue(), 0.0000005);
+        assertEquals(57.06, sma, 0.005);
     }
    
 }

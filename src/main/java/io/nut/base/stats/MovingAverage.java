@@ -20,8 +20,6 @@
  */
 package io.nut.base.stats;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.security.InvalidParameterException;
 
 /**
@@ -32,47 +30,38 @@ public abstract class MovingAverage
 {
     public enum Type { SMA, EMA, WMA, CMA}; 
 
-    public abstract BigDecimal next(BigDecimal value);
-
-    public final BigDecimal next(long value)
-    {
-        return next(BigDecimal.valueOf(value));
-    }
-    public final BigDecimal next(double value)
-    {
-        return next(BigDecimal.valueOf(value));
-    }
+    public abstract double next(double value);
     
-    public static MovingAverage create(Type type, int period, int decimals, RoundingMode roundingMode)
+    public static MovingAverage create(Type type, int period)
     {
         switch(type)
         {
             case SMA: 
-                return createSMA(period, decimals, roundingMode);
+                return createSMA(period);
             case EMA: 
-                return createEMA(period, decimals, roundingMode);
+                return createEMA(period);
             case WMA: 
-                return createWMA(period, decimals, roundingMode);
+                return createWMA(period);
             case CMA: 
-                return createCMA(decimals, roundingMode);
+                return createCMA();
             default: 
                 throw new InvalidParameterException("Unknown type "+type);
         }
     }
-    public static SimpleMovingAverage createSMA(int period, int decimals, RoundingMode roundingMode)
+    public static SimpleMovingAverage createSMA(int period)
     {
-        return new SimpleMovingAverage(period, decimals, roundingMode);
+        return new SimpleMovingAverage(period);
     }
-    public static ExponentialMovingAverage createEMA(int period, int decimals, RoundingMode roundingMode)
+    public static ExponentialMovingAverage createEMA(int period)
     {
-        return new ExponentialMovingAverage(period, decimals, roundingMode);
+        return new ExponentialMovingAverage(period);
     }
-    public static WeightedMovingAverage createWMA(int period, int decimals, RoundingMode roundingMode)
+    public static WeightedMovingAverage createWMA(int period)
     {
-        return new WeightedMovingAverage(period, decimals, roundingMode);
+        return new WeightedMovingAverage(period);
     }
-    public static CumulativeMovingAverage createCMA(int decimals, RoundingMode roundingMode)
+    public static CumulativeMovingAverage createCMA()
     {
-        return new CumulativeMovingAverage(decimals, roundingMode);
+        return new CumulativeMovingAverage();
     }
 }

@@ -20,51 +20,57 @@
  */
 package io.nut.base.stats;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.List;
 
-public class WeightedMovingAverage extends MovingAverage
+public class BigWeightedMovingAverage extends BigMovingAverage
 {
 
     private int count;
     private final int period;
-    private final List<Double> values;
-    private double sum;
-    private double weightedSum;
-    private double divisor;
-    private double multiplier;
+    private final int scale;
+    private final RoundingMode roundingMode;
+    private final List<BigDecimal> values;
+    private BigDecimal sum;
+    private BigDecimal weightedSum;
+    private BigDecimal divisor;
+    private BigDecimal multiplier;
 
-    public WeightedMovingAverage(int period)
+    public BigWeightedMovingAverage(int period, int scale, RoundingMode roundingMode)
     {
         if (period <= 0)
         {
             throw new IllegalArgumentException("Period must be positive");
         }
         this.period = period;
+        this.scale = scale;
+        this.roundingMode = roundingMode;
         this.values = new ArrayList<>(period);
-        this.sum = 0.0;
-        this.weightedSum = 0.0;
+        this.sum = BigDecimal.ZERO;
+        this.weightedSum = BigDecimal.ZERO;
     }
 
     @Override
-    public double next(double value)
+    public BigDecimal next(BigDecimal value)
     {
         if (count++ >= period)
         {
-            double oldest = values.remove(0);
-            weightedSum -= sum;
-            sum -= oldest;
+            BigDecimal oldest = values.remove(0);
+            weightedSum = weightedSum.subtract(sum);
+            sum = sum.subtract(oldest);
         }
         else
         {
-            divisor = (count * (count+1)) / 2;
-            multiplier = count;
+            divisor = BigDecimal.valueOf((count * (count+1)) / 2);
+            multiplier = BigDecimal.valueOf(count);
         }
         
         values.add(value);
-        sum += value;
-        weightedSum += value * multiplier;
+        sum = sum.add(value);
+        weightedSum = weightedSum.add(value.multiply(multiplier));
 
-        return weightedSum/divisor;
+        return weightedSum.divide(divisor, scale, roundingMode);
     }
 }

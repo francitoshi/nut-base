@@ -1,8 +1,8 @@
 /*
- *  ExponentialMovingAverageTest.java
+ *  BigExponentialMovingAverageTest.java
  *
  *  Copyright (c) 2024 francitoshi@gmail.com
- *-
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -20,6 +20,8 @@
  */
 package io.nut.base.stats;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -27,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class ExponentialMovingAverageTest
+public class BigExponentialMovingAverageTest
 {
     /**
      * Test of next method, of class ExponentialMovingAverage.
@@ -38,12 +40,12 @@ public class ExponentialMovingAverageTest
         int[] data = {12, 14, 16, 15, 18, 20, 22, 21, 23, 25};
         double[] exp = {12, 13, 14.5, 14.75, 16.375, 18.1875, 20.09375, 20.546875, 21.773437, 23.386719};
 
-        MovingAverage instance = MovingAverage.createEMA(3);
+        BigMovingAverage instance = BigMovingAverage.createEMA(3, 7, RoundingMode.HALF_UP);
         
         for(int i=0;i<data.length;i++)
         {
-            double sma = instance.next(data[i]);
-            assertEquals(exp[i], sma, 0.0000005);
+            BigDecimal sma = instance.next(data[i]);
+            assertEquals(exp[i], sma.doubleValue(), 0.0000005);
         }
     }
     /**
@@ -55,12 +57,12 @@ public class ExponentialMovingAverageTest
         int[] data = { 10, 12, 15, 14, 13, 11, 12, 13, 14, 15};
         double[] exp = {10.0000, 11.0000, 13.0000, 13.5000, 13.2500, 12.1250, 12.0625, 12.5313, 13.2656, 14.1328};
 
-        MovingAverage instance = MovingAverage.createEMA(3);
+        BigMovingAverage instance = BigMovingAverage.createEMA(3, 4, RoundingMode.HALF_UP);
         
         for(int i=0;i<data.length;i++)
         {
-            double sma = instance.next(data[i]);
-            assertEquals(exp[i], sma, 0.00005);
+            BigDecimal sma = instance.next(data[i]);
+            assertEquals(exp[i], sma.doubleValue(), 0.000005);
         }
     }
     

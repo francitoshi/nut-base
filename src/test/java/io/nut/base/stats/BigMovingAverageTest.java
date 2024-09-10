@@ -2,7 +2,7 @@
  *  MovingAverageTest.java
  *
  *  Copyright (c) 2024 francitoshi@gmail.com
- *-
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -20,7 +20,8 @@
  */
 package io.nut.base.stats;
 
-import io.nut.base.stats.MovingAverage.Type;
+import io.nut.base.stats.BigMovingAverage.Type;
+import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -28,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class MovingAverageTest
+public class BigMovingAverageTest
 {
 
     /**
@@ -37,16 +38,16 @@ public class MovingAverageTest
     @Test
     public void testNext0()
     {
-        MovingAverage.Type[] types = {Type.SMA, Type.EMA, Type.WMA, Type.CMA};
+        BigMovingAverage.Type[] types = {Type.SMA, Type.EMA, Type.WMA, Type.CMA};
 
-        for(MovingAverage.Type t : types)
+        for(BigMovingAverage.Type t : types)
         {
             for(int p=1;p<10;p++)
             {
-                MovingAverage instance = MovingAverage.create(t, p);
+                BigMovingAverage instance = BigMovingAverage.create(t, p, 8, RoundingMode.HALF_UP);
                 for(int i=0;i<25;i++)
                 {
-                    assertEquals(100.0, instance.next(100), 0.005, "t="+t+" p="+p+" i="+i);
+                    assertEquals(100.0, instance.next(100).doubleValue(), "t="+t+" p="+p+" i="+i);
                 }
                 //CMA can't pass this proof
                 if(t!=Type.CMA)
@@ -55,7 +56,7 @@ public class MovingAverageTest
                     {
                         instance.next(101);
                     }
-                    assertEquals(101.0, instance.next(101), 0.005, "t="+t+" p="+p);
+                    assertEquals(101.0, instance.next(101).doubleValue(), "t="+t+" p="+p);
                 }
             }
         }

@@ -20,8 +20,6 @@
  */
 package io.nut.base.stats;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,17 +35,17 @@ public class CumulativeMovingAverageTest
     @Test
     public void testNext()
     {
-        CumulativeMovingAverage cma = MovingAverage.createCMA(8, RoundingMode.HALF_UP);
+        CumulativeMovingAverage cma = MovingAverage.createCMA();
         for(int i=1;i<100;i++)
         {
-            SimpleMovingAverage sma = MovingAverage.createSMA(i, 8, RoundingMode.HALF_UP);
+            SimpleMovingAverage sma = MovingAverage.createSMA(i);
 
-            BigDecimal expected = BigDecimal.ZERO;
+            double expected = 0;
             for(int j=1;j<=i;j++)
             {
                 expected = sma.next(j);
             }
-            BigDecimal result = cma.next(i);
+            double result = cma.next(i);
             assertEquals(expected, result);
         }
     }

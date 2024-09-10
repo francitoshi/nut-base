@@ -1,5 +1,5 @@
 /*
- *  SimpleMovingAverage.java
+ *  BigCumulativeMovingAverageTest.java
  *
  *  Copyright (c) 2024 francitoshi@gmail.com
  *
@@ -20,47 +20,36 @@
  */
 package io.nut.base.stats;
 
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  *
  * @author franci
  */
-public class SimpleMovingAverage extends MovingAverage 
+public class BigCumulativeMovingAverageTest
 {
-    private int count;
-    private final int period;
-    
-    private double sum = 0.0;
-    private double sma;
-    private final Queue<Double> queue;
-    
-    public SimpleMovingAverage(int period)
+    /**
+     * Test of next method, of class CumulativeMovingAverage.
+     */
+    @Test
+    public void testNext()
     {
-        if (period <= 0)
+        BigCumulativeMovingAverage cma = BigMovingAverage.createCMA(8, RoundingMode.HALF_UP);
+        for(int i=1;i<100;i++)
         {
-            throw new IllegalArgumentException("Period must be positive");
-        }
-        this.period = period;
-        this.queue = new ArrayBlockingQueue<>(period);
-    }
+            BigSimpleMovingAverage sma = BigMovingAverage.createSMA(i, 8, RoundingMode.HALF_UP);
 
-    @Override
-    public double next(double value)
-    {
-        if(count++ < period)
-        {
-            sum += value;
-            sma = sum/count;
+            BigDecimal expected = BigDecimal.ZERO;
+            for(int j=1;j<=i;j++)
+            {
+                expected = sma.next(j);
+            }
+            BigDecimal result = cma.next(i);
+            assertEquals(expected, result);
         }
-        else
-        {
-            sum = sum + value - queue.remove();
-            sma = sum / period;
-        }
-        this.queue.add(value);
-        return sma;
     }
     
 }

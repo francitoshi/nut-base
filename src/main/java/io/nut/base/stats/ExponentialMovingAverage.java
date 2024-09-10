@@ -2,7 +2,7 @@
  *  ExponentialMovingAverage.java
  *
  *  Copyright (c) 2024 francitoshi@gmail.com
- *-
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -20,53 +20,31 @@
  */
 package io.nut.base.stats;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-
 /**
  *
  * @author franci
  */
 public class ExponentialMovingAverage extends MovingAverage 
 {
-    private static final BigDecimal TWO = BigDecimal.valueOf(2);
     private int count;
-    private final BigDecimal alpha;  // The smoothing factor
-    private final BigDecimal oneMinusAlpha;
-    private BigDecimal ema;          // Stores the current EMA value
-    private final int decimals;
-    private final RoundingMode roundingMode;
+    private final double alpha;  // The smoothing factor
+    private final double oneMinusAlpha;
+    private double ema;          // Stores the current EMA value
   
-    public ExponentialMovingAverage(int period, int decimals, RoundingMode roundingMode)
+    public ExponentialMovingAverage(int period)
     {
         if (period <= 0)
         {
             throw new IllegalArgumentException("Period must be positive");
         }
-        // Calculate alpha: 2 / (period + 1)
-        this.alpha = TWO.divide(BigDecimal.valueOf(period + 1), decimals*2, RoundingMode.HALF_UP).stripTrailingZeros();
-        this.oneMinusAlpha = BigDecimal.ONE.subtract(alpha).stripTrailingZeros();
-        this.decimals = decimals;
-        this.roundingMode = roundingMode;
+        this.alpha = 2.0 / (period + 1.0);
+        this.oneMinusAlpha = 1 - alpha;
     }
 
     @Override
-    public BigDecimal next(BigDecimal value)
+    public double next(double value)
     {
-        if(count==0)
-        {
-            // First value initializes the EMA directly
-            ema = value;
-        }
-        else
-        {
-            // Calculate EMA: EMA = (Value * Alpha) + (EMA_prev * (1 - Alpha))
-            ema = value.multiply(alpha)
-                    .add(ema.multiply(oneMinusAlpha))
-                    .setScale(decimals*2, roundingMode);
-        }
-        count++;
-        return ema.setScale(decimals, roundingMode);
+        return ema = (count++ == 0) ? value : value*alpha + ema*oneMinusAlpha;
     }
     
 }
