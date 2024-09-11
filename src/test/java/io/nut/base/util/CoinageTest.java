@@ -165,6 +165,22 @@ public class CoinageTest
         assertArrayEquals(btc_usd, instance.getPair("BTCUSD"));
         assertArrayEquals(btc_usd, instance.getPair("BTC-USD"));
         assertArrayEquals(btc_usd, instance.getPair("BTC/USD"));
+
+        String[] eur_usdc = {"EUR", "USDC"};
+        assertArrayEquals(eur_usdc, instance.getPair("EUR-USDC"));
+        assertArrayEquals(eur_usdc, instance.getPair("EUR/USDC"));
+        assertArrayEquals(eur_usdc, instance.getPair("EURUSDC"));
+        
+        assertTrue(instance.isAvailablePair("EURUSDC"));
+        assertTrue(instance.isAvailablePair("BTCEUR"));
+        assertTrue(instance.isAvailablePair("ETHEUR"));
+        assertTrue(instance.isAvailablePair("SOLEUR"));
+//EURAEUR
+        assertTrue(instance.isAvailablePair("XRPEUR"));
+        assertTrue(instance.isAvailablePair("BNBEUR"));
+        assertTrue(instance.isAvailablePair("SHIBEUR"));
+        assertTrue(instance.isAvailablePair("DOGEEUR"));
+        assertTrue(instance.isAvailablePair("ADAEUR"));
     }
 
     /**
@@ -208,6 +224,9 @@ public class CoinageTest
         assertEquals("BTCUSD", Coinage.normalize("BTC-USD"));
         assertEquals("BTCUSD", Coinage.normalize("BTC/USD"));
         assertEquals("BTCUSD", Coinage.normalize("btcusd"));
+        
+        assertEquals("EURUSDC", Coinage.normalize("EUR-USDC"));
+        assertEquals("EURUSDC", Coinage.normalize("EUR/USDC"));
     }
     
 }

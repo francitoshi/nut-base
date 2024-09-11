@@ -36,13 +36,14 @@ public class Coinage
     {
         INSTANCE;
         final String[] FIAT_COINS = "AUD,CAD,CHF,EUR,GBP,JPY,USD".split(",");
-        final String[] BASE_COINS = "ADA,BEAM,BNB,BTC,DASH,DOGE,DOT,ETH,GRIN,LTC,MATIC,TRX,USDC,USDT,XMR,ZEC".split(",");
-        final String[] COUNTER_COINS = "BTC,BNB,ETH,LTC,USDT".split(",");
+        final String[] CRYPTO_BASE_COINS = "ADA,BEAM,BNB,BTC,DASH,DOGE,DOT,ETH,GRIN,LTC,MATIC,SHIB,SOL,TRX,USDC,USDT,XMR,XRP,ZEC".split(",");
+        final String[] CRYPTO_COUNTER_COINS = "BTC,BNB,ETH,LTC,USDT,USDC".split(",");
+        final String[] EXTRA_PAIRS = "EUR-USDC".split(",");
     }
     
     public static Coinage getDefaultInstance()
     {
-        return new Coinage(Holder.INSTANCE.FIAT_COINS, Holder.INSTANCE.BASE_COINS, Holder.INSTANCE.COUNTER_COINS);
+        return new Coinage(Holder.INSTANCE.FIAT_COINS, Holder.INSTANCE.CRYPTO_BASE_COINS, Holder.INSTANCE.CRYPTO_COUNTER_COINS, Holder.INSTANCE.EXTRA_PAIRS);
     }
     
     private final Set<String> fiatCoins = new HashSet<>();
@@ -50,7 +51,7 @@ public class Coinage
     private final Set<String> allCoins = new HashSet<>();
     private final Map<String,String[]> pairs = new HashMap<>();
             
-    public Coinage(String[] fiatCoins, String[] baseCoins, String[] counterCoins)
+    public Coinage(String[] fiatCoins, String[] baseCoins, String[] counterCoins, String[] extraPairs)
     {
         Collections.addAll(this.fiatCoins, fiatCoins);
         Collections.addAll(this.cryptoCoins, baseCoins);
@@ -73,6 +74,11 @@ public class Coinage
                     this.pairs.put(base+counter, new String[]{base,counter});
                 }
             }
+        }
+        for(String pair : extraPairs)
+        {
+            String[] p = splitPair(pair);
+            this.pairs.put(p[0]+p[1], new String[]{p[0],p[1]});
         }
     }
     
@@ -112,7 +118,12 @@ public class Coinage
     }
     public String[] getPairOrCoin(String code)
     {
-        return this.pairs.get(normalize(code));
+        String[] pair = this.pairs.get(normalize(code));
+        if(pair==null && this.allCoins.contains(code))
+        {
+            return new String[]{code};
+        }
+        return pair;
     }
     public String[] getPair(String code)
     {
@@ -122,7 +133,7 @@ public class Coinage
     public Coinage addBaseCoins(String... bases)
     {
         String[] fiatCoins = Holder.INSTANCE.FIAT_COINS;
-        String[] counterCoins = Holder.INSTANCE.COUNTER_COINS;
+        String[] counterCoins = Holder.INSTANCE.CRYPTO_COUNTER_COINS;
         
         for(String base : bases)
         {
