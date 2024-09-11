@@ -18,13 +18,15 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.util.tuple;
+
+import java.util.Objects;
 
 /**
  *
  * @author franci
- * @param <K>
- * @param <V>
+ * @param <K> the Key
+ * @param <V> the Value
  */
 public class Pair<K,V>
 {
@@ -53,10 +55,22 @@ public class Pair<K,V>
         return key + "=" + val;
     }
 
-    
+    @Override
+    public int hashCode()
+    {
+        int hash = 7;
+        hash = 97 * hash + Objects.hashCode(this.key);
+        hash = 97 * hash + Objects.hashCode(this.val);
+        return hash;
+    }
+
     @Override
     public boolean equals(Object obj)
     {
+        if (this == obj)
+        {
+            return true;
+        }
         if (obj == null)
         {
             return false;
@@ -65,27 +79,13 @@ public class Pair<K,V>
         {
             return false;
         }
-        @SuppressWarnings("unchecked")
-        final Pair<K, V> other = (Pair<K, V>) obj;
-        if (this.key != other.key && (this.key == null || !this.key.equals(other.key)))
+        final Pair<?, ?> other = (Pair<?, ?>) obj;
+        if (!Objects.equals(this.key, other.key))
         {
             return false;
         }
-        if (this.val != other.val && (this.val == null || !this.val.equals(other.val)))
-        {
-            return false;
-        }
-        return true;
-    }
-
-    @Override
-    public int hashCode()
-    {
-        int hash = 7;
-        hash = 67 * hash + (this.key != null ? this.key.hashCode() : 0);
-        hash = 67 * hash + (this.val != null ? this.val.hashCode() : 0);
-        return hash;
-    }
+        return Objects.equals(this.val, other.val);
+    }    
 
     public static <K,V> K getKey(Pair<K,V> pair)
     {
@@ -110,4 +110,13 @@ public class Pair<K,V>
         return val;
     }
     
+    public K get1st() 
+    {
+        return key;
+    }
+    
+    public V get2nd() 
+    {
+        return val;
+    }
 }
