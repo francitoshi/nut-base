@@ -45,4 +45,60 @@ public class PairTest
         assertEquals("1", instance.getRight());
     }
     
+    /**
+     * Test of equals method, of class Pair.
+     */
+    @Test
+    public void testEquals()
+    {
+        Pair<String, String> p11 = new Pair<>("a", null);
+        Pair<String, String> p12 = new Pair<>("a", null);
+
+        Pair<String, String> p21 = new Pair<>(null, "a");
+        Pair<String, String> p22 = new Pair<>(null, "a");
+        
+        Pair<String, String> p31 = new Pair<>("a", "b");
+        Pair<String, String> p32 = new Pair<>("a", "b");
+
+        Pair<String, String> p44 = new Pair<>("A", "B");
+        
+        assertTrue(p11.equals(p12));
+        assertTrue(p21.equals(p22));
+        assertTrue(p31.equals(p32));
+        
+        assertFalse(p11.equals(p21));
+        assertFalse(p12.equals(p22));
+        
+        assertFalse(p44.equals(p11));
+        assertFalse(p44.equals(p21));
+        assertFalse(p44.equals(p31));
+        
+    }
+
+    /**
+     * Test of getKey method, of class Pair.
+     */
+    @Test
+    public void testGetKey_Pair()
+    {
+        Pair<String, String> pair0 = new Pair<>(null, "B");
+        Pair<String, String> pair1 = new Pair<>("A", "B");
+        
+        assertNull(pair0.getKey());
+        assertEquals("A", pair1.getKey());
+}
+
+    /**
+     * Test of getVal method, of class Pair.
+     */
+    @Test
+    public void testGetVal_Pair()
+    {
+        Pair<String, String> pair0 = new Pair<>("A", null);
+        Pair<String, String> pair1 = new Pair<>("A", "B");
+        
+        assertNull(pair0.getVal());
+        assertEquals("B", pair1.getVal());
+    }
+    
 }
