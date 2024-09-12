@@ -22,31 +22,19 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
-import java.io.Closeable;
-import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.BlockingQueue;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,32 +48,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class UtilsTest
 {
-    
-    public UtilsTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
-       @Test
+    @Test
     public void testReverseBytes()
     {
         assertArrayEquals(new byte[]{1, 2, 3, 4, 5}, Sorts.reverseOf(new byte[]{5, 4, 3, 2, 1}));
@@ -520,17 +483,6 @@ public class UtilsTest
     }
 
     /**
-     * Test of asLong method, of class Utils.
-     */
-    @Test
-    public void testAsLongs_longArr()
-    {
-        long[] expResult = {1, 3, 2};
-        long[] result = Utils.asLongs(1L, 3L, 2L);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
      * Test of asInt method, of class Utils.
      */
     @Test
@@ -538,24 +490,6 @@ public class UtilsTest
     {
         int[] expResult = {1, 3, 2};
         assertArrayEquals(expResult, Utils.asInts(1, 3, 2));
-    }
-    /**
-     * Test of asFloat method, of class Utils.
-     */
-    @Test
-    public void testAsFloats_floatArr()
-    {
-        float[] expResult = {1, 3, 2};
-        assertArrayEquals(expResult, Utils.asFloats(1f, 3f, 2f), 0f);
-    }
-    /**
-     * Test of asDouble method, of class Utils.
-     */
-    @Test
-    public void testAsDoubles_doubleArr()
-    {
-        double[] expResult = {1, 3, 2};
-        assertArrayEquals(expResult, Utils.asDoubles(1.0, 3.0, 2.0), 0.0);
     }
 
     /**
@@ -2864,5 +2798,28 @@ public class UtilsTest
         Set<String> result = Utils.intersection(sets);
         assertEquals(1, result.size());
     }
-    
+
+    /**
+     * Test of asBytes method, of class Utils.
+     */
+    @Test
+    public void testAsBytes_intArr()
+    {
+        int[] array = {1,2,3,4};
+        byte[] exp = {0,0,0,1,0,0,0,2,0,0,0,3,0,0,0,4};
+        byte[] result = Utils.asBytes(array);
+        assertArrayEquals(exp, result);
+    }
+
+    /**
+     * Test of asBytes method, of class Utils.
+     */
+    @Test
+    public void testAsBytes_longArr()
+    {
+        long[] array = {1,2,3,4};
+        byte[] exp = {0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,4};
+        byte[] result = Utils.asBytes(array);
+        assertArrayEquals(exp, result);
+    }    
 }

@@ -244,9 +244,41 @@ public class Utils
         return out.toByteArray();
     }
 
-    public static byte[] asBytes(byte... src)
+    public static byte[] asBytes(int[] intArray)
     {
-        return src;
+        ByteBuffer bb = ByteBuffer.allocate(intArray.length * Integer.BYTES);
+        for (int i = 0; i < intArray.length; i++)
+        {
+            bb.putInt(intArray[i]);
+        }
+        return bb.array();
+    }
+    public static byte[] asBytesLE(int[] intArray)
+    {
+        ByteBuffer bb = ByteBuffer.allocate(intArray.length * Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN);
+        for (int i = 0; i < intArray.length; i++)
+        {
+            bb.putInt(intArray[i]);
+        }
+        return bb.array();
+    }
+    public static byte[] asBytes(long[] longArray)
+    {
+        ByteBuffer bb = ByteBuffer.allocate(longArray.length * Long.BYTES);
+        for (int i = 0; i < longArray.length; i++)
+        {
+            bb.putLong(longArray[i]);
+        }
+        return bb.array();
+    }
+    public static byte[] asBytesLE(long[] longArray)
+    {
+        ByteBuffer bb = ByteBuffer.allocate(longArray.length * Long.BYTES).order(ByteOrder.LITTLE_ENDIAN);
+        for (int i = 0; i < longArray.length; i++)
+        {
+            bb.putLong(longArray[i]);
+        }
+        return bb.array();
     }
 
     public static byte[] asBytes(BigInteger n, int minBytes)
@@ -264,7 +296,7 @@ public class Utils
         return ret;
     }
 
-    public static short[] asShorts(byte... src)
+    public static short[] asShorts(byte[] src)
     {
         if (src == null)
             return null;
@@ -277,7 +309,7 @@ public class Utils
     }
 
     //----------------------------------------------------------------------------------------------
-    public static int[] asInts(byte... src)
+    public static int[] asInts(byte[] src)
     {
         if (src == null)
             return null;
@@ -289,7 +321,7 @@ public class Utils
         return dst;
     }
 
-    public static int[] asInts(short... src)
+    public static int[] asInts(short[] src)
     {
         if (src == null)
             return null;
@@ -369,7 +401,7 @@ public class Utils
 
     //----------------------------------------------------------------------------------------------
 
-    public static long[] asLongs(byte... src)
+    public static long[] asLongs(byte[] src)
     {
         if (src == null)
             return null;
@@ -381,7 +413,7 @@ public class Utils
         return dst;
     }
 
-    public static long[] asLongs(short... src)
+    public static long[] asLongs(short[] src)
     {
         if (src == null)
             return null;
@@ -393,7 +425,7 @@ public class Utils
         return dst;
     }
 
-    public static long[] asLongs(int... src)
+    public static long[] asLongs(int[] src)
     {
         if (src == null)
             return null;
@@ -459,7 +491,7 @@ public class Utils
     }
 
     //----------------------------------------------------------------------------------------------
-    public static float[] asFloats(byte... src)
+    public static float[] asFloats(byte[] src)
     {
         if (src == null)
             return null;
@@ -471,7 +503,7 @@ public class Utils
         return dst;
     }
 
-    public static float[] asFloats(short... src)
+    public static float[] asFloats(short[] src)
     {
         if (src == null)
             return null;
@@ -483,7 +515,7 @@ public class Utils
         return dst;
     }
 
-    public static float[] asFloats(int... src)
+    public static float[] asFloats(int[] src)
     {
         if (src == null)
             return null;
@@ -495,7 +527,7 @@ public class Utils
         return dst;
     }
 
-    public static float[] asFloats(long... values)
+    public static float[] asFloats(long[] values)
     {
         float[] ret = new float[values.length];
         for (int i = 0; i < values.length; i++)
@@ -505,13 +537,8 @@ public class Utils
         return ret;
     }
 
-    public static float[] asFloats(float... items)
-    {
-        return items;
-    }
-
     //----------------------------------------------------------------------------------------------
-    public static double[] asDoubles(byte... src)
+    public static double[] asDoubles(byte[] src)
     {
         if (src == null)
             return null;
@@ -523,7 +550,7 @@ public class Utils
         return dst;
     }
 
-    public static double[] asDoubles(short... src)
+    public static double[] asDoubles(short[] src)
     {
         if (src == null)
             return null;
@@ -535,7 +562,7 @@ public class Utils
         return dst;
     }
 
-    public static double[] asDoubles(int... src)
+    public static double[] asDoubles(int[] src)
     {
         if (src == null)
             return null;
@@ -547,7 +574,7 @@ public class Utils
         return dst;
     }
 
-    public static double[] asDoubles(long... src)
+    public static double[] asDoubles(long[] src)
     {
         if (src == null)
             return null;
@@ -559,7 +586,7 @@ public class Utils
         return dst;
     }
 
-    public static double[] asDoubles(float... src)
+    public static double[] asDoubles(float[] src)
     {
         if (src == null)
             return null;
