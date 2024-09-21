@@ -43,7 +43,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.InvalidKeyException;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -58,12 +57,10 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -809,52 +806,51 @@ public class Utils
     }
 
     //----------------------------------------------------------------------------------------------
-
+    @Deprecated
     public static <T> Set<T> asSet(T... items)
     {
-        return new HashSet<>(Arrays.asList(items));
+        return As.set(items);
     }
     
+    @Deprecated
     public static <T> List<T> asList(T... items)
     {
-        return Arrays.asList(items);
+        return As.list(items);
+    }
+    public static <E> List<E> listOf(E... e)
+    {
+        ArrayList<E> list = new ArrayList<>(e.length);
+        Collections.addAll(list, e);
+        return Collections.unmodifiableList(list);
     }
     
+    @Deprecated
     public static <T> Queue<T> asQueue(T... items)
     {
-        return new ArrayDeque<>(Arrays.asList(items));
+        return As.queue(items);
     }
     
+    @Deprecated
     public static <T> Deque<T> asDeque(T... items)
     {
-        return new ArrayDeque<>(Arrays.asList(items));
+        return As.deque(items);
     }
     
+    @Deprecated
     public static <T> BlockingQueue<T> asBlockingQueue(T... items)
     {
-        return new ArrayBlockingQueue<>(items.length, true, Arrays.asList(items));
+        return As.blockingQueue(items);
     }
 
+    @Deprecated
     public static <T> BlockingDeque<T> asBlockingDeque(T... items)
     {
-        return new LinkedBlockingDeque<>(Arrays.asList(items));
+        return As.blockingDeque(items);
     }
-
+    @Deprecated
     public static <K,V> Map<K,V> asMap(K[] keys, V[] values)
     {
-        assert keys.length>=values.length;
-
-        HashMap<K,V> map = new HashMap<>();
-
-        for(int i=0;i<values.length;i++)
-        {
-            map.put(keys[i], values[i]);
-        }
-        for(int i=values.length;i<keys.length;i++)
-        {
-            map.put(keys[i], null);
-        }
-        return map;
+        return As.map(keys, values);
     }
     
     //----------------------------------------------------------------------------------------------
@@ -3145,15 +3141,6 @@ public class Utils
     public static BigInteger newBigInteger​(byte[] val, int off, int len)
     {
         return new BigInteger(Arrays.copyOfRange(val, off, off+len));
-    }
-    
-    //java9 List.of(E... e)
-    public static <E> List<E> listOf(E... e)
-    {
-        ArrayList<E> list = new ArrayList<>(e.length);
-        Collections.addAll(list, e);
-        return Collections.unmodifiableList(list);
-    }
-    
+    }    
     
 }

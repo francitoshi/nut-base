@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 
 group = 'com.github.francitoshi'
-version = '0.0.31'
+version = '0.0.32'
 
 repositories 
 {
