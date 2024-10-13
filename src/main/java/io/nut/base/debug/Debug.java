@@ -19,7 +19,7 @@
  *  Report bugs or new features to: francitoshi@gmail.com
  *
  */
-package io.nut.base.os;
+package io.nut.base.debug;
 
 import java.util.logging.Level;
 

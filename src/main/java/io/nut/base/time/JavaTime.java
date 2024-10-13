@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -564,7 +565,9 @@ public class JavaTime
     }
 
     private static final String[] DURATION_UNITS = "d,h,m,s,ms,ns".split(",");
+
     public static enum Resolution {D,H,M,S,MS,NS}
+
     public static String toString(Duration duration, int elements, Resolution resolution)
     {
         long[] values = new long[]
@@ -594,5 +597,20 @@ public class JavaTime
     public static long epochSecond()
     {
         return ZonedDateTime.now().toEpochSecond();
+    }
+
+    public static long epochSecond(ZonedDateTime zdt)
+    {
+        return zdt.toEpochSecond();
+    }
+
+    public static long epochSecond(LocalDateTime ldt)
+    {
+        return ldt.toEpochSecond(ZoneOffset.UTC);
+    }
+
+    public static long epochSecond(LocalDate ld)
+    {
+        return ld.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
     }
 }
