@@ -22,6 +22,7 @@ package io.nut.base.time;
 
 import java.time.DayOfWeek;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -604,13 +605,23 @@ public class JavaTime
         return zdt.toEpochSecond();
     }
 
-    public static long epochSecond(LocalDateTime ldt)
+    public static long epochSecond(LocalDateTime datetime)
     {
-        return ldt.toEpochSecond(ZoneOffset.UTC);
+        return datetime.toEpochSecond(ZoneOffset.UTC);
     }
 
-    public static long epochSecond(LocalDate ld)
+    public static long epochSecond(LocalDate date)
     {
-        return ld.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
+        return date.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
     }
+    
+    public static LocalDate asLocalDate(long epochSecond)
+    {
+        return LocalDate.from(Instant.ofEpochSecond(epochSecond));
+    }
+
+    public static LocalDateTime asLocalDateTime(long epochSecond)
+    {
+        return LocalDateTime.from(Instant.ofEpochSecond(epochSecond));
+    }   
 }
