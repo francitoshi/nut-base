@@ -615,13 +615,13 @@ public class JavaTime
         return date.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
     }
     
-    public static LocalDate asLocalDate(long epochSecond)
+    public static LocalDate asLocalDate(long epochSeconds)
     {
-        return LocalDate.from(Instant.ofEpochSecond(epochSecond));
+        return Instant.ofEpochSecond(epochSeconds).atZone(UTC).toLocalDate();
     }
 
-    public static LocalDateTime asLocalDateTime(long epochSecond)
+    public static LocalDateTime asLocalDateTime(long epochSeconds)
     {
-        return LocalDateTime.from(Instant.ofEpochSecond(epochSecond));
+        return Instant.ofEpochSecond(epochSeconds).atZone(UTC).toLocalDateTime();
     }   
 }

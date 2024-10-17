@@ -24,6 +24,7 @@ import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.HashSet;
@@ -745,5 +746,27 @@ public class JavaTimeTest
             }
         }
 
+    }
+
+    /**
+     * Test of asLocalDate method, of class JavaTime.
+     */
+    @Test
+    public void testAsLocalDate()
+    {
+        LocalDate expected = LocalDate.of(2014, 1, 1);
+        LocalDate result = JavaTime.asLocalDate(1388534400);
+        assertEquals(expected, result);
+    }
+
+    /**
+     * Test of asLocalDateTime method, of class JavaTime.
+     */
+    @Test
+    public void testAsLocalDateTime()
+    {
+        LocalDateTime expected = LocalDateTime.of(2014, 1, 1, 0, 0, 0);
+        LocalDateTime result = JavaTime.asLocalDateTime(1388534400);
+        assertEquals(expected, result);
     }
 }
