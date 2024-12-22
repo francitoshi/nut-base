@@ -64,6 +64,7 @@ import static io.nut.base.math.Nums.BIG_INT_ZETTA;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -71,6 +72,8 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
+import java.util.List;
+import java.util.Random;
 import javax.crypto.NoSuchPaddingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
@@ -1321,6 +1324,20 @@ public class NumsTest
             BigInteger value = BigInteger.valueOf(i);
             assertEquals( i%2==1, Nums.isOdd(value), "i="+i);
         }
+    }
+
+    /**
+     * Test of nthRoot method, of class Nums.
+     */
+    @Test
+    public void testNthRoot()
+    {
+        assertEquals(BigDecimal.ONE, Nums.nthRoot(BigDecimal.ONE, 1, 8));
+        assertEquals(BigDecimal.TEN, Nums.nthRoot(BigDecimal.TEN, 1, 8));
+        assertEquals(0, Nums.nthRoot(Nums.BIG_DEC_HUNDRED, 2, 8).compareTo(BigDecimal.TEN));
+        assertEquals(0, Nums.nthRoot(Nums.BIG_DEC_THOUSAND, 3, 8).compareTo(BigDecimal.TEN));
+        assertEquals(0, Nums.nthRoot(BigDecimal.valueOf(1024), 10, 8).compareTo(BigDecimal.valueOf(2)));
+
     }
 
 }
