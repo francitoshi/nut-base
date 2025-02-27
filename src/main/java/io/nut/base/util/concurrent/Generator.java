@@ -1,7 +1,7 @@
 /*
- *  Yield.java
+ *  Generator.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
  */
 package io.nut.base.util.concurrent;
 
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
@@ -33,7 +34,7 @@ import java.util.logging.Logger;
  * @author franci
  * @param <E>
  */
-public abstract class Yield<E> implements Iterable<E>, Iterator<E>, Runnable
+public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
 {
     static class Item<E>
     {
@@ -50,12 +51,12 @@ public abstract class Yield<E> implements Iterable<E>, Iterator<E>, Runnable
     private volatile E nextElement = null;
     private volatile boolean terminated;
 
-    public Yield(int capacity)
+    public Generator(int capacity)
     {
         this.queue = capacity==0 ? new SynchronousQueue<>() : new LinkedBlockingQueue<>(capacity);
     }
 
-    public Yield()
+    public Generator()
     {
         this(0);
     }
@@ -73,7 +74,7 @@ public abstract class Yield<E> implements Iterable<E>, Iterator<E>, Runnable
         }
         catch (InterruptedException ex)
         {
-            Logger.getLogger(Yield.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
@@ -91,8 +92,8 @@ public abstract class Yield<E> implements Iterable<E>, Iterator<E>, Runnable
             @Override
             public void run()
             {
-                Yield.this.run();
-                Yield.this.yield(POISON);
+                Generator.this.run();
+                Generator.this.yield(POISON);
             }
         },"Yield").start();
     }
@@ -123,7 +124,7 @@ public abstract class Yield<E> implements Iterable<E>, Iterator<E>, Runnable
         }
         catch (InterruptedException ex) 
         {
-            Logger.getLogger(Yield.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
             this.terminated=true;
             return false;
         }
@@ -141,7 +142,7 @@ public abstract class Yield<E> implements Iterable<E>, Iterator<E>, Runnable
         return currentElement;
     }
 
-    public static abstract class Safe<E> extends Yield<E>
+    public static abstract class Safe<E> extends Generator<E>
     {
         private final Object lock = new Object();
         
@@ -164,4 +165,26 @@ public abstract class Yield<E> implements Iterable<E>, Iterator<E>, Runnable
         }
         
     }
+
+    public Object[] toArray()
+    {
+        ArrayList<E> list = new ArrayList();
+        for(E item : this)
+        {
+            list.add(item);
+        }
+        return list.toArray();
+    }
+
+    public E[] toArray(E[] array)
+    {
+        ArrayList<E> list = new ArrayList();
+        for(E item : this)
+        {
+            list.add(item);
+        }
+        return list.toArray(array);
+    }
+    
+    
 }

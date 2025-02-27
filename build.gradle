@@ -2,7 +2,7 @@ apply plugin: 'java'
 apply plugin: 'maven-publish'
 
 group = 'com.github.francitoshi'
-version = '0.0.35'
+version = '0.0.36'
 
 repositories 
 {
@@ -15,6 +15,8 @@ dependencies
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
     testImplementation 'org.bouncycastle:bcprov-jdk15on:1.62'
     testImplementation 'org.apache.commons:commons-csv:1.9.0'
+    
+    testImplementation 'ch.obermuhlner:big-math:2.3.0'
 }
 
 java 

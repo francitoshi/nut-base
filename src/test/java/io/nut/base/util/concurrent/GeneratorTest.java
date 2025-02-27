@@ -1,7 +1,7 @@
 /*
- *  YieldTest.java
+ *  GeneratorTest.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,10 +30,10 @@ import org.junit.jupiter.api.Test;
  *
  * @author franci
  */
-public class YieldTest
+public class GeneratorTest
 {
 
-    public YieldTest()
+    public GeneratorTest()
     {
     }
 
@@ -57,9 +57,9 @@ public class YieldTest
     {
     }
 
-    static Yield<Character> letters(int n, int capacity)
+    static Generator<Character> letters(int n, int capacity)
     {
-        return new Yield.Safe<Character>()
+        return new Generator.Safe<Character>()
         {
             @Override
             public void run()
@@ -72,9 +72,9 @@ public class YieldTest
         };
     }
 
-    static Yield<Integer> numbers(int n, int capacity)
+    static Generator<Integer> numbers(int n, int capacity)
     {
-        return new Yield.Safe<Integer>()
+        return new Generator.Safe<Integer>()
         {
             @Override
             public void run()
@@ -88,7 +88,7 @@ public class YieldTest
     }
 
     /**
-     * Test of iterator method, of class Yield.
+     * Test of iterator method, of class Generator.
      */
     @Test
     public void testIterator()
@@ -106,5 +106,6 @@ public class YieldTest
             numbers(99, 10).forEach((num) -> System.out.print(" " + ch + num));
             System.out.println();
         }
+        Generator<Integer> x = numbers(99, 0);
     }
 }

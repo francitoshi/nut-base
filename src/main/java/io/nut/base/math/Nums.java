@@ -1,7 +1,7 @@
 /*
  *  Nums.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -382,7 +382,15 @@ public class Nums
 
     public static boolean equalsEnough(BigDecimal d1, BigDecimal d2, BigDecimal delta)
     {
-        return d1.compareTo(d2) == 0 || d1.subtract(d2).abs().compareTo(delta) <= 0;
+        if(d1.compareTo(d2) == 0)
+        {
+            return true;
+        }
+        if(delta.equals(BigDecimal.ZERO))
+        {
+            return d1.compareTo(d2) == 0;
+        }
+        return d1.subtract(d2).abs().compareTo(delta) <= 0;
     }
     
     public static BigDecimal[] stripTrailingZeros(BigDecimal... src)
@@ -428,8 +436,6 @@ public class Nums
         }
         return dst;
     }
-
-
 
     private static final BigInteger[] TRIO_UP   = {BigInteger.ONE, BigInteger.valueOf(2), BigInteger.valueOf(5)};
     
@@ -1895,65 +1901,5 @@ public class Nums
                 return n;
             }
         }
-    }
-    
-    /**
-     * Calculates the N-th root of a number using BigDecimal.
-     *
-     * @param number The number for which the root is to be calculated.
-     * @param n The index of the root (N).
-     * @param precision The desired precision for the calculation.
-     * @return The nth root of the number
-     * @throws IllegalArgumentException if N is less than or equal to 0.
-     */
-    public static BigDecimal nthRoot(BigDecimal number, int n, int precision)
-    {
-        if (n <= 0)
-        {
-            throw new IllegalArgumentException("The root index must be greater than 0.");
-        }
-        if (number.compareTo(BigDecimal.ZERO) < 0 && n % 2 == 0)
-        {
-            throw new ArithmeticException("Cannot calculate the even root of a negative number.");
-        }
-        if (precision <= 0)
-        {
-            throw new IllegalArgumentException("Precision must be positive");
-        }
-
-        // Handle special cases
-        if (number.compareTo(BigDecimal.ZERO) == 0)
-        {
-            return BigDecimal.ZERO;
-        }
-        if (n == 1)
-        {
-            return number;
-        }
-        MathContext mc = new MathContext(precision, RoundingMode.HALF_UP);
-
-        // Initial value for the Newton-Raphson method
-        BigDecimal x = number.divide(BigDecimal.valueOf(n), mc);
-
-        BigDecimal nBigDecimal = BigDecimal.valueOf(n);
-        BigDecimal epsilon = BigDecimal.ONE.scaleByPowerOfTen(-precision);
-
-        while (true)
-        {
-            // x_n+1 = (1/n) * ((n-1) * x_n + number / x_n^(n-1))
-            BigDecimal xPrev = x;
-            BigDecimal xToThePowerOfNMinus1 = x.pow(n - 1, mc);
-            BigDecimal numerator = number.divide(xToThePowerOfNMinus1, mc).add(x.multiply(nBigDecimal.subtract(BigDecimal.ONE), mc));
-            x = numerator.divide(nBigDecimal, mc);
-
-            // Check if the difference is smaller than epsilon
-            if (x.subtract(xPrev).abs().compareTo(epsilon) < 0)
-            {
-                break;
-            }
-        }
-
-        return x.round(mc);
-    }
-    
+    }    
 }

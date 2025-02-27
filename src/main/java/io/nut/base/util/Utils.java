@@ -1,7 +1,7 @@
 /*
  *  Utils.java
  *
- *  Copyright (c) 2023-2024 francitoshi@gmail.com
+ *  Copyright (c) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1489,6 +1489,24 @@ public class Utils
             }
         }
         return dst;
+    }
+    
+    public static <E> List<E> append(List<E> list, E... items)
+    {
+        list.addAll(Arrays.asList(items));
+        return list;
+    }
+
+    public static <E> Set<E> append(Set<E> set, E... items)
+    {
+        set.addAll(Arrays.asList(items));
+        return set;
+    }
+
+    public static <E> Queue<E> append(Queue<E> queue, E... items)
+    {
+        queue.addAll(Arrays.asList(items));
+        return queue;
     }
 
     public static long adler32(byte[] bytes)

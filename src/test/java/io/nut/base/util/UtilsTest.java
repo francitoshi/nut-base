@@ -1,7 +1,7 @@
 /*
  * UtilsTest.java
  *
- * Copyright (c) 2023-2024 francitoshi@gmail.com
+ * Copyright (c) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,19 +22,32 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
+import java.io.Closeable;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -2341,47 +2354,6 @@ public class UtilsTest
         assertFalse(Utils.isNullOrZero(new BigDecimal(-0.003), delta));
     }
 
-    /**
-     * Test of equalsEnough method, of class Utils.
-     */
-    @Test
-    public void testEqualsEnough_3args_1()
-    {
-        assertTrue(Nums.equalsEnough(0f, 0f, 0f));
-        assertTrue(Nums.equalsEnough(0f, 1f, 1f));
-        assertFalse(Nums.equalsEnough(0f, 10f, 1f));
-
-        assertTrue(Nums.equalsEnough(0.1001f, 0.1f, 0.01f));
-        assertFalse(Nums.equalsEnough(0.1001f, 0.2f, 0.01f));
-    }
-
-    /**
-     * Test of equalsEnough method, of class Utils.
-     */
-    @Test
-    public void testEqualsEnough_3args_2()
-    {
-        assertTrue(Nums.equalsEnough(0d, 0d, 0d));
-        assertTrue(Nums.equalsEnough(0d, 1d, 1d));
-        assertFalse(Nums.equalsEnough(0d, 10d, 1d));
-
-        assertTrue(Nums.equalsEnough(0.1001, 0.1, 0.01));
-        assertFalse(Nums.equalsEnough(0.1001, 0.2, 0.01));
-    }
-
-    /**
-     * Test of equalsEnough method, of class Utils.
-     */
-    @Test
-    public void testEqualsEnough_3args_3()
-    {
-        assertTrue(Nums.equalsEnough(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
-        assertTrue(Nums.equalsEnough(BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.ONE));
-        assertFalse(Nums.equalsEnough(BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.ONE));
-
-        assertTrue(Nums.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.1), BigDecimal.valueOf(0.01)));
-        assertFalse(Nums.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.2), BigDecimal.valueOf(0.01)));
-    }
 
     @Test
     public void testBitSet()
@@ -2822,4 +2794,38 @@ public class UtilsTest
         byte[] result = Utils.asBytes(array);
         assertArrayEquals(exp, result);
     }    
+
+    /**
+     * Test of append method, of class Utils.
+     */
+    @Test
+    public void testAppend_List_GenericType()
+    {
+        List<String> exp = Arrays.asList("1","2","3","4","5");
+        List<String> result = Utils.append(new ArrayList<>(), "1","2","3","4","5");
+        assertEquals(exp, result);
+    }
+
+    /**
+     * Test of append method, of class Utils.
+     */
+    @Test
+    public void testAppend_Set_GenericType()
+    {
+        Set<String> exp = new HashSet<>(Arrays.asList("1","2","3","4","5"));
+        Set<String> result = Utils.append(new HashSet<>(), "1","2","3","4","5");
+        assertEquals(exp, result);
+    }
+
+    /**
+     * Test of append method, of class Utils.
+     */
+    @Test
+    public void testAppend_Queue_GenericType()
+    {
+        Queue<String> exp = new ConcurrentLinkedQueue<>(Arrays.asList("1","2","3","4","5"));
+        Queue<String> result = Utils.append(new ConcurrentLinkedQueue<>(), "1","2","3","4","5");
+        assertEquals(exp.size(), result.size());
+    }
+
 }
