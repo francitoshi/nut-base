@@ -1,5 +1,5 @@
 /*
- * Combinator.java
+ * Permutator2.java
  *
  * Copyright (c) 2025 francitoshi@gmail.com
  *
@@ -22,17 +22,13 @@ package io.nut.base.combinatorics;
 
 import io.nut.base.util.concurrent.Generator;
 import java.security.InvalidParameterException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
-public class Combinator<E> extends Generator<E[]>
+public class Permutator2<E> extends Generator<E[]>
 {
-    private final E[] values;
+    private final E[][] values;
     private final int k;
-    private final E[] empty;
 
-    public Combinator(E[] values, int k, int capacity)
+    public Permutator2(E[][] values, int k, int capacity)
     {
         super(capacity);
         this.values = values.clone();
@@ -41,45 +37,30 @@ public class Combinator<E> extends Generator<E[]>
         {
             throw new InvalidParameterException("invalid value for k="+k);
         }
-        this.empty = Arrays.copyOf(values, 0);
     }
 
-    public Combinator(E[] values, int k)
+    public Permutator2(E[][] values, int k)
     {
         this(values, k, 0);
     }
     
-    public Combinator(E[] values)
+    public Permutator2(E[][] values)
     {
         this(values, values.length, 0);
     }
+
     @Override
     public void run()
     {
-        if(k==values.length)
+        Combinator2<E> combinator2 = new Combinator2<>(values,k);
+        for(E[] c : combinator2)
         {
-            this.yield(values.clone());
-        }
-        else
-        {
-            combineK(0, k, new ArrayList<>());
+            Permutator<E> permutator = new Permutator<>(c,k);
+            for(E[] p : permutator)
+            {
+                this.yield(p);
+            }
         }
     }
     
-    private void combineK(int start, int k, List<E> current)
-    {
-        if (k == 0)
-        {
-            this.yield(current.toArray(this.empty));
-            return;
-        }
-
-        for (int i = start; i < values.length; i++)
-        {
-            current.add(values[i]);
-            combineK(i + 1, k - 1, current);
-            current.remove(current.size() - 1);
-        }
-    }
-
 }

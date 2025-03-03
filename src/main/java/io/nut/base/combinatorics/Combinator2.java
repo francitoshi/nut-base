@@ -1,5 +1,5 @@
 /*
- * Combinator.java
+ * Combinator2.java
  *
  * Copyright (c) 2025 francitoshi@gmail.com
  *
@@ -26,13 +26,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class Combinator<E> extends Generator<E[]>
+public class Combinator2<E> extends Generator<E[]>
 {
-    private final E[] values;
+    private final E[][] values;
     private final int k;
     private final E[] empty;
 
-    public Combinator(E[] values, int k, int capacity)
+    public Combinator2(E[][] values, int k, int capacity)
     {
         super(capacity);
         this.values = values.clone();
@@ -41,45 +41,40 @@ public class Combinator<E> extends Generator<E[]>
         {
             throw new InvalidParameterException("invalid value for k="+k);
         }
-        this.empty = Arrays.copyOf(values, 0);
+        this.empty = Arrays.copyOf(values[0], 0);
     }
 
-    public Combinator(E[] values, int k)
+    public Combinator2(E[][] values, int k)
     {
         this(values, k, 0);
     }
     
-    public Combinator(E[] values)
+    public Combinator2(E[][] values)
     {
         this(values, values.length, 0);
     }
     @Override
     public void run()
     {
-        if(k==values.length)
-        {
-            this.yield(values.clone());
-        }
-        else
-        {
-            combineK(0, k, new ArrayList<>());
-        }
+        combine(0, k, new ArrayList<>());
     }
     
-    private void combineK(int start, int k, List<E> current)
+    private void combine(int start, int k, List<E> current)
     {
         if (k == 0)
         {
             this.yield(current.toArray(this.empty));
             return;
         }
-
         for (int i = start; i < values.length; i++)
         {
-            current.add(values[i]);
-            combineK(i + 1, k - 1, current);
-            current.remove(current.size() - 1);
+            for (int j = 0; j < values[i].length; j++)
+            {
+                current.add(values[i][j]);
+                combine(i + 1, k - 1, current);
+                current.remove(current.size() - 1);
+            }
+            //combine(i + 1, k, current);
         }
     }
-
 }
