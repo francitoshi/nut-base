@@ -1,7 +1,7 @@
 /*
  *  Bip39Test.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ import io.nut.base.crypto.bips.Bip39.MnemonicChecksumException;
 import io.nut.base.crypto.bips.Bip39.MnemonicWordException;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.Strings;
+import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
@@ -243,6 +244,36 @@ public class Bip39Test
         byte[] seed = bip39.seed(words, "TREZOR");
 
         assertEquals("628c3827a8823298ee685db84f55caa34b5cc195a778e52d45f59bcf75aba68e4d7590e101dc414bc1bbd5737666fbbef35d1f1903953b66624f910feef245ac", Hex.encode(seed));
+    }
+
+
+    /**
+     * Test of getWord method, of class Bip39.
+     */
+    @Test
+    public void testGetWord()
+    {
+        Bip39 instance = new Bip39();
+        assertEquals("abandon", instance.getWord(0));
+        assertEquals("ability", instance.getWord(1));
+        assertEquals("accident", instance.getWord(11));
+        assertEquals("assume", instance.getWord(111));
+        assertEquals("memory", instance.getWord(1111));
+
+    }
+
+    /**
+     * Test of getIndex method, of class Bip39.
+     */
+    @Test
+    public void testGetIndex()
+    {
+        Bip39 instance = new Bip39();
+        assertEquals(0, instance.getIndex("abandon"));
+        assertEquals(1, instance.getIndex("ability"));
+        assertEquals(11, instance.getIndex("accident"));
+        assertEquals(111, instance.getIndex("assume"));
+        assertEquals(1111, instance.getIndex("memory"));
     }
 
 }

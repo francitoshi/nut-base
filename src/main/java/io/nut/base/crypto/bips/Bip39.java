@@ -1,7 +1,7 @@
 /*
  *  BIP39.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -395,5 +395,16 @@ public class Bip39
             return s2i.getOrDefault(s, -1);
         }
     }
+
+    public String getWord(int i)
+    {
+        return this.wordList.getWord(i);
+    }
+
+    public int getIndex(String s)
+    {
+        return this.wordList.getIndex(s);
+    }
+    
 }
 
