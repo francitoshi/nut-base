@@ -108,4 +108,16 @@ public class GeneratorTest
         }
         Generator<Integer> x = numbers(99, 0);
     }
+    /**
+     * Test of shutdown method, of class Generator.
+     */
+    @Test
+    public void testShutdown()
+    {
+        Generator<Character> instance = letters(26, 0);
+        for (Character ch : instance)
+        {
+            instance.shutdown();
+        }
+    }
 }
