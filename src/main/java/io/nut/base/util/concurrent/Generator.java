@@ -82,6 +82,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         {
             if(terminated)
             {
+                this.queue.offer(POISON);
                 throw new IllegalStateException();
             }
             this.queue.put(item);
