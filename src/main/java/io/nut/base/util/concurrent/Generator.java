@@ -82,7 +82,6 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         {
             if(terminated)
             {
-                this.queue.offer(POISON);
                 throw new IllegalStateException();
             }
             this.queue.put(item);
@@ -110,10 +109,14 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                 try
                 {
                     Generator.this.run();
-                    Generator.this.yield(POISON);
                 }
                 catch(IllegalStateException ex)
                 {
+                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, null, ex);
+                }
+                finally
+                {
+                    Generator.this.yield(POISON);
                 }
             }
         },"Generator").start();
