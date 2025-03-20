@@ -65,7 +65,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     {
         this.yield(POISON);
     }
-
+   
     public boolean isTerminated()
     {
         return terminated;
@@ -80,7 +80,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     {
         try
         {
-            if(terminated)
+            if(terminated && !item.equals(POISON))
             {
                 throw new IllegalStateException();
             }
