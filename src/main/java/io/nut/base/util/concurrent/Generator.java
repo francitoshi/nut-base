@@ -61,15 +61,29 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         this(0);
     }
     
+    public void shutdown()
+    {
+        this.yield(POISON);
+    }
+
+    public boolean isTerminated()
+    {
+        return terminated;
+    }
+    
     protected final void yield(E e)
     {
-            this.yield(new Item<>(e));
+        this.yield(new Item<>(e));
     }
     
     private void yield(Item<E> item)
     {
         try
         {
+            if(terminated)
+            {
+                throw new IllegalStateException();
+            }
             this.queue.put(item);
         }
         catch (InterruptedException ex)
@@ -92,10 +106,16 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
             @Override
             public void run()
             {
-                Generator.this.run();
-                Generator.this.yield(POISON);
+                try
+                {
+                    Generator.this.run();
+                    Generator.this.yield(POISON);
+                }
+                catch(IllegalStateException ex)
+                {
+                }
             }
-        },"Yield").start();
+        },"Generator").start();
     }
 
     @Override
