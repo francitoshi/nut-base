@@ -64,6 +64,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     public void shutdown()
     {
         terminated = true;
+        queue.clear();
     }
    
     public boolean isTerminated()
@@ -112,11 +113,11 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                 }
                 catch(IllegalStateException ex)
                 {
-                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, null, ex);
+//                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, null, ex);
                 }
                 finally
                 {
-                    Generator.this.yield(POISON);
+                    queue.offer(POISON);
                 }
             }
         },"Generator").start();

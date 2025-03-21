@@ -20,6 +20,7 @@
  */
 package io.nut.base.util.concurrent;
 
+import io.nut.base.util.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -117,6 +118,13 @@ public class GeneratorTest
         Generator<Character> instance = letters(26, 0);
         for (Character ch : instance)
         {
+            Utils.sleep(100);
+            instance.shutdown();
+        }
+        instance = letters(26, 10);
+        for (Character ch : instance)
+        {
+            Utils.sleep(100);
             instance.shutdown();
         }
     }
