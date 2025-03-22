@@ -126,16 +126,6 @@ public class UtilsTest
     }
 
     /**
-     * Test of asShortArray method, of class ArrayUtils.
-     */
-    @Test
-    public void testAsShortArray()
-    {
-        assertArrayEquals(null, Utils.asShorts(null));
-        assertArrayEquals(shortArray, Utils.asShorts(byteArray));
-    }
-
-    /**
      * Test of asIntArray method, of class ArrayUtils.
      */
     @Test
@@ -369,29 +359,6 @@ public class UtilsTest
     static final float[] floatArray = {0,1,2,3,4};
     static final double[] doubleArray = {0,1,2,3,4};
     
-    /**
-     * Test of toShort method, of class Utils.
-     */
-    @Test
-    public void testAsShorts()
-    {
-        {
-            byte[] src = null;
-            assertNull(Utils.asShorts(src));
-        }
-        {
-            byte[] src = {};
-            short[] expResult = {};
-            assertArrayEquals(expResult, Utils.asShorts(src));
-        }
-        {
-            byte[] src        = {Byte.MIN_VALUE, -1, 0, +1, Byte.MAX_VALUE};
-            short[] expResult = {Byte.MIN_VALUE, -1, 0, +1, Byte.MAX_VALUE};
-            assertArrayEquals(expResult, Utils.asShorts(src));
-        }
-        
-    }
-
 
     /**
      * Test of asString method, of class Utils.
@@ -2770,30 +2737,6 @@ public class UtilsTest
         Set<String> result = Utils.intersection(sets);
         assertEquals(1, result.size());
     }
-
-    /**
-     * Test of asBytes method, of class Utils.
-     */
-    @Test
-    public void testAsBytes_intArr()
-    {
-        int[] array = {1,2,3,4};
-        byte[] exp = {0,0,0,1,0,0,0,2,0,0,0,3,0,0,0,4};
-        byte[] result = Utils.asBytes(array);
-        assertArrayEquals(exp, result);
-    }
-
-    /**
-     * Test of asBytes method, of class Utils.
-     */
-    @Test
-    public void testAsBytes_longArr()
-    {
-        long[] array = {1,2,3,4};
-        byte[] exp = {0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,4};
-        byte[] result = Utils.asBytes(array);
-        assertArrayEquals(exp, result);
-    }    
 
     /**
      * Test of append method, of class Utils.

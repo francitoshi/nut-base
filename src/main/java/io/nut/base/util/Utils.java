@@ -241,42 +241,6 @@ public class Utils
         return out.toByteArray();
     }
 
-    public static byte[] asBytes(int[] intArray)
-    {
-        ByteBuffer bb = ByteBuffer.allocate(intArray.length * Integer.BYTES);
-        for (int i = 0; i < intArray.length; i++)
-        {
-            bb.putInt(intArray[i]);
-        }
-        return bb.array();
-    }
-    public static byte[] asBytesLE(int[] intArray)
-    {
-        ByteBuffer bb = ByteBuffer.allocate(intArray.length * Integer.BYTES).order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < intArray.length; i++)
-        {
-            bb.putInt(intArray[i]);
-        }
-        return bb.array();
-    }
-    public static byte[] asBytes(long[] longArray)
-    {
-        ByteBuffer bb = ByteBuffer.allocate(longArray.length * Long.BYTES);
-        for (int i = 0; i < longArray.length; i++)
-        {
-            bb.putLong(longArray[i]);
-        }
-        return bb.array();
-    }
-    public static byte[] asBytesLE(long[] longArray)
-    {
-        ByteBuffer bb = ByteBuffer.allocate(longArray.length * Long.BYTES).order(ByteOrder.LITTLE_ENDIAN);
-        for (int i = 0; i < longArray.length; i++)
-        {
-            bb.putLong(longArray[i]);
-        }
-        return bb.array();
-    }
 
     public static byte[] asBytes(BigInteger n, int minBytes)
     {
@@ -293,17 +257,6 @@ public class Utils
         return ret;
     }
 
-    public static short[] asShorts(byte[] src)
-    {
-        if (src == null)
-            return null;
-        short[] dst = new short[src.length];
-        for (int i = 0; i < src.length; i++)
-        {
-            dst[i] = src[i];
-        }
-        return dst;
-    }
 
     //----------------------------------------------------------------------------------------------
     public static int[] asInts(byte[] src)
