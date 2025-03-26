@@ -21,6 +21,8 @@
 package io.nut.base.util;
 
 import java.nio.ByteOrder;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -240,6 +242,13 @@ public class ByterTest
 
         assertNull(Byter.bytesUTF8((char[])null));
         assertNull(Byter.charsUTF8(null));
+        
+        String hello_world = "hello world";
+        byte[] expected = hello_world.getBytes(StandardCharsets.UTF_8);
+        byte[] result = Byter.bytesUTF8(hello_world.toCharArray());
+        assertArrayEquals(expected, result);
+        
+        
     }
 
 }
