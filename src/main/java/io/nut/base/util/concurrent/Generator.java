@@ -113,11 +113,19 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                 }
                 catch(IllegalStateException ex)
                 {
-//                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, null, ex);
+                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, null, ex);
                 }
                 finally
                 {
-                    queue.offer(POISON);
+                    try
+                    {
+                        queue.put(POISON);
+                    }
+                    catch (InterruptedException ex)
+                    {
+                        terminated = true;
+                        Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
             }
         },"Generator").start();

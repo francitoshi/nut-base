@@ -1,7 +1,7 @@
 /*
  *  Digest.java
  *
- *  Copyright (c) 2014-2024 francitoshi@gmail.com
+ *  Copyright (c) 2014-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ public class Digest
         {
             if(BC.equals(this.provider))
             {
-                Crypto.registerBouncyCastle();
+                Kripto.registerBouncyCastle();
             } 
             return  this.provider==null ? MessageDigest.getInstance(this.algorithm) : MessageDigest.getInstance(this.algorithm, this.provider);
         }

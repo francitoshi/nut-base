@@ -20,7 +20,7 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.crypto.Crypto;
+import io.nut.base.crypto.Kripto;
 import java.security.SecureRandom;
 import java.util.BitSet;
 
@@ -39,7 +39,7 @@ public abstract class BitSetReader
 
     public BitSetReader()
     {
-        this.secureRandom = Crypto.getSecureRandomStrong();
+        this.secureRandom = Kripto.getSecureRandomStrong();
     }
    
     static public BitSetReader build(final BitSet src)

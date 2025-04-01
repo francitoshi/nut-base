@@ -1,7 +1,7 @@
 /*
  * SteganographyTest.java
  *
- * Copyright (c) 2010-2023 francitoshi@gmail.com
+ * Copyright (c) 2010-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,14 @@
  */
 package io.nut.base.stego;
 
+import io.nut.base.crypto.Digest;
 import io.nut.base.io.FileUtils;
 import java.io.File;
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Random;
+import javax.crypto.SecretKey;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -118,9 +122,8 @@ public class SteganographyTest
      * Test of encode method, of class Steganography.
      */
     @Test
-    public void testEncode() throws IOException 
+    public void testEncode() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException 
     {
-        
         {
             Steganography instance = new Steganography(72, true, true, false);
             String txt11 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus id ultrices ligula. Praesent in sem at turpis sagittis scelerisque. Nunc massa nulla, eleifend ac maximus sit amet, commodo vitae arcu. Etiam et elit vel magna volutpat consectetur ut quis nisi. Etiam dignissim sem vitae consectetur dapibus. Proin molestie eleifend cursus. Mauris ut fermentum neque, aliquam hendrerit felis. Sed nec quam in erat tincidunt mollis quis nec neque. Aliquam venenatis nibh ac commodo congue. Quisque blandit ligula eu dui ultrices ultrices. Suspendisse placerat efficitur ex, pharetra congue magna viverra in.";
@@ -135,21 +138,29 @@ public class SteganographyTest
             Steganography instance = new Steganography(72, true, true, false);
             byte[] msg21 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit".getBytes();
             String otrashiervas = FileUtils.readFileAsString(new File("doc", STEGOWINSTEGOYOTRASHIERBASTXT));
-            byte[] pass = "eureka".getBytes();
+            char[] passphrase = "eureka".toCharArray();
 
             String otrashiervas2 = instance.encode(otrashiervas, msg21);
             byte[] msg22 = instance.decode(otrashiervas2);
             assertArrayEquals(msg21, msg22);
+            
+            SecretKey keyChars = instance.deriveSecretKey(passphrase);
 
-            String otrashiervas3 = instance.encode(otrashiervas, msg21, pass);
-            byte[] msg3 = instance.decode(otrashiervas3, pass);
+            String otrashiervas3 = instance.encode(otrashiervas, msg21, keyChars);
+            byte[] msg3 = instance.decode(otrashiervas3, keyChars);
             assertArrayEquals(msg21, msg3);
+            
+            SecretKey keyBytes = instance.getSecretKey(Digest.sha256(msg3));
+
+            String otrashiervas4 = instance.encode(otrashiervas, msg21, keyBytes);
+            byte[] msg4 = instance.decode(otrashiervas4, keyBytes);
+            assertArrayEquals(msg21, msg4);
         }
         {
             Steganography instance = new Steganography(72, true, true, true);
             
             byte[] msg1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.".getBytes();
-            byte[] pass = "eureka".getBytes();
+            char[] pass = "eureka".toCharArray();
             String otrashiervas = FileUtils.readFileAsString(new File("doc", STEGOWINSTEGOYOTRASHIERBASTXT));
 
             String otrashiervas2 = instance.encode(otrashiervas, msg1);
@@ -157,8 +168,10 @@ public class SteganographyTest
             byte[] msg2 = instance.decode(otrashiervas2);
             assertArrayEquals(msg1, msg2);
 
-            String otrashiervas3 = instance.encode(otrashiervas, msg1, pass);
-            byte[] msg3 = instance.decode(otrashiervas3, pass);
+            SecretKey keyChars = instance.deriveSecretKey(pass);
+            
+            String otrashiervas3 = instance.encode(otrashiervas, msg1, keyChars);
+            byte[] msg3 = instance.decode(otrashiervas3, keyChars);
             assertArrayEquals(msg1, msg3);
         }
         {
@@ -181,7 +194,7 @@ public class SteganographyTest
      * Test of justify method, of class Steganography.
      */
     @Test
-    public void testJustify() throws IOException
+    public void testJustify() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException
     {
         String otrashiervas = FileUtils.readFileAsString(new File("doc",STEGOWINSTEGOYOTRASHIERBASTXT));
         Steganography instance = new Steganography(72, true, true, true);

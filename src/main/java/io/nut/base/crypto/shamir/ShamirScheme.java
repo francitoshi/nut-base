@@ -12,14 +12,14 @@
  * limitations under the License.
  */
 
-//2018-07-11 franci 
+//2018-07-11 francitoshi 
 //• copied from https://github.com/codahale/shamir
 //• remove use of Google AutoValue 
 //• drop use of lambdas
 
 package io.nut.base.crypto.shamir;
 
-import io.nut.base.crypto.Crypto;
+import io.nut.base.crypto.Kripto;
 import java.security.SecureRandom;
 
 /**
@@ -46,7 +46,7 @@ public class ShamirScheme
     {
         this.n = n;
         this.k = k;
-        this.secureRandom = Crypto.getSecureRandomStrong();
+        this.secureRandom = Kripto.getSecureRandomStrong();
     }
   
   /**

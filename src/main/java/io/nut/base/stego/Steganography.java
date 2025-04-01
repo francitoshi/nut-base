@@ -1,7 +1,7 @@
 /*
  * Steganography.java
  *
- * Copyright (c) 2010-2023 francitoshi@gmail.com
+ * Copyright (c) 2010-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@
  */
 package io.nut.base.stego;
 
-import io.nut.base.crypto.Crypto;
-import io.nut.base.crypto.Crypto.SymmetricAlgorithm;
+import io.nut.base.crypto.Kripto;
+import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
+import io.nut.base.crypto.Kripto.SecretKeyDerivation;
+import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.math.Nums;
 import io.nut.base.util.BitSetReader;
 import io.nut.base.util.BitSetWriter;
@@ -31,11 +33,12 @@ import io.nut.base.util.Utils;
 import io.nut.base.util.VarInt;
 import io.nut.base.util.Zip;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
@@ -45,6 +48,8 @@ import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
 
 /**
  *
@@ -57,7 +62,12 @@ public class Steganography
     private static final String WORDS = "[ \n\r\t\f]+";
     private static final String HOLES = "\\S+";
     private static final byte[] IV16 = new byte[16];
-    private static final SymmetricAlgorithm SYMETRIC_ALGORITHM = Crypto.SymmetricAlgorithm.AES_CFB8_NoPadding;
+    private static final SecretKeyAlgorithm AES = SecretKeyAlgorithm.AES;
+    private static final SecretKeyTransformation AES_CFB8_NOPADDING = SecretKeyTransformation.AES_CFB8_NoPadding;
+
+    private static final byte[] SALT = "salt".getBytes(StandardCharsets.UTF_8);
+    private static final int ROUNDS = 2048;
+    private static final int KEY_BITS = 256;
 
 //    private static final StegoPack pk = new StegoPack0();
 
@@ -65,7 +75,7 @@ public class Steganography
     private final boolean splitLines;
     private final boolean mergeLines;
     private final boolean deflate;
-    private final Crypto crypto;
+    private final Kripto kripto;
     private volatile double bitsRatio=0;
     private volatile String bitsGauge="";
     
@@ -75,14 +85,14 @@ public class Steganography
     {
         this(columns, splitLines, mergeLines, deflate, false);
     }
-    public Steganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate, boolean bouncyCastle)
+    public Steganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate, boolean preferBouncyCastle)
     {
         this.columns = columns;
         this.splitLines = splitLines;
         this.mergeLines = mergeLines;
         this.deflate = deflate;
-        this.crypto = Crypto.getInstance(bouncyCastle);
-        this.secureRandom = Crypto.getSecureRandomStrong();
+        this.kripto = Kripto.getInstance(preferBouncyCastle);
+        this.secureRandom = Kripto.getSecureRandomStrong();
     }
 
     public double getBitsRatio()
@@ -211,14 +221,14 @@ public class Steganography
         return size;
     }
 
-    private byte[] encrypt(byte[] packet, byte[] pass) throws RuntimeException
+    private byte[] encrypt(byte[] packet, SecretKey key) throws RuntimeException
     {
         try
         {
-            pass = crypto.sha256().digest(pass);
-            packet = crypto.newEncryptCipher(SYMETRIC_ALGORITHM, pass, IV16).doFinal(packet);
+            IvParameterSpec iv16 = kripto.getIv(IV16);
+            packet = kripto.encrypt(key, AES_CFB8_NOPADDING, iv16, packet);
         }
-        catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
+        catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
         {
             Logger.getLogger(Steganography.class.getName()).log(Level.SEVERE, null, ex);
             throw new RuntimeException("Cryptography error",ex);
@@ -226,14 +236,14 @@ public class Steganography
         return packet;
     }
     
-    private byte[] decrypt(byte[] packet, byte[] pass) throws RuntimeException
+    private byte[] decrypt(byte[] packet, SecretKey key) throws RuntimeException
     {
         try
         {
-            pass = crypto.sha256().digest(pass);
-            packet = crypto.newDecryptCipher(SYMETRIC_ALGORITHM, pass, IV16).doFinal(packet);
+            IvParameterSpec iv16 = kripto.getIv(IV16);
+            packet = kripto.decrypt(key, AES_CFB8_NOPADDING, iv16, packet);
         }
-        catch (NoSuchAlgorithmException | NoSuchProviderException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
+        catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
         {
             Logger.getLogger(Steganography.class.getName()).log(Level.SEVERE, null, ex);
             throw new RuntimeException("Cryptography error",ex);
@@ -367,12 +377,29 @@ public class Steganography
         decodeNH(holes, d, n, h, 0, wbits);
     }
 
-    public String encode(String text, byte[] msg, byte[] pass)
+    public SecretKey deriveSecretKey(char[] passphrase) throws NoSuchAlgorithmException, InvalidKeySpecException
+    {
+        if(passphrase==null || passphrase.length==0)
+        {
+            return null;
+        }
+        return kripto.deriveSecretKey(passphrase, SALT, ROUNDS, KEY_BITS, SecretKeyDerivation.PBKDF2WithHmacSHA256, AES);
+    }
+    public SecretKey getSecretKey(byte[] passphrase) throws NoSuchAlgorithmException, InvalidKeySpecException
+    {
+        if(passphrase==null || passphrase.length==0)
+        {
+            return null;
+        }
+        return kripto.getSecretKey(passphrase, AES);
+    }
+
+    public String encode(String text, byte[] msg, SecretKey key)
     {
         byte[] packet = pack(msg,this.deflate);
-        if(pass!=null && pass.length>0)
+        if(key!=null)
         {
-            packet = encrypt(packet, pass);
+            packet = encrypt(packet, key);
         }
         BitSetReader rbits = BitSetReader.build(BitSet.valueOf(packet));
         
@@ -402,20 +429,19 @@ public class Steganography
 
     public String encode(String text, byte[] msg) 
     {
-        return encode(text, msg, null);
+        return encode(text, msg, (SecretKey)null);
     }
 
-    public String justify(String text)
+    public String justify(String text) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
         byte[] msg = new byte[1024];
         byte[] pass = new byte[32];
         this.secureRandom.nextBytes(msg);
         this.secureRandom.nextBytes(pass);
-        return encode(text,msg,pass);
+        return encode(text,msg,getSecretKey(pass));
     }
 
-
-    public byte[] decode(String text, byte[] pass)
+    public byte[] decode(String text, SecretKey key)
     {
         BitSet bitSet = new BitSet();
         BitSetWriter wbits = BitSetWriter.build(bitSet);
@@ -430,9 +456,9 @@ public class Steganography
         }
         
         byte[] packet = bitSet.toByteArray();
-        if(pass!=null && pass.length>0)
+        if(key!=null)
         {
-            packet = decrypt(packet, pass);
+            packet = decrypt(packet, key);
         }
         
         return unpack(packet);
@@ -440,7 +466,6 @@ public class Steganography
 
     public byte[] decode(String text)
     {
-        return decode(text, null);
-    }
-   
+        return decode(text, (SecretKey)null);
+    }   
 }

@@ -1,7 +1,7 @@
 /*
  * Shuffles.java
  *
- * Copyright (c) 2012-2024 francitoshi@gmail.com
+ * Copyright (c) 2012-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.crypto.Crypto;
+import io.nut.base.crypto.Kripto;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,7 +35,7 @@ public class Shuffles
     enum Holder
     {
         INSTANCE;
-        private final SecureRandom secureRandom = Crypto.getSecureRandomStrong();
+        private final SecureRandom secureRandom = Kripto.getSecureRandomStrong();
     }
 
     private static SecureRandom getSecureRandom()
