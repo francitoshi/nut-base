@@ -1,7 +1,7 @@
 /*
  * CommonsTest.java
  *
- * Copyright (c) 2013-2024 francitoshi@gmail.com
+ * Copyright (c) 2013-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
  */
 package io.tea.base.text;
 
+import io.nut.base.text.Commons;
 import java.util.Arrays;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;

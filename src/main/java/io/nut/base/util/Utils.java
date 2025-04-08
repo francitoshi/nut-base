@@ -3113,5 +3113,108 @@ public class Utils
     {
         return new BigInteger(Arrays.copyOfRange(val, off, off+len));
     }    
-    
+
+    public static <T> int countColums(T[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (T[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
+
+    public static int countColums(byte[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (byte[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
+
+    public static int countColums(short[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (short[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
+
+    public static int countColums(char[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (char[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
+
+    public static int countColums(int[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (int[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
+
+    public static int countColums(long[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (long[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
+
+    public static int countColums(float[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (float[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
+
+    public static int countColums(double[][] cells)
+    {
+        int cols = 0;
+        if (cells != null)
+        {
+            for (double[] row : cells)
+            {
+                cols = Math.max(cols, row != null ? row.length : 0);
+            }
+        }
+        return cols;
+    }
 }

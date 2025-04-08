@@ -2771,4 +2771,180 @@ public class UtilsTest
         assertEquals(exp.size(), result.size());
     }
 
+    @Test
+    public void testCountColums_GenericType()
+    {
+        String[][] cells1 = {};
+        String[][] cells2 = {null};
+        String[][] cells3 = {{}};
+        String[][] cells4 = {{"1"}};
+        String[][] cells5 = {{"1","2"}};
+        String[][] cells6 = {{},{"1","2"},null};
+        String[][] cells7 = {null, {"1","2"}};
+        String[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
+    @Test
+    public void testCountColums_byteArrArr()
+    {
+        byte[][] cells1 = {};
+        byte[][] cells2 = {null};
+        byte[][] cells3 = {{}};
+        byte[][] cells4 = {{1}};
+        byte[][] cells5 = {{1,2}};
+        byte[][] cells6 = {{},{1,2},null};
+        byte[][] cells7 = {null, {1,2}};
+        byte[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
+    @Test
+    public void testCountColums_shortArrArr()
+    {
+        short[][] cells1 = {};
+        short[][] cells2 = {null};
+        short[][] cells3 = {{}};
+        short[][] cells4 = {{1}};
+        short[][] cells5 = {{1,2}};
+        short[][] cells6 = {{},{1,2},null};
+        short[][] cells7 = {null, {1,2}};
+        short[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
+    @Test
+    public void testCountColums_charArrArr()
+    {
+        char[][] cells1 = {};
+        char[][] cells2 = {null};
+        char[][] cells3 = {{}};
+        char[][] cells4 = {{1}};
+        char[][] cells5 = {{1,2}};
+        char[][] cells6 = {{},{1,2},null};
+        char[][] cells7 = {null, {1,2}};
+        char[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
+    @Test
+    public void testCountColums_intArrArr()
+    {
+        int[][] cells1 = {};
+        int[][] cells2 = {null};
+        int[][] cells3 = {{}};
+        int[][] cells4 = {{1}};
+        int[][] cells5 = {{1,2}};
+        int[][] cells6 = {{},{1,2},null};
+        int[][] cells7 = {null, {1,2}};
+        int[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
+    @Test
+    public void testCountColums_longArrArr()
+    {
+        long[][] cells1 = {};
+        long[][] cells2 = {null};
+        long[][] cells3 = {{}};
+        long[][] cells4 = {{1}};
+        long[][] cells5 = {{1,2}};
+        long[][] cells6 = {{},{1,2},null};
+        long[][] cells7 = {null, {1,2}};
+        long[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
+    @Test
+    public void testCountColums_floatArrArr()
+    {
+        float[][] cells1 = {};
+        float[][] cells2 = {null};
+        float[][] cells3 = {{}};
+        float[][] cells4 = {{1}};
+        float[][] cells5 = {{1,2}};
+        float[][] cells6 = {{},{1,2},null};
+        float[][] cells7 = {null, {1,2}};
+        float[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
+    @Test
+    public void testCountColums_doubleArrArr()
+    {
+        double[][] cells1 = {};
+        double[][] cells2 = {null};
+        double[][] cells3 = {{}};
+        double[][] cells4 = {{1}};
+        double[][] cells5 = {{1,2}};
+        double[][] cells6 = {{},{1,2},null};
+        double[][] cells7 = {null, {1,2}};
+        double[][] cells8 = {null,null,null};
+        
+        assertEquals(0, Utils.countColums(cells1));
+        assertEquals(0, Utils.countColums(cells2));
+        assertEquals(0, Utils.countColums(cells3));
+        assertEquals(1, Utils.countColums(cells4));
+        assertEquals(2, Utils.countColums(cells5));
+        assertEquals(2, Utils.countColums(cells6));
+        assertEquals(2, Utils.countColums(cells7));
+        assertEquals(0, Utils.countColums(cells8));
+    }
+
 }

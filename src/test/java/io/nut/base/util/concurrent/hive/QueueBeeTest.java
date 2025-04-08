@@ -1,7 +1,7 @@
 /*
  *  QueueBeeTest.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,8 +21,6 @@
 package io.nut.base.util.concurrent.hive;
 
 import io.nut.base.util.Utils;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

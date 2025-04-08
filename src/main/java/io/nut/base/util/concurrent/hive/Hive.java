@@ -1,7 +1,7 @@
 /*
  *  Hive.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,8 +20,10 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
@@ -36,25 +38,29 @@ public class Hive implements AutoCloseable, Executor
     public static final int CORES = Runtime.getRuntime().availableProcessors();
     
     public static final int KEEP_ALIVE_MILLIS = 30_000;
+    
+    private static final ThreadPoolExecutor.CallerRunsPolicy CALLER_RUNS_POLICY  = new ThreadPoolExecutor.CallerRunsPolicy();
 
     private final ThreadPoolExecutor threadPoolExecutor;
+    
     
     protected Hive(ThreadPoolExecutor threadPoolExecutor)
     {
         this.threadPoolExecutor = threadPoolExecutor;
     }
-    public Hive(int coreThreads, int maxThreads, int keepAliveMillis)
+    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
     {
-        this.threadPoolExecutor = new ThreadPoolExecutor(coreThreads, maxThreads, keepAliveMillis, TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>());
-    }
-    public Hive(int threads)
-    {
-        this( threads, threads, KEEP_ALIVE_MILLIS);
+        BlockingQueue queue = queueCapacity==0 ? new SynchronousQueue() : new LinkedBlockingQueue(queueCapacity);
+        this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, rushPoolSize, keepAliveMillis, TimeUnit.MILLISECONDS, queue, CALLER_RUNS_POLICY);
     }
 
+    public Hive(int corePoolSize)
+    {
+        this( corePoolSize, corePoolSize, corePoolSize, KEEP_ALIVE_MILLIS);
+    }
     public Hive()
     {
-        this( CORES + 1, CORES*2 + 1, KEEP_ALIVE_MILLIS);
+        this( CORES, CORES, CORES, KEEP_ALIVE_MILLIS);
     }
     
     public Hive add(Bee<?>... bees)

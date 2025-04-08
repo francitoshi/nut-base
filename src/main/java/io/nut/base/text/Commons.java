@@ -1,7 +1,7 @@
 /*
  * Commons.java
  *
- * Copyright (c) 2013-2024 francitoshi@gmail.com
+ * Copyright (c) 2013-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.tea.base.text;
+package io.nut.base.text;
 
 import java.util.Arrays;
 import java.util.Comparator;

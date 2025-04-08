@@ -1,7 +1,7 @@
 /*
  * TableTest.java
  *
- * Copyright (c) 2024 francitoshi@gmail.com
+ * Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -73,6 +73,43 @@ public class TableTest
 //        System.out.println(instance.toString());
         
         assertEquals(expected, instance.toString());
+    }
+
+
+    /**
+     * Test of addRowHead method, of class Table.
+     */
+    @Test
+    public void testExample3()
+    {
+        Table instance = new Table(null,null, null, true);
+        
+        assertEquals(0, instance.rows);
+        assertEquals(0, instance.cols);
+
+        String[] rowNames = {"A","B"};
+        String[] colNames = {"a","b"};
+        String[][] cells1 = {};
+        String[][] cells2 = {{"1","2"},{"1","2"}};
+        
+        instance = new Table(null,null, cells1, true);
+        
+        assertEquals(0, instance.rows);
+        assertEquals(0, instance.cols);
+
+        instance = new Table(null,null, cells2, true);
+
+        assertEquals(2, instance.rows);
+        assertEquals(2, instance.cols);
+
+        instance = new Table(rowNames,colNames, null, true);
+
+        assertEquals(2, instance.rows);
+        assertEquals(2, instance.cols);
+        assertEquals("A", instance.getRowName(0));
+        assertEquals("B", instance.getRowName(1));
+        assertEquals("a", instance.getColName(0));
+        assertEquals("b", instance.getColName(1));
     }
 
 

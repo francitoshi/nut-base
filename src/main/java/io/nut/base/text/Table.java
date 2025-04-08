@@ -1,7 +1,7 @@
 /*
  * Table.java
  *
- * Copyright (c) 2024 francitoshi@gmail.com
+ * Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,21 +21,50 @@
 package io.nut.base.text;
 
 import io.nut.base.util.Strings;
+import io.nut.base.util.Utils;
 
 /**
  *
  * @author franci
  */
-public class Table
+public final class Table
 {
+    private static final char SPACE= ' ';
+    private static final char HLINE= '-';
+    private static final char CROSS= '+';
+    private static final char VLINE= '|';
     
-    private final int cols;
-    private final int rows;
+    public enum Paint
+    {
+        Space(SPACE,SPACE,SPACE), 
+        Math('-','+','|'), 
+        BoxLight('─','┼','│'), 
+        BoxHeavy('━','╋','┃'),
+        BoxDouble('═','╬','║');
+
+        private Paint(char hline, char cross, char vline)
+        {
+            this.hline = hline;
+            this.cross = cross;
+            this.vline = vline;
+        }
+        
+        final char hline;
+        final char cross;
+        final char vline;
+
+    }
+    
+    
+    final int cols;
+    final int rows;
     private final String[][] cells;
-    private final boolean alignRight;
+    final boolean alignRight;
     private volatile String title;
     private final String[] colNames;
     private final String[] rowNames;
+    
+    private volatile Paint paint = Paint.Space;
 
     public Table(int rows, int cols, boolean alignRight)
     {
@@ -50,7 +79,59 @@ public class Table
     {
         this(rows, cols, false);
     }
+
+    public Table setBorder(Paint paint)
+    {
+        this.paint = paint!=null ?  paint : Paint.Space;
+        return this;
+    }
     
+    private static int rowCount(String[] rows, String[][] cells)
+    {
+        int r1 = rows!=null ? rows.length : 0;
+        int r2 = cells!=null ? cells.length : 0;
+        return Math.max(r2, r1);
+    }
+    private static int colCount(String[] cols, String[][] cells)
+    {
+        int r1 = cols!=null ? cols.length : 0;
+        int r2 = Utils.countColums(cells);
+        return Math.max(r2, r1);
+    }
+
+    public Table(String[] rowNames, String[] colNames, String[][] cells, boolean alignRight)
+    {
+        this(rowCount(rowNames, cells), colCount(colNames, cells), alignRight);
+
+        if(rowNames!=null)
+        {
+            for(int i=0;i<rowNames.length;i++)
+            {
+                this.setRowName(i, rowNames[i]);
+            }
+        }
+
+        if(colNames!=null)
+        {
+            for(int i=0;i<colNames.length;i++)
+            {
+                this.setColName(i, colNames[i]);
+            }
+        }
+        if(cells!=null)
+        {
+            for(int r=0;r<cells.length;r++)
+            {
+                if(cells[r]!=null)
+                {
+                    for(int c=0;c<cells[r].length;c++)
+                    {
+                        this.setCell(r, c, cells[r][c]);
+                    }
+                }
+            }
+        }
+    }
     public void setTitle(String title)
     {
         this.title = title;
@@ -70,13 +151,20 @@ public class Table
         this.colNames[c] = name;
     }
     
-    public void setCell(int r, int c, String value)
+    public String getRowName(int r)
+    {
+        return this.rowNames[r];
+    }
+    public String getColName(int c)
+    {
+        return this.colNames[c];
+    }
+    
+    public final void setCell(int r, int c, String value)
     {
         this.cells[r][c] = value;
     }
 
-    static final char SEP = '|';
-    
     @Override
     public String toString()
     {
@@ -110,12 +198,12 @@ public class Table
         if(tw>0)
         {
             String s = Strings.fill(this.title!=null?this.title:"", ' ', tw);
-            sb.append(s).append(SEP);
-            hr += Strings.repeat('-', tw)+'+';
+            sb.append(s).append(paint.vline);
+            hr += Strings.repeat(paint.hline, tw)+paint.cross;
         }
         for (int c=0;c<this.cols;c++)
         {
-            hr += Strings.repeat('-', cw[c])+'+';
+            hr += Strings.repeat(paint.hline, cw[c])+paint.cross;
         }
 
         if(cn)
@@ -123,7 +211,7 @@ public class Table
             for (int c=0;c<this.cols;c++)
             {
                 String s = Strings.fill(this.colNames[c]!=null ? this.colNames[c] : "", ' ', cw[c], alignRight);
-                sb.append(s).append(SEP);
+                sb.append(s).append(paint.vline);
             }
             sb.append('\n');
         }
@@ -134,13 +222,13 @@ public class Table
             if(tw>0)
             {
                 String s = Strings.fill(this.rowNames[r]!=null?this.rowNames[r]:"", ' ', tw);
-                sb.append(s).append(SEP);
+                sb.append(s).append(paint.vline);
             }
 
             for (int c=0;c<this.cols;c++)
             {
                 String s = Strings.fill(this.cells[r][c]!=null ? this.cells[r][c] : "", ' ', cw[c], alignRight);
-                sb.append(s).append(SEP);
+                sb.append(s).append(paint.vline);
             }
             sb.append('\n').append(hr).append('\n');
         }        
