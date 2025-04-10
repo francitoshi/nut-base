@@ -20,6 +20,7 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import io.nut.base.util.concurrent.CallerWaitsPolicy;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -40,27 +41,31 @@ public class Hive implements AutoCloseable, Executor
     public static final int KEEP_ALIVE_MILLIS = 30_000;
     
     private static final ThreadPoolExecutor.CallerRunsPolicy CALLER_RUNS_POLICY  = new ThreadPoolExecutor.CallerRunsPolicy();
+    private static final CallerWaitsPolicy CALLER_WAITS_POLICY  = new CallerWaitsPolicy();
 
     private final ThreadPoolExecutor threadPoolExecutor;
-    
     
     protected Hive(ThreadPoolExecutor threadPoolExecutor)
     {
         this.threadPoolExecutor = threadPoolExecutor;
     }
-    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
+    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
         BlockingQueue queue = queueCapacity==0 ? new SynchronousQueue() : new LinkedBlockingQueue(queueCapacity);
-        this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, rushPoolSize, keepAliveMillis, TimeUnit.MILLISECONDS, queue, CALLER_RUNS_POLICY);
+        this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, rushPoolSize, keepAliveMillis, TimeUnit.MILLISECONDS, queue, callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY); 
+    }
+    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
+    {
+        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, false);
     }
 
     public Hive(int corePoolSize)
     {
-        this( corePoolSize, corePoolSize, corePoolSize, KEEP_ALIVE_MILLIS);
+        this( corePoolSize, corePoolSize, corePoolSize, KEEP_ALIVE_MILLIS, false);
     }
     public Hive()
     {
-        this( CORES, CORES, CORES, KEEP_ALIVE_MILLIS);
+        this( CORES, CORES, CORES, KEEP_ALIVE_MILLIS, false);
     }
     
     public Hive add(Bee<?>... bees)

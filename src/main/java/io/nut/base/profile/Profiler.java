@@ -64,7 +64,7 @@ public class Profiler
             }
         }
 
-        public void stop()
+        public Task stop()
         {
             synchronized (lock)
             {
@@ -73,6 +73,7 @@ public class Profiler
                 this.stepNanos += this.stopNanos - this.startNanos;
                 this.startNanos = this.stopNanos;
             }
+            return this;
         }
 
         public void count()

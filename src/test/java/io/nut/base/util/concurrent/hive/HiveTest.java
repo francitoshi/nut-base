@@ -1,7 +1,7 @@
 /*
  *  HiveTest.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import io.nut.base.profile.Profiler;
+import io.nut.base.util.Utils;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
@@ -95,6 +97,63 @@ public class HiveTest
         assertEquals("0,1,2,3,4,5,6,7,8,9,", s);
         assertTrue(hive.isShutdown(), "Shutdown");
         assertTrue(hive.isTerminated(), "Terminated");
+    }
+        
+    /**
+     * Test of shutdown method, of class Hive.
+     */
+    @Test
+    public void testWaitPolicy() throws InterruptedException
+    {   
+        final Runnable fastTask = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                Utils.sleep(5);
+            }
+        };
+        final Runnable slowTask = new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                Utils.sleep(5_000);
+            }
+        };
+        int th = 5;
+        int q = 5;
+        int loops = 4000;
+        int slow = 10;
+        Profiler profiler = new Profiler();
+        Profiler.Task profilerRun = profiler.getTask("run");
+        Profiler.Task profilerWait = profiler.getTask("wait");
+        {
+            Hive hive1 = new Hive(th, th, q, 60_000, false);
+            profilerRun.start();
+            for(int i=0;i<loops;i++)
+            {
+                hive1.execute(i==slow ? slowTask : fastTask);
+                profilerRun.count();
+            }
+            hive1.shutdownAndAwaitTermination();
+            profilerRun.stop().count();
+        }
+        
+        {
+            Hive hive2 = new Hive(th, th, q, 60_000, true);
+            profilerWait.start();
+            for(int i=0;i<loops;i++)
+            {
+                hive2.execute(i==slow ? slowTask : fastTask);
+                profilerWait.count();
+            }
+            hive2.shutdownAndAwaitTermination();
+            profilerWait.stop().count();
+        }
+        profiler.print();
+        
+        assertTrue(profilerRun.nanos()>profilerWait.nanos());
     }
         
 }

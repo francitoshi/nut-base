@@ -1,7 +1,7 @@
 /*
  *  Strings.java
  *
- *  Copyright (c) 2012-2024 francitoshi@gmail.com
+ *  Copyright (c) 2012-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *  Report bugs or new features to: francitoshi@gmail.com
-  */
+ */
 package io.nut.base.util;
 
 import java.io.IOException;
@@ -156,9 +156,7 @@ public class Strings
     static final String TRIM = "(^[\\s\u00a0\n]+)|([\\s\u00a0\n]+$)";
     public static String trimWhitespaces(String str)
     {
-        //pendiente de optimizar quizas verificando si el primer y último caracter son whitespaces
-        //verificar si es más rápido o no antes de realizar el cambio
-        return str.trim().replaceAll(TRIM, "");
+        return str==null ? null : str.trim().replaceAll(TRIM, "");
     }
             
     public static String firstNonNull(String first, String second, String... others)

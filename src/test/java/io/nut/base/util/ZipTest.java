@@ -1,7 +1,7 @@
 /*
  *  ZipTest.java
  *
- *  Copyright (c) 2023-2024 francitoshi@gmail.com
+ *  Copyright (c) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,8 @@
 package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
+import io.nut.base.profile.Profiler;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Random;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
@@ -276,6 +278,45 @@ public class ZipTest
             }
         }
         
+    }
+    
+    /**
+     * Test of gzip method, of class Utils.
+     */
+    @Test
+    public void testSpeed() throws Exception 
+    {
+        StringBuilder sb = new StringBuilder();
+        for(int i=0;i<1024;i++)
+        {
+            sb.append(i);
+        }
+        byte[] bytes = sb.toString().getBytes(UTF_8);
+        
+        Profiler profiler = new Profiler();
+        Profiler.Task gzipTask = profiler.getTask("gzip");
+        Profiler.Task deflateTask = profiler.getTask("deflate");
+        Profiler.Task gunzipTask = profiler.getTask("gunzip");
+        Profiler.Task inflateTask = profiler.getTask("inflate");
+        for(int i=0;i<10_000;i++)        
+        {
+            gzipTask.start();
+            byte[] gzip  = Zip.gzip(bytes);
+            gzipTask.stop().count();
+
+            deflateTask.start();
+            byte[] deflate  = Zip.deflate(bytes);
+            deflateTask.stop().count();
+            
+            gunzipTask.start();
+            byte[] gzip2  = Zip.gunzip(gzip);
+            gunzipTask.stop().count();
+
+            inflateTask.start();
+            byte[] deflate2  = Zip.inflate(deflate);
+            inflateTask.stop().count();
+        }
+        profiler.print();
     }
     
 }
