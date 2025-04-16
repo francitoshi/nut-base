@@ -655,12 +655,31 @@ public class JavaTimeTest
         long s1 = 24*3600 + 2*3600 + 3*60 + 4;
         assertEquals("1d2h3m4s", JavaTime.toString(Duration.ofSeconds(s1), 4, JavaTime.Resolution.MS));
         long ns1 = 5_000_006;
-        assertEquals("1d2h3m4s5ms6ns", JavaTime.toString(Duration.ofSeconds(s1,ns1), 6, JavaTime.Resolution.MS));
+        assertEquals("1d2h3m4s5ms6ns", JavaTime.toString(Duration.ofSeconds(s1,ns1), 6, JavaTime.Resolution.NS));
 
         long s2 = 11*24*3600 + 22*3600 + 33*60 + 44;
         assertEquals("11d22h33m44s", JavaTime.toString(Duration.ofSeconds(s2), 4, JavaTime.Resolution.MS));
         long ns2 = 777_008_888;
-        assertEquals("11d22h33m44s777ms8888ns", JavaTime.toString(Duration.ofSeconds(s2,ns2), 6, JavaTime.Resolution.MS));
+        assertEquals("11d22h33m44s777ms8888ns", JavaTime.toString(Duration.ofSeconds(s2,ns2), 6, JavaTime.Resolution.NS));
+
+        assertEquals("0s", JavaTime.toString(Duration.ZERO, 1, 3, JavaTime.Resolution.S));
+        assertEquals("0ms", JavaTime.toString(Duration.ZERO, 1, 3, JavaTime.Resolution.MS));
+        assertEquals("0m0s", JavaTime.toString(Duration.ZERO, 2, 3, JavaTime.Resolution.S));
+
+        assertEquals("1h", JavaTime.toString(Duration.ofMillis(3600_123), 1, 3, JavaTime.Resolution.S));
+        assertEquals("1h0m", JavaTime.toString(Duration.ofMillis(3600_123), 2, 3, JavaTime.Resolution.S));
+        assertEquals("1h0m0s", JavaTime.toString(Duration.ofMillis(3600_123), 3, 3, JavaTime.Resolution.S));
+
+        assertEquals("1h", JavaTime.toString(Duration.ofMillis(3999_123), 0, 1, JavaTime.Resolution.S));
+        assertEquals("1h6m", JavaTime.toString(Duration.ofMillis(3999_123), 1, 2, JavaTime.Resolution.S));
+        assertEquals("1h6m39s", JavaTime.toString(Duration.ofMillis(3999_123), 1, 3, JavaTime.Resolution.S));
+
+        
+        assertEquals("1d2h3m4s", JavaTime.toString(Duration.ofSeconds(s1), 1, 4, JavaTime.Resolution.MS));
+        assertEquals("1d2h3m4s5ms6ns", JavaTime.toString(Duration.ofSeconds(s1,ns1), 3, 6, JavaTime.Resolution.NS));
+        assertEquals("11d22h33m44s", JavaTime.toString(Duration.ofSeconds(s2), 3, 4, JavaTime.Resolution.MS));
+        assertEquals("11d22h33m44s777ms8888ns", JavaTime.toString(Duration.ofSeconds(s2,ns2), 3, 6, JavaTime.Resolution.NS));
+
     }
 
     /**

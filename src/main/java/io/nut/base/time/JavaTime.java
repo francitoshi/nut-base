@@ -20,6 +20,7 @@
  */
 package io.nut.base.time;
 
+import java.security.InvalidParameterException;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -571,6 +572,15 @@ public class JavaTime
 
     public static String toString(Duration duration, int elements, Resolution resolution)
     {
+        return toString(duration, elements, elements, resolution);
+    }
+    
+    public static String toString(Duration duration, int minElements, int maxElements, Resolution resolution)
+    {
+        if(minElements>maxElements)
+        {
+            throw new InvalidParameterException("minElements > maxElements");
+        }
         long[] values = new long[]
         {
             duration.toDays(),
@@ -582,17 +592,24 @@ public class JavaTime
         };
         boolean started = false;
         int count = 0;
-        StringBuilder sb = new StringBuilder();
-        for(int i=0;i<values.length && count<elements;i++)
+        StringBuilder s = new StringBuilder();
+        StringBuilder tail = new StringBuilder();
+        for(int i=0;i<values.length && count<maxElements && i<=resolution.ordinal();i++)
         {
-            if(started || values[i]!=0 || i + elements>resolution.ordinal())
+            if(values[i]!=0 || !started && i+minElements>resolution.ordinal() || started && count < minElements)
             {
-                sb.append(values[i]).append(DURATION_UNITS[i]);
+                s.append(tail).append(values[i]).append(DURATION_UNITS[i]);
+                tail = new StringBuilder();
                 started = true;
                 count++;
             }
+            else if(started)
+            {
+                tail.append(values[i]).append(DURATION_UNITS[i]);
+                count++;
+            }
         }
-        return sb.toString();
+        return s.toString();
     }
 
     public static long epochSecond()

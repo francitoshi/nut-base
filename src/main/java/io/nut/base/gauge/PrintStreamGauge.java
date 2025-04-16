@@ -1,7 +1,7 @@
 /*
- *  BeepTest.java
+ *  ConsoleGaugeProgress.java
  *
- *  Copyright (c) 2020-2025 francitoshi@gmail.com
+ *  Copyright (C) 2012-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,29 +17,26 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *  Report bugs or new features to: francitoshi@gmail.com
+ *
  */
-package io.nut.base.os;
-
-import org.junit.jupiter.api.Test;
+package io.nut.base.gauge;
 
 /**
  *
  * @author franci
  */
-public class BeepTest
+public class PrintStreamGauge extends AbstractGaugeProgress
 {
-    
-    /**
-     * Test of beep method, of class Beep.
-     */
-    @Test
-    public void testBeep()
+    private final PrintStreamGaugeView view;
+    public PrintStreamGauge()
     {
-        Beep.beep();
-        double[] f = {440, 220, 440, 220, 440, 220};
-        int[] ms = {1000, 500, 1000, 500,1000, 500};
-        
-        Beep.beep(f,ms);
+        super();
+        view = new PrintStreamGaugeView();
     }
-    
+
+    @Override
+    public void paint(boolean started, int max, int val, String prefix, double done, String msg)
+    {
+        view.paint(started, max, val, prefix, done, msg);
+    }
 }
