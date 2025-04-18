@@ -21,6 +21,7 @@
  */
 package io.nut.base.gauge;
 
+import io.nut.base.io.ansi.Ansi;
 import java.io.PrintStream;
 
 /**
@@ -29,10 +30,7 @@ import java.io.PrintStream;
  */
 public class PrintStreamGauge extends AbstractGauge
 {
-    private int lastLen = 0;
-    private boolean debug = true;
-    private boolean prefixBreak = true;
-    private String prefix = "";
+    private boolean debug = false;
 
     private final PrintStream out;
     
@@ -47,25 +45,45 @@ public class PrintStreamGauge extends AbstractGauge
         this.out = out;
         this.debug=true;
     }
-
-    public void paint(boolean started, int max, int val, String prefix, double done, String msg)
+    
+    public void println(String s)
     {
-        boolean newLine = (prefixBreak && !this.prefix.equals(prefix));
-        this.prefix=prefix;
-        
-        StringBuilder buf = new StringBuilder("\r");
-        buf.append(msg);
-        for (int i = msg.length(); i < lastLen; i++)
-        {
-            buf.append(" ");
-        }
-        if (newLine)
-        {
-            buf.append("\n");
-        }
+        this.out.print(Ansi.ansi().eraseLine(Ansi.Erase.ALL).append('\r').append(s).append('\n'));
+        this.out.flush();
+        invalidate();
+    }
 
-        print(buf.toString());
-        lastLen = msg.length();
+    private static final String[] PAINT_FMT = 
+    {
+        "",                 //000   0
+        "%3$s",     //001   1 
+        "%2$s",     //020   2   
+        "%2$s = %3$s",     //021   3
+        "%1$s",     //400   4
+        "%1$s / %3$s",     //401   5
+        "%1$s + %2$s",     //420   6
+        "%1$s + %2$s = %3$s"      //421   7
+    };
+    public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
+    {
+        StringBuilder txt = new StringBuilder("\r");
+        
+        if(prefix!=null && !(prefix=prefix.trim()).isEmpty())
+        {
+            txt.append(prefix).append(' ');
+        }
+        
+        txt.append(String.format("%d/%d %.2f%%", val, max, done*100));
+        
+        int index = (prev!=null?4:0) + (prev!=null?2:0) + (prev!=null?1:0);
+        if(index!=0)
+        {
+            txt.append(' ').append(String.format(PAINT_FMT[index], prev, next, full));
+        }
+        
+        if(debug) txt.append('\n');
+        this.out.print(txt);
+        this.out.flush();
     }
 
     public boolean isDebug()
@@ -76,17 +94,6 @@ public class PrintStreamGauge extends AbstractGauge
     public void setDebug(boolean debug)
     {
         this.debug = debug;
-    }
-
-    public void setPrefixBreak(boolean prefixBreak)
-    {
-        this.prefixBreak = prefixBreak;
-    }
-
-    private void print(String text)
-    {
-        this.out.print(text);
-        this.out.flush();
     }
     
     //hacer que consoleGaugeView herede de esta

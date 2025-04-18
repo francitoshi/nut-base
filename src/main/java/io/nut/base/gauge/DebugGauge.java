@@ -227,13 +227,13 @@ public class DebugGauge implements GaugeProgress, GaugeView
         }
         return gp.isPaused();
     }
-    public void paint(boolean started, int max, int val, String prefix, double done, String msg)
+    public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
     {
         if(logger.isLoggable(Level.CONFIG))
         {
-            logger.log(Level.CONFIG, "{0}.paint({1}, {2}, {3}, {4}, {5}, {6})", new Object[]{name, started, max, val, prefix, done, msg});
+            logger.log(Level.CONFIG, "{0}.paint({1}, {2}, {3}, {4}, {5}, {6}, {7}, {8})", new Object[]{name, started, max, val, done, prefix, prev, next, full});
         }
-        gv.paint(started, max, val, prefix, done, msg);
+        gv.paint(started, max, val, done, prefix, prev, next, full);
     }
 
     public void pause()

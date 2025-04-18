@@ -38,6 +38,8 @@ public class PrintStreamGaugeTest
     {
         PrintStreamGauge gauge = new PrintStreamGauge();
         int max = 200;
+        
+        gauge.setDebug(true);
         gauge.setShowPrev(true);
         gauge.setShowNext(true);
         gauge.setShowFull(true);
@@ -45,9 +47,10 @@ public class PrintStreamGaugeTest
         
         for(int i=0;i<max;i++)
         {
-            gauge.setPrefix(i+"/"+max);
+            gauge.println(Integer.toString(i, 26)+" completed");
+            gauge.setPrefix("["+i+"]");
             gauge.setVal(i);
-            Thread.sleep(5);
+            Thread.sleep(10);
         }
         gauge.close();
     }

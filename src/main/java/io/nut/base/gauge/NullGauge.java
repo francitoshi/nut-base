@@ -99,7 +99,7 @@ public class NullGauge implements GaugeProgress, GaugeView
     {
     }
 
-    public void paint(boolean started, int max, int val, String prefix, double done, String msg)
+    public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
     {
     }
 }

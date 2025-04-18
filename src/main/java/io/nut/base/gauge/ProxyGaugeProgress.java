@@ -47,13 +47,13 @@ final public class ProxyGaugeProgress extends AbstractGauge
     }
 
     @Override
-    public void paint(boolean started, int max, int val, String prefix, double done, String msg)
+    public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
     {
         for(GaugeView item : views)
         {
             if(item!=null)
             {
-                item.paint(started, max, val, prefix, done, msg);
+                item.paint(started, max, val, done, prefix, prev, next, full);
             }
         }
     }

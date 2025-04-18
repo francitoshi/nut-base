@@ -33,45 +33,32 @@ public interface GaugeProgress
     void setPrefix(String prefix);
     String getPrefix();
     
-    /**
-     * 
-     * @return 
-     */
-
     double getDone();
+    
     /**
      * Gets the current value
-     * <p>
-     * Obtiene el valor actual
      * @return 
      */
-
     int getVal();
+    
     /**
-     * Gets the minimun value
-     * <p>
-     * Obtiene el valor mínimo
+     * Gets the maximum value
      * @return 
      */
-
-
     int getMax();
+    
     /**
      * Sets the current value
-     * <p>
-     * Establece el valor actual
      * @param n 
      */
-
     void setVal(int n);
+    
     /**
-     * Sets the minimun value
-     * <p>
-     * Establece el valor mínimo
+     * Sets the maximun value
      * @param n 
      */
-
     void setMax(int n);
+
     void step();
     void step(int n);
     void setShow(boolean showPrev, boolean showNext, boolean showFull);

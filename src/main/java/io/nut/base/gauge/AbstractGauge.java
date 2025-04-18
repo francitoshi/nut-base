@@ -27,6 +27,7 @@ import io.nut.base.util.Utils;
 import java.text.NumberFormat;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 /**
  *
@@ -34,13 +35,11 @@ import java.util.Locale;
  */
 public abstract class AbstractGauge implements Gauge
 {
-    private static final long NANOS_PER_MILLIS=Utils.NANOS_PER_MILLIS;//1000000;
     //minimal difference to paint again
-    private static final int MIN_DIFF_STEP = 1;
-    private static final double MIN_DIFF_TIME = 2000;
+    private static final double MIN_DIFF_NANOS = TimeUnit.SECONDS.toNanos(2);
     //enough value to show times
     private static final double MIN_SHOW_DONE = 0.01;
-    private static final long MIN_SHOW_TIME = 30000*NANOS_PER_MILLIS;
+    private static final long MIN_SHOW_TIME = TimeUnit.SECONDS.toNanos(10);
 
     private final Object lock = new Object();
     //--- time variables
@@ -236,23 +235,25 @@ public abstract class AbstractGauge implements Gauge
     }
 
     @Override
-    public abstract void paint(boolean started, int max, int val, String prefix, double done, String msg);
+    public abstract void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full);
 
     private void paintLazy()
     {
         synchronized(lock)
         {
-            long now = nanoTime();
-            double cur = (double) curValue / (double) maxValue;
-            double dif = Math.abs(done - cur);
-            long difTime = now - lastPaint;
+            long nowNanos = nanoTime();
+            double curr = (double) curValue / (double) maxValue;
+            double diff = Math.abs(done - curr);
+            long diffNanos = nowNanos - lastPaint;
 
-            if (dif >= MIN_DIFF_STEP || difTime >= MIN_DIFF_TIME || force)
+            if (diff > 0 || diffNanos >= MIN_DIFF_NANOS || force)
             {
-                done = cur;
-                lastPaint = now;
+                done = curr;
+                lastPaint = nowNanos;
 
-                String txt = prefix + " " + fmt.format(done);
+                String prev = null;
+                String next = null;
+                String full = null;
 
                 if (done >= MIN_SHOW_DONE || (accuNanos) >= MIN_SHOW_TIME)
                 {
@@ -260,21 +261,13 @@ public abstract class AbstractGauge implements Gauge
                     long prevNanos = accuNanos;
                     long nextNanos = (maxValue-curValue)*unitNanos;
                     long fullNanos = prevNanos + nextNanos;
-                    if (showPrev)
-                    {
-                        txt += " (" + fmtTime(prevNanos) + ")";
-                    }
-                    if (showNext)
-                    {
-                        txt += " [" + fmtTime(nextNanos) + "]";
-                    }
-                    if (showFull)
-                    {
-                        txt += " <" + fmtTime(fullNanos) + ">";
-                    }
+
+                    prev = showPrev ? fmtTime(prevNanos) : null;
+                    next = showNext ? fmtTime(nextNanos) : null;
+                    full = showFull ? fmtTime(fullNanos) : null;
                 }
                 force = false;
-                paint(started, maxValue, curValue, prefix, done, txt);
+                paint(started, maxValue, curValue, done, prefix, prev, next, full);
             }
         }
     }
