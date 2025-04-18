@@ -1,5 +1,5 @@
 /*
- *  AbstractGaugeProgress.java
+ *  AbstractGauge.java
  *
  *  Copyright (c) 2012-2025 francitoshi@gmail.com
  *
@@ -32,7 +32,7 @@ import java.util.Locale;
  *
  * @author franci
  */
-public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
+public abstract class AbstractGauge implements Gauge
 {
     private static final long NANOS_PER_MILLIS=Utils.NANOS_PER_MILLIS;//1000000;
     //minimal difference to paint again
@@ -88,7 +88,7 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         this.prefix = prefix;
     }
 
-    public AbstractGaugeProgress()
+    public AbstractGauge()
     {
         super();
     }
@@ -102,14 +102,17 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         return paused;
     }
 
+    @Override
     public void start()
     {
         start(100,"");
     }
+    @Override
     public void start(int max)
     {
         start(max,"");
     }
+    @Override
     public void start(int max, String prefix)
     {
         synchronized(lock)
@@ -129,6 +132,7 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         this.paintLazy();
     }
 
+    @Override
     public void pause()
     {
         synchronized(lock)
@@ -139,6 +143,7 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         }
     }
 
+    @Override
     public void resume()
     {
         synchronized(lock)
@@ -148,6 +153,7 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         }
     }
 
+    @Override
     public void close()
     {
         synchronized(lock)
@@ -159,16 +165,19 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         paintLazy();
     }
 
+    @Override
     public double getDone()
     {
         return done;
     }
 
+    @Override
     public int getVal()
     {
         return curValue;
     }
 
+    @Override
     public int getMax()
     {
         return maxValue;
@@ -190,12 +199,14 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
             curValue   = n;
         }
     }
+    @Override
     public void setVal(int n)
     {
         setValue(n);
         paintLazy();
     }
 
+    @Override
     public void setMax(int n)
     {
         if(maxValue!=n)
@@ -208,15 +219,13 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         }
     }
 
+    @Override
     public void step()
     {
-        synchronized(lock)
-        {
-            setValue(curValue+1);
-        }
-        paintLazy();
+        step(1);
     }
 
+    @Override
     public void step(int n)
     {
         synchronized(lock)
@@ -226,6 +235,7 @@ public abstract class AbstractGaugeProgress implements GaugeProgress, GaugeView
         paintLazy();
     }
 
+    @Override
     public abstract void paint(boolean started, int max, int val, String prefix, double done, String msg);
 
     private void paintLazy()

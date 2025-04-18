@@ -1,7 +1,7 @@
 /*
- * AbstractGaugeProgressTest.java
+ * AbstractGaugeTest.java
  *
- * Copyright (c) 2015-2023 francitoshi@gmail.com
+ * Copyright (c) 2015-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,10 +32,10 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class AbstractGaugeProgressTest
+public class AbstractGaugeTest
 {
     
-    public AbstractGaugeProgressTest()
+    public AbstractGaugeTest()
     {
     }
     
@@ -60,23 +60,23 @@ public class AbstractGaugeProgressTest
     }
 
     /**
-     * Test of getPrefix method, of class AbstractGaugeProgress.
+     * Test of getPrefix method, of class AbstractGauge.
      */
     @Test
     public void testGetPrefix()
     {
-        AbstractGaugeProgress instance = new AbstractGaugeProgressImpl();
+        AbstractGauge instance = new AbstractGaugeProgressImpl();
         instance.setPrefix("123");
         assertEquals("123", instance.getPrefix());
     }
 
     /**
-     * Test of isStarted method, of class AbstractGaugeProgress.
+     * Test of isStarted method, of class AbstractGauge.
      */
     @Test
     public void testIsStarted()
     {
-        AbstractGaugeProgress instance = new AbstractGaugeProgressImpl();
+        AbstractGauge instance = new AbstractGaugeProgressImpl();
         assertFalse(instance.isStarted());
         instance.start();
         assertTrue(instance.isStarted());
@@ -85,7 +85,7 @@ public class AbstractGaugeProgressTest
     }
 
     /**
-     * Test of pause method, of class AbstractGaugeProgress.
+     * Test of pause method, of class AbstractGauge.
      */
     @Test
     public void testPause()
@@ -103,7 +103,7 @@ public class AbstractGaugeProgressTest
     }
 
     /**
-     * Test of resume method, of class AbstractGaugeProgress.
+     * Test of resume method, of class AbstractGauge.
      */
     @Test
     public void testResume()
@@ -119,7 +119,7 @@ public class AbstractGaugeProgressTest
         assertEquals(20, instance.getLastNanos());
     }
 
-    public class AbstractGaugeProgressImpl extends AbstractGaugeProgress
+    public class AbstractGaugeProgressImpl extends AbstractGauge
     {
         long nanos=0;
         boolean started;
@@ -157,7 +157,7 @@ public class AbstractGaugeProgressTest
     }
 
     /**
-     * Test of setPrefix method, of class AbstractGaugeProgress.
+     * Test of setPrefix method, of class AbstractGauge.
      */
     @Test
     public void testSetPrefix()
@@ -170,7 +170,7 @@ public class AbstractGaugeProgressTest
     }
 
     /**
-     * Test of paint method, of class AbstractGaugeProgress.
+     * Test of paint method, of class AbstractGauge.
      */
     @Test
     public void testPaint()

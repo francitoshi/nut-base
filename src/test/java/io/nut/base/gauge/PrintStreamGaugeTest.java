@@ -1,7 +1,7 @@
 /*
- *  ProxyGaugeProgress.java
+ *  PrintStreamGaugeTest.java
  *
- *  Copyright (c) 2012-2025 francitoshi@gmail.com
+ *  Copyright (c) 2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,42 +20,36 @@
  */
 package io.nut.base.gauge;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author franci
  */
-final public class ProxyGaugeProgress extends AbstractGauge
+public class PrintStreamGaugeTest
 {
-    private volatile List<GaugeView> views =  new ArrayList<>();
-
-    public ProxyGaugeProgress()
+    
+    public PrintStreamGaugeTest()
     {
     }
-    public ProxyGaugeProgress(GaugeView... view)
-    {
-        setView(view);
-    }
 
-    public void setView(GaugeView... view)
+    @Test
+    public void testPaint() throws InterruptedException
     {
-        this.views = view != null ? Arrays.asList(view) : new ArrayList<>();
-        super.invalidate();
-    }
-
-    @Override
-    public void paint(boolean started, int max, int val, String prefix, double done, String msg)
-    {
-        for(GaugeView item : views)
+        PrintStreamGauge gauge = new PrintStreamGauge();
+        int max = 200;
+        gauge.setShowPrev(true);
+        gauge.setShowNext(true);
+        gauge.setShowFull(true);
+        gauge.start(max);
+        
+        for(int i=0;i<max;i++)
         {
-            if(item!=null)
-            {
-                item.paint(started, max, val, prefix, done, msg);
-            }
+            gauge.setPrefix(i+"/"+max);
+            gauge.setVal(i);
+            Thread.sleep(5);
         }
+        gauge.close();
     }
     
 }

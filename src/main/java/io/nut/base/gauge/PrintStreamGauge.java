@@ -1,5 +1,5 @@
 /*
- *  ConsoleGaugeProgress.java
+ *  ConsoleGaugeView.java
  *
  *  Copyright (C) 2012-2025 francitoshi@gmail.com
  *
@@ -21,22 +21,73 @@
  */
 package io.nut.base.gauge;
 
+import java.io.PrintStream;
+
 /**
  *
  * @author franci
  */
-public class PrintStreamGauge extends AbstractGaugeProgress
+public class PrintStreamGauge extends AbstractGauge
 {
-    private final PrintStreamGaugeView view;
+    private int lastLen = 0;
+    private boolean debug = true;
+    private boolean prefixBreak = true;
+    private String prefix = "";
+
+    private final PrintStream out;
+    
     public PrintStreamGauge()
     {
         super();
-        view = new PrintStreamGaugeView();
+        this.out = System.out;
+    }
+    public PrintStreamGauge(PrintStream out)
+    {
+        super();
+        this.out = out;
+        this.debug=true;
     }
 
-    @Override
     public void paint(boolean started, int max, int val, String prefix, double done, String msg)
     {
-        view.paint(started, max, val, prefix, done, msg);
+        boolean newLine = (prefixBreak && !this.prefix.equals(prefix));
+        this.prefix=prefix;
+        
+        StringBuilder buf = new StringBuilder("\r");
+        buf.append(msg);
+        for (int i = msg.length(); i < lastLen; i++)
+        {
+            buf.append(" ");
+        }
+        if (newLine)
+        {
+            buf.append("\n");
+        }
+
+        print(buf.toString());
+        lastLen = msg.length();
     }
+
+    public boolean isDebug()
+    {
+        return debug;
+    }
+
+    public void setDebug(boolean debug)
+    {
+        this.debug = debug;
+    }
+
+    public void setPrefixBreak(boolean prefixBreak)
+    {
+        this.prefixBreak = prefixBreak;
+    }
+
+    private void print(String text)
+    {
+        this.out.print(text);
+        this.out.flush();
+    }
+    
+    //hacer que consoleGaugeView herede de esta
 }
