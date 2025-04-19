@@ -53,16 +53,16 @@ public class PrintStreamGauge extends AbstractGauge
         invalidate();
     }
 
-    private static final String[] PAINT_FMT = 
+    private static final String[] TIME_FMT = 
     {
         "",                 //000   0
-        "%3$s",     //001   1 
-        "%2$s",     //020   2   
-        "%2$s = %3$s",     //021   3
-        "%1$s",     //400   4
-        "%1$s / %3$s",     //401   5
-        "%1$s + %2$s",     //420   6
-        "%1$s + %2$s = %3$s"      //421   7
+        "%3$s",             //001   1 
+        "%2$s",             //020   2   
+        "%2$s = %3$s",      //021   3
+        "%1$s",             //400   4
+        "%1$s / %3$s",      //401   5
+        "%1$s + %2$s",      //420   6
+        "%1$s + %2$s = %3$s"//421   7
     };
     public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
     {
@@ -78,7 +78,7 @@ public class PrintStreamGauge extends AbstractGauge
         int index = (prev!=null?4:0) + (prev!=null?2:0) + (prev!=null?1:0);
         if(index!=0)
         {
-            txt.append(' ').append(String.format(PAINT_FMT[index], prev, next, full));
+            txt.append(' ').append(String.format(TIME_FMT[index], prev, next, full));
         }
         
         if(debug) txt.append('\n');

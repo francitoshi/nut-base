@@ -728,11 +728,24 @@ public class Ansi implements Appendable
         return appendEscapeSequence('J', kind.value());
     }
 
+    /**
+     * erase in line, same as eraseLine(Erase.FORWARD)
+     *
+     * @return this Ansi instance
+     */
     public Ansi eraseLine()
     {
         return appendEscapeSequence('K');
     }
 
+    /**
+     * erase:
+     *  • Erase.FORWARD from cursor to end of line
+     *  • Erase.BACKWARD start of line to the cursor
+     *  • Erase.ALL the entire line
+     *
+     * @return this Ansi instance
+     */
     public Ansi eraseLine(final Erase kind)
     {
         return appendEscapeSequence('K', kind.value());
