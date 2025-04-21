@@ -35,10 +35,11 @@ import java.util.concurrent.TimeUnit;
 public abstract class AbstractGauge implements Gauge
 {
     //minimal difference to paint again
-    private static final double MIN_DIFF_NANOS = TimeUnit.SECONDS.toNanos(2);
+    private static final long MIN_DIFF_NANOS = TimeUnit.SECONDS.toNanos(1);
+    //minimal time to evaluate and show time
+    private static final long MIN_SHOW_TIME = TimeUnit.SECONDS.toNanos(10);
     //enough value to show times
     private static final double MIN_SHOW_DONE = 0.0001;
-    private static final long MIN_SHOW_TIME = TimeUnit.SECONDS.toNanos(10);
 
     private final Object lock = new Object();
     //--- time variables
@@ -103,15 +104,20 @@ public abstract class AbstractGauge implements Gauge
     @Override
     public void start()
     {
-        start(100,"");
+        start(100,"", 0);
     }
     @Override
     public void start(int max)
     {
-        start(max,"");
+        start(max,"", 0);
     }
     @Override
     public void start(int max, String prefix)
+    {
+        start(max,prefix, 0);
+    }    
+    
+    public void start(int max, String prefix, int curValue)
     {
         synchronized(lock)
         {
@@ -122,7 +128,7 @@ public abstract class AbstractGauge implements Gauge
             this.lastNanos = nanoTime();
             this.accuValue = 0;
             this.lastPaint = 0;
-            this.curValue = 0;
+            this.curValue = curValue;
             this.maxValue = max;
             this.done = 0.0;
             this.force = true;
@@ -245,7 +251,7 @@ public abstract class AbstractGauge implements Gauge
             double diff = Math.abs(done - curr);
             long diffNanos = nowNanos - lastPaint;
 
-            if (diff > 0 || diffNanos >= MIN_DIFF_NANOS || force)
+            if (diff >= MIN_SHOW_DONE || diffNanos >= MIN_DIFF_NANOS || force)
             {
                 done = curr;
                 lastPaint = nowNanos;
