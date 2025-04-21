@@ -22,7 +22,6 @@ package io.nut.base.gauge;
 
 import io.nut.base.time.JavaTime;
 import io.nut.base.time.JavaTime.Resolution;
-import io.nut.base.util.Utils;
 
 import java.text.NumberFormat;
 import java.time.Duration;
@@ -38,7 +37,7 @@ public abstract class AbstractGauge implements Gauge
     //minimal difference to paint again
     private static final double MIN_DIFF_NANOS = TimeUnit.SECONDS.toNanos(2);
     //enough value to show times
-    private static final double MIN_SHOW_DONE = 0.01;
+    private static final double MIN_SHOW_DONE = 0.0001;
     private static final long MIN_SHOW_TIME = TimeUnit.SECONDS.toNanos(10);
 
     private final Object lock = new Object();
@@ -251,9 +250,9 @@ public abstract class AbstractGauge implements Gauge
                 done = curr;
                 lastPaint = nowNanos;
 
-                String prev = null;
-                String next = null;
-                String full = null;
+                String prev = showPrev ? "" : null;
+                String next = showNext ? "" : null;
+                String full = showFull ? "" : null;
 
                 if (done >= MIN_SHOW_DONE || (accuNanos) >= MIN_SHOW_TIME)
                 {
@@ -301,6 +300,8 @@ public abstract class AbstractGauge implements Gauge
     {
         this.showFull = showFull;
     }
+    
+    @Override
     public void setShow(boolean showPrev, boolean showNext, boolean showFull)
     {
         this.showPrev = showPrev;
