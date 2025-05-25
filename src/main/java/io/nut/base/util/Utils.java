@@ -2664,6 +2664,56 @@ public class Utils
         return e;
     }
 
+    /**
+     * Checks whether the given array is {@code null} or contains {@code null} 
+     * elements.
+     *
+     * @param e the array to check, may be {@code null}
+     * @param <E> the type of elements in the array
+     * @return {@code true} if the array is {@code null} or any element is 
+     * {@code null}; {@code false} otherwise
+     */
+    public static <E> boolean hasNulls(E... e)
+    {
+        if (e == null)
+        {
+            return true;
+        }
+        for (E item : e)
+        {
+            if (item == null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether the given array is {@code null}, is empty or contains {@code null} 
+     * elements.
+     *
+     * @param e the array to check, may be {@code null}
+     * @param <E> the type of elements in the array
+     * @return {@code true} if the array is {@code null}, is empty or any element is 
+     * {@code null}; {@code false} otherwise
+     */
+    public static <E> boolean hasNullsOrEmpty(E... e)
+    {
+        if (e == null || e.length==0)
+        {
+            return true;
+        }
+        for (E item : e)
+        {
+            if (item == null)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static <T> void foreach(Consumer<? super T> action, T... items)
     {
         foreach(1, action, items);
@@ -3216,5 +3266,28 @@ public class Utils
             }
         }
         return cols;
+    }
+    
+    /**
+     * Creates, configures, and starts a new {@link Thread} to execute the given
+     * task.
+     *
+     * <p>
+     * This method simplifies thread creation by allowing the caller to specify
+     * the task, thread name, and daemon status. The thread is immediately
+     * started after creation.</p>
+     *
+     * @param task the {@link Runnable} task to be executed in the new thread
+     * @param name the name to assign to the new thread
+     * @param daemon {@code true} if the new thread should be a daemon thread;
+     * {@code false} otherwise
+     * @return the {@link Thread} that was created and started
+     */
+    public static Thread execute(Runnable task, String name, boolean daemon)
+    {
+        Thread thread = new Thread(task, name);
+        thread.setDaemon(daemon);
+        thread.start();
+        return thread;
     }
 }

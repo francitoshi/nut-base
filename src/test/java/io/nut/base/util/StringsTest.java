@@ -1,7 +1,7 @@
 /*
  *  StringsTest.java
  *
- *  Copyright (c) 2012-2024 francitoshi@gmail.com
+ *  Copyright (c) 2012-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.util.Strings;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -363,21 +362,41 @@ public class StringsTest
     @Test
     public void testIsEmpty()
     {
+        assertTrue(Strings.isEmpty(null));
         assertTrue(Strings.isEmpty(""));
+        assertFalse(Strings.isEmpty(" "));
         assertFalse(Strings.isEmpty("no"));
+        assertFalse(Strings.isEmpty("  no  "));
     }
-
-    /**
-     * Test of isNullOrEmpty method, of class Strings.
-     */
     @Test
-    public void testIsNullOrEmpty()
+    public void testIsNotEmpty()
     {
-        assertTrue(Strings.isNullOrEmpty(null));
-        assertTrue(Strings.isNullOrEmpty(""));
-        assertFalse(Strings.isNullOrEmpty("no"));
+        assertFalse(Strings.isNotEmpty(null));
+        assertFalse(Strings.isNotEmpty(""));
+        assertTrue(Strings.isNotEmpty(" "));
+        assertTrue(Strings.isNotEmpty("yes"));
+        assertTrue(Strings.isNotEmpty("  yes  "));
     }
 
+    @Test
+    public void testIsBlank()
+    {
+        assertTrue(Strings.isBlank(null));
+        assertTrue(Strings.isBlank(""));
+        assertTrue(Strings.isBlank(" "));
+        assertFalse(Strings.isBlank("no"));
+        assertFalse(Strings.isBlank("  no  "));
+    }
+
+    @Test
+    public void testIsNotBlank()
+    {
+        assertFalse(Strings.isNotBlank(null));
+        assertFalse(Strings.isNotBlank(""));
+        assertFalse(Strings.isNotBlank(" "));
+        assertTrue(Strings.isNotBlank("yes"));
+        assertTrue(Strings.isNotBlank("  yes  "));
+    }
 
     /**
      * Test of safeToString method, of class Strings.
@@ -542,14 +561,32 @@ public class StringsTest
      * Test of startsWith method, of class Strings.
      */
     @Test
-    public void testSafeStartsWith()
+    public void testStartsWith()
     {
-        assertFalse(Strings.safeStartsWith(null, null));
-        assertFalse(Strings.safeStartsWith(null, "prefix"));
-        assertFalse(Strings.safeStartsWith("", "prefix"));
-        assertTrue(Strings.safeStartsWith("prefix", "prefix"));
-        assertTrue(Strings.safeStartsWith("prefix2", "prefix"));
-        assertFalse(Strings.safeStartsWith("prefix", "prefix2"));
+        assertTrue(Strings.startsWith(null, null));
+        assertFalse(Strings.startsWith(null, "prefix"));
+        assertFalse(Strings.startsWith("", "prefix"));
+        assertTrue(Strings.startsWith("prefix", "prefix"));
+        assertTrue(Strings.startsWith("prefix2", "prefix"));
+        assertFalse(Strings.startsWith("prefix", "prefix2"));
+        
+        assertFalse(Strings.startsWith("abc", null));
+        assertFalse(Strings.startsWith("abc", "abcdef"));
+        assertFalse(Strings.startsWith("abc", "ABCDEF"));
+
+        assertTrue(Strings.startsWith("sss", "s"));
+        
+        assertFalse(Strings.startsWith("sss", "d"));
+    }
+
+    /**
+     * Test of startsWithAny method, of class Strings.
+     */
+    @Test
+    public void testStartsWithAny()
+    {
+        assertTrue(Strings.startsWithAny("sss", "d", "s"));
+        assertFalse(Strings.startsWithAny("sss", "d", "r"));
     }
 
     /**
@@ -558,12 +595,34 @@ public class StringsTest
     @Test
     public void testEndsWith()
     {
-        assertFalse(Strings.safeEndsWith(null, null));
-        assertFalse(Strings.safeEndsWith(null, "suffix"));
-        assertFalse(Strings.safeEndsWith("", "suffix"));
-        assertTrue(Strings.safeEndsWith("suffix", "suffix"));
-        assertTrue(Strings.safeEndsWith("2suffix", "suffix"));
-        assertFalse(Strings.safeEndsWith("suffix", "suffix2"));
+        assertTrue(Strings.endsWith(null, null));
+        assertFalse(Strings.endsWith(null, "suffix"));
+        assertFalse(Strings.endsWith("", "suffix"));
+        assertTrue(Strings.endsWith("suffix", "suffix"));
+        assertTrue(Strings.endsWith("2suffix", "suffix"));
+        assertFalse(Strings.endsWith("suffix", "suffix2"));
+        
+        assertFalse(Strings.endsWith("abc", null));
+        assertFalse(Strings.endsWith("abc", "abcdef"));
+        assertFalse(Strings.endsWith("abc", "ABCDEF"));
+
+        assertTrue(Strings.endsWith("sss", "s"));
+        
+        assertFalse(Strings.endsWith("sss", "d"));
+        
+    }
+    /**
+     * Test of endsWithAny method, of class Strings.
+     */
+    @Test
+    public void testEndsWithAny()
+    {
+        assertTrue(Strings.endsWithAny(null, null, "suffix"));
+        assertFalse(Strings.endsWithAny(null, "suffix", "suffix2"));
+        assertFalse(Strings.endsWithAny("", "suffix", "suffix2"));
+        assertTrue(Strings.endsWithAny("suffix", "suffix", "suffix2"));
+        assertTrue(Strings.endsWithAny("2suffix", "suffix", "suffix2"));
+        assertFalse(Strings.endsWithAny("suffix", "suffix2", "suffix2"));
     }
 
     /**
@@ -572,8 +631,8 @@ public class StringsTest
     @Test
     public void testSafeToLowerCase_String()
     {
-        assertNull(Strings.safeToLowerCase(null));
-        assertEquals("a", Strings.safeToLowerCase("A"));
+        assertNull(Strings.toLowerCase(null));
+        assertEquals("a", Strings.toLowerCase("A"));
     }
 
     /**
@@ -582,8 +641,8 @@ public class StringsTest
     @Test
     public void testSafeToLowerCase_String_Locale()
     {
-        assertNull(Strings.safeToLowerCase(null,Locale.US));
-        assertEquals("a", Strings.safeToLowerCase("A", Locale.US));
+        assertNull(Strings.toLowerCase(null,Locale.US));
+        assertEquals("a", Strings.toLowerCase("A", Locale.US));
     }
 
     /**
@@ -592,8 +651,8 @@ public class StringsTest
     @Test
     public void testSafeToUpperCase_String()
     {
-        assertNull(Strings.safeToUpperCase(null));
-        assertEquals("A", Strings.safeToUpperCase("a"));
+        assertNull(Strings.toUpperCase(null));
+        assertEquals("A", Strings.toUpperCase("a"));
     }
 
     /**
@@ -602,8 +661,8 @@ public class StringsTest
     @Test
     public void testSafeToUpperCase_String_Locale()
     {
-        assertNull(Strings.safeToUpperCase(null,Locale.US));
-        assertEquals("A", Strings.safeToUpperCase("a", Locale.US));
+        assertNull(Strings.toUpperCase(null,Locale.US));
+        assertEquals("A", Strings.toUpperCase("a", Locale.US));
     }
 
     /**
@@ -618,70 +677,105 @@ public class StringsTest
     }
 
     /**
-     * Test of safeReplace method, of class Strings.
+     * Test of replace method, of class Strings.
      */
     @Test
     public void testSafeReplace_3args_1()
     {
-        assertNull(Strings.safeReplace(null, 'b', 'c'));
-        assertEquals("a", Strings.safeReplace("a", 'b', 'c'));
-        assertEquals("ac", Strings.safeReplace("ab", 'b', 'c'));
+        assertNull(Strings.replace(null, 'b', 'c'));
+        assertEquals("a", Strings.replace("a", 'b', 'c'));
+        assertEquals("ac", Strings.replace("ab", 'b', 'c'));
     }
 
     /**
-     * Test of safeReplaceFirst method, of class Strings.
+     * Test of replaceFirst method, of class Strings.
      */
     @Test
     public void testSafeReplaceFirst()
     {
-        assertNull(Strings.safeReplaceFirst(null, "b", "c"));
-        assertEquals("a", Strings.safeReplaceFirst("a", null, "c"));
-        assertEquals("a", Strings.safeReplaceFirst("a", "b", null));
-        assertEquals("a", Strings.safeReplaceFirst("a", "b", "c"));
-        assertEquals("ac", Strings.safeReplaceFirst("ab", "b", "c"));
+        assertNull(Strings.replaceFirst(null, "b", "c"));
+        assertEquals("a", Strings.replaceFirst("a", null, "c"));
+        assertEquals("a", Strings.replaceFirst("a", "b", null));
+        assertEquals("a", Strings.replaceFirst("a", "b", "c"));
+        assertEquals("ac", Strings.replaceFirst("ab", "b", "c"));
     }
 
     /**
-     * Test of safeReplaceAll method, of class Strings.
+     * Test of replaceAll method, of class Strings.
      */
     @Test
     public void testSafeReplaceAll()
     {
-        assertNull(Strings.safeReplaceAll(null, "b", "c"));
-        assertEquals("a", Strings.safeReplaceAll("a", null, "c"));
-        assertEquals("a", Strings.safeReplaceAll("a", "b", null));
-        assertEquals("a", Strings.safeReplaceAll("a", "b", "c"));
-        assertEquals("ac", Strings.safeReplaceAll("ab", "b", "c"));
+        assertNull(Strings.replaceAll(null, "b", "c"));
+        assertEquals("a", Strings.replaceAll("a", null, "c"));
+        assertEquals("a", Strings.replaceAll("a", "b", null));
+        assertEquals("a", Strings.replaceAll("a", "b", "c"));
+        assertEquals("ac", Strings.replaceAll("ab", "b", "c"));
     }
 
     /**
-     * Test of safeReplace method, of class Strings.
+     * Test of replace method, of class Strings.
      */
     @Test
     public void testSafeReplace_3args_2()
     {
-        assertNull(Strings.safeReplace(null, "b", "c"));
-        assertEquals("a", Strings.safeReplace("a", null, "c"));
-        assertEquals("a", Strings.safeReplace("a", "b", null));
-        assertEquals("a", Strings.safeReplace("a", "b", "c"));
-        assertEquals("ac", Strings.safeReplace("ab", "b", "c"));
+        assertNull(Strings.replace(null, "b", "c"));
+        assertEquals("a", Strings.replace("a", null, "c"));
+        assertEquals("a", Strings.replace("a", "b", null));
+        assertEquals("a", Strings.replace("a", "b", "c"));
+        assertEquals("ac", Strings.replace("ab", "b", "c"));
     }
 
     /**
-     * Test of safeTrim method, of class Strings.
+     * Test of trim method, of class Strings.
      */
     @Test
-    public void testSafeTrim()
+    public void testTrim_String()
     {
-        assertNull(Strings.safeTrim(null));
-        assertEquals("", Strings.safeTrim(""));
-        assertEquals("", Strings.safeTrim(" "));
-        assertEquals("a b", Strings.safeTrim("a b"));
-        assertEquals("a b", Strings.safeTrim("a b "));
-        assertEquals("a b", Strings.safeTrim(" a b"));
-        assertEquals("a b", Strings.safeTrim(" a b "));
+        assertNull(Strings.trim(null));
+        assertEquals("", Strings.trim(""));
+        assertEquals("", Strings.trim(" "));
+        assertEquals("a b", Strings.trim("a b"));
+        assertEquals("a b", Strings.trim("a b "));
+        assertEquals("a b", Strings.trim(" a b"));
+        assertEquals("a b", Strings.trim(" a b "));
     }
 
+    /**
+     * Test of trim method, of class Strings.
+     */
+    @Test
+    public void testTrim_CharSequence()
+    {
+        assertNull(Strings.trim((CharSequence)null));
+        assertEquals("", Strings.trim((CharSequence)""));
+        assertEquals("", Strings.trim((CharSequence)" "));
+        assertEquals("a b", Strings.trim((CharSequence)"a b"));
+        assertEquals("a b", Strings.trim((CharSequence)"a b "));
+        assertEquals("a b", Strings.trim((CharSequence)" a b"));
+        assertEquals("a b", Strings.trim((CharSequence)" a b "));
+    }
+
+
+    @Test
+    public void testTrimToNull()
+    {
+        assertNull(Strings.trimToNull(null));
+        assertNull(Strings.trimToNull(""));
+        assertNull(Strings.trimToNull("     "));
+        assertEquals("abc", Strings.trimToNull("abc"));
+        assertEquals("abc", Strings.trimToNull("    abc    "));
+    }
+
+    @Test
+    public void testTrimToEmpty()
+    {
+        assertEquals("", Strings.trimToEmpty(null));
+        assertEquals("", Strings.trimToEmpty(""));
+        assertEquals("", Strings.trimToEmpty("     "));
+        assertEquals("abc", Strings.trimToEmpty("abc"));
+        assertEquals("abc", Strings.trimToEmpty("    abc    "));
+    }
 
     /**
      * Test of split method, of class Strings.
@@ -715,19 +809,6 @@ public class StringsTest
         
     }
 
-    /**
-     * Test of startsWith method, of class Strings.
-     */
-    @Test
-    public void testStartsWith()
-    {
-        assertTrue(Strings.startsWith("sss", "s"));
-        assertTrue(Strings.startsWith("sss", "d", "s"));
-        
-        assertFalse(Strings.startsWith("sss", "d"));
-        assertFalse(Strings.startsWith("sss", "d", "r"));
-        
-    }
 
     /**
      * Test of isPalindrome method, of class Strings.
@@ -1287,6 +1368,7 @@ public class StringsTest
     @Test
     public void testReverse()
     {
+        assertNull(Strings.reverse(null));
         assertEquals("", Strings.reverse(""));
         assertEquals("!", Strings.reverse("!"));
         assertEquals("cba", Strings.reverse("abc"));
@@ -1310,52 +1392,17 @@ public class StringsTest
     }
 
     /**
-     * Test of isNullOrEmptyAll method, of class Strings.
-     */
-    @Test
-    public void testIsNullOrEmptyAll()
-    {
-        assertFalse(Strings.isNullOrEmptyAll());
-        
-        assertTrue(Strings.isNullOrEmptyAll(null, null));
-        assertTrue(Strings.isNullOrEmptyAll("", ""));
-        assertTrue(Strings.isNullOrEmptyAll(null, ""));
-        
-        assertFalse(Strings.isNullOrEmptyAll(null, "a"));
-        assertFalse(Strings.isNullOrEmptyAll("", "b"));
-    }
-
-    /**
-     * Test of isNullOrEmptyAny method, of class Strings.
-     */
-    @Test
-    public void testIsNullOrEmptyAny()
-    {
-        assertFalse(Strings.isNullOrEmptyAny());
-        
-        assertTrue(Strings.isNullOrEmptyAny(null, null));
-        assertTrue(Strings.isNullOrEmptyAny("", ""));
-        assertTrue(Strings.isNullOrEmptyAny(null, "a"));
-        assertTrue(Strings.isNullOrEmptyAny("b", null));
-
-        assertTrue(Strings.isNullOrEmptyAny(null, "a", "b"));
-        assertTrue(Strings.isNullOrEmptyAny("", "a", "b"));
-        
-        assertFalse(Strings.isNullOrEmptyAny("a", "b"));
-    }
-
-    /**
-     * Test of safeEndsWith method, of class Strings.
+     * Test of endsWith method, of class Strings.
      */
     @Test
     public void testSafeEndsWith()
     {
-        assertTrue(Strings.safeEndsWith("hello world", "world"));
-        assertTrue(Strings.safeEndsWith("hello world", "hello world"));
-        assertFalse(Strings.safeEndsWith("hello world", "hello"));
+        assertTrue(Strings.endsWith("hello world", "world"));
+        assertTrue(Strings.endsWith("hello world", "hello world"));
+        assertFalse(Strings.endsWith("hello world", "hello"));
 
-        assertFalse(Strings.safeEndsWith(null, "hello"));
-        assertFalse(Strings.safeEndsWith("hello world", null));
+        assertFalse(Strings.endsWith(null, "hello"));
+        assertFalse(Strings.endsWith("hello world", null));
     }
 
     /**
@@ -1391,6 +1438,53 @@ public class StringsTest
         assertEquals("\"hello\"",Strings.quoteDouble("hello"));
         assertEquals("\"hello 'yoyo' \"",Strings.quoteDouble("hello 'yoyo' "));
         assertEquals("\"hello \"yoyo\"\"",Strings.quoteDouble("hello \"yoyo\""));
+    }
+
+    @Test
+    public void testCenter_String_int()
+    {
+     assertNull(Strings.center(null, 0));
+     assertEquals("    ", Strings.center("", 4));
+     assertEquals("ab", Strings.center("ab", -1));
+     assertEquals(" ab ", Strings.center("ab", 4));
+     assertEquals("abcd", Strings.center("abcd", 2));
+     assertEquals(" a  ", Strings.center("a", 4));
+    }
+
+    @Test
+    public void testCenter_3args()
+    {
+     assertNull(Strings.center(null, 0, '0'));
+     assertEquals("    ", Strings.center("", 4, ' '));
+     assertEquals("ab", Strings.center("ab", -1, ' '));
+     assertEquals(" ab ", Strings.center("ab", 4, ' '));
+     assertEquals("abcd", Strings.center("abcd", 2, ' '));
+     assertEquals(" a  ", Strings.center("a", 4, ' '));
+     assertEquals("yayy", Strings.center("a", 4, 'y'));
+    }
+
+    @Test
+    public void testLength()
+    {
+        assertEquals(0, Strings.length(null));
+        assertEquals(0, Strings.length(""));
+        assertEquals(3, Strings.length("123"));
+    }
+
+    @Test
+    public void testHasNullsOrBlank()
+    {
+        assertTrue(Strings.hasNullsOrBlank());
+        assertTrue(Strings.hasNullsOrBlank((String) null));
+        assertTrue(Strings.hasNullsOrBlank(new String[0]));
+        assertTrue(Strings.hasNullsOrBlank(new String[]{null}));
+        assertTrue(Strings.hasNullsOrBlank(new String[]{null, ""}));
+        assertTrue(Strings.hasNullsOrBlank(new String[]{"", ""}));
+        assertTrue(Strings.hasNullsOrBlank(new String[]{"", null}));
+        assertTrue(Strings.hasNullsOrBlank(new String[]{null, " "}));
+        assertTrue(Strings.hasNullsOrBlank(new String[]{"", " "}));
+        assertFalse(Strings.hasNullsOrBlank(new String[]{"a", "b"}));
+        assertTrue(Strings.hasNullsOrBlank(new String[]{" ", null}));
     }
 
 }

@@ -1,7 +1,7 @@
 /*
  *  AbstractConsole.java
  *
- *  Copyright (C) 2015-2024 francitoshi@gmail.com
+ *  Copyright (C) 2015-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,6 +32,12 @@ public abstract class AbstractConsole implements VirtualConsole
 {
     private final Queue<String> queue = new ConcurrentLinkedQueue<>();
 
+    @Override
+    public VirtualConsole println(String s)
+    {
+        return format("%s\n", s);
+    }
+    
     @Override
     public void addLine(String e)
     {

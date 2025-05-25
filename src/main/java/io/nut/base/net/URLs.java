@@ -408,35 +408,35 @@ public class URLs
     public static boolean isVideoLink(String url)
     {
         url = URLs.extractDomain(url, true);
-        return Strings.startsWith(url, "youtube.com","video.yahoo.com","vimeo.com","blip.tv");
+        return Strings.startsWithAny(url, "youtube.com","video.yahoo.com","vimeo.com","blip.tv");
     }
     
     public static boolean isVideo(String url)
     {
-        return Strings.endsWith(url, ".mpeg",".mpg",".avi",".mov",".mpg4",".mp4",".flv",".wmv");
+        return Strings.endsWithAny(url, ".mpeg",".mpg",".avi",".mov",".mpg4",".mp4",".flv",".wmv");
     }
     public static boolean isAudio(String url)
     {
-        return Strings.endsWith(url,".mp3",".ogg",".m3u",".wav");
+        return Strings.endsWithAny(url,".mp3",".ogg",".m3u",".wav");
     }
     public static boolean isDoc(String url)
     {
-        return Strings.endsWith(url,".pdf",".ppt",".doc",".swf",".rtf",".xls");
+        return Strings.endsWithAny(url,".pdf",".ppt",".doc",".swf",".rtf",".xls");
     }
 
     public static boolean isPackage(String url)
     {
-        return Strings.endsWith(url,".gz",".tgz",".zip",".rar",".deb",".rpm",".7z");
+        return Strings.endsWithAny(url,".gz",".tgz",".zip",".rar",".deb",".rpm",".7z");
     }
 
     public static boolean isApp(String url)
     {
-        return Strings.endsWith(url,".exe",".bin",".bat",".dmg");
+        return Strings.endsWithAny(url,".exe",".bin",".bat",".dmg");
     }
 
     public static boolean isImage(String url)
     {
-        return Strings.endsWith(url,".png",".jpeg",".gif",".jpg",".bmp",".ico",".eps",".svg");
+        return Strings.endsWithAny(url,".png",".jpeg",".gif",".jpg",".bmp",".ico",".eps",".svg");
     }
     /**
      * Popular sites uses the #! to indicate the importance of the following

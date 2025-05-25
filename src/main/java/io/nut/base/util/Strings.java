@@ -79,9 +79,23 @@ public class Strings
         return builder.toString();
     }
     
+    /**
+     * <p>Reverses a String as per {@link StringBuilder#reverse()}.</p>
+     *
+     * <p>A <code>null</code> String returns <code>null</code>.</p>
+     *
+     * <pre>
+     * Strings.reverse(null)  = null
+     * Strings.reverse("")    = ""
+     * Strings.reverse("bat") = "tab"
+     * </pre>
+     *
+     * @param s  the String to reverse, may be null
+     * @return the reversed String, <code>null</code> if null String input
+     */
     public static String reverse(String s)
     {
-        return new StringBuilder(s).reverse().toString();
+        return (s!=null && s.length()!=0) ? new StringBuilder(s).reverse().toString() : s;
     }
     
     public static StringBuilder fill(StringBuilder builder,char c, int size, boolean insert)
@@ -116,43 +130,120 @@ public class Strings
         int index = Math.max(s.length()-count,0);
         return s.substring(index);
     }    
-    
-    public static boolean isEmpty(CharSequence cs)
-    {
-        return (cs.length()==0);
-    }
 
-    public static boolean isNullOrEmpty(CharSequence cs)
+    /**
+     * <p>Checks if a CharSequence is empty ("") or null.</p>
+     *
+     * <pre>
+     * Strings.isEmpty(null)      = true
+     * Strings.isEmpty("")        = true
+     * Strings.isEmpty(" ")       = false
+     * Strings.isEmpty("no")     = false
+     * Strings.isEmpty("  no  ") = false
+     * </pre>
+     *
+     * @param cs  the CharSequence to check, may be null
+     * @return <code>true</code> if the String is empty or null
+     */
+    public static boolean isEmpty(CharSequence cs) 
     {
         return (cs==null || cs.length()==0);
     }
-    public static boolean isNullOrEmptyAll(CharSequence... cs)
+
+    /**
+     * <p>Checks if a CharSequence is not empty ("") and not null.</p>
+     *
+     * <pre>
+     * Strings.isNotEmpty(null)      = false
+     * Strings.isNotEmpty("")        = false
+     * Strings.isNotEmpty(" ")       = true
+     * Strings.isNotEmpty("yes")     = true
+     * Strings.isNotEmpty("  yes  ") = true
+     * </pre>
+     *
+     * @param cs  the CharSequence to check, may be null
+     * @return <code>true</code> if the CharSequence is not empty and not null
+     */
+    public static boolean isNotEmpty(CharSequence cs) 
     {
-        boolean ret = false;
-        for (CharSequence item : cs) 
-        {
-            ret=isNullOrEmpty(item);
-            if(!ret)
-            {
-                break;
-            }
-        }
-        return ret;
+        return !isEmpty(cs);
     }
-    public static boolean isNullOrEmptyAny(CharSequence... cs)
+    
+    /**
+     * <p>Checks if a CharSequence is whitespace, empty ("") or null.</p>
+     *
+     * <pre>
+     * Strings.isBlank(null)      = true
+     * Strings.isBlank("")        = true
+     * Strings.isBlank(" ")       = true
+     * Strings.isBlank("no")     = false
+     * Strings.isBlank("  no  ") = false
+     * </pre>
+     *
+     * @param cs  the CharSequence to check, may be null
+     * @return <code>true</code> if the CharSequence is null, empty or whitespace
+     */
+    public static boolean isBlank(CharSequence cs)
     {
-        boolean ret = false;
-        for (CharSequence item : cs) 
+        int len;
+        if (cs==null || (len=cs.length())==0)
         {
-            ret=isNullOrEmpty(item);
-            if(ret)
+            return true;
+        }
+        for (int i = 0; i < len; i++)
+        {
+            if (Character.isWhitespace(cs.charAt(i)) == false)
             {
-                break;
+                return false;
             }
         }
-        return ret;
+        return true;
     }
 
+    /**
+     * <p>Checks if a CharSequence is not empty (""), not null and not whitespace only.</p>
+     *
+     * <pre>
+     * Strings.isNotBlank(null)      = false
+     * Strings.isNotBlank("")        = false
+     * Strings.isNotBlank(" ")       = false
+     * Strings.isNotBlank("yes")     = true
+     * Strings.isNotBlank("  yes  ") = true
+     * </pre>
+     *
+     * @param cs  the CharSequence to check, may be null
+     * @return <code>true</code> if the CharSequence is not empty and not null and not whitespace
+     */
+    public static boolean isNotBlank(CharSequence cs) 
+    {
+        return !isBlank(cs);
+    }
+
+    /**
+     * Checks whether the given array is {@code null}, is empty or contains {@code null} 
+     * elements.
+     *
+     * @param s the array to check, may be {@code null}
+     * @param <E> the type of elements in the array
+     * @return {@code true} if the array is {@code null}, is empty or any element is 
+     * {@code null}; {@code false} otherwise
+     */
+    public static <E> boolean hasNullsOrBlank(String... s)
+    {
+        if (s == null || s.length==0)
+        {
+            return true;
+        }
+        for (String item : s)
+        {
+            if (item == null || isBlank(item))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     static final String TRIM = "(^[\\s\u00a0\n]+)|([\\s\u00a0\n]+$)";
     public static String trimWhitespaces(String str)
     {
@@ -246,55 +337,277 @@ public class Strings
         return count;
     }
     
-    public static boolean safeStartsWith(String s, String prefix)
+    /**
+     * <p>Check if a String starts with a specified prefix.</p>
+     *
+     * <p><code>null</code>s are handled without exceptions. Two <code>null</code>
+     * references are considered to be equal. The comparison is case sensitive.</p>
+     *
+     * <pre>
+     * Strings.startsWith(null, null)      = true
+     * Strings.startsWith(null, "abcdef")  = false
+     * Strings.startsWith("abc", null)     = false
+     * Strings.startsWith("abc", "abcdef") = true
+     * Strings.startsWith("abc", "ABCDEF") = false
+     * </pre>
+     *
+     * @see java.lang.String#startsWith(String)
+     * @param s  the String to check, may be null
+     * @param prefix the prefix to find, may be null
+     * @return <code>true</code> if the String starts with the prefix, case sensitive, or
+     *  both <code>null</code>
+     */
+    public static boolean startsWith(String s, String prefix)
     {
-        return (s!=null) && s.startsWith(prefix);
+        if(s==null || prefix==null) 
+        {
+            return (s==null && prefix==null);
+        }
+        if (prefix.length() > s.length()) 
+        {
+            return false;
+        }
+        return s.startsWith(prefix);
+    }
+    
+    /**
+     * <p>Check if a String starts with any specified prefixes.</p>
+     *
+     * <p><code>null</code>s are handled without exceptions. Two <code>null</code>
+     * references are considered to be equal. The comparison is case sensitive.</p>
+     *
+     * <pre>
+     * Strings.startsWithAny(null, null, "abcdef")      = true
+     * Strings.startsWithAny(null, "abcdef","xxxyyy")  = false
+     * Strings.startsWithAny("abc", null, "xxxyyy")     = false
+     * Strings.startsWithAny("abc", "abcdef", "ABCDEF") = false
+     * </pre>
+     *
+     * @see java.lang.String#startsWith(String)
+     * @param s  the String to check, may be null
+     * @param prefix the prefix to find, may be null
+     * @return <code>true</code> if the String starts with the prefix, case sensitive, or
+     *  both <code>null</code>
+     */
+    public static boolean startsWithAny(String s, String... prefix)
+    {
+        for(String item : prefix)
+        {
+            if(startsWith(s, item))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public static boolean safeEndsWith(String s, String suffix)
+    /**
+     * <p>Check if a String ends with a specified suffix.</p>
+     *
+     * <p><code>null</code>s are handled without exceptions. Two <code>null</code>
+     * references are considered to be equal. The comparison is case sensitive.</p>
+     *
+     * <pre>
+     * StringUtils.endsWith(null, null)      = true
+     * StringUtils.endsWith(null, "abcdef")  = false
+     * StringUtils.endsWith("def", null)     = false
+     * StringUtils.endsWith("def", "abcdef") = true
+     * StringUtils.endsWith("def", "ABCDEF") = false
+     * </pre>
+     *
+     * @see java.lang.String#endsWith(String)
+     * @param s  the String to check, may be null
+     * @param suffix the suffix to find, may be null
+     * @return <code>true</code> if the String ends with the suffix, case sensitive, or
+     *  both <code>null</code>
+     */
+    public static boolean endsWith(String s, String suffix)
     {
-        return (s!=null) && (suffix!=null) && s.endsWith(suffix);
+        if(s==null || suffix==null) 
+        {
+            return (s==null && suffix==null);
+        }
+        if (suffix.length() > s.length()) 
+        {
+            return false;
+        }
+        return s.endsWith(suffix);
+    }
+    
+    /**
+     * <p>Check if a String ends with any specified suffix.</p>
+     *
+     * <p><code>null</code>s are handled without exceptions. Two <code>null</code>
+     * references are considered to be equal. The comparison is case sensitive.</p>
+     *
+     * <pre>
+     * Strings.endsWithAny(null, null, "abcdef")      = true
+     * Strings.endsWithAny(null, "abcdef","xxxyyy")  = false
+     * Strings.endsWithAny("def", null, "xxxyyy")     = false
+     * Strings.endsWithAny("def", "abcdef", "ABCDEF") = false
+     * </pre>
+     *
+     * @see java.lang.String#endsWith(String)
+     * @param s  the String to check, may be null
+     * @param suffix the suffix to find, may be null
+     * @return <code>true</code> if the String ends with the suffix, case sensitive, or
+     *  both <code>null</code>
+     */
+    public static boolean endsWithAny(String s, String... suffix)
+    {
+        for(String item : suffix)
+        {
+            if(endsWith(s, item))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
-    public static String safeToLowerCase(String s)
+    public static String toLowerCase(String s)
     {
         return (s!=null) ? s.toLowerCase() : null;
     }
-    public static String safeToLowerCase(String s, Locale locale)
+    public static String toLowerCase(String s, Locale locale)
     {
         return (s!=null) ? s.toLowerCase(locale) : null;
     }
-    public static String safeToUpperCase(String s)
+    public static String toUpperCase(String s)
     {
         return (s!=null) ? s.toUpperCase() : null;
     }
-    public static String safeToUpperCase(String s, Locale locale)
+    public static String toUpperCase(String s, Locale locale)
     {
         return (s!=null) ? s.toUpperCase(locale) : null;
     }
 
-    public static String safeReplace(String s, char oldChar, char newChar)
+    public static String replace(String s, char oldChar, char newChar)
     {
         return s!=null ? s.replace(oldChar, newChar) : null;
     }
 
-    public static String safeReplaceFirst(String s, String regex, String replacement)
+    public static String replaceFirst(String s, String regex, String replacement)
     {
         return s!=null ? ( (regex!=null && replacement!=null) ? s.replaceFirst(regex, replacement) : s ) : null;
     }
 
-    public static String safeReplaceAll(String s, String regex, String replacement)
+    public static String replaceAll(String s, String regex, String replacement)
     {
         return s!=null ? ( (regex!=null && replacement!=null) ? s.replaceAll(regex, replacement) : s ) : null;
     }
 
-    public static String safeReplace(String s, CharSequence target, CharSequence replacement)
+    public static String replace(String s, CharSequence target, CharSequence replacement)
     {
         return s!=null ? ( (target!=null && replacement!=null) ? s.replace(target, replacement) : s ) : null;
     }
-    public static String safeTrim(String s)
+    
+    /**
+     * <p>Removes control characters (char &lt;= 32) from both
+     * ends of this String, handling <code>null</code> by returning
+     * <code>null</code>.</p>
+     *
+     * <p>The String is trimmed using {@link String#trim()}.
+     * Trim removes start and end characters &lt;= 32.
+     * To strip whitespace use {@link #strip(String)}.</p>
+     *
+     * <p>To trim your choice of characters, use the
+     * {@link #strip(String, String)} methods.</p>
+     *
+     * <pre>
+     * Strings.trim(null)          = null
+     * Strings.trim("")            = ""
+     * Strings.trim("     ")       = ""
+     * Strings.trim("abc")         = "abc"
+     * Strings.trim("    abc    ") = "abc"
+     * </pre>
+     *
+     * @param s  the String to be trimmed, may be null
+     * @return the trimmed string, <code>null</code> if null String input
+     */
+    public static String trim(String s)
     {
-        return s!=null ? s.trim() : null;
+        return (s!=null && s.length()!=0) ? s.trim() : s;
+    }
+    
+    /**
+     * <p>Removes control characters (char &lt;= 32) from both
+     * ends of this CharSequence, handling <code>null</code> by returning
+     * <code>null</code>.</p>
+     *
+     * <p>The CharSequence is trimmed using {@link String#trim()}.
+     * Trim removes start and end characters &lt;= 32.
+     * To strip whitespace use {@link #strip(String)}.</p>
+     *
+     * <p>To trim your choice of characters, use the
+     * {@link #strip(String, String)} methods.</p>
+     *
+     * <pre>
+     * Strings.trim(null)          = null
+     * Strings.trim("")            = ""
+     * Strings.trim("     ")       = ""
+     * Strings.trim("abc")         = "abc"
+     * Strings.trim("    abc    ") = "abc"
+     * </pre>
+     *
+     * @param cs  the CharSequence to be trimmed, may be null
+     * @return the trimmed string, <code>null</code> if null String input
+     */
+    public static String trim(CharSequence cs)
+    {
+        return cs!=null ? cs.toString().trim() : null;
+    }
+
+    /**
+     * <p>Removes control characters (char &lt;= 32) from both
+     * ends of this String returning <code>null</code> if the String is
+     * empty ("") after the trim or if it is <code>null</code>.
+     *
+     * <p>The String is trimmed using {@link String#trim()}.
+     * Trim removes start and end characters &lt;= 32.
+     * To strip whitespace use {@link #stripToNull(String)}.</p>
+     *
+     * <pre>
+     * Strings.trimToNull(null)          = null
+     * Strings.trimToNull("")            = null
+     * Strings.trimToNull("     ")       = null
+     * Strings.trimToNull("abc")         = "abc"
+     * Strings.trimToNull("    abc    ") = "abc"
+     * </pre>
+     *
+     * @param str  the String to be trimmed, may be null
+     * @return the trimmed String,
+     *  <code>null</code> if only chars &lt;= 32, empty or null String input
+     */
+    public static String trimToNull(String str) 
+    {
+        String ts = trim(str);
+        return isEmpty(ts) ? null : ts;
+    }
+
+    /**
+     * <p>Removes control characters (char &lt;= 32) from both
+     * ends of this String returning an empty String ("") if the String
+     * is empty ("") after the trim or if it is <code>null</code>.
+     *
+     * <p>The String is trimmed using {@link String#trim()}.
+     * Trim removes start and end characters &lt;= 32.
+     * To strip whitespace use {@link #stripToEmpty(String)}.</p>
+     *
+     * <pre>
+     * Strings.trimToEmpty(null)          = ""
+     * Strings.trimToEmpty("")            = ""
+     * Strings.trimToEmpty("     ")       = ""
+     * Strings.trimToEmpty("abc")         = "abc"
+     * Strings.trimToEmpty("    abc    ") = "abc"
+     * </pre>
+     *
+     * @param s  the String to be trimmed, may be null
+     * @return the trimmed String, or an empty String if <code>null</code> input
+     */
+    public static String trimToEmpty(String s)
+    {
+        return s==null ? EMPTY : s.trim();
     }
     
     public static String firstNonEmpty(String first, String second, String... others)
@@ -345,29 +658,6 @@ public class Strings
             items = count<items.length ? Arrays.copyOf(items, count) : items;
         }
         return items;
-    }
-
-    public static boolean startsWith(String s, String... prefix)
-    {
-        for(String item : prefix)
-        {
-            if(s.startsWith(item))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-    public static boolean endsWith(String s, String... sufix)
-    {
-        for(String item : sufix)
-        {
-            if(s.endsWith(item))
-            {
-                return true;
-            }
-        }
-        return false;
     }
     
     public static String dumpHex(String s) throws IOException
@@ -508,7 +798,6 @@ public class Strings
      * @throws IllegalArgumentException
      *             if the lengths of the arrays are not the same (null is ok,
      *             and/or size 0)
-     * @since 2.4
      */
     public static String replaceEach(final String s, final String[] src, final String[] dst, final boolean repeat, final int levels) 
     {
@@ -849,7 +1138,7 @@ public class Strings
         return true;
     }
 
-    public static int safeCompareTo(String a, String b)
+    public static int compareTo(String a, String b)
     {
         if(a==null && b!=null)
         {
@@ -865,13 +1154,13 @@ public class Strings
         }
         return 0;
     }
-    public static int safeCompareTo(String[] a, String[] b)
+    public static int compareTo(String[] a, String[] b)
     {
         int cmp = 0;
         int count = Math.min(a.length, b.length);
         for(int i=0;i<count && cmp==0;i++)
         {
-            cmp = safeCompareTo(a[i], b[i]);
+            cmp = compareTo(a[i], b[i]);
         }
         if(cmp==0 && a.length!=b.length)
         {
@@ -879,7 +1168,7 @@ public class Strings
         }
         return cmp;
     }
-    public static int safeCompareToIgnoreCase(String a, String b)
+    public static int compareToIgnoreCase(String a, String b)
     {
         if(a==null && b!=null)
         {
@@ -895,13 +1184,13 @@ public class Strings
         }
         return 0;
     }
-    public static int safeCompareToIgnoreCase(String[] a, String[] b)
+    public static int compareToIgnoreCase(String[] a, String[] b)
     {
         int cmp = 0;
         int count = Math.min(a.length, b.length);
         for(int i=0;i<count && cmp==0;i++)
         {
-            cmp = safeCompareToIgnoreCase(a[i], b[i]);
+            cmp = compareToIgnoreCase(a[i], b[i]);
         }
         if(cmp==0 && a.length!=b.length)
         {
@@ -1307,30 +1596,29 @@ public class Strings
      * <code>getCommonPrefix(new String[] {"i am a machine", "i am a robot"}) -> "i am a "</code></p>
      *
      * <pre>
-     * StringUtils.getCommonPrefix(null) = ""
-     * StringUtils.getCommonPrefix(new String[] {}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"abc"}) = "abc"
-     * StringUtils.getCommonPrefix(new String[] {null, null}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"", ""}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"", null}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"abc", null, null}) = ""
-     * StringUtils.getCommonPrefix(new String[] {null, null, "abc"}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"", "abc"}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"abc", ""}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"abc", "abc"}) = "abc"
-     * StringUtils.getCommonPrefix(new String[] {"abc", "a"}) = "a"
-     * StringUtils.getCommonPrefix(new String[] {"ab", "abxyz"}) = "ab"
-     * StringUtils.getCommonPrefix(new String[] {"abcde", "abxyz"}) = "ab"
-     * StringUtils.getCommonPrefix(new String[] {"abcde", "xyz"}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"xyz", "abcde"}) = ""
-     * StringUtils.getCommonPrefix(new String[] {"i am a machine", "i am a robot"}) = "i am a "
+     * Strings.getCommonPrefix(null) = ""
+     * Strings.getCommonPrefix(new String[] {}) = ""
+     * Strings.getCommonPrefix(new String[] {"abc"}) = "abc"
+     * Strings.getCommonPrefix(new String[] {null, null}) = ""
+     * Strings.getCommonPrefix(new String[] {"", ""}) = ""
+     * Strings.getCommonPrefix(new String[] {"", null}) = ""
+     * Strings.getCommonPrefix(new String[] {"abc", null, null}) = ""
+     * Strings.getCommonPrefix(new String[] {null, null, "abc"}) = ""
+     * Strings.getCommonPrefix(new String[] {"", "abc"}) = ""
+     * Strings.getCommonPrefix(new String[] {"abc", ""}) = ""
+     * Strings.getCommonPrefix(new String[] {"abc", "abc"}) = "abc"
+     * Strings.getCommonPrefix(new String[] {"abc", "a"}) = "a"
+     * Strings.getCommonPrefix(new String[] {"ab", "abxyz"}) = "ab"
+     * Strings.getCommonPrefix(new String[] {"abcde", "abxyz"}) = "ab"
+     * Strings.getCommonPrefix(new String[] {"abcde", "xyz"}) = ""
+     * Strings.getCommonPrefix(new String[] {"xyz", "abcde"}) = ""
+     * Strings.getCommonPrefix(new String[] {"i am a machine", "i am a robot"}) = "i am a "
      * </pre>
      *
      * @param strs  array of String objects, entries may be null
      * @return the initial sequence of characters that are common to all Strings
      * in the array; empty String if the array is null, the elements are all null 
      * or if there is no common prefix. 
-     * @since 2.4
      */
     public static String commonPrefix(String[] strs) 
     {
@@ -1384,4 +1672,84 @@ public class Strings
         }
         return s.substring(n, s.length());
     }
+    
+    /**
+     * <p>Centers a String in a larger String of size <code>size</code>
+     * using the space character (' ').<p>
+     *
+     * <p>If the size is less than the String length, the String is returned.
+     * A <code>null</code> String returns <code>null</code>.
+     * A negative size is treated as zero.</p>
+     *
+     * <p>Equivalent to <code>center(str, size, " ")</code>.</p>
+     *
+     * <pre>
+     * Strings.center(null, *)   = null
+     * Strings.center("", 4)     = "    "
+     * Strings.center("ab", -1)  = "ab"
+     * Strings.center("ab", 4)   = " ab "
+     * Strings.center("abcd", 2) = "abcd"
+     * Strings.center("a", 4)    = " a  "
+     * </pre>
+     *
+     * @param s  the String to center, may be null
+     * @param size  the int size of new String, negative treated as zero
+     * @return centered String, <code>null</code> if null String input
+     */
+    public static String center(String s, int size)
+    {
+        return center(s, size, ' ');
+    }
+
+    /**
+     * <p>Centers a String in a larger String of size <code>size</code>.
+     * Uses a supplied character as the value to pad the String with.</p>
+     *
+     * <p>If the size is less than the String length, the String is returned.
+     * A <code>null</code> String returns <code>null</code>.
+     * A negative size is treated as zero.</p>
+     *
+     * <pre>
+     * Strings.center(null, *, *)     = null
+     * Strings.center("", 4, ' ')     = "    "
+     * Strings.center("ab", -1, ' ')  = "ab"
+     * Strings.center("ab", 4, ' ')   = " ab "
+     * Strings.center("abcd", 2, ' ') = "abcd"
+     * Strings.center("a", 4, ' ')    = " a  "
+     * Strings.center("a", 4, 'y')    = "yayy"
+     * </pre>
+     *
+     * @param s  the String to center, may be null
+     * @param size  the int size of new String, negative treated as zero
+     * @param pad  the character to pad the new String with
+     * @return centered String, <code>null</code> if null String input
+     */
+    public static String center(String s, int size, char pad)
+    {
+        if (s == null || size <= 0)
+        {
+            return s;
+        }
+        int strLen = s.length();
+        int pads = size - strLen;
+        if (pads <= 0)
+        {
+            return s;
+        }
+        s = paddingLeft(s, strLen + pads / 2, pad);
+        s = paddingRight(s, size, pad);
+        return s;
+    }
+
+    /**
+     * Gets a CharSequence's length or <code>0</code> if the CharSequence is <code>null</code>.
+     * 
+     * @param s a CharSequence or <code>null</code>
+     * @return CharSequence length or <code>0</code> if the CharSequence is <code>null</code>.
+     */
+    public static int length(CharSequence s)
+    {
+        return s==null ? 0 : s.length();
+    }
+
 }

@@ -1,7 +1,7 @@
 /*
- *  VirtualConsole.java
+ *  PubKey.java
  *
- *  Copyright (C) 2010-2025 francitoshi@gmail.com
+ *  Copyright (c) 2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -17,39 +17,19 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *  Report bugs or new features to: francitoshi@gmail.com
- *
  */
-package io.nut.base.io.console;
-
-import java.io.PrintWriter;
-import java.io.Reader;
+package io.nut.base.crypto.gpg;
 
 /**
  *
  * @author franci
  */
-public interface VirtualConsole
+public class PubKey extends MainKey
 {
-    void addLine(String line);
     
-    void flush();
-
-    VirtualConsole format(String fmt, Object... args);
-
-    VirtualConsole printf(String format, Object... args);
-
-    VirtualConsole println(String s);
-
-    String readLine(String fmt, Object... args);
-
-    String readLine();
-
-    char[] readPassword(String fmt, Object... args);
-
-    char[] readPassword();
-
-    Reader reader();
-
-    PrintWriter writer();
-
+    public PubKey(SubKey main)
+    {
+        super(main);
+    }
+    
 }

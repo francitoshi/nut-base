@@ -1,7 +1,7 @@
 /*
  *  RomanNumbers.java
  *
- *  Copyright (C) 2014-2024 francitoshi@gmail.com
+ *  Copyright (C) 2014-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,9 +18,8 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.tea.base.text;
+package io.nut.base.text;
 
-import io.nut.base.text.CardinalFormat;
 import io.nut.base.util.Strings;
 import java.util.Locale;
 import java.util.regex.Pattern;
@@ -147,7 +146,7 @@ public class RomanNumbers
         int value ;
         try
         {
-            value = Strings.isNullOrEmpty(s) ? defaultValue : parse(s);
+            value = Strings.isEmpty(s) ? defaultValue : parse(s);
         }
         catch(NumberFormatException ex)
         {

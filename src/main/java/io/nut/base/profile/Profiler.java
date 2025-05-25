@@ -55,13 +55,14 @@ public class Profiler
             this.startNanos = this.stopNanos = System.nanoTime();
         }
 
-        public void start()
+        public Task start()
         {
             synchronized (lock)
             {
                 this.startNanos = System.nanoTime();
                 this.active = true;
             }
+            return this;
         }
 
         public Task stop()

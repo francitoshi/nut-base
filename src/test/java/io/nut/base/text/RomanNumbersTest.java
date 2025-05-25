@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.tea.base.text;
+package io.nut.base.text;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;

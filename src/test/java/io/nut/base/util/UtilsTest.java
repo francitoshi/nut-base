@@ -2947,4 +2947,41 @@ public class UtilsTest
         assertEquals(0, Utils.countColums(cells8));
     }
 
+    @Test
+    public void testExecute()
+    {
+        Runnable task = () ->
+        {
+            //do nothing
+        };
+        Thread result = Utils.execute(task, "name", true);
+        assertEquals("name", result.getName());
+        assertTrue(result.isDaemon());
+    }
+
+    @Test
+    public void testHasNulls()
+    {
+        assertFalse(Utils.hasNulls());
+        assertTrue(Utils.hasNulls((Object) null));
+        assertFalse(Utils.hasNulls(new Object[0]));
+        assertTrue(Utils.hasNulls(new Object[]{null}));
+        assertTrue(Utils.hasNulls(new Object[]{null, ""}));
+        assertFalse(Utils.hasNulls(new Object[]{"", ""}));
+        assertTrue(Utils.hasNulls(new Object[]{"", null}));
+    }
+
+    @Test
+    public void testHasNullsOrEmpty()
+    {
+        assertTrue(Utils.hasNullsOrEmpty());
+        assertTrue(Utils.hasNullsOrEmpty((Object) null));
+        assertTrue(Utils.hasNullsOrEmpty(new Object[0]));
+        assertTrue(Utils.hasNullsOrEmpty(new Object[]{null}));
+        assertTrue(Utils.hasNullsOrEmpty(new Object[]{null, ""}));
+        assertFalse(Utils.hasNullsOrEmpty(new Object[]{"", ""}));
+        assertTrue(Utils.hasNullsOrEmpty(new Object[]{"", null}));
+    }
+
+
 }

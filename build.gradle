@@ -1,8 +1,10 @@
-apply plugin: 'java'
-apply plugin: 'maven-publish'
+plugins 
+{
+    id 'java'
+}
 
 group = 'com.github.francitoshi'
-version = '0.1.7'
+version = '0.1.8'
 
 repositories 
 {
@@ -11,7 +13,8 @@ repositories
 
 dependencies
 {
-    // Use JUnit Jupiter for testing.
+    //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
+
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
     testImplementation 'org.bouncycastle:bcprov-jdk15on:1.62'
     testImplementation 'org.apache.commons:commons-csv:1.9.0'
@@ -35,17 +38,5 @@ wrapper
 
 test 
 {
-    // Use JUnit Platform for unit tests.
     useJUnitPlatform()
-}
-
-publishing 
-{
-    publications 
-    {
-        maven(MavenPublication) 
-	{
-            from components.java
-        }
-    }
 }

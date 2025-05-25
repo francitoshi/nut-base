@@ -1,7 +1,7 @@
 /*
  *  Files.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@ import io.nut.base.util.Sorts;
 import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -36,13 +35,12 @@ import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Random;
-import java.util.zip.GZIPInputStream;
 
 /**
  *
  * @author franci
  */
-public class FileUtils 
+public class FileUtils extends IO
 {
     private static final Random random = new Random();
 
@@ -80,8 +78,6 @@ public class FileUtils
         },
     };
 
-    public static final File ROOT = new File(File.separator);
-
     public static File createTempFile(File parent, String prefix, String suffix)
     {
         File file = new File(parent,prefix+random.nextInt(9999)+suffix);
@@ -110,52 +106,6 @@ public class FileUtils
         return file;
     }
 
-
-    private static boolean equals(File a, File b, boolean useCanonical) throws IOException
-    {
-        if (useCanonical)
-        {
-            a = a.getCanonicalFile();
-            b = b.getCanonicalFile();
-        }
-        return a.equals(b);
-    }
-
-    // Copies src file to dst file.
-    // If the dst file does not exist, it is created
-    public static void copy(File src, File dst) throws IOException
-    {
-        try(InputStream in = new BufferedInputStream(new FileInputStream(src))) 
-        {
-            try(OutputStream out = new BufferedOutputStream(new FileOutputStream(dst))) 
-            {
-                // Transfer bytes from in to out
-                copy(in, out);
-            }
-        }
-    }
-    public static void copy(InputStream in, OutputStream out) throws IOException
-    {
-        // Transfer bytes from in to out
-        byte[] buf = new byte[8192];
-        int r;
-        while ((r = in.read(buf)) > 0)
-        {
-            out.write(buf, 0, r);
-        }
-    }
-
-    public static boolean move(File src, File dst) throws IOException
-    {
-        if (src.renameTo(dst))
-        {
-            return true;
-        }
-        copy(src, dst);
-        src.delete();
-        return true;
-    }
-
     public static String escape(String name)
     {
         for (String[] item : escapeCharacters)
@@ -166,16 +116,6 @@ public class FileUtils
             }
         }
         return name;
-    }
-
-    public static String wildcard(String name)
-    {
-        return name.replace('\uFFFD', '?');
-    }
-
-    public static String normalize(String name)
-    {
-        return name.replace('\uFFFD', '.');
     }
 
     public static String[] getParents(File file, boolean includeFile)
@@ -285,87 +225,6 @@ public class FileUtils
         return false;
     }
 
-    public static File[] uniqueCopyOf(File[] list, boolean canonical, boolean mergeWithParent) throws IOException
-    {
-        // se eliminan los duplicados
-        File[] unique = Sorts.uniqueCopyOf(list);
-        for (int i = 0; i < unique.length; i++)
-        {
-            for (int j = i + 1; j < unique.length; j++)
-            {
-                if (equals(unique[j], unique[i], true))
-                {
-                    continue;
-                }
-                if (mergeWithParent)
-                {
-                    if (unique[j].isDirectory() && isParentOf(unique[j], unique[i], canonical))
-                    {
-                        unique[i] = unique[j];
-                        continue;
-                    }
-                    if (unique[i].isDirectory() && isParentOf(unique[i], unique[j], canonical))
-                    {
-                        unique[j] = unique[i];
-                        continue;
-                    }
-                }
-            }
-        }
-        return Sorts.uniqueCopyOf(unique);
-    }
-
-    public static boolean isLink(String name) throws IOException
-    {
-        return isLink(new File(name));
-    }
-
-    public static boolean isBugName(File file) throws IOException
-    {
-        String name = file.toString();
-        String name2 = normalize(name);
-        return !name.equals(name2);
-    }
-
-    /**
-     * Tests whether the file denoted by this abstract pathname is a link.
-     * @param file
-     * @return
-     * @throws IOException
-     */
-    public static boolean isLink(File file) throws IOException
-    {
-        return isLink(file, false);
-    }
-
-    /**
-     * Tests whether the file denoted by this abstract pathname is a link, or his path is in a link.
-     * @param file
-     * @return
-     * @throws IOException
-     */
-    public static boolean isLink(File file, boolean path) throws IOException
-    {
-        File c = file.getCanonicalFile();
-        File a = file.getAbsoluteFile();
-        boolean link = !c.equals(a);
-        if (!link || path)
-        {
-            return link;
-        }
-        File ap = a.getParentFile();
-        File cp = c.getParentFile();
-        if (ap.equals(cp))
-        {
-            return true;
-        }
-        File apc = a.getParentFile().getCanonicalFile();
-        String name = file.getName();
-        File apcName = new File(apc, name);
-        link = !apcName.equals(c);
-        return link;
-    }
-
     public static File getNoDotFile(File file) throws IOException
     {
         // "." => ""
@@ -409,88 +268,6 @@ public class FileUtils
         return file;
     }
 
-    public static boolean isCyclicLink(File file) throws IOException
-    {
-        if (file.isDirectory() && isLink(file))
-        {
-            File canonical = file.getCanonicalFile();
-            File absolute = file.getAbsoluteFile();
-            File[] parents = getParentFiles(absolute, false);
-            for (int i = 0; i < parents.length; i++)
-            {
-                if (canonical.equals(parents[i].getCanonicalFile()))
-                {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
-    public static byte[] bytesFromFile(InputStream in, int readlimit) throws IOException
-    {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte buf[] = new byte[64 * 1024];
-        int r;
-        int count=0;
-        while ((r = in.read(buf)) > 0 && count<readlimit)
-        {
-            baos.write(buf, 0, r);
-            count+=r;
-        }
-        return baos.toByteArray();
-    }
-    public static byte[] bytesFromFile(InputStream in) throws IOException
-    {
-        return bytesFromFile(in, Integer.MAX_VALUE);
-    }
-    public static byte[] bytesFromFile(File file, int readlimit) throws IOException
-    {
-        return bytesFromFile(new FileInputStream(file), readlimit);
-    }
-    public static byte[] bytesFromFile(File file) throws IOException
-    {
-        return bytesFromFile(new FileInputStream(file), Integer.MAX_VALUE);
-    }
-    public static byte[] bytesFromFileGZ(InputStream in, int readlimit, boolean forceGZ) throws IOException
-    {
-        boolean gzip = forceGZ;
-        if(!forceGZ)
-        {
-            in = in.markSupported()? in : new BufferedInputStream(in, 1024);
-            in.mark(1024);
-            try
-            {
-                byte[] data = new byte[1024];
-                int r = in.read(data);
-                GZIPInputStream gzis = new GZIPInputStream(new ByteArrayInputStream(data, 0, r), 32);
-                byte buf[] = new byte[16];
-                gzis.read(buf);
-                gzip = true;
-            }
-            catch(IOException ex)
-            {
-                gzip = false;
-            }
-            finally
-            {
-                in.reset();
-            }
-        }
-        return bytesFromFile( gzip? new GZIPInputStream(in):in, readlimit);
-    }
-    public static byte[] bytesFromFileGZ(InputStream in, boolean detect) throws IOException
-    {
-        return bytesFromFileGZ(in, Integer.MAX_VALUE, detect);
-    }
-    public static byte[] bytesFromFileGZ(File file, int readlimit, boolean detect) throws IOException
-    {
-        return bytesFromFileGZ(new FileInputStream(file), readlimit, detect);
-    }
-    public static byte[] bytesFromFileGZ(File file, boolean detect) throws IOException
-    {
-        return bytesFromFileGZ(new FileInputStream(file), Integer.MAX_VALUE, detect);
-    }
 
     public static File[] getAbsoluteFile(File[] files)
     {
@@ -526,22 +303,6 @@ public class FileUtils
     public static String briefPath(String fileName, int max)
     {
         return fileName;
-    }
-
-    public static boolean delete(File file)
-    {
-        if (file.isDirectory())
-        {
-            File[] childs = file.listFiles();
-            for (File item : childs)
-            {
-                if (!delete(item))
-                {
-                    return false;
-                }
-            }
-        }
-        return file.delete();
     }
     
     public static File createTempDirectory(String prefix, String suffix) throws IOException
@@ -588,8 +349,6 @@ public class FileUtils
         }
         return fileName;
     }
-////////////////////////////////////////////////////////
-    public static final String UTF8 = "UTF-8";
     
     public static void writeFile(String data, File file) throws IOException
     {
@@ -668,19 +427,4 @@ public class FileUtils
         return sb.toString();
     }
     
-    public static boolean mkdirs(File dir)
-    {
-        if(!dir.exists())
-        {
-            dir.mkdirs();
-            if(!dir.exists())
-            {
-                File parent = dir.getParentFile();
-                mkdirs(parent);
-                dir.mkdirs();
-            }
-            return true;
-        }
-        return false;
-    }
 }
