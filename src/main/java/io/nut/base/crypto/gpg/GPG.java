@@ -21,6 +21,7 @@
 package io.nut.base.crypto.gpg;
 
 import io.nut.base.util.Args;
+import io.nut.base.util.Strings;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -345,11 +346,11 @@ public class GPG
                 }
                 out.println("Subkey-Usage: "+usage(ssbKey.usage));
             }
-            if(nameReal!=null && !nameReal.isBlank())
+            if(nameReal!=null && !Strings.isBlank(nameReal))
             {
                 out.println("Name-Real: " + nameReal);
             }
-            if(comment!=null && !comment.isBlank())
+            if(comment!=null && !Strings.isBlank(comment))
             {
                 out.println("Name-Comment: "+comment);
             }
