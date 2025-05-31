@@ -32,6 +32,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -3289,5 +3290,14 @@ public class Utils
         thread.setDaemon(daemon);
         thread.start();
         return thread;
+    }
+    
+    public static void ansiTitle(String s)
+    {
+        ansiTitle(System.out, s);
+    }
+    public static void ansiTitle(PrintStream out, String s)
+    {
+        out.printf("\033]0;%s\007",s);
     }
 }

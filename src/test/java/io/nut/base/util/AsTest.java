@@ -1,7 +1,7 @@
 /*
  *  AsTest.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -44,7 +44,7 @@ public class AsTest
     {
         String[] keys = "1,2,3,4,5".split(",");
         Integer[] values = {1,2,3,4,5};
-        
+
         Map<String,Integer> map = As.map(keys, values);
         for(int i=0;i<keys.length;i++)
         {
@@ -115,6 +115,76 @@ public class AsTest
         assertEquals(3, map.getOrDefault("3",null));
         assertEquals(4, map.getOrDefault("4",null));
         assertEquals(5, map.getOrDefault("5",null));
+    }
+
+    /**
+     * Test of map method, of class As.
+     */
+    @Test
+    public void testMap_12args()
+    {
+        Map<String,Integer> map = As.map("1", 1, "2", 2, "3", 3, "4", 4, "5", 5, "6", 6);
+        assertEquals(6, map.size());
+        assertEquals(1, map.getOrDefault("1",null));
+        assertEquals(2, map.getOrDefault("2",null));
+        assertEquals(3, map.getOrDefault("3",null));
+        assertEquals(4, map.getOrDefault("4",null));
+        assertEquals(5, map.getOrDefault("5",null));
+        assertEquals(6, map.getOrDefault("6",null));
+    }
+
+    /**
+     * Test of map method, of class As.
+     */
+    @Test
+    public void testMap_14args()
+    {
+        Map<String,Integer> map = As.map("1", 1, "2", 2, "3", 3, "4", 4, "5", 5, "6", 6, "7", 7);
+        assertEquals(7, map.size());
+        assertEquals(1, map.getOrDefault("1",null));
+        assertEquals(2, map.getOrDefault("2",null));
+        assertEquals(3, map.getOrDefault("3",null));
+        assertEquals(4, map.getOrDefault("4",null));
+        assertEquals(5, map.getOrDefault("5",null));
+        assertEquals(6, map.getOrDefault("6",null));
+        assertEquals(7, map.getOrDefault("7",null));
+    }
+
+    /**
+     * Test of map method, of class As.
+     */
+    @Test
+    public void testMap_16args()
+    {
+        Map<String,Integer> map = As.map("1", 1, "2", 2, "3", 3, "4", 4, "5", 5, "6", 6, "7", 7, "8", 8);
+        assertEquals(8, map.size());
+        assertEquals(1, map.getOrDefault("1",null));
+        assertEquals(2, map.getOrDefault("2",null));
+        assertEquals(3, map.getOrDefault("3",null));
+        assertEquals(4, map.getOrDefault("4",null));
+        assertEquals(5, map.getOrDefault("5",null));
+        assertEquals(6, map.getOrDefault("6",null));
+        assertEquals(7, map.getOrDefault("7",null));
+        assertEquals(8, map.getOrDefault("8",null));
+    }
+
+    /**
+     * Test of map method, of class As.
+     */
+    @Test
+    public void testMap_18args()
+    {
+        Map<String,Integer> map = As.map("1", 1, "2", 2, "3", 3, "4", 4, "5", 5, "6", 6, "7", 7, "8", 8, "9", 9);
+        assertEquals(9, map.size());
+        assertEquals(1, map.getOrDefault("1",null));
+        assertEquals(2, map.getOrDefault("2",null));
+        assertEquals(3, map.getOrDefault("3",null));
+        assertEquals(4, map.getOrDefault("4",null));
+        assertEquals(5, map.getOrDefault("5",null));
+        assertEquals(6, map.getOrDefault("6",null));
+        assertEquals(7, map.getOrDefault("7",null));
+        assertEquals(8, map.getOrDefault("8",null));
+        assertEquals(9, map.getOrDefault("9",null));
     }
 
     /**
