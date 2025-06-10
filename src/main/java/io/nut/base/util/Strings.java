@@ -610,19 +610,31 @@ public class Strings
         return s==null ? EMPTY : s.trim();
     }
     
-    public static String firstNonEmpty(String first, String second, String... others)
+    public static String firstNonEmpty(String first, String... others)
     {
         if(first!=null && first.length()>0)
         {
             return first;
         }
-        if(second!=null && second.length()>0)
-        {
-            return second;
-        }
         for(String item : others)
         {
             if(item!=null && item.length()>0)
+            {
+                return item;
+            }
+        }
+        return "";
+    }
+    
+    public static String firstNonBlank(String first, String... others)
+    {
+        if(first!=null && !isBlank(first))
+        {
+            return first;
+        }
+        for(String item : others)
+        {
+            if(item!=null && !isBlank(item))
             {
                 return item;
             }

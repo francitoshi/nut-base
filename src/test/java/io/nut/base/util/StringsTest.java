@@ -179,8 +179,8 @@ public class StringsTest
     public void testFirstNonEmpty()
     {
         // using null as empty
-        assertEquals("", Strings.firstNonEmpty(null,null));
-        assertEquals("s1", Strings.firstNonEmpty("s1",null));
+        assertEquals("", Strings.firstNonEmpty(null,(String)null));
+        assertEquals("s1", Strings.firstNonEmpty("s1",(String)null));
         assertEquals("s2", Strings.firstNonEmpty(null, "s2"));
         assertEquals("s1", Strings.firstNonEmpty("s1", "s2"));
         
@@ -207,7 +207,46 @@ public class StringsTest
         assertEquals("s1", Strings.firstNonEmpty("s1","", "s3"));
         assertEquals("s1", Strings.firstNonEmpty("s1","s2", ""));
         assertEquals("s1", Strings.firstNonEmpty("s1","s2", "s3"));
+     
+        assertEquals(" ", Strings.firstNonEmpty(""," ", "s3"));
+    }
+    /**
+     * Test of firstNonBlank method, of class Strings.
+     */
+    @Test
+    public void testFirstNonBlank()
+    {
+        // using null as empty
+        assertEquals("", Strings.firstNonBlank(null,(String)null));
+        assertEquals("s1", Strings.firstNonBlank("s1",(String)null));
+        assertEquals("s2", Strings.firstNonBlank(null, "s2"));
+        assertEquals("s1", Strings.firstNonBlank("s1", "s2"));
         
+        assertEquals("", Strings.firstNonBlank(null,null, (String)null));
+        assertEquals("s3", Strings.firstNonBlank(null,null, "s3"));
+        assertEquals("s2", Strings.firstNonBlank(null,"s2", (String)null));
+        assertEquals("s2", Strings.firstNonBlank(null,"s2", "s3"));
+        assertEquals("s1", Strings.firstNonBlank("s1",null, (String)null));
+        assertEquals("s1", Strings.firstNonBlank("s1",null, "s3"));
+        assertEquals("s1", Strings.firstNonBlank("s1","s2", (String)null));
+        assertEquals("s1", Strings.firstNonBlank("s1","s2", "s3"));
+        
+        // using empty string as empty
+        assertEquals("", Strings.firstNonBlank("",""));
+        assertEquals("s1", Strings.firstNonBlank("s1",""));
+        assertEquals("s2", Strings.firstNonBlank("", "s2"));
+        assertEquals("s1", Strings.firstNonBlank("s1", "s2"));
+        
+        assertEquals("", Strings.firstNonBlank("","", ""));
+        assertEquals("s3", Strings.firstNonBlank("","", "s3"));
+        assertEquals("s2", Strings.firstNonBlank("","s2", ""));
+        assertEquals("s2", Strings.firstNonBlank("","s2", "s3"));
+        assertEquals("s1", Strings.firstNonBlank("s1","", ""));
+        assertEquals("s1", Strings.firstNonBlank("s1","", "s3"));
+        assertEquals("s1", Strings.firstNonBlank("s1","s2", ""));
+        assertEquals("s1", Strings.firstNonBlank("s1","s2", "s3"));
+
+        assertEquals("s3", Strings.firstNonBlank(""," ", "s3"));
     }
     /**
      * Test of firstNonNull method, of class Strings.

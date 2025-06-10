@@ -31,6 +31,8 @@ import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPairGenerator;
+import java.security.KeyStore;
+import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -47,6 +49,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
@@ -176,6 +179,11 @@ public class Kripto
      * Secret key derivation algorithm using PBKDF2 with HMAC SHA-256.
      */
     public static final SecretKeyDerivation PBKDF2WITHHMACSHA256 = SecretKeyDerivation.PBKDF2WithHmacSHA256;
+
+    /**
+     * Secret key derivation algorithm using PBKDF2 with HMAC SHA-512.
+     */
+    public static final SecretKeyDerivation PBKDF2WITHHMACSHA512 = SecretKeyDerivation.PBKDF2WithHmacSHA512;
 
     ////////////////////////////////////////////////////////////////////////////
     ///// Static Members /////////////////////////////////////////////////////
@@ -346,7 +354,7 @@ public class Kripto
     
     public enum SecretKeyDerivation
     {
-        PBKDF2WithHmacSHA256        //GOOD
+        PBKDF2WithHmacSHA256, PBKDF2WithHmacSHA512        //GOOD
     }
     
     public enum SecretKeyAlgorithm
@@ -791,7 +799,8 @@ public class Kripto
     ////////////////////////////////////////////////////////////////////////////
     
     /**
-     * Derives a {@link SecretKey} from a passphrase using the specified derivation algorithm.
+     * Derives a {@link SecretKey} from a passphrase using the specified 
+     * derivation algorithm.
      *
      * @param passphrase the passphrase to derive from
      * @param salt the salt to use
@@ -810,7 +819,26 @@ public class Kripto
         SecretKey genericSecretKey = factory.generateSecret(spec);
         return this.getSecretKey(genericSecretKey.getEncoded(), secretKeyAlgorithm);
     }
-
+    public byte[] derivePassphrase(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws NoSuchAlgorithmException, InvalidKeySpecException
+    {
+        SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
+        PBEKeySpec spec = new PBEKeySpec(passphrase, salt, rounds, keyBits);
+        SecretKey genericSecretKey = factory.generateSecret(spec);
+        return genericSecretKey.getEncoded();
+    }
+    public char[] derivePassphraseUTF8(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws NoSuchAlgorithmException, InvalidKeySpecException
+    {
+        byte[] temp = derivePassphrase(passphrase, salt, rounds, keyBits, derivation);
+        try
+        {
+            return Byter.charsUTF8(temp);
+        }
+        finally
+        {
+            Arrays.fill(temp, (byte)0);
+        }
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     ///// KeyAgreement Algorithms ///////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -1123,9 +1151,9 @@ public class Kripto
     {
         Signature signature = this.getSignature(algorithm);
         signature.initSign(privateKey);
-        for(int i=0;i<data.length;i++)
+        for (byte[] item : data)
         {
-            signature.update(data[i]);
+            signature.update(item);
         }
         return signature.sign();
     }
@@ -1146,9 +1174,9 @@ public class Kripto
     {
         Signature signature = this.getSignature(algorithm);
         signature.initVerify(publicKey);
-        for(int i=0;i<data.length;i++)
+        for (byte[] item : data)
         {
-            signature.update(data[i]);
+            signature.update(item);
         }
         return signature.verify(sign);
     }       
@@ -1455,4 +1483,26 @@ public class Kripto
         return new ShamirSharedSecret(n, k);
     }
     
+    public PassphraseDeriver getPassphraseDeriver(char[] masterPassphrase, int keyBits, int rounds, boolean cache) throws Exception
+    {
+        return new PassphraseDeriver(masterPassphrase, keyBits, rounds, cache, this);
+    }
+
+    
+    public KeyStore getKeyStore(String type) throws KeyStoreException, NoSuchProviderException
+    {
+        return this.providerName==null ? KeyStore.getInstance(type) : KeyStore.getInstance(type, this.providerName);
+    }
+    
+    private static final String PKCS12 = "PKCS12";
+    
+    public KeyStore getKeyStorePKCS12() throws KeyStoreException, NoSuchProviderException
+    {
+        return this.providerName==null ? KeyStore.getInstance(PKCS12) : KeyStore.getInstance(PKCS12, this.providerName);
+    }
+
+    public KeyStoreManager getKeyStoreManager() throws KeyStoreException, NoSuchProviderException, Exception
+    {
+        return new KeyStoreManager(this.getKeyStorePKCS12());
+    }
 }

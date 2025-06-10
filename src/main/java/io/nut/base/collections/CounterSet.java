@@ -239,7 +239,7 @@ public class CounterSet<E> implements Set<E>
         for(Object o: c)
         {
             count--;
-            ret |= (map.remove(c)!=null);
+            ret |= (map.remove(o)!=null);
         }
         return ret;
     }

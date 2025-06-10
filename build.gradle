@@ -17,9 +17,8 @@ dependencies
     //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
-    testImplementation 'org.bouncycastle:bcprov-jdk15on:1.62'
+    testImplementation 'org.bouncycastle:bcprov-jdk18on:1.81'
     testImplementation 'org.apache.commons:commons-csv:1.9.0'
-    
     testImplementation 'ch.obermuhlner:big-math:2.3.0'
 }
 
