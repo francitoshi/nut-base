@@ -259,6 +259,25 @@ public class Kripto
         return registerBouncyCastle() ? new Kripto("BC") : null;
     }
     
+    /**
+     * Checks if the Bouncy Castle provider's main class is available on the classpath.
+     *
+     * @return true if Bouncy Castle is present, false otherwise.
+     */
+    public static boolean isBouncyCastleAvailable() 
+    {
+        try 
+        {
+            // Intentamos cargar la clase principal del proveedor de Bouncy Castle.
+            // No necesitamos una instancia, solo verificar que la clase existe.
+            Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
+            return true;
+        } 
+        catch (ClassNotFoundException ex) 
+        {
+            return false;
+        }
+    }    
     
     ////////////////////////////////////////////////////////////////////////////
     ///// Enums /////////////////////////////////////

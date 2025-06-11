@@ -27,4 +27,5 @@ import java.security.cert.X509Certificate;
 public interface X509CertificateBuiler
 {
     public X509Certificate buildCertificate(PublicKey publicKey, PrivateKey privateKey, String dnAlias) throws Exception;
+    public X509Certificate[] buildCertificateChain(PublicKey publicKey, PrivateKey privateKey, String dnAlias) throws Exception;
 }

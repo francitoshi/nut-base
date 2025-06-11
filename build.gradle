@@ -4,7 +4,7 @@ plugins
 }
 
 group = 'com.github.francitoshi'
-version = '0.1.10'
+version = '0.1.11'
 //remember to execute 'git tag -a vx.x.x -m "Version x.x.x"'
 
 repositories 
@@ -14,10 +14,16 @@ repositories
 
 dependencies
 {
+    compileOnly 'org.bouncycastle:bcprov-jdk18on:1.81'
+    compileOnly 'org.bouncycastle:bcpkix-jdk18on:1.81'
+    
     //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+
     testImplementation 'org.bouncycastle:bcprov-jdk18on:1.81'
+    testImplementation 'org.bouncycastle:bcpkix-jdk18on:1.81'
+
     testImplementation 'org.apache.commons:commons-csv:1.9.0'
     testImplementation 'ch.obermuhlner:big-math:2.3.0'
 }

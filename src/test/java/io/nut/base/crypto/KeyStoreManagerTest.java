@@ -65,7 +65,7 @@ public class KeyStoreManagerTest
         PrivateKey privateKey1 = keyPair0.getPrivate();
         PublicKey publicKey1 = keyPair0.getPublic();
 
-        X509Certificate[] certificateChain = {new X509CertificateBuilerSun().buildCertificate(publicKey1, privateKey1, privateAlias)};
+        X509Certificate[] certificateChain = new X509CertificateBuilerBC().buildCertificateChain(publicKey1, privateKey1, privateAlias);
         manager.setPrivateKey(privateAlias, privateKey1, certificateChain, privateProtectionPass);
 
         PrivateKey privateKey2 = manager.getPrivateKey(privateAlias, privateProtectionPass);
