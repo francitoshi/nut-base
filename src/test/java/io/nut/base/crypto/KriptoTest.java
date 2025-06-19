@@ -43,6 +43,7 @@ import java.security.PrivateKey;
 import java.security.ProviderException;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.util.Arrays;
@@ -306,31 +307,26 @@ public class KriptoTest
             { 128, 192 },
             { 64 },
         };
-        int[][] ivBits =
-        {
-            { 128, 128, 128 },
-            { 96 },
-            { 64, 64 },
-            { 64 },
-        };
 
         for (int i = 0; i < secretKeyTransformations.length; i++)
         {
             for (int j = 0; j < keyBits[i].length; j++)
             {
-                System.out.println("algorithm=" + secretKeyTransformations[i] + " " + secretKeyAlgorithms[i] + " " + keyBits[i][j] + " " + ivBits[i][j]);
+                SecretKeyTransformation skt = secretKeyTransformations[i];
+                System.out.println("algorithm=" + skt + " " + secretKeyAlgorithms[i] + " " + keyBits[i][j] + " ivBits=" + skt.ivBits+ " tagBits=" + skt.tagBits);
                 System.out.flush();
 
                 int bits = keyBits[i][j];
 
-                byte[] sk = Arrays.copyOf(BYTES32_256, bits / 8);
+                byte[] skDet = Arrays.copyOf(BYTES32_256, bits / 8);
+                byte[] ivDet = Arrays.copyOf(BYTES32_256, skt.ivBits / 8);
 
                 KeyGenerator kg = instance.getKeyGenerator(secretKeyAlgorithms[i], bits);
 
-                SecretKey secretKey0 = instance.getSecretKey(sk, secretKeyAlgorithms[i]);
+                SecretKey secretKey0 = instance.getSecretKey(skDet, secretKeyAlgorithms[i]);
                 SecretKey secretKey1 = kg.generateKey();
 
-                IvParameterSpec iv = instance.getIv(sk, ivBits[i][j]);
+                AlgorithmParameterSpec iv = (skt.gcm|skt.siv) ? instance.getIvGCM(ivDet, skt.tagBits) : instance.getIv(ivDet, skt.ivBits);
 
                 Cipher encode0 = instance.getCipher(secretKey0, secretKeyTransformations[i], iv, Cipher.ENCRYPT_MODE);
                 byte[] coded0 = encode0.doFinal(plain);
@@ -812,7 +808,7 @@ public class KriptoTest
             assertEquals(prvKeySrc, dst);
         }
 
-        KeyPairTransformation rsaOAEP = Kripto.RSA_ECB_OAEPWITHSHA256ANDMGF1PADDING;
+        KeyPairTransformation rsaOAEP = Kripto.KeyPairTransformation.RSA_ECB_OAEPWithSHA256AndMGF1Padding;
 
         {
             byte[] bytes = instance.wrap(rsaWrapper.getPublic(), rsaOAEP, secKeySrc);

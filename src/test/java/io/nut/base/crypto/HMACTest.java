@@ -1,7 +1,7 @@
 /*
- *  CryptoTest.java
+ *  HMACTest.java
  *
- *  Copyright (C) 2018-2024 francitoshi@gmail.com
+ *  Copyright (C) 2018-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,15 +20,12 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.crypto.HMAC.Hash;
 import io.nut.base.util.CharSets;
 import io.nut.base.encoding.Hex;
 import java.io.UnsupportedEncodingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -39,36 +36,14 @@ import static org.junit.jupiter.api.Assertions.*;
 public class HMACTest
 {
 
-    public HMACTest()
-    {
-    }
+    final HMAC hmac = Kripto.getInstance().hmac();
     
-    @BeforeAll
-    public static void setUpClass()
+    private void checkHmacSHA256(String key, String data, String result) throws UnsupportedEncodingException
     {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
-    private static void checkHmacSHA256(String key, String data, String result) throws UnsupportedEncodingException
-    {
-        SecretKey k = new SecretKeySpec(key.getBytes(CharSets.UTF8), HMAC.Hash.HmacSHA256.name());
+        SecretKey k = new SecretKeySpec(key.getBytes(CharSets.UTF8), Hash.HmacSHA256.name());
         byte[] d = data.getBytes(CharSets.UTF8);
         byte[] r =  Hex.decode(result);
-        assertArrayEquals(r, HMAC.hmacSHA256(k, d));
+        assertArrayEquals(r, hmac.hmacSHA256(k, d));
     }
     /**
      * Test of hmacSHA256 method, of class Crypto.
@@ -145,8 +120,8 @@ public class HMACTest
                 SecretKey key = new SecretKeySpec(k, hmacs[j].name());
                 byte[] exp = Hex.decode(DATA[i][2+j]);
                 
-                byte[] res1 = HMAC.hmac(hmacs[j], key, d);
-                byte[] res2 = HMAC.hmac(hmacs[j], k, d);
+                byte[] res1 = hmac.hmac(hmacs[j], key, d);
+                byte[] res2 = hmac.hmac(hmacs[j], k, d);
                 
                 assertArrayEquals(res1, exp);
                 assertArrayEquals(res2, exp);                

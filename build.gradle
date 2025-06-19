@@ -4,7 +4,7 @@ plugins
 }
 
 group = 'com.github.francitoshi'
-version = '0.1.11'
+version = '0.1.12'
 //remember to execute 'git tag -a vx.x.x -m "Version x.x.x"'
 
 repositories 
@@ -26,6 +26,8 @@ dependencies
 
     testImplementation 'org.apache.commons:commons-csv:1.9.0'
     testImplementation 'ch.obermuhlner:big-math:2.3.0'
+    testImplementation 'org.mapdb:mapdb:3.1.0'
+    
 }
 
 java 

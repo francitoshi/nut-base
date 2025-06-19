@@ -1,7 +1,7 @@
 /*
  *  Bip32.java
  *
- *  Copyright (C) 2023-2024 francitoshi@gmail.com
+ *  Copyright (C) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -72,6 +72,7 @@ public class Bip32
         return ExtKey.prv2pub(version);
     }
     
+    private static HMAC HMAC = new HMAC();
     private static final byte[] BITCOIN_SEED = "Bitcoin seed".getBytes();
     
     public static ExtKey masterKeyGeneration(byte[] seed, int keyType, ExtKey.ScriptType scriptType, ExtKey.PolicyType policyType, ExtKey.Network network) throws InvalidKeyException

@@ -1,7 +1,7 @@
 /*
  *  KeyStoreManagerTest.java
  *
- *  Copyright (C) 2018-2025 francitoshi@gmail.com
+ *  Copyright (C) 2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -37,9 +37,6 @@ public class KeyStoreManagerTest
     @Test
     public void testMain() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
     {
-
-        String ksPath = "miKeyStore_BC.p12";
-        String ksPassword = "keystore_password";
 
         KeyStoreManager manager = Kripto.getInstance().getKeyStoreManager();
 

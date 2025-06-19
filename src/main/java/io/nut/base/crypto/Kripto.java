@@ -57,6 +57,7 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyAgreement;
 import javax.crypto.KeyGenerator;
+import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -85,6 +86,7 @@ public class Kripto
     
     private static final String NOPADDING = "NoPadding";
     private static final String GCM = "GCM";
+    private static final String SIV = "SIV";
     
     /**
      * Constant for encryption mode, as defined in {@link Cipher#ENCRYPT_MODE}.
@@ -288,20 +290,21 @@ public class Kripto
     public enum SecretKeyTransformation
     {
         //Symetric Algorithms
-        AES_CBC_NoPadding("AES/CBC/NoPadding",              128, 128),  //(128,192,256) iv=128
-        AES_GCM_NoPadding("AES/GCM/NoPadding",              128, 96),   //(128,192,256) iv=96   GOOD
-        AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding",        128, 128),  //(128,192,256) iv=128  GOOD
-        AES_ECB_NoPadding("AES/ECB/NoPadding",              128, 0),    //(128)         iv=0
-        AES_ECB_PKCS5Padding("AES/ECB/PKCS5Padding",        128, 0),    //(128)         iv=0
-        AES_CFB8_NoPadding("AES/CFB8/NoPadding",            128, 128),  //(128)         iv=128
-        DES_CBC_NoPadding("DES/CBC/NoPadding",              64, 64),    //(56)          iv=64
-        DES_CBC_PKCS5Padding("DES/CBC/PKCS5Padding",        64, 64),    //(56)          iv=64
-        DES_ECB_NoPadding("DES/ECB/NoPadding",              64, 0),     //(56)          iv=0
-        DES_ECB_PKCS5Padding("DES/ECB/PKCS5Padding",        64, 0),     //(56)          iv=0
-        DESede_CBC_NoPadding("DESede/CBC/NoPadding",        64, 64),    //(168)         iv=64
-        DesEde_Cbc_Pkcs5Padding("DESede/CBC/PKCS5Padding",  64, 64),    //(128)         iv=64
-        DESede_ECB_NoPadding("DESede/ECB/NoPadding",        64, 0),     //(128)         iv=0
-        DESede_ECB_PKCS5Padding("DESede/ECB/PKCS5Padding",  64, 0);     //(128)         iv=0
+        AES_CBC_NoPadding("AES/CBC/NoPadding",              128, 128, 0),  //(128,192,256) iv=128
+        AES_GCM_NoPadding("AES/GCM/NoPadding",              128, 96, 128), //(128,192,256) iv=96   GOOD
+//      AES_SIV_NoPadding("AES/SIV/NoPadding",              128, 96, 128), //(128,192,256) iv=128  GOOD
+        AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding",        128, 128, 0),  //(128,192,256) iv=128  GOOD
+        AES_ECB_NoPadding("AES/ECB/NoPadding",              128, 0, 0),    //(128)         iv=0
+        AES_ECB_PKCS5Padding("AES/ECB/PKCS5Padding",        128, 0, 0),    //(128)         iv=0
+        AES_CFB8_NoPadding("AES/CFB8/NoPadding",            128, 128, 0),  //(128)         iv=128
+        DES_CBC_NoPadding("DES/CBC/NoPadding",              64, 64, 0),    //(56)          iv=64
+        DES_CBC_PKCS5Padding("DES/CBC/PKCS5Padding",        64, 64, 0),    //(56)          iv=64
+        DES_ECB_NoPadding("DES/ECB/NoPadding",              64, 0, 0),     //(56)          iv=0
+        DES_ECB_PKCS5Padding("DES/ECB/PKCS5Padding",        64, 0, 0),     //(56)          iv=0
+        DESede_CBC_NoPadding("DESede/CBC/NoPadding",        64, 64, 0),    //(168)         iv=64
+        DesEde_Cbc_Pkcs5Padding("DESede/CBC/PKCS5Padding",  64, 64, 0),    //(128)         iv=64
+        DESede_ECB_NoPadding("DESede/ECB/NoPadding",        64, 0, 0),     //(128)         iv=0
+        DESede_ECB_PKCS5Padding("DESede/ECB/PKCS5Padding",  64, 0, 0);     //(128)         iv=0
         
         public final String transformation;
         public final String algorithm;
@@ -309,10 +312,12 @@ public class Kripto
         public final String padding;
         public final boolean nopadding;
         public final boolean gcm;
+        public final boolean siv;
         public final int blockBits;
         public final int ivBits;
+        public final int tagBits;
         
-        SecretKeyTransformation(String transformation, int blockBits, int ivBits)
+        SecretKeyTransformation(String transformation, int blockBits, int ivBits, int tagBits)
         {
             String[] items = transformation.split("/");
             this.algorithm = items[0];
@@ -321,8 +326,10 @@ public class Kripto
             this.transformation = transformation;
             this.nopadding = NOPADDING.equalsIgnoreCase(padding);
             this.gcm = GCM.equalsIgnoreCase(mode);
+            this.siv = SIV.equalsIgnoreCase(mode);
             this.blockBits = blockBits;
             this.ivBits = ivBits;
+            this.tagBits = tagBits;
         }
         
         /**
@@ -576,6 +583,46 @@ public class Kripto
             return Signature.getInstance(algorithm);
         }        
     }
+
+    private Mac getMac(String algorithm, SecretKey key) throws NoSuchAlgorithmException
+    {
+        Mac mac;
+        try
+        {
+            mac = this.providerName==null ? Mac.getInstance(algorithm) : Mac.getInstance(algorithm, this.providerName);
+        }
+        catch(NoSuchProviderException ex)
+        {
+            if(this.forceProvider)
+            {
+                throw new ProviderException(ex.getMessage(), ex);
+            }
+            mac = Mac.getInstance(algorithm);
+        }        
+        try
+        {
+            mac.init(key);
+        }
+        catch (InvalidKeyException e)
+        {
+            throw new IllegalArgumentException("Invalid MAC key", e);
+        }
+        return mac;
+    }    
+    
+    byte[] hmac(String algorithm, SecretKey key, byte[] data)
+    {
+        
+        try
+        {
+            Mac mac = getMac(algorithm, key);
+            return mac.doFinal(data);
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new IllegalArgumentException("Unsupported MAC algorithm: " + algorithm, ex);
+        }
+    }    
     
     ////////////////////////////////////////////////////////////////////////////
     ///// Message Diggest //////////////////////////////////////////////////////
@@ -660,6 +707,20 @@ public class Kripto
     }
 
     ////////////////////////////////////////////////////////////////////////////
+    ///// HMAC facilities //////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Returns a HMAC
+     *
+     * @return the HMAC facilities class.
+     */
+    public HMAC hmac()
+    {
+        return new HMAC(this);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////
     ///// Keys /////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
 
@@ -733,28 +794,28 @@ public class Kripto
      * Creates an {@link IvParameterSpec} from the provided IV bytes with specified bit length.
      *
      * @param iv the initialization vector bytes
-     * @param bits the number of bits to use from the IV
+     * @param ivBits the number of bits to use from the IV
      * @return an IvParameterSpec instance
      * @throws NoSuchAlgorithmException if the algorithm is not available
      * @throws NoSuchPaddingException if the padding is not available
      */
-    public IvParameterSpec getIv(byte[] iv, int bits) throws NoSuchAlgorithmException, NoSuchPaddingException
+    public IvParameterSpec getIv(byte[] iv, int ivBits) throws NoSuchAlgorithmException, NoSuchPaddingException
     {
-        return new IvParameterSpec(iv, 0, bits/8);
+        return new IvParameterSpec(iv, 0, ivBits/8);
     }
     
     /**
      * Creates a {@link GCMParameterSpec} for GCM mode from the provided IV bytes and bit length.
      *
      * @param iv the initialization vector bytes
-     * @param bits the tag length in bits
+     * @param tagBits the tag length in bits
      * @return a GCMParameterSpec instance
      * @throws NoSuchAlgorithmException if the algorithm is not available
      * @throws NoSuchPaddingException if the padding is not available
      */
-    public GCMParameterSpec getIvGCM(byte[] iv, int bits) throws NoSuchAlgorithmException, NoSuchPaddingException
+    public GCMParameterSpec getIvGCM(byte[] iv, int tagBits) throws NoSuchAlgorithmException, NoSuchPaddingException
     {
-        return new GCMParameterSpec(bits, iv);
+        return new GCMParameterSpec(tagBits, iv);
     }
     
     ////////////////////////////////////////////////////////////////////////////
@@ -828,15 +889,21 @@ public class Kripto
      * @param derivation the key derivation algorithm
      * @param secretKeyAlgorithm the target secret key algorithm
      * @return the derived SecretKey
-     * @throws NoSuchAlgorithmException if the algorithm is not available
      * @throws InvalidKeySpecException if the key specification is invalid
      */
-    public SecretKey deriveSecretKey(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation, SecretKeyAlgorithm secretKeyAlgorithm) throws NoSuchAlgorithmException, InvalidKeySpecException
+    public SecretKey deriveSecretKey(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation, SecretKeyAlgorithm secretKeyAlgorithm) throws InvalidKeySpecException
     {
-        SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
-        PBEKeySpec spec = new PBEKeySpec(passphrase, salt, rounds, keyBits);
-        SecretKey genericSecretKey = factory.generateSecret(spec);
-        return this.getSecretKey(genericSecretKey.getEncoded(), secretKeyAlgorithm);
+        try
+        {
+            SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
+            PBEKeySpec spec = new PBEKeySpec(passphrase, salt, rounds, keyBits);
+            SecretKey genericSecretKey = factory.generateSecret(spec);
+            return this.getSecretKey(genericSecretKey.getEncoded(), secretKeyAlgorithm);
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new IllegalArgumentException("Unsupported SecretKeyFactory algorithm: " + derivation.name(), ex);
+        }
     }
     public byte[] derivePassphrase(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
