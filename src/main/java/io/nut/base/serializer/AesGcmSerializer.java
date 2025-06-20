@@ -23,6 +23,7 @@ package io.nut.base.serializer;
 import io.nut.base.crypto.HMAC;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
+import java.util.Arrays;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import java.util.logging.Level;
@@ -90,7 +91,7 @@ public class AesGcmSerializer<T> implements Serializer<T>
 
     private byte[] encrypt(byte[] plaintext) throws Exception
     {
-        byte[] iv = hmac==null ? Kripto.random(new byte[GCM_IV_LENGTH]) : hmac.hmacSHA256(hmacKey, new byte[GCM_IV_LENGTH]);
+        byte[] iv = hmac==null ? Kripto.random(new byte[GCM_IV_LENGTH]) : Arrays.copyOf(hmac.hmacSHA256(hmacKey, plaintext),GCM_IV_LENGTH);
 
         GCMParameterSpec ivGCM = kripto.getIvGCM(iv, GCM_IV_BITS);
         byte[] encryptedData = kripto.encrypt(key, SecretKeyTransformation.AES_GCM_NoPadding, ivGCM, plaintext);

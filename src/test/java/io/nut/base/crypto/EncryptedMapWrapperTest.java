@@ -70,34 +70,33 @@ public class EncryptedMapWrapperTest
     private static final StringSerializer STRING_SERIALIZER = new StringSerializer();
     private static void exampleMap(Map<String,String> map, char[] passphrase, String saltSeed) throws InvalidKeySpecException 
     {
-        // Crear wrapper con HashMap normal
         EncryptedMapWrapper<String, String> encryptedMap = new EncryptedMapWrapper<>(KRIPTO, map, passphrase, saltSeed, ROUNDS, KEYBITS, STRING_SERIALIZER, STRING_SERIALIZER);
         
-        // Insertar datos
-        encryptedMap.put(USER, "juan123");
-        encryptedMap.put(PASSWORD, "miClaveSecreta456");
-        encryptedMap.put(EMAIL, "juan@ejemplo.com");
+        // Insert data
+        encryptedMap.put(USER, "peter123");
+        encryptedMap.put(PASSWORD, "mySecretKey456");
+        encryptedMap.put(EMAIL, "juan@example.com");
         encryptedMap.put(API_KEY, "sk-1234567890abcdef");
         
-        // Leer datos
+        // Read data
         System.out.println("User: " + encryptedMap.get(USER));
         System.out.println("Email: " + encryptedMap.get(EMAIL));
         System.out.println("API Key: " + encryptedMap.get(API_KEY));
         
-        // Operaciones del Map
+        // Operations with the Map
         assertTrue(encryptedMap.containsKey(USER));
         assertFalse(encryptedMap.containsKey("telefone"));
         System.out.println("size: " + encryptedMap.size());
         
-        // Ver datos cifrados en el HashMap subyacente
+        // View encrypted data in the underlying HashMap
         System.out.println("\nENCRYPTED data stored in HashMap:");
         map.forEach((k, v) -> {
-            String shortK = k.length() > 30 ? k.substring(0, 30) + "..." : k;
-            String shortV = v.length() > 30 ? v.substring(0, 30) + "..." : v;
+            String shortK = k.length() > 32 ? k.substring(0, 32) + "..." : k;
+            String shortV = v.length() > 32 ? v.substring(0, 32) + "..." : v;
             System.out.println("  " + shortK + " -> " + shortV);
         });
         
-        // Eliminar una clave
+        // Delete a key
         String removedValue = encryptedMap.remove(PASSWORD);
         System.out.println("removed value: " + removedValue);
         System.out.println("size after remove: " + encryptedMap.size());
@@ -111,7 +110,7 @@ public class EncryptedMapWrapperTest
         EncryptedMapWrapper<String, String> encrypted1 = new EncryptedMapWrapper<>(KRIPTO, map1, passphrase, "salt", ROUNDS, KEYBITS, STRING_SERIALIZER, STRING_SERIALIZER);
         EncryptedMapWrapper<String, String> encrypted2 = new EncryptedMapWrapper<>(KRIPTO, map2, passphrase, "salt", ROUNDS, KEYBITS, STRING_SERIALIZER, STRING_SERIALIZER);
         
-        // Insertar la misma clave y valor en ambos maps
+        // Insert the same key and value into both maps
         encrypted1.put(TEST_KEY, "test_value");
         encrypted2.put(TEST_KEY, "test_value");
         
@@ -127,11 +126,11 @@ public class EncryptedMapWrapperTest
         System.out.println("  ¿equals?: " + encryptedKey1.equals(encryptedKey2));
         
         System.out.println("\nVALUES (undeterministic):");
-        System.out.println("  Map1: " + encryptedValue1.substring(0, 30) + "...");
-        System.out.println("  Map2: " + encryptedValue2.substring(0, 30) + "...");
+        System.out.println("  Map1: " + encryptedValue1.substring(0, 32) + "...");
+        System.out.println("  Map2: " + encryptedValue2.substring(0, 32) + "...");
         System.out.println("  ¿equals?: " + encryptedValue1.equals(encryptedValue2));
         
-        System.out.println("\recover:");
+        System.out.println("\rrecover:");
         System.out.println("  Map1 get('test_key'): " + encrypted1.get(TEST_KEY));
         System.out.println("  Map2 get('test_key'): " + encrypted2.get(TEST_KEY));
     }

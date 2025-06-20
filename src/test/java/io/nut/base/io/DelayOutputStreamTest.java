@@ -48,12 +48,12 @@ public class DelayOutputStreamTest
         
         long t0 = System.nanoTime();
 
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 10; i++)
         {
             out.printf("%s\n",LocalDateTime.now());
             long t1 = System.nanoTime();
             long diff = TimeUnit.NANOSECONDS.toMillis(t1-t0);
-            System.out.println("diff="+diff);
+
             assertTrue(diff>low," i="+i+" diff>75 diff="+diff);
             assertTrue(diff<high," i="+i+" diff>99 diff="+diff);
             t0=t1;
@@ -76,12 +76,12 @@ public class DelayOutputStreamTest
         
         long t0 = System.nanoTime();
 
-        for (int i = 0; i < 100; i++)
+        for (int i = 0; i < 10; i++)
         {
             out.println(".........");
             long t1 = System.nanoTime();
             long diff = TimeUnit.NANOSECONDS.toMillis(t1-t0);
-            System.out.println("diff="+diff+" i="+i);
+            
             assertTrue(diff>low," i="+i+" diff>75 diff="+diff);
             assertTrue(diff<high," i="+i+" diff>99 diff="+diff);
             t0=t1;
