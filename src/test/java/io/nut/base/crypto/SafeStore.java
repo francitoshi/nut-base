@@ -20,8 +20,6 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Digest;
-import io.nut.base.util.Byter;
 import io.nut.base.util.Utils;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,7 +27,6 @@ import java.io.FileNotFoundException;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.SecretKeyFactory;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +37,6 @@ import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
-import java.util.Arrays;
 import java.util.Properties;
 import javax.crypto.CipherInputStream;
 import javax.crypto.CipherOutputStream;
@@ -66,9 +62,9 @@ public class SafeStore
     private static final char[] SALT_SEED = "safestore.salt.".toCharArray();
     
     // Constructor para char[] con IV explícito y opción atómica
-    public SafeStore(File file, char[] key, String appName, boolean atomic, int rounds) throws NoSuchAlgorithmException, InvalidKeySpecException
+    public SafeStore(File file, char[] key, String appName, boolean atomic, int rounds, Kripto kripto) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
-        this.kripto = Kripto.getInstance();
+        this.kripto = kripto==null ? Kripto.getInstance() : kripto;
         this.file = file;
         char[] app = appName.toCharArray();
         this.charKey = (key!=null) ? key : Utils.EMPTY_CHAR_ARRAY;
@@ -80,7 +76,7 @@ public class SafeStore
 
     public SafeStore(File file, char[] key, String appName, boolean atomic) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
-        this(file, key, appName, atomic, DEFAULT_ROUNDS);
+        this(file, key, appName, atomic, DEFAULT_ROUNDS, null);
     }
     
     // derive the key using PBKDF2

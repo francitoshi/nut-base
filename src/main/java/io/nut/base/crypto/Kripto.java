@@ -20,6 +20,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.encoding.Ascii85;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.PrintStream;
@@ -86,7 +87,6 @@ public class Kripto
     
     private static final String NOPADDING = "NoPadding";
     private static final String GCM = "GCM";
-    private static final String SIV = "SIV";
     
     /**
      * Constant for encryption mode, as defined in {@link Cipher#ENCRYPT_MODE}.
@@ -141,6 +141,9 @@ public class Kripto
      * High-security key size in bits for symmetric encryption (high level).
      */
     public static final int SYMETRIC_HIGH_KEY_BITS = 256;
+    
+    
+    private static final int MINIMUM_PBKDF2_ROUNDS = 310000;
     
     /**
      * The AES algorithm for secret key operations.
@@ -202,6 +205,9 @@ public class Kripto
             throw new RuntimeException("there is no strong algorithm", ex);
         }
     }
+    
+    
+    private volatile int minimumPbkdf2Rounds = MINIMUM_PBKDF2_ROUNDS;
     
     /**
      * Returns a default instance of {@link Kripto} with no specific provider.
@@ -280,6 +286,12 @@ public class Kripto
             return false;
         }
     }    
+
+    public Kripto setMinimumPbkdf2Rounds(int value)
+    {
+        this.minimumPbkdf2Rounds = value;
+        return this;
+    }
     
     ////////////////////////////////////////////////////////////////////////////
     ///// Enums /////////////////////////////////////
@@ -292,19 +304,9 @@ public class Kripto
         //Symetric Algorithms
         AES_CBC_NoPadding("AES/CBC/NoPadding",              128, 128, 0),  //(128,192,256) iv=128
         AES_GCM_NoPadding("AES/GCM/NoPadding",              128, 96, 128), //(128,192,256) iv=96   GOOD
-//      AES_SIV_NoPadding("AES/SIV/NoPadding",              128, 96, 128), //(128,192,256) iv=128  GOOD
+        AES_CTR_NoPadding("AES/CTR/NoPadding",              128, 128, 128),//(128,192,256) iv=128  GOOD
         AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding",        128, 128, 0),  //(128,192,256) iv=128  GOOD
-        AES_ECB_NoPadding("AES/ECB/NoPadding",              128, 0, 0),    //(128)         iv=0
-        AES_ECB_PKCS5Padding("AES/ECB/PKCS5Padding",        128, 0, 0),    //(128)         iv=0
-        AES_CFB8_NoPadding("AES/CFB8/NoPadding",            128, 128, 0),  //(128)         iv=128
-        DES_CBC_NoPadding("DES/CBC/NoPadding",              64, 64, 0),    //(56)          iv=64
-        DES_CBC_PKCS5Padding("DES/CBC/PKCS5Padding",        64, 64, 0),    //(56)          iv=64
-        DES_ECB_NoPadding("DES/ECB/NoPadding",              64, 0, 0),     //(56)          iv=0
-        DES_ECB_PKCS5Padding("DES/ECB/PKCS5Padding",        64, 0, 0),     //(56)          iv=0
-        DESede_CBC_NoPadding("DESede/CBC/NoPadding",        64, 64, 0),    //(168)         iv=64
-        DesEde_Cbc_Pkcs5Padding("DESede/CBC/PKCS5Padding",  64, 64, 0),    //(128)         iv=64
-        DESede_ECB_NoPadding("DESede/ECB/NoPadding",        64, 0, 0),     //(128)         iv=0
-        DESede_ECB_PKCS5Padding("DESede/ECB/PKCS5Padding",  64, 0, 0);     //(128)         iv=0
+        AES_CFB8_NoPadding("AES/CFB8/NoPadding",            128, 128, 0);  //(128)         iv=128
         
         public final String transformation;
         public final String algorithm;
@@ -312,7 +314,6 @@ public class Kripto
         public final String padding;
         public final boolean nopadding;
         public final boolean gcm;
-        public final boolean siv;
         public final int blockBits;
         public final int ivBits;
         public final int tagBits;
@@ -326,7 +327,6 @@ public class Kripto
             this.transformation = transformation;
             this.nopadding = NOPADDING.equalsIgnoreCase(padding);
             this.gcm = GCM.equalsIgnoreCase(mode);
-            this.siv = SIV.equalsIgnoreCase(mode);
             this.blockBits = blockBits;
             this.ivBits = ivBits;
             this.tagBits = tagBits;
@@ -346,7 +346,9 @@ public class Kripto
     
     public enum KeyPairTransformation
     {
+        @Deprecated
         RSA_ECB_PKCS1Padding("RSA/ECB/PKCS1Padding"),                                  //(1024,2048)
+        @Deprecated
         RSA_ECB_OAEPWithSHA1AndMGF1Padding("RSA/ECB/OAEPWithSHA-1AndMGF1Padding"),     //(1024,2048)
         RSA_ECB_OAEPWithSHA256AndMGF1Padding("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");  //(1024, 2048)  GOOD        
 
@@ -385,8 +387,7 @@ public class Kripto
     
     public enum SecretKeyAlgorithm
     {
-        AES, DES, DESede
-        //, HmacSHA1, HmacSHA256
+        AES
     }
     public enum KeyPairAlgorithm //KeyPair Algorithms, KeyFactory Algorithms
     {
@@ -401,7 +402,7 @@ public class Kripto
 
     public enum MessageDigestAlgorithm
     {
-        MD2("MD2"), MD5("MD5"), SHA1("SHA1"), SHA224("SHA-224"), 
+        SHA224("SHA-224"), 
         SHA256("SHA-256"),                                                      //GOOD
         SHA384("SHA-384"),                                                      //GOOD
         SHA512("SHA-512");                                                      //GOOD
@@ -415,13 +416,17 @@ public class Kripto
 
     public enum SignatureAlgorithm
     {
-        NONEwithRSA, MD2withRSA, MD5withRSA, SHA1withRSA, SHA224withRSA, 
+        NONEwithRSA, SHA224withRSA, 
         SHA256withRSA,                                                          //GOOD 
         SHA384withRSA, SHA512withRSA,
-        NONEwithDSA, SHA1withDSA, SHA224withDSA, SHA256withDSA, 
-        NONEwithECDSA, SHA1withECDSA, SHA224withECDSA, 
+        NONEwithDSA, SHA224withDSA, SHA256withDSA, 
+        NONEwithECDSA, SHA224withECDSA, 
         SHA256withECDSA,                                                        //GOOD
         SHA384withECDSA, SHA512withECDSA
+    }
+    public enum HMAC
+    { 
+        HmacSHA224, HmacSHA256, HmacSHA384, HmacSHA512
     }
     
     ////////////////////////////////////////////////////////////////////////////
@@ -610,9 +615,8 @@ public class Kripto
         return mac;
     }    
     
-    byte[] hmac(String algorithm, SecretKey key, byte[] data)
+    private byte[] hmac(String algorithm, SecretKey key, byte[] data)
     {
-        
         try
         {
             Mac mac = getMac(algorithm, key);
@@ -638,28 +642,6 @@ public class Kripto
     public MessageDigest getMessageDigest(MessageDigestAlgorithm algorithm) throws NoSuchAlgorithmException
     {
         return getMessageDigest(algorithm.code);
-    }
-    
-    /**
-     * Returns an MD5 {@link MessageDigest} instance.
-     *
-     * @return an MD5 MessageDigest instance
-     * @throws NoSuchAlgorithmException if MD5 is not available
-     */
-    public MessageDigest md5() throws NoSuchAlgorithmException
-    {
-        return this.getMessageDigest(MessageDigestAlgorithm.MD5);
-    }
-    
-    /**
-     * Returns a SHA-1 {@link MessageDigest} instance.
-     *
-     * @return a SHA-1 MessageDigest instance
-     * @throws NoSuchAlgorithmException if SHA-1 is not available
-     */
-    public MessageDigest sha1() throws NoSuchAlgorithmException
-    {
-        return this.getMessageDigest(MessageDigestAlgorithm.SHA1);
     }
     
     /**
@@ -713,11 +695,59 @@ public class Kripto
     /**
      * Returns a HMAC
      *
+     * @param hash
+     * @param key
+     * @param data
      * @return the HMAC facilities class.
      */
-    public HMAC hmac()
+    public byte[] hmac(HMAC hash, SecretKey key, byte[] data) 
     {
-        return new HMAC(this);
+        return hmac(hash.name(), key, data);
+    }    
+    
+    public byte[] hmac(HMAC hash, byte[] key, byte[] data) 
+    {
+        return hmac(hash, new SecretKeySpec(key, hash.name()), data);
+    }
+    
+    public byte[] hmacSHA224(byte[] key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA224, key, data);
+    }
+    
+    public byte[] hmacSHA256(byte[] key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA256, key, data);
+    }
+    
+    public byte[] hmacSHA384(byte[] key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA384, key, data);
+    }
+    
+    public byte[] hmacSHA512(byte[] key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA512, key, data);
+    }
+    
+    public byte[] hmacSHA224(SecretKey key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA224, key, data);
+    }
+    
+    public byte[] hmacSHA256(SecretKey key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA256, key, data);
+    }
+    
+    public byte[] hmacSHA384(SecretKey key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA384, key, data);
+    }
+    
+    public byte[] hmacSHA512(SecretKey key, byte[] data) 
+    {
+        return hmac(HMAC.HmacSHA512, key, data);
     }
     
     ////////////////////////////////////////////////////////////////////////////
@@ -761,18 +791,7 @@ public class Kripto
     {
         return getKeyPairGenerator(algorithm.name(), keyBits);
     }    
-    
-    public static SecretKey resizeSecretKey(SecretKey sk, int keyBits)
-    {
-        int keyBytes = keyBits/8;
-        if(keyBytes>0)
-        {
-            byte[] key = sk.getEncoded();
-            sk = keyBytes<key.length ? new SecretKeySpec(key, 0, keyBytes, sk.getAlgorithm()) : sk;  
-        }
-        return sk;
-    }
-    
+       
     ////////////////////////////////////////////////////////////////////////////
     ///// IV ///////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -893,6 +912,10 @@ public class Kripto
      */
     public SecretKey deriveSecretKey(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation, SecretKeyAlgorithm secretKeyAlgorithm) throws InvalidKeySpecException
     {
+        if(rounds<this.minimumPbkdf2Rounds)
+        {
+            throw new IllegalArgumentException("rounds = "+rounds+" < "+this.minimumPbkdf2Rounds);
+        }
         try
         {
             SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
@@ -905,23 +928,36 @@ public class Kripto
             throw new IllegalArgumentException("Unsupported SecretKeyFactory algorithm: " + derivation.name(), ex);
         }
     }
-    public byte[] derivePassphrase(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws NoSuchAlgorithmException, InvalidKeySpecException
+
+    public byte[] deriveSecretKeyEncoded(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws InvalidKeySpecException
     {
-        SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
-        PBEKeySpec spec = new PBEKeySpec(passphrase, salt, rounds, keyBits);
-        SecretKey genericSecretKey = factory.generateSecret(spec);
-        return genericSecretKey.getEncoded();
-    }
-    public char[] derivePassphraseUTF8(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws NoSuchAlgorithmException, InvalidKeySpecException
-    {
-        byte[] temp = derivePassphrase(passphrase, salt, rounds, keyBits, derivation);
+        if(rounds<this.minimumPbkdf2Rounds)
+        {
+            throw new IllegalArgumentException("rounds = "+rounds+" < "+this.minimumPbkdf2Rounds);
+        }
         try
         {
-            return Byter.charsUTF8(temp);
+            SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
+            PBEKeySpec spec = new PBEKeySpec(passphrase, salt, rounds, keyBits);
+            SecretKey genericSecretKey = factory.generateSecret(spec);
+            return genericSecretKey.getEncoded();
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new IllegalArgumentException("Unsupported SecretKeyFactory algorithm: " + derivation.name(), ex);
+        }
+    }
+
+    public char[] deriveSecretKeyAscii85(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws InvalidKeySpecException
+    {
+        byte[] tmp = deriveSecretKeyEncoded(passphrase, salt, rounds, keyBits, derivation);
+        try
+        {
+            return Ascii85.encode(tmp);
         }
         finally
         {
-            Arrays.fill(temp, (byte)0);
+            Arrays.fill(tmp, (byte)0);
         }
     }
     
@@ -1310,16 +1346,15 @@ public class Kripto
     ////////////////////////////////////////////////////////////////////////////
     ///// Random data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-    
-    private static volatile SecureRandom secureRandom;
+    private enum SecureRandomHolder
+    {
+        INSTANCE;
+        final SecureRandom secureRandom = getSecureRandomStrong();
+    }
 
     private static SecureRandom getSecureRandom() throws RuntimeException
     {
-        if(secureRandom==null)
-        {
-            secureRandom = getSecureRandomStrong();
-        }
-        return secureRandom;
+        return SecureRandomHolder.INSTANCE.secureRandom;
     }
     
     /**

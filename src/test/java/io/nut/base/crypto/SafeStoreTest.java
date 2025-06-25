@@ -23,12 +23,12 @@ public class SafeStoreTest
     public void testGetDerivedKey() throws Exception
     {
         char[] key = "12345678901234567890".toCharArray();
-        String s = "12345678901234567890";
+        Kripto kripto = Kripto.getInstance().setMinimumPbkdf2Rounds(2);
         
         File file = new File("safe-store.test");
         
         {
-            SafeStore safe = new SafeStore(file, key, SafeStoreTest.class.getName(), true, 2);
+            SafeStore safe = new SafeStore(file, key, SafeStoreTest.class.getName(), true, 2, kripto);
             Properties properties = new Properties();
 
             properties.setProperty("a", "A");
@@ -46,7 +46,7 @@ public class SafeStoreTest
         }
         
         {
-            SafeStore safe = new SafeStore(file, key, SafeStoreTest.class.getName(), true, 2);
+            SafeStore safe = new SafeStore(file, key, SafeStoreTest.class.getName(), true, 2, kripto);
             Properties properties = new Properties();
             safe.load(properties);
             properties.list(System.out);

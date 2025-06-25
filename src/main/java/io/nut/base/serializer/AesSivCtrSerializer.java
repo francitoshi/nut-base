@@ -1,5 +1,5 @@
 /*
- *  AesGcmSerializer.java
+ *  AesSivCtrSerializer.java
  *
  *  Copyright (c) 2025 francitoshi@gmail.com
  *
@@ -20,41 +20,47 @@
  */
 package io.nut.base.serializer;
 
-import io.nut.base.crypto.AesGcmBytesCipher;
+import io.nut.base.crypto.AesSivCtrBytesCipher;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.SecretKeyTransformation;
+import io.nut.base.crypto.Kripto.HMAC;
 import io.nut.base.serializer.Serializer;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class AesGcmSerializer<T> extends AesGcmBytesCipher implements Serializer<T>
+/**
+ * Serializador que cifra y descifra datos usando AES en modo CTR. El formato de
+ * salida es [IV] + [Texto Cifrado]. Admite tanto IV aleatorios (no
+ * determinista) como IV sintéticos generados con HMAC (determinista). Cuando se
+ * usa un IV sintético, se realiza una verificación de integridad durante el
+ * descifrado.
+ */
+public class AesSivCtrSerializer<T> extends AesSivCtrBytesCipher implements Serializer<T>
 {
-    private final SecretKey key;
     private final Serializer<T> serializer;
 
-    public AesGcmSerializer(SecretKey key, Serializer<T> serializer)
+    public AesSivCtrSerializer(HMAC hmac, SecretKey hmacKey, SecretKey encryptionKey, Serializer<T> serializer)
     {
-        this(key, serializer, null);
-    }
-    public AesGcmSerializer(SecretKey key, Serializer<T> serializer, Kripto kripto)
-    {
-        super(key, kripto);
-        this.key = key;
+        super(hmac, hmacKey, encryptionKey);
         this.serializer = serializer;
     }
 
+    public AesSivCtrSerializer(HMAC hmac, SecretKey hmacKey, SecretKey encryptionKey, Serializer<T> serializer, Kripto kripto)
+    {
+        super(hmac, hmacKey, encryptionKey, kripto);
+        this.serializer = serializer;
+    }
+    
     @Override
     public byte[] toBytes(T t)
     {
         try
         {
-            return t!=null ? encrypt(this.serializer.toBytes(t)) : null;
+            return t != null ? encrypt(this.serializer.toBytes(t)) : null;
         }
         catch (Exception ex)
         {
-            Logger.getLogger(AesGcmSerializer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(AesSivCtrSerializer.class.getName()).log(Level.SEVERE, null, ex);
             throw new RuntimeException(ex);
         }
     }
@@ -64,11 +70,11 @@ public class AesGcmSerializer<T> extends AesGcmBytesCipher implements Serializer
     {
         try
         {
-            return bytes!=null ? this.serializer.fromBytes(decrypt(bytes)) : null;
+            return bytes != null ? this.serializer.fromBytes(decrypt(bytes)) : null;
         }
         catch (Exception ex)
         {
-            Logger.getLogger(AesGcmSerializer.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(AesSivCtrSerializer.class.getName()).log(Level.SEVERE, null, ex);
             throw new RuntimeException(ex);
         }
     }

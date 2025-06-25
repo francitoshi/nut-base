@@ -1,7 +1,7 @@
 /*
  *  Coinage.java
  *
- *  Copyright (c) 2023-2024 francitoshi@gmail.com
+ *  Copyright (c) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ public class Coinage
     {
         INSTANCE;
         final String[] FIAT_COINS = "AUD,CAD,CHF,EUR,GBP,JPY,USD".split(",");
-        final String[] CRYPTO_BASE_COINS = "ADA,BEAM,BNB,BTC,DASH,DOGE,DOT,ETH,GRIN,LTC,MATIC,SHIB,SOL,TRX,USDC,USDT,XMR,XRP,ZEC".split(",");
+        final String[] CRYPTO_BASE_COINS = "ADA,BEAM,BNB,BTC,DASH,DOGE,DOT,ETH,GRIN,LTC,POL,SHIB,SOL,TRX,USDC,USDT,XMR,XRP,ZEC".split(",");
         final String[] CRYPTO_COUNTER_COINS = "BTC,BNB,ETH,LTC,USDT,USDC".split(",");
         final String[] EXTRA_PAIRS = "EUR-USDC".split(",");
     }

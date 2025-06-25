@@ -1,7 +1,7 @@
 /*
  *  AtbashTest.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,8 +18,9 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.crypto;
+package io.nut.base.crypto.human;
 
+import io.nut.base.crypto.human.Atbash;
 import static io.nut.base.util.Assert.assertEquals;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;

@@ -20,6 +20,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.crypto.Kripto.HMAC;
 import io.nut.base.crypto.Kripto.KeyAgreementAlgorithm;
 import io.nut.base.crypto.Kripto.KeyPairAlgorithm;
 import io.nut.base.crypto.Kripto.KeyPairTransformation;
@@ -31,6 +32,7 @@ import io.nut.base.encoding.Hex;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
 import io.nut.base.util.Utils;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -55,6 +57,7 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -134,8 +137,7 @@ public class KriptoTest
     @Test
     public void testDerive() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException
     {
-        Kripto instance = Kripto.getInstance();
-
+        Kripto instance = Kripto.getInstance().setMinimumPbkdf2Rounds(2048);
         String plainText = "this is the plaintext";
         char[] passphrase = "this is the key".toCharArray();
         
@@ -238,28 +240,6 @@ public class KriptoTest
     {
         Kripto instance = Kripto.getInstance();
         {
-            MessageDigest md5 = instance.md5();
-
-            byte[] a = md5.digest("The quick brown fox jumps over the lazy dog".getBytes(UTF8));
-            byte[] b = md5.digest("The quick brown fox jumps over the lazy dog.".getBytes(UTF8));
-            byte[] c = md5.digest("".getBytes(UTF8));
-
-            assertEquals("9e107d9d372bb6826bd81d3542a419d6", Hex.encode(a));
-            assertEquals("e4d909c290d0fb1ca068ffaddf22cbd0", Hex.encode(b));
-            assertEquals("d41d8cd98f00b204e9800998ecf8427e", Hex.encode(c));
-        }
-        {
-            MessageDigest sha1 = instance.sha1();
-
-            byte[] a = sha1.digest("The quick brown fox jumps over the lazy dog".getBytes(UTF8));
-            byte[] b = sha1.digest("The quick brown fox jumps over the lazy cog".getBytes(UTF8));
-            byte[] c = sha1.digest("".getBytes(UTF8));
-
-            assertEquals("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12", Hex.encode(a));
-            assertEquals("de9f2c7fd25e1b3afad3e85a0bd17d9b100db4b3", Hex.encode(b));
-            assertEquals("da39a3ee5e6b4b0d3255bfef95601890afd80709", Hex.encode(c));
-        }
-        {
             MessageDigest sha224 = instance.sha224();
             byte[] a = sha224.digest("The quick brown fox jumps over the lazy dog".getBytes(UTF8));
             byte[] b = sha224.digest("The quick brown fox jumps over the lazy dog.".getBytes(UTF8));
@@ -290,22 +270,16 @@ public class KriptoTest
         {
             SecretKeyTransformation.AES_CBC_PKCS5Padding,
             SecretKeyTransformation.AES_GCM_NoPadding,
-            SecretKeyTransformation.DesEde_Cbc_Pkcs5Padding,
-            SecretKeyTransformation.DES_CBC_PKCS5Padding,
         };
         SecretKeyAlgorithm[] secretKeyAlgorithms =
         {
             SecretKeyAlgorithm.AES,
             SecretKeyAlgorithm.AES,
-            SecretKeyAlgorithm.DESede,
-            SecretKeyAlgorithm.DES,
         };
         int[][] keyBits =
         {
             { 128, 192, 256 },
             { 128 },
-            { 128, 192 },
-            { 64 },
         };
 
         for (int i = 0; i < secretKeyTransformations.length; i++)
@@ -326,7 +300,7 @@ public class KriptoTest
                 SecretKey secretKey0 = instance.getSecretKey(skDet, secretKeyAlgorithms[i]);
                 SecretKey secretKey1 = kg.generateKey();
 
-                AlgorithmParameterSpec iv = (skt.gcm|skt.siv) ? instance.getIvGCM(ivDet, skt.tagBits) : instance.getIv(ivDet, skt.ivBits);
+                AlgorithmParameterSpec iv = skt.gcm ? instance.getIvGCM(ivDet, skt.tagBits) : instance.getIv(ivDet, skt.ivBits);
 
                 Cipher encode0 = instance.getCipher(secretKey0, secretKeyTransformations[i], iv, Cipher.ENCRYPT_MODE);
                 byte[] coded0 = encode0.doFinal(plain);
@@ -416,20 +390,19 @@ public class KriptoTest
             KeyAgreementAlgorithm.ECDH,
             KeyAgreementAlgorithm.DiffieHellman
         };
-        int[] keyBits = { 256, 512 };
-        int aesBits = 256;
+        int keyBits = 256;
 
         Kripto instance = Kripto.getInstanceBouncyCastle();
 
         for (int i = 0; i < pair.length; i++)
         {
             //Alice
-            KeyPair alice = instance.getKeyPairGenerator(pair[i], keyBits[i]).generateKeyPair();
+            KeyPair alice = instance.getKeyPairGenerator(pair[i], keyBits).generateKeyPair();
             byte[] a = alice.getPrivate().getEncoded();
             byte[] A = alice.getPublic().getEncoded();
 
             //Bob
-            KeyPair bob = instance.getKeyPairGenerator(pair[i], keyBits[i]).generateKeyPair();
+            KeyPair bob = instance.getKeyPairGenerator(pair[i], keyBits).generateKeyPair();
             byte[] b = bob.getPrivate().getEncoded();
             byte[] B = bob.getPublic().getEncoded();
 
@@ -441,12 +414,10 @@ public class KriptoTest
 
             assertEquals(aliceSecret, bobSecret);
 
-            aliceSecret = Kripto.resizeSecretKey(aliceSecret, aesBits);
             IvParameterSpec iv = instance.getIv(B, 128);
             Cipher aliceCipher = instance.getCipher(aliceSecret, SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, Cipher.ENCRYPT_MODE);
             byte[] encoded = aliceCipher.doFinal(plain);
 
-            bobSecret = Kripto.resizeSecretKey(bobSecret, aesBits);
             Cipher bobCipher = instance.getCipher(bobSecret, SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, Cipher.DECRYPT_MODE);
             byte[] restored = bobCipher.doFinal(encoded);
 
@@ -468,12 +439,8 @@ public class KriptoTest
         SignatureAlgorithm[] signAlgo =
         {
             //NONEwith... doesn't use a digest so modifications beyond the used data are not detected
-            SignatureAlgorithm.MD5withRSA,
-            SignatureAlgorithm.SHA1withRSA,
             SignatureAlgorithm.SHA256withRSA,
-            SignatureAlgorithm.SHA1withDSA,
             SignatureAlgorithm.SHA256withDSA,
-            SignatureAlgorithm.SHA1withECDSA,
             SignatureAlgorithm.SHA256withECDSA,
         };
 
@@ -693,7 +660,7 @@ public class KriptoTest
 
         instance.getCipher(kp.getPublic(), KeyPairTransformation.RSA_ECB_PKCS1Padding, Cipher.ENCRYPT_MODE);
 
-        Signature aliceSignature = instance.getSignature(SignatureAlgorithm.SHA1withECDSA);
+        Signature aliceSignature = instance.getSignature(SignatureAlgorithm.SHA256withECDSA);
 
         //kripto.deriveKey
         Kripto forced = new Kripto("fake", true);
@@ -741,19 +708,16 @@ public class KriptoTest
         assertEquals(aliceSecret, bobSecret);
 
         {
-            aliceSecret = Kripto.resizeSecretKey(aliceSecret, keyBits);
             IvParameterSpec iv16 = instance.getIv(IV16, 128);
             Cipher aliceEncryptCipher = instance.getCipher(aliceSecret, SecretKeyTransformation.AES_CBC_PKCS5Padding, iv16, Cipher.ENCRYPT_MODE);
             byte[] encodedHelloFromAlice = aliceEncryptCipher.doFinal(helloFromAlice.getBytes());
 
-            bobSecret = Kripto.resizeSecretKey(bobSecret, keyBits);
             Cipher bobDecryptCipher = instance.getCipher(bobSecret, SecretKeyTransformation.AES_CBC_PKCS5Padding, iv16, Cipher.DECRYPT_MODE);
             byte[] restoredHelloFromAlice = bobDecryptCipher.doFinal(encodedHelloFromAlice);
 
             assertEquals(helloFromAlice, new String(restoredHelloFromAlice));
         }
         {
-            bobSecret = Kripto.resizeSecretKey(bobSecret, keyBits);
             IvParameterSpec iv16 = instance.getIv(IV16, 128);
 
             Cipher bobEncryptCipher = instance.getCipher(bobSecret, SecretKeyTransformation.AES_CBC_PKCS5Padding, iv16, Cipher.ENCRYPT_MODE);
@@ -851,4 +815,97 @@ public class KriptoTest
         }                
     }
 
+    static final Kripto KRIPTO = Kripto.getInstance();
+    
+    private void checkHmacSHA256(String key, String data, String result) throws UnsupportedEncodingException
+    {
+        SecretKey k = new SecretKeySpec(key.getBytes(CharSets.UTF8), HMAC.HmacSHA256.name());
+        byte[] d = data.getBytes(CharSets.UTF8);
+        byte[] r =  Hex.decode(result);
+        assertArrayEquals(r, KRIPTO.hmac(HMAC.HmacSHA256, k, d));
+    }
+    /**
+     * Test of hmacSHA256 method, of class Crypto.
+     */
+    @Test
+    public void testHmacSHA256() throws UnsupportedEncodingException
+    {
+        checkHmacSHA256("very secret key", "test", "3CE0018B7377335BCCD9201A98FA14D95F06C52BFD8D5417249B59BA42EAC37A");
+        checkHmacSHA256("very secret key", "A long an winding road led nowhere", "652A95EB2DD10AD8C3627A053DD0A1C0B8BF2529FBE50F6C3556C237681DBC99");
+    }
+   
+    /**
+     * Test of hmac method, of class Crypto.
+     */
+    @Test
+    public void testHmac()
+    {
+        //rfc4868
+        String[][] DATA=
+        {
+            {
+                "0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b",
+                "4869205468657265",//"Hi There"
+                "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7",
+                "afd03944d84895626b0825f4ab46907f15f9dadbe4101ec682aa034c7cebc59cfaea9ea9076ede7f4af152e8b2fa9cb6",
+                "87aa7cdea5ef619d4ff0b4241a1d6cb02379f4e2ce4ec2787ad0b30545e17cdedaa833b7d6b8a702038b274eaea3f4e4be9d914eeb61f1702e696c203a126854"
+            },
+            {
+                "4a656665",//"Jefe"
+                "7768617420646f2079612077616e7420666f72206e6f7468696e673f",//"what do ya want for nothing?"
+                "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843",
+                "af45d2e376484031617f78d2b58a6b1b9c7ef464f5a01b47e42ec3736322445e8e2240ca5e69e2c78b3239ecfab21649",
+                "164b7a7bfcf819e2e395fbe73b56e0a387bd64222e831fd610270cd7ea2505549758bf75c05a994a6d034f65f8f0e6fdcaeab1a34d4a6b4b636e070a38bce737"
+            },
+            {
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+                "773ea91e36800e46854db8ebd09181a72959098b3ef8c122d9635514ced565fe",
+                "88062608d3e6ad8a0aa2ace014c8a86f0aa635d947ac9febe83ef4e55966144b2a5ab39dc13814b94e3ab6e101a34f27",
+                "fa73b0089d56a284efb0f0756c890be9b1b5dbdd8ee81a3655f83e33b2279d39bf3e848279a722c806b485a47e67c807b946a337bee8942674278859e13292fb"
+            },
+            {
+                "0102030405060708090a0b0c0d0e0f10111213141516171819",
+                "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+                "82558a389a443c0ea4cc819899f2083a85f0faa3e578f8077a2e3ff46729665b",
+                "3e8a69b7783c25851933ab6290af6ca77a9981480850009cc5577c6e1f573b4e6801dd23c4a7d679ccf8a386c674cffb",
+                "b0ba465637458c6990e5a8c5f61d4af7e576d97ff94b872de76f8050361ee3dba91ca5c11aa25eb4d679275cc5788063a5f19741120c4f2de2adebeb10a298dd"
+            },
+            {
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "54657374205573696e67204c6172676572205468616e20426c6f636b2d53697a65204b6579202d2048617368204b6579204669727374",
+                "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54",
+                "4ece084485813e9088d2c63a041bc5b44f9ef1012a2b588f3cd11f05033ac4c60c2ef6ab4030fe8296248df163f44952",
+                "80b24263c7c1a3ebb71493c1dd7be8b49b46d1f41b4aeec1121b013783f8f3526b56d037e05f2598bd0fd2215d6a1e5295e64f73f63f0aec8b915a985d786598"
+            },
+            {
+                "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "5468697320697320612074657374207573696e672061206c6172676572207468616e20626c6f636b2d73697a65206b657920616e642061206c6172676572207468616e20626c6f636b2d73697a6520646174612e20546865206b6579206e6565647320746f20626520686173686564206265666f7265206265696e6720757365642062792074686520484d414320616c676f726974686d2e",
+                "9b09ffa71b942fcb27635fbcd5b0e944bfdc63644f0713938a7f51535c3a35e2",
+                "6617178e941f020d351e2f254e8fd32c602420feb0b8fb9adccebb82461e99c5a678cc31e799176d3860e6110c46523e",
+                "e37b6a775dc87dbaa4dfa9f96e5e3ffddebd71f8867289865df5a32d20cdc944b6022cac3c4982b10d5eeb55c3e4de15134676fb6de0446065c97440fa8c6a58"
+            }
+        };
+        
+        HMAC[] hmacs = {HMAC.HmacSHA256, HMAC.HmacSHA384, HMAC.HmacSHA512};
+        
+        for(int i=0;i<DATA.length;i++)
+        {
+            byte[] k = Hex.decode(DATA[i][0]);
+            byte[] d = Hex.decode(DATA[i][1]);
+            
+            for (int j = 0; j < hmacs.length; j++)
+            {
+                SecretKey key = new SecretKeySpec(k, hmacs[j].name());
+                byte[] exp = Hex.decode(DATA[i][2+j]);
+                
+                byte[] res1 = KRIPTO.hmac(hmacs[j], key, d);
+                byte[] res2 = KRIPTO.hmac(hmacs[j], k, d);
+                
+                assertArrayEquals(res1, exp);
+                assertArrayEquals(res2, exp);                
+            }
+        }
+    }
+    
 }

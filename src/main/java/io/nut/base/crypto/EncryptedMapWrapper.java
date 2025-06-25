@@ -20,8 +20,10 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.crypto.Kripto.HMAC;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyDerivation;
+import io.nut.base.serializer.AesSivCtrSerializer;
 import io.nut.base.serializer.AesGcmSerializer;
 import io.nut.base.serializer.Serializer;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +37,7 @@ public class EncryptedMapWrapper<K, V>
     private final Kripto kripto;
     private final Map<String, String> map;
 
-    private final AesGcmSerializer<K> keySerializer;
+    private final AesSivCtrSerializer<K> keySerializer;
     private final AesGcmSerializer<V> valSerializer;
     
     public EncryptedMapWrapper(Kripto kripto, Map<String, String> map, char[] passphrase, String saltSeed, int rounds, int keyBits, Serializer<K> ks, Serializer<V> vs) throws InvalidKeySpecException
@@ -51,7 +53,7 @@ public class EncryptedMapWrapper<K, V>
         SecretKey keyKey = kripto.deriveSecretKey(passphrase, keySalt, rounds, keyBits, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
         SecretKey valKey = kripto.deriveSecretKey(passphrase, valSalt, rounds, keyBits, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
                 
-        this.keySerializer = new AesGcmSerializer<>(macKey, keyKey, ks, kripto);
+        this.keySerializer = new AesSivCtrSerializer<>(HMAC.HmacSHA256, macKey, keyKey, ks, kripto);
         this.valSerializer = new AesGcmSerializer<>(valKey, vs, kripto);
     }
 

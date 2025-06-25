@@ -37,8 +37,9 @@ public class PassphraseDeriverTest
         char[] password = "my-super-secret-password-123".toCharArray();
         int keyBits = 256;
         int pbkdf2Iterations = 10;
+        Kripto kripto = Kripto.getInstance().setMinimumPbkdf2Rounds(pbkdf2Iterations);
 
-        try (PassphraseDeriver keyDeriver = new PassphraseDeriver(password, keyBits, pbkdf2Iterations, true))
+        try (PassphraseDeriver keyDeriver = new PassphraseDeriver(password, keyBits, pbkdf2Iterations, true, kripto))
         {
             
             byte[] dbKey1 = keyDeriver.getKey("database-key");
@@ -47,7 +48,7 @@ public class PassphraseDeriverTest
             assertArrayEquals(dbKey1, dbKey2);
             assertFalse(Arrays.equals(dbKey1, apiKey));
         }
-        try (PassphraseDeriver keyDeriver = new PassphraseDeriver(password, keyBits, pbkdf2Iterations, false))
+        try (PassphraseDeriver keyDeriver = new PassphraseDeriver(password, keyBits, pbkdf2Iterations, false, kripto))
         {
             
             byte[] dbKey1 = keyDeriver.getKey("database-key");

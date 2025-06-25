@@ -102,7 +102,7 @@ public final class PassphraseDeriver implements AutoCloseable
         // Immediately encrypt the master passphrase for secure in-memory storage.
         SecretKey protectionKey = generateAesKey();
         byte[] iv = generateIv();
-        byte[] passphraseBytes = kripto.derivePassphrase(masterPassphrase, MASTER_SALT, rounds, keyBits, Kripto.SecretKeyDerivation.PBKDF2WithHmacSHA256);
+        byte[] passphraseBytes = kripto.deriveSecretKeyEncoded(masterPassphrase, MASTER_SALT, rounds, keyBits, Kripto.SecretKeyDerivation.PBKDF2WithHmacSHA256);
         Arrays.fill(passphraseBytes, (byte) 0);
         byte[] encryptedKey = encrypt(passphraseBytes, protectionKey, iv);
 
@@ -166,7 +166,7 @@ public final class PassphraseDeriver implements AutoCloseable
             try
             {
                 byte[] salt = label.getBytes(StandardCharsets.UTF_8);
-                return kripto.derivePassphrase(masterChars, salt, rounds, keybits, Kripto.SecretKeyDerivation.PBKDF2WithHmacSHA256);
+                return kripto.deriveSecretKeyEncoded(masterChars, salt, rounds, keybits, Kripto.SecretKeyDerivation.PBKDF2WithHmacSHA256);
             }
             finally
             {
