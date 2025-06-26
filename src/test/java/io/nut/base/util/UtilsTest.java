@@ -22,18 +22,12 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
-import java.io.Closeable;
-import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -41,17 +35,7 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -571,189 +555,6 @@ public class UtilsTest
     }
 
     /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_intArrArr()
-    {
-        int[][] src = 
-        {
-            {1},
-            {1,2},
-            {1,2,3},
-            {},
-            null,
-            {1,2,3,4},
-        };
-        int[] exp = {1,1,2,1,2,3,1,2,3,4};
-        
-        int[] result = Utils.join(src);
-        assertArrayEquals(exp, result);
-    }
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_longArrArr()
-    {
-        long[][] src = 
-        {
-            {1},
-            {1,2},
-            {1,2,3},
-            {},
-            null,
-            {1,2,3,4},
-        };
-        long[] exp = {1,1,2,1,2,3,1,2,3,4};
-        
-        long[] result = Utils.join(src);
-        assertArrayEquals(exp, result);
-    }
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_shortArrArr()
-    {
-        short[][] src = 
-        {
-            {1},
-            {1,2},
-            {1,2,3},
-            {},
-            null,
-            {1,2,3,4},
-        };
-        short[] exp = {1,1,2,1,2,3,1,2,3,4};
-        
-        short[] result = Utils.join(src);
-        assertArrayEquals(exp, result);
-    }
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_charArrArr()
-    {
-        char[][] src = 
-        {
-            {1},
-            {1,2},
-            {1,2,3},
-            {},
-            null,
-            {1,2,3,4},
-        };
-        char[] exp = {1,1,2,1,2,3,1,2,3,4};
-        
-        char[] result = Utils.join(src);
-        assertArrayEquals(exp, result);
-    }
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_floatArrArr()
-    {
-        float[][] src = 
-        {
-            {1},
-            {1,2},
-            {1,2,3},
-            {},
-            null,
-            {1,2,3,4},
-        };
-        float[] exp = {1,1,2,1,2,3,1,2,3,4};
-        
-        float[] result = Utils.join(src);
-        assertArrayEquals(exp, result, 0);
-    }
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_doubleArrArr()
-    {
-        double[][] src = 
-        {
-            {1},
-            {1,2},
-            {1,2,3},
-            {},
-            null,
-            {1,2,3,4},
-        };
-        double[] exp = {1,1,2,1,2,3,1,2,3,4};
-        
-        double[] result = Utils.join(src);
-        assertArrayEquals(exp, result, 0);
-    }
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_GenericType()
-    {
-        String[][] src = 
-        {
-            {"1"},
-            {"1","2"},
-            {"1","2","3"},
-            {},
-            null,
-            {"1","2","3","4"},
-        };
-        String[] exp = {"1","1","2","1","2","3","1","2","3","4"};
-        
-        String[] result = Utils.join(String.class, src);
-        assertArrayEquals(exp, result);
-    }
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_GenericType2()
-    {
-        String[] src0 = {"1"};
-        String[] src1 = {"1","2"};
-        String[] src2 = {"1","2","3"};
-        String[] src3 = {};
-        String[] src4 = null;
-        String[] src5 = {"1","2","3","4"};
-        
-        String[][] src = {src0, src1, src2, src3, src4, src5};
-        
-        String[] exp = {"1","1","2","1","2","3","1","2","3","4"};
-        
-        String[] result1 = Utils.join(src0,src1,src2,src3,src4,src5);
-        String[] result2 = Utils.join(src);
-        
-        assertArrayEquals(exp, result1);
-        assertArrayEquals(exp, result2);
-    }
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_StringArr()
-    {
-        String[] src = {"1","1","2","1","2","3","",null,"1","2","3","4"};
-        String exp = "1121231234";
-        
-        String result = Utils.join(src);
-        assertEquals(exp, result);
-    }
-
-    /**
      * Test of compare method, of class Utils.
      */
     @Test
@@ -1134,28 +935,6 @@ public class UtilsTest
         assertEquals(BigDecimal.TEN, Utils.bound(BigDecimal.ONE, BigDecimal.TEN, BigDecimal.TEN));
     }
     
-
-    /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_byteArrArr()
-    {
-        byte[][] src = 
-        {
-            {1},
-            {1,2},
-            {1,2,3},
-            {},
-            null,
-            {1,2,3,4},
-        };
-        byte[] exp = {1,1,2,1,2,3,1,2,3,4};
-        
-        byte[] result = Utils.join(src);
-        assertArrayEquals(exp, result);
-    }
-
     /**
      * Test of deepCopy method, of class Utils.
      */
@@ -2483,106 +2262,6 @@ public class UtilsTest
     }
 
     /**
-     * Test of join method, of class Utils.
-     */
-    @Test
-    public void testJoin_ListArr()
-    {
-        List<String> a = null;
-        List<String> b = Collections.EMPTY_LIST;
-        List<String> c = Utils.listOf("a","b","c");
-        List<String> d = Utils.listOf("d","e");
-        
-        List<String> result = Utils.join(a,b,c, d);
-        List<String> expected = Utils.listOf("a","b","c","d","e");
-        assertEquals(expected, result);
-    }
-
-    /**
-     * Test of cat method, of class Utils.
-     */
-    @Test
-    public void testCat_byteArr_byteArr()
-    {
-        byte[] src = {1,2};
-        byte[] expResult = {1,2,3,4};
-        byte[] result = Utils.cat(src, (byte)3,(byte)4);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
-     * Test of cat method, of class Utils.
-     */
-    @Test
-    public void testCat_intArr_intArr()
-    {
-        int[] src = {1,2};
-        int[] expResult = {1,2,3,4};
-        int[] result = Utils.cat(src, 3,4);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
-     * Test of cat method, of class Utils.
-     */
-    @Test
-    public void testCat_shortArr_shortArr()
-    {
-        short[] src = {1,2};
-        short[] expResult = {1,2,3,4};
-        short[] result = Utils.cat(src, (short)3,(short)4);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
-     * Test of cat method, of class Utils.
-     */
-    @Test
-    public void testCat_charArr_charArr()
-    {
-        char[] src = {1,2};
-        char[] expResult = {1,2,3,4};
-        char[] result = Utils.cat(src, (char)3,(char)4);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
-     * Test of cat method, of class Utils.
-     */
-    @Test
-    public void testCat_longArr_longArr()
-    {
-        long[] src = {1,2};
-        long[] expResult = {1,2,3,4};
-        long[] result = Utils.cat(src, 3L, 4L);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
-     * Test of cat method, of class Utils.
-     */
-    @Test
-    public void testCat_floatArr_floatArr()
-    {
-        float[] src = {1,2};
-        float[] expResult = {1,2,3,4};
-        float[] result = Utils.cat(src, 3f, 4f);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
-     * Test of cat method, of class Utils.
-     */
-    @Test
-    public void testCat_doubleArr_doubleArr()
-    {
-        double[] src = {1,2};
-        double[] expResult = {1,2,3,4};
-        double[] result = Utils.cat(src, 3d, 4d);
-        assertArrayEquals(expResult, result);
-    }
-
-    /**
      * Test of asBytes method, of class Utils.
      */
     @Test
@@ -2982,6 +2661,4 @@ public class UtilsTest
         assertFalse(Utils.hasNullsOrEmpty(new Object[]{"", ""}));
         assertTrue(Utils.hasNullsOrEmpty(new Object[]{"", null}));
     }
-
-
 }

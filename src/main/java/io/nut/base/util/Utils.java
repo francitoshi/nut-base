@@ -21,19 +21,17 @@
 package io.nut.base.util;
 
 import io.nut.base.compat.ByteBufferCompat;
+import io.nut.base.crypto.Kripto;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.awt.datatransfer.UnsupportedFlavorException;
-import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintStream;
-import java.lang.reflect.Array;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
@@ -44,12 +42,12 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.InvalidKeyException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -58,8 +56,6 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.BlockingDeque;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +69,7 @@ import java.util.zip.Adler32;
  *
  * @author franci
  */
-public class Utils
+public abstract class Utils
 {
     public static final long NANOS_PER_MILLIS = 1_000_000L;
     public static final long NANOS_PER_SECOND = 1_000_000_000L;
@@ -90,6 +86,8 @@ public class Utils
     public static final long HOUR_NANOS = 60 * MINUTE_NANOS;
     public static final long DAY_NANOS = 24 * HOUR_NANOS;
     public static final long WEEK_NANOS = 7 * DAY_NANOS;   
+    
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
      * An empty immutable {@code boolean} array.
@@ -226,23 +224,6 @@ public class Utils
         }
     };
     
-    public static byte[] asBytes(InputStream in) throws IOException
-    {
-        if (in == null)
-        {
-            return null;
-        }
-        int r;
-        byte[] buf = new byte[64 * 1024];
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        while ((r = in.read(buf)) > 0)
-        {
-            out.write(buf, 0, r);
-        }
-        return out.toByteArray();
-    }
-
-
     public static byte[] asBytes(BigInteger n, int minBytes)
     {
         if(n==null)
@@ -760,54 +741,12 @@ public class Utils
     }
 
     //----------------------------------------------------------------------------------------------
-    @Deprecated
-    public static <T> Set<T> asSet(T... items)
-    {
-        return As.set(items);
-    }
-    
-    @Deprecated
-    public static <T> List<T> asList(T... items)
-    {
-        return As.list(items);
-    }
     public static <E> List<E> listOf(E... e)
     {
         ArrayList<E> list = new ArrayList<>(e.length);
         Collections.addAll(list, e);
         return Collections.unmodifiableList(list);
     }
-    
-    @Deprecated
-    public static <T> Queue<T> asQueue(T... items)
-    {
-        return As.queue(items);
-    }
-    
-    @Deprecated
-    public static <T> Deque<T> asDeque(T... items)
-    {
-        return As.deque(items);
-    }
-    
-    @Deprecated
-    public static <T> BlockingQueue<T> asBlockingQueue(T... items)
-    {
-        return As.blockingQueue(items);
-    }
-
-    @Deprecated
-    public static <T> BlockingDeque<T> asBlockingDeque(T... items)
-    {
-        return As.blockingDeque(items);
-    }
-    @Deprecated
-    public static <K,V> Map<K,V> asMap(K[] keys, V[] values)
-    {
-        return As.map(keys, values);
-    }
-    
-    //----------------------------------------------------------------------------------------------
     
     //java9 Arrays.compare(byte[] a, int aFromIndex, int aToIndex, byte[] b, int bFromIndex, int bToIndex)
     public static int compare(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo)
@@ -930,42 +869,6 @@ public class Utils
             return +1;
         }
         return 0;
-    }
-
-    @Deprecated
-    public static String getJavaHome()
-    {
-        return Java.JAVA_HOME;
-    }
-    @Deprecated
-    public static String getTmpDir()
-    {
-        return Java.JAVA_IO_TMPDIR;
-    }
-    @Deprecated
-    public static String getOsName()
-    {
-        return Java.OS_NAME;
-    }
-    @Deprecated
-    public static String getOsArch()
-    {
-        return Java.OS_ARCH;
-    }
-    @Deprecated
-    public static String getOsVersion()
-    {
-        return Java.OS_VERSION;
-    }
-    @Deprecated
-    public static String getUserName()
-    {
-        return Java.USER_NAME;
-    }
-    @Deprecated
-    public static String getUserHome()
-    {
-        return Java.USER_HOME;
     }
 
     public static String getJavaClassPathCommon()
@@ -1137,314 +1040,7 @@ public class Utils
         }
         return false;
     }
-    
-    public static byte[] cat(byte[] src, byte... next)
-    {
-        return join(src, next);
-    }
-    /**
-     * Concatenate a series of elements to an int[] array.
-     * @param src the starting array
-     * @param next the values to concatenate
-     * @return a new array with the resulting array
-     */
-    public static int[] cat(int[] src, int... next)
-    {
-        return join(src, next);
-    }
-    public static short[] cat(short[] src, short... next)
-    {
-        return join(src, next);
-    }
-    public static char[] cat(char[] src, char... next)
-    {
-        return join(src, next);
-    }
-    public static long[] cat(long[] src, long... next)
-    {
-        return join(src, next);
-    }
-    public static float[] cat(float[] src, float... next)
-    {
-        return join(src, next);
-    }
-    public static double[] cat(double[] src, double... next)
-    {
-        return join(src, next);
-    }
-    public static <E> E[] cat(E[] src, E... next)
-    {
-        return join(src, next);
-    }
-    
-    public static byte[] join(byte[]... src)
-    {
-        int count = 0;
-        for (byte[] item : src)
-        {
-            if (item != null)
-            {
-                count += item.length;
-            }
-        }
-        ByteBuffer dst = ByteBuffer.allocate(count);
-        for (byte[] item : src)
-        {
-            if (item != null && item.length > 0)
-            {
-                dst.put(item);
-            }
-        }
-        return dst.array();
-    }
-
-    public static int[] join(int[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        int[] dst = new int[count];
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-
-    public static long[] join(long[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        long[] dst = new long[count];
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-
-    public static short[] join(short[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        short[] dst = new short[count];
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-
-    public static char[] join(char[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        char[] dst = new char[count];
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-
-    public static float[] join(float[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        float[] dst = new float[count];
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-
-    public static double[] join(double[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        double[] dst = new double[count];
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-
-    public static String[] join(String[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        String[] dst = new String[count];
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-    @Deprecated
-    public static <E> E[] join(Class<E> cls, E[]... src)
-    {
-        int count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                count += src[i].length;
-            }
-        }
-        E[] dst = (E[]) Array.newInstance(cls, count);
-        count = 0;
-        for (int i = 0; i < src.length; i++)
-        {
-            if (src[i] != null && src[i].length > 0)
-            {
-                System.arraycopy(src[i], 0, dst, count, src[i].length);
-                count += src[i].length;
-            }
-        }
-        return dst;
-    }
-
-    public static <E> E[] join(E[] ... src)
-    {
-        if (src == null)
-        {
-            return null;
-        }
-        int size = 0;
-        E[] dst = null;
-        for (E[] item : src)
-        {
-            if (item != null)
-            {
-                size += item.length;
-                if (dst==null)
-                {
-                    dst = Arrays.copyOf(item, 0);
-                }
-            }
-        }
-        if(dst ==null)
-        {
-            return null;
-        }
-        dst = Arrays.copyOf(dst,size);
-        for (int i = 0, w = 0; i < src.length; i++)
-        {
-            if (src[i] != null)
-            {
-                for (E item : src[i])
-                {
-                    dst[w++] = item;
-                }
-            }
-        }
-        return dst;
-    }
-    
-    public static String join(String... src)
-    {
-        StringBuilder dst = new StringBuilder();
-        for (String src1 : src)
-        {
-            if (src1 != null)
-            {
-                dst.append(src1);
-            }
-        }
-        return dst.toString();
-    }
-
-    public static <E> List<E> join(List<E>... src)
-    {
-        List<E> dst = new ArrayList<>();
-        for (List<E> src1 : src)
-        {
-            if (src1 != null)
-            {
-                dst.addAll(src1);
-            }
-        }
-        return dst;
-    }
-    
+        
     public static <E> List<E> append(List<E> list, E... items)
     {
         list.addAll(Arrays.asList(items));
@@ -2785,7 +2381,7 @@ public class Utils
     public static String toJavaXor(String name, byte[] data)
     {
         StringBuilder sb = new StringBuilder();
-        long xor = Math.abs(new Random().nextLong());
+        long xor = Math.abs(SECURE_RANDOM.nextLong());
         data = rollXor(data, xor);
         sb.append("long ").append(name).append("Xor = ").append(xor).append("L;\n");
         sb.append("byte[] ").append(name).append(" = {");

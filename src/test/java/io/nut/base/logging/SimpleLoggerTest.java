@@ -20,6 +20,7 @@
  */
 package io.nut.base.logging;
 
+import io.nut.base.util.Java;
 import io.nut.base.util.Utils;
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +70,7 @@ public class SimpleLoggerTest
     @Test
     public void testSetFileHandler() throws IOException
     {
-        String tmpLog = new File(Utils.getTmpDir(),"cafecore.log").getAbsolutePath();
+        String tmpLog = new File(Java.JAVA_IO_TMPDIR,"cafecore.log").getAbsolutePath();
         
         SimpleLogger instance = new SimpleLogger(true).setConsoleOut(true, Level.FINEST, true, "out.prefix")
                                                        .setConsoleErr(true, Level.FINEST, true)

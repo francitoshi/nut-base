@@ -31,6 +31,7 @@ import io.nut.base.crypto.Kripto.SignatureAlgorithm;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
+import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
@@ -434,7 +435,7 @@ public class KriptoTest
         Kripto instance = Kripto.getInstance();
 
         byte[] plain = "abcdefghijklmnopqrstuvxyz".getBytes(CharSets.UTF8);
-        byte[] plain2 = Utils.join("abcdefghijklmnopqrstuvxyz", ".").getBytes(CharSets.UTF8);
+        byte[] plain2 = Joins.join("abcdefghijklmnopqrstuvxyz", ".").getBytes(CharSets.UTF8);
 
         SignatureAlgorithm[] signAlgo =
         {
@@ -512,129 +513,6 @@ public class KriptoTest
     {
         Kripto result = Kripto.getInstanceBouncyCastle();
         assertNotNull(result);
-    }
-
-    /**
-     * Test of random method, of class Kripto.
-     */
-    @Test
-    public void testRandom_booleanArr()
-    {
-        boolean[] dataNull = null;
-        boolean[] dataEmpty = new boolean[0];
-
-        assertNull(Kripto.random(dataNull));
-        assertEquals(0, Kripto.random(dataEmpty).length);
-
-        boolean[] result = Kripto.random(new boolean[10]);
-        assertEquals(10, result.length);
-    }
-
-    /**
-     * Test of random method, of class Kripto.
-     */
-    @Test
-    public void testRandom_byteArr()
-    {
-        byte[] dataNull = null;
-        byte[] dataEmpty = new byte[0];
-
-        assertNull(Kripto.random(dataNull));
-        assertEquals(0, Kripto.random(dataEmpty).length);
-
-        byte[] result = Kripto.random(new byte[10]);
-        assertEquals(10, result.length);
-    }
-
-    /**
-     * Test of random method, of class Kripto.
-     */
-    @Test
-    public void testRandom_intArr()
-    {
-        int[] dataNull = null;
-        int[] dataEmpty = new int[0];
-
-        assertNull(Kripto.random(dataNull));
-        assertEquals(0, Kripto.random(dataEmpty).length);
-
-        int[] result = Kripto.random(new int[10]);
-        assertEquals(10, result.length);
-    }
-
-    /**
-     * Test of random method, of class Kripto.
-     */
-    @Test
-    public void testRandom_longArr()
-    {
-        long[] dataNull = null;
-        long[] dataEmpty = new long[0];
-
-        assertNull(Kripto.random(dataNull));
-        assertEquals(0, Kripto.random(dataEmpty).length);
-
-        long[] result = Kripto.random(new long[10]);
-        assertEquals(10, result.length);
-    }
-
-    /**
-     * Test of random method, of class Kripto.
-     */
-    @Test
-    public void testRandom_floatArr()
-    {
-        float[] dataNull = null;
-        float[] dataEmpty = new float[0];
-
-        assertNull(Kripto.random(dataNull));
-        assertEquals(0, Kripto.random(dataEmpty).length);
-
-        float[] result = Kripto.random(new float[10]);
-        assertEquals(10, result.length);
-    }
-
-    /**
-     * Test of random method, of class Kripto.
-     */
-    @Test
-    public void testRandom_doubleArr()
-    {
-        double[] dataNull = null;
-        double[] dataEmpty = new double[0];
-
-        assertNull(Kripto.random(dataNull));
-        assertEquals(0, Kripto.random(dataEmpty).length);
-
-        double[] result = Kripto.random(new double[10]);
-        assertEquals(10, result.length);
-    }
-
-    /**
-     * Test of random method, of class Kripto.
-     */
-    @Test
-    public void testRandom_BigIntegerArr_int()
-    {
-        BigInteger[] dataNull = null;
-        BigInteger[] dataEmpty = new BigInteger[0];
-
-        assertNull(Kripto.random(dataNull, 256));
-        assertEquals(0, Kripto.random(dataEmpty, 256).length);
-
-        BigInteger[] result = Kripto.random(new BigInteger[10], 256);
-        assertEquals(10, result.length);
-    }
-
-    /**
-     * Test of randomNextInt method, of class Kripto.
-     */
-    @Test
-    public void testRandomInt_int()
-    {
-        int result = Kripto.randomInt(10);
-        assertTrue(result < 10);
-        assertTrue(result >= 0);
     }
 
     /**

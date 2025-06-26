@@ -25,7 +25,6 @@ import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
-import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -205,8 +204,7 @@ public class Kripto
             throw new RuntimeException("there is no strong algorithm", ex);
         }
     }
-    
-    
+        
     private volatile int minimumPbkdf2Rounds = MINIMUM_PBKDF2_ROUNDS;
     
     /**
@@ -1346,248 +1344,31 @@ public class Kripto
     ////////////////////////////////////////////////////////////////////////////
     ///// Random data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-    private enum SecureRandomHolder
+    private enum StrongSecureRandomHolder
     {
         INSTANCE;
         final SecureRandom secureRandom = getSecureRandomStrong();
     }
 
-    private static SecureRandom getSecureRandom() throws RuntimeException
+    public static SecureRandom getSecureRandom(boolean strong)
     {
-        return SecureRandomHolder.INSTANCE.secureRandom;
+        return strong ? StrongSecureRandomHolder.INSTANCE.secureRandom : new SecureRandom();
     }
     
-    /**
-     * Fills a boolean array with random values.
-     *
-     * @param data the array to fill
-     * @return the filled array, or the input if null/empty
-     */
-    public static boolean[] random(boolean[] data)
+    public static SecureRandom getSecureRandom()
     {
-        if(data==null || data.length==0)
-        {
-            return data;
-        }
-        for(int i=0;i<data.length;i++)
-        {
-            data[i] = getSecureRandom().nextBoolean();
-        }
-        return data;
-    }
-    
-    /**
-     * Fills a byte array with random values.
-     *
-     * @param data the array to fill
-     * @return the filled array, or the input if null/empty
-     */
-    public static byte[] random(byte[] data)
-    {
-        if(data==null || data.length==0)
-        {
-            return data;
-        }
-        getSecureRandom().nextBytes(data);
-        return data;
-    }
-    
-    /**
-     * Fills an int array with random values.
-     *
-     * @param data the array to fill
-     * @return the filled array, or the input if null/empty
-     */
-    public static int[] random(int[] data)
-    {
-        if(data==null || data.length==0)
-        {
-            return data;
-        }
-        for(int i=0;i<data.length;i++)
-        {
-            data[i] = getSecureRandom().nextInt();
-        }
-        return data;
-    }
-    
-    /**
-     * Fills a long array with random values.
-     *
-     * @param data the array to fill
-     * @return the filled array, or the input if null/empty
-     */
-    public static long[] random(long[] data)
-    {
-        if(data==null || data.length==0)
-        {
-            return data;
-        }
-        for(int i=0;i<data.length;i++)
-        {
-            data[i] = getSecureRandom().nextLong();
-        }
-        return data;
-    }
-    
-    /**
-     * Fills a float array with random values.
-     *
-     * @param data the array to fill
-     * @return the filled array, or the input if null/empty
-     */
-    public static float[] random(float[] data)
-    {
-        if(data==null || data.length==0)
-        {
-            return data;
-        }
-        for(int i=0;i<data.length;i++)
-        {
-            data[i] = getSecureRandom().nextFloat();
-        }
-        return data;
-    }
-    
-    /**
-     * Fills a double array with random values.
-     *
-     * @param data the array to fill
-     * @return the filled array, or the input if null/empty
-     */
-    public static double[] random(double[] data)
-    {
-        if(data==null || data.length==0)
-        {
-            return data;
-        }
-        for(int i=0;i<data.length;i++)
-        {
-            data[i] = getSecureRandom().nextDouble();
-        }
-        return data;
-    }
-    
-    /**
-     * Fills a BigInteger array with random values of specified bit length.
-     *
-     * @param data the array to fill
-     * @param numBits the bit length of each BigInteger
-     * @return the filled array, or the input if null/empty
-     */
-    public static BigInteger[] random(BigInteger[] data, int numBits)
-    {
-        if(data==null || data.length==0)
-        {
-            return data;
-        }
-        for(int i=0;i<data.length;i++)
-        {
-            data[i] = new BigInteger(numBits, getSecureRandom());
-        }
-        return data;
-    }
-    
-    /**
-     * Generates a random boolean value.
-     *
-     * @return a random boolean
-     */
-    public static boolean randomBoolean()
-    {
-        return getSecureRandom().nextBoolean();
-    }
-    
-    /**
-     * Generates a random {@link BigInteger} with the specified bit length.
-     *
-     * @param numBits the bit length of the BigInteger
-     * @return a random BigInteger
-     */
-    public static BigInteger randomBigInteger(int numBits)
-    {
-        return new BigInteger(numBits, getSecureRandom());
-    }
-    
-    /**
-     * Generates a random {@link BigInteger} less than the specified bound.
-     *
-     * @param bound the upper bound (exclusive)
-     * @return a random BigInteger
-     */
-    public static BigInteger randomBigInteger(BigInteger bound)
-    {
-        SecureRandom sr = getSecureRandom();
-        BigInteger r;
-        do 
-        {
-            r = new BigInteger(bound.bitLength(), sr);
-        } 
-        while (r.compareTo(bound) >= 0);
-        return r;
-    }
-    
-    /**
-     * Generates a random int value.
-     *
-     * @return a random int
-     */
-    public static int randomInt()
-    {
-        return getSecureRandom().nextInt();
+        return new SecureRandom();
     }
 
-    /**
-     * Generates a random int value less than the specified bound.
-     *
-     * @param bound the upper bound (exclusive)
-     * @return a random int
-     */
-    public static int randomInt(int bound)
+    public static Rand getRand(boolean strong)
     {
-        return getSecureRandom().nextInt(bound);
+        return new Rand(getSecureRandom(strong));
     }
-
-    /**
-     * Generates a random long value.
-     *
-     * @return a random long
-     */
-    public static long randomLong()
+    public static Rand getRand()
     {
-        return getSecureRandom().nextLong();
+        return new Rand(getSecureRandom());
     }
-
-    /**
-     * Generates a random float value between 0.0 and 1.0.
-     *
-     * @return a random float
-     */
-    public static float randomFloat()
-    {
-        return getSecureRandom().nextFloat();
-    }
-
-    /**
-     * Generates a random double value between 0.0 and 1.0.
-     *
-     * @return a random double
-     */
-    public static double randomDouble()
-    {
-        return getSecureRandom().nextDouble();
-    }
-
-    /**
-     * Generates a random Gaussian (normally distributed) double value.
-     *
-     * @return a random Gaussian double
-     */
-    public static double randomGaussian()
-    {
-        return getSecureRandom().nextGaussian();
-    }
-
+    
     ////////////////////////////////////////////////////////////////////////////
     ///// Shared Secrets n of m share the secret key ///////////////////////////
     ////////////////////////////////////////////////////////////////////////////

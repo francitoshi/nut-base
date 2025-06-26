@@ -44,6 +44,8 @@ import java.nio.ByteBuffer; // Using ByteBuffer for cleaner array handling is a 
  */
 public class AesGcmBytesCipher implements BytesCipher
 {
+    protected static final Rand RAND = Kripto.getRand();
+    
     protected final Kripto kripto;
     protected final SecretKey key;
 
@@ -87,7 +89,7 @@ public class AesGcmBytesCipher implements BytesCipher
     public byte[] encrypt(byte[] plaintext) throws Exception
     {
         // 1. Generate a new, cryptographically random IV for each encryption. This is critical for GCM security.
-        byte[] iv = Kripto.random(new byte[GCM_IV_LENGTH]);
+        byte[] iv = RAND.nextBytes(new byte[GCM_IV_LENGTH]);
 
         // 2. Prepare GCM parameters.
         GCMParameterSpec ivGCM = kripto.getIvGCM(iv, GCM_IV_BITS);

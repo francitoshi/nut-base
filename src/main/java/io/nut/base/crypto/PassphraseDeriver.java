@@ -66,6 +66,8 @@ public final class PassphraseDeriver implements AutoCloseable
             this.protectionKey = protectionKey;
         }
     }
+    
+    private static final Rand RAND = Kripto.getRand();
 
     // --- Instance fields ---
     private final int keybits;
@@ -217,7 +219,7 @@ public final class PassphraseDeriver implements AutoCloseable
 
     private byte[] generateIv()
     {
-        return Kripto.random(new byte[GCM_IV_LENGTH]);
+        return RAND.nextBytes(new byte[GCM_IV_LENGTH]);
     }
 
     /**

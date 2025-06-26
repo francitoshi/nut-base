@@ -21,8 +21,6 @@
 package io.nut.base.io;
 
 import io.nut.base.util.MimeTypes;
-import io.nut.base.util.Sorts;
-import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
@@ -31,10 +29,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.Random;
 
 /**
  *
@@ -42,8 +37,7 @@ import java.util.Random;
  */
 public class FileUtils extends IO
 {
-    private static final Random random = new Random();
-
+            
     private static final String[][] escapeCharacters =
     {
         {
@@ -78,34 +72,6 @@ public class FileUtils extends IO
         },
     };
 
-    public static File createTempFile(File parent, String prefix, String suffix)
-    {
-        File file = new File(parent,prefix+random.nextInt(9999)+suffix);
-        while(file.exists())
-        {
-            file = new File(parent,prefix+random.nextInt()+suffix);
-        }
-        return file;
-    }
-    public static File createTempFile(String prefix, String suffix)
-    {
-        return createTempFile(new File(Utils.getTmpDir()), prefix, suffix);
-    }
-    public static String createTempPath(String prefix, String suffix)
-    {
-        return createTempFile(prefix, suffix).toString();
-    }
-
-    public static File createNonExistentFile(File parent, String name, String ext)
-    {
-        File file = new File(parent, name+ext);
-        for(int i=1;file.exists() && i<Integer.MAX_VALUE;i++)
-        {
-            file = new File(parent, name+"-"+i+ext);
-        }
-        return file;
-    }
-
     public static String escape(String name)
     {
         for (String[] item : escapeCharacters)
@@ -118,112 +84,6 @@ public class FileUtils extends IO
         return name;
     }
 
-    public static String[] getParents(File file, boolean includeFile)
-    {
-        File[] items = getParentFiles(file, includeFile);
-        String[] names = new String[items.length];
-        for (int i = 0; i < items.length; i++)
-        {
-            names[i] = items[i].toString();
-        }
-        return names;
-    }
-
-    public static String[] getParents(File file)
-    {
-        return getParents(file, false);
-    }
-
-    public static File[] getParentFiles(File file, boolean includeFile)
-    {
-        File item = file;
-        ArrayList<File> list = new ArrayList<>();
-        if (includeFile)
-        {
-            list.add(item);
-        }
-        while ((item = item.getParentFile()) != null)
-        {
-            list.add(item);
-        }
-        return Sorts.reverseOf(list.toArray(new File[0]));
-    }
-
-    public static File[] getParentFiles(File file)
-    {
-        return getParentFiles(file, false);
-    }
-
-    public static String getCommonParent(File a, File b)
-    {
-        File parent = getCommonParentFile(a, b);
-        if (parent != null)
-        {
-            return parent.toString();
-        }
-        return null;
-    }
-
-    public static File getCommonParentFile(File a, File b)
-    {
-        File[] listA = getParentFiles(a, true);
-        File[] listB = getParentFiles(b, true);
-        int max = Math.min(listA.length, listB.length);
-        File common = null;
-        for (int i = 0; i < max && listA[i].equals(listB[i]); i++)
-        {
-            common = listA[i];
-        }
-        return common;
-    }
-    public static String getCommonParent(File[] files)
-    {
-        File parent = getCommonParentFile(files);
-        return parent==null?null:parent.toString();
-    }
-    public static File getCommonParentFile(File[] files)
-    {
-        if(files.length==0)
-        {
-            return null;
-        }
-        if(files.length==1)
-        {
-            return files[0];
-        }
-        File parent = files[0];
-        for(int i=1;i<files.length;i++)
-        {
-            parent = getCommonParentFile(parent, files[i]);
-        }
-        return parent;
-    }
-
-    public static boolean haveCommonParent(File a, File b)
-    {
-        return (getCommonParentFile(a, b) != null);
-    }
-
-    public static boolean isParentOf(File parent, File child, boolean canonical) throws IOException
-    {
-        File pa = parent.getAbsoluteFile();
-        File ca = child.getAbsoluteFile();
-        if (pa.equals(getCommonParentFile(pa, ca)))
-        {
-            return true;
-        }
-        if (canonical)
-        {
-            File pc = parent.getCanonicalFile();
-            File cc = child.getCanonicalFile();
-            if (pc.equals(parent) && cc.equals(child))
-            {
-                return false;
-            }
-            return pc.equals(getCommonParentFile(pc, cc));
-        }
-        return false;
-    }
 
     public static File getNoDotFile(File file) throws IOException
     {
@@ -305,28 +165,6 @@ public class FileUtils extends IO
         return fileName;
     }
     
-    public static File createTempDirectory(String prefix, String suffix) throws IOException
-    {
-        return createTempDirectory(prefix, suffix, null);
-    }
-    public static File createTempDirectory(String prefix, String suffix, File directory) throws IOException
-    {
-        prefix = (prefix!=null) ? prefix : "tmp-";
-        suffix = (suffix!=null) ? suffix : ".tmp";
-        directory = (directory!=null)?directory:new File(Utils.getTmpDir());
-        File file=null;
-	for(int i=0;i<Integer.MAX_VALUE;i++)
-        {
-            String medfix = String.format("%04x%04x",random.nextInt(0xffff),random.nextInt(0xffff));
-            file=new File(directory, prefix+medfix+suffix);
-            if(!file.exists())
-            {
-                file.mkdirs();
-                break;
-            }
-	}
-        return file;
-    }
     public static String getExtension(String fileName)
     {
         return getExtension(fileName, false);
