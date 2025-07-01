@@ -22,8 +22,12 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
+import java.io.Closeable;
+import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,6 +40,10 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -2661,4 +2669,122 @@ public class UtilsTest
         assertFalse(Utils.hasNullsOrEmpty(new Object[]{"", ""}));
         assertTrue(Utils.hasNullsOrEmpty(new Object[]{"", null}));
     }
+
+    @Test
+    public void testIsEmpty_ObjectArr()
+    {
+        Object[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        Object[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        Object[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_longArr()
+    {
+        long[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        long[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        long[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_intArr()
+    {
+        int[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        int[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        int[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_shortArr()
+    {
+        short[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        short[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        short[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_charArr()
+    {
+        char[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        char[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        char[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_byteArr()
+    {
+        byte[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        byte[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        byte[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_doubleArr()
+    {
+        double[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        double[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        double[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_floatArr()
+    {
+        float[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        float[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        float[] array2 = {1};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
+    @Test
+    public void testIsEmpty_booleanArr()
+    {
+        boolean[] array0 = null;
+        assertTrue(Utils.isEmpty(array0));
+        
+        boolean[] array1 = {};
+        assertTrue(Utils.isEmpty(array1));
+        
+        boolean[] array2 = {true};
+        assertFalse(Utils.isEmpty(array2));
+    }
+
 }

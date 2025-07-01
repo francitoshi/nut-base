@@ -1,7 +1,7 @@
 /*
  *  NumsTest.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
  */
 package io.nut.base.math;
 
-import ch.obermuhlner.math.big.BigDecimalMath;
 import static io.nut.base.math.Nums.BIG_DEC_ATTO;
 import static io.nut.base.math.Nums.BIG_DEC_EXA;
 import static io.nut.base.math.Nums.BIG_DEC_EXBI;
@@ -65,8 +64,6 @@ import static io.nut.base.math.Nums.BIG_INT_ZETTA;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
-import java.math.RoundingMode;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -1324,30 +1321,6 @@ public class NumsTest
             BigInteger value = BigInteger.valueOf(i);
             assertEquals( i%2==1, Nums.isOdd(value), "i="+i);
         }
-    }
-
-    /**
-     * Test of nthRoot method, of class Nums.
-     */
-    @Test
-    public void testNthRoot()
-    {
-        MathContext mc8 = new MathContext(8, RoundingMode.HALF_UP);
-        
-        assertEquals(BigDecimal.ONE, BigDecimalMath.root(BigDecimal.ONE, BigDecimal.ONE, mc8));
-        assertTrue(BigDecimal.TEN.compareTo(BigDecimalMath.root(BigDecimal.TEN, BigDecimal.ONE, mc8))==0);
-        assertTrue(BigDecimal.TEN.compareTo(BigDecimalMath.root(Nums.BIG_DEC_HUNDRED, Nums.BIG_DEC_TWO, mc8))==0);
-        assertTrue(BigDecimal.TEN.compareTo(BigDecimalMath.root(Nums.BIG_DEC_THOUSAND, BigDecimal.valueOf(3), mc8))==0);
-        assertTrue(Nums.BIG_DEC_TWO.compareTo(BigDecimalMath.root(BigDecimal.valueOf(1024), BigDecimal.TEN, mc8))==0);
-        assertTrue(Nums.BIG_DEC_TWO.compareTo(BigDecimalMath.root(BigDecimal.valueOf(4294967296L), BigDecimal.valueOf(32), mc8))==0);
-
-        MathContext mc365 = new MathContext(365, RoundingMode.HALF_UP);
-        MathContext mc367 = new MathContext(370, RoundingMode.HALF_UP);
-        BigDecimal root = BigDecimalMath.root(Nums.BIG_DEC_HUNDRED, BigDecimal.valueOf(365), mc367);
-//        System.out.println(root);
-        BigDecimal pow = BigDecimalMath.pow(root, BigDecimal.valueOf(365), mc367).round(mc365);
-//        System.out.println(pow);
-        assertTrue(Nums.BIG_DEC_HUNDRED.compareTo(pow)==0);
     }
 
     /**

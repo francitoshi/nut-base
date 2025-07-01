@@ -2896,4 +2896,104 @@ public abstract class Utils
     {
         out.printf("\033]0;%s\007",s);
     }
+    
+    /**
+     * <p>Checks if an array of Objects is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(Object[] array) 
+    {
+        return array==null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive longs is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(long[] array) 
+    {
+        return array == null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive ints is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(int[] array) 
+    {
+        return array == null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive shorts is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(short[] array)
+    {
+        return array == null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive chars is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(char[] array)
+    {
+        return array == null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive bytes is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(byte[] array)
+    {
+        return array == null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive doubles is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(double[] array)
+    {
+        return array == null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive floats is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(float[] array) 
+    {
+        return array == null || array.length == 0;
+    }
+
+    /**
+     * <p>Checks if an array of primitive booleans is empty or <code>null</code>.</p>
+     *
+     * @param array  the array to test
+     * @return <code>true</code> if the array is empty or <code>null</code>
+     */
+    public static boolean isEmpty(boolean[] array) 
+    {
+        return array == null || array.length == 0;
+    }
+    
 }

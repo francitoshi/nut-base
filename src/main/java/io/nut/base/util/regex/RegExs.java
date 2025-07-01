@@ -1,9 +1,9 @@
-package io.tea.base.util.regex;
+package io.nut.base.util.regex;
 
 /*
  *  RegExs.java
  *
- *  Copyright (C) 2009-2023 francitoshi@gmail.com
+ *  Copyright (C) 2009-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by

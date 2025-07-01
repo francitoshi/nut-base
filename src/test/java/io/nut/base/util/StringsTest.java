@@ -574,12 +574,12 @@ public class StringsTest
     @Test
     public void testEquals()
     {
-        assertTrue(Strings.safeEquals(null, null));
-        assertFalse(Strings.safeEquals("a", null));
-        assertFalse(Strings.safeEquals(null, "a"));
-        assertTrue(Strings.safeEquals("a", "a"));
-        assertFalse(Strings.safeEquals("a", "A"));
-        assertFalse(Strings.safeEquals("a", "b"));
+        assertTrue(Strings.equals(null, null));
+        assertFalse(Strings.equals("a", null));
+        assertFalse(Strings.equals(null, "a"));
+        assertTrue(Strings.equals("a", "a"));
+        assertFalse(Strings.equals("a", "A"));
+        assertFalse(Strings.equals("a", "b"));
     }
 
     /**
@@ -588,12 +588,12 @@ public class StringsTest
     @Test
     public void testEqualsIgnoreCase()
     {
-        assertTrue(Strings.safeEqualsIgnoreCase(null, null));
-        assertFalse(Strings.safeEqualsIgnoreCase("a", null));
-        assertFalse(Strings.safeEqualsIgnoreCase(null, "a"));
-        assertTrue(Strings.safeEqualsIgnoreCase("a", "a"));
-        assertTrue(Strings.safeEqualsIgnoreCase("a", "A"));
-        assertFalse(Strings.safeEqualsIgnoreCase("a", "b"));
+        assertTrue(Strings.equalsIgnoreCase(null, null));
+        assertFalse(Strings.equalsIgnoreCase("a", null));
+        assertFalse(Strings.equalsIgnoreCase(null, "a"));
+        assertTrue(Strings.equalsIgnoreCase("a", "a"));
+        assertTrue(Strings.equalsIgnoreCase("a", "A"));
+        assertFalse(Strings.equalsIgnoreCase("a", "b"));
     }
 
     /**
@@ -1159,12 +1159,12 @@ public class StringsTest
     @Test
     public void testSafeEqualsIgnoreCase()
     {
-        assertTrue(Strings.safeEqualsIgnoreCase(null, null));
-        assertFalse(Strings.safeEqualsIgnoreCase("a", null));
-        assertFalse(Strings.safeEqualsIgnoreCase(null, "a"));
-        assertTrue(Strings.safeEqualsIgnoreCase("a", "a"));
-        assertTrue(Strings.safeEqualsIgnoreCase("a", "A"));
-        assertFalse(Strings.safeEqualsIgnoreCase("a", "b"));
+        assertTrue(Strings.equalsIgnoreCase(null, null));
+        assertFalse(Strings.equalsIgnoreCase("a", null));
+        assertFalse(Strings.equalsIgnoreCase(null, "a"));
+        assertTrue(Strings.equalsIgnoreCase("a", "a"));
+        assertTrue(Strings.equalsIgnoreCase("a", "A"));
+        assertFalse(Strings.equalsIgnoreCase("a", "b"));
     }
 
 

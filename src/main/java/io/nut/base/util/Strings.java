@@ -1101,11 +1101,11 @@ public class Strings
         return sb.toString();
     }
 
-    public static boolean safeEquals(String s1, String s2)
+    public static boolean equals(String s1, String s2)
     {
         return s1==null ? s2==null : s1.equals(s2);
     }
-    public static boolean safeEqualsIgnoreCase(String s1, String s2)
+    public static boolean equalsIgnoreCase(String s1, String s2)
     {
         return s1==null ? s2==null : s1.equalsIgnoreCase(s2);
     }
