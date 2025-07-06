@@ -37,7 +37,7 @@ public class PassphraseDeriverTest
         char[] password = "my-super-secret-password-123".toCharArray();
         int keyBits = 256;
         int pbkdf2Iterations = 10;
-        Kripto kripto = Kripto.getInstance().setMinimumPbkdf2Rounds(pbkdf2Iterations);
+        Kripto kripto = Kripto.getInstance().setMinDeriveRounds(pbkdf2Iterations);
 
         try (PassphraseDeriver keyDeriver = new PassphraseDeriver(password, keyBits, pbkdf2Iterations, true, kripto))
         {

@@ -18,12 +18,14 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.stego;
+package io.nut.base.crypto.stego;
 
+import io.nut.base.crypto.Derive;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyDerivation;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
+import io.nut.base.encoding.Ascii85;
 import io.nut.base.math.Nums;
 import io.nut.base.util.BitSetReader;
 import io.nut.base.util.BitSetWriter;
@@ -62,11 +64,10 @@ public class Steganography
     private static final String WORDS = "[ \n\r\t\f]+";
     private static final String HOLES = "\\S+";
     private static final byte[] IV16 = new byte[16];
-    private static final SecretKeyAlgorithm AES = SecretKeyAlgorithm.AES;
     private static final SecretKeyTransformation AES_CFB8_NOPADDING = SecretKeyTransformation.AES_CFB8_NoPadding;
 
     private static final byte[] SALT = "salt".getBytes(StandardCharsets.UTF_8);
-    private static final int ROUNDS = 2048;
+    private static final int ROUNDS = 500_000;
     private static final int KEY_BITS = 256;
 
 //    private static final StegoPack pk = new StegoPack0();
@@ -76,6 +77,9 @@ public class Steganography
     private final boolean mergeLines;
     private final boolean deflate;
     private final Kripto kripto;
+    private final Derive derive;
+    
+    private final SecretKeyDerivation derivation = SecretKeyDerivation.PBKDF2WithHmacSHA256;
     private volatile double bitsRatio=0;
     private volatile String bitsGauge="";
     
@@ -83,16 +87,17 @@ public class Steganography
                
     public Steganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate)
     {
-        this(columns, splitLines, mergeLines, deflate, false);
+        this(null, columns, splitLines, mergeLines, deflate);
     }
-    public Steganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate, boolean preferBouncyCastle)
+    public Steganography(Kripto kripto, int columns, boolean splitLines, boolean mergeLines, boolean deflate)
     {
+        this.kripto = kripto==null ? kripto=Kripto.getInstance(true) : kripto;
+        this.derive = kripto.getDerive(derivation);
         this.columns = columns;
         this.splitLines = splitLines;
         this.mergeLines = mergeLines;
         this.deflate = deflate;
-        this.kripto = Kripto.getInstance(preferBouncyCastle);
-        this.secureRandom = Kripto.getSecureRandomStrong();
+        this.secureRandom = Kripto.getSecureRandom();
     }
 
     public double getBitsRatio()
@@ -377,21 +382,21 @@ public class Steganography
         decodeNH(holes, d, n, h, 0, wbits);
     }
 
-    public SecretKey deriveSecretKey(char[] passphrase) throws NoSuchAlgorithmException, InvalidKeySpecException
+    public SecretKey deriveSecretKey(char[] passphrase) throws InvalidKeySpecException
     {
         if(passphrase==null || passphrase.length==0)
         {
             return null;
         }
-        return kripto.deriveSecretKey(passphrase, SALT, ROUNDS, KEY_BITS, SecretKeyDerivation.PBKDF2WithHmacSHA256, AES);
+        return derive.deriveSecretKey(passphrase, SALT, ROUNDS, KEY_BITS, SecretKeyAlgorithm.AES);
     }
-    public SecretKey getSecretKey(byte[] passphrase) throws NoSuchAlgorithmException, InvalidKeySpecException
+    public SecretKey getSecretKey(byte[] passphrase) throws InvalidKeySpecException
     {
         if(passphrase==null || passphrase.length==0)
         {
             return null;
         }
-        return kripto.getSecretKey(passphrase, AES);
+        return kripto.getSecretKey(passphrase, SecretKeyAlgorithm.AES);
     }
 
     public String encode(String text, byte[] msg, SecretKey key)
@@ -435,10 +440,10 @@ public class Steganography
     public String justify(String text) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
         byte[] msg = new byte[1024];
-        byte[] pass = new byte[32];
         this.secureRandom.nextBytes(msg);
-        this.secureRandom.nextBytes(pass);
-        return encode(text,msg,getSecretKey(pass));
+        char[] passphrase = Ascii85.encode(msg);
+        SecretKey key = derive.deriveSecretKeyAES(passphrase, SALT, ROUNDS, KEY_BITS);
+        return encode(text, msg, key);
     }
 
     public byte[] decode(String text, SecretKey key)

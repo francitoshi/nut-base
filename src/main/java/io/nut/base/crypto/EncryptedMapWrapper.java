@@ -49,9 +49,10 @@ public class EncryptedMapWrapper<K, V>
         byte[] keySalt = (saltSeed+"key").getBytes(StandardCharsets.UTF_8);
         byte[] valSalt = (saltSeed+"val").getBytes(StandardCharsets.UTF_8);
         
-        SecretKey macKey = kripto.deriveSecretKey(passphrase, macSalt, rounds, keyBits, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
-        SecretKey keyKey = kripto.deriveSecretKey(passphrase, keySalt, rounds, keyBits, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
-        SecretKey valKey = kripto.deriveSecretKey(passphrase, valSalt, rounds, keyBits, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
+        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        SecretKey macKey = derive.deriveSecretKey(passphrase, macSalt, rounds, keyBits, SecretKeyAlgorithm.AES);
+        SecretKey keyKey = derive.deriveSecretKey(passphrase, keySalt, rounds, keyBits, SecretKeyAlgorithm.AES);
+        SecretKey valKey = derive.deriveSecretKey(passphrase, valSalt, rounds, keyBits, SecretKeyAlgorithm.AES);
                 
         this.keySerializer = new AesSivCtrSerializer<>(HMAC.HmacSHA256, macKey, keyKey, ks, kripto);
         this.valSerializer = new AesGcmSerializer<>(valKey, vs, kripto);

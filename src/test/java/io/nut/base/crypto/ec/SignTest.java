@@ -21,6 +21,7 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -40,29 +41,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class SignTest
 {
     
-    public SignTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
+    static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
 
  
     /**
@@ -162,7 +141,7 @@ public class SignTest
         long[] nanos = new long[sign.length];
         
         String helloWorld = "Hello World!!!";
-        byte[] msg = Digest.sha256(helloWorld.getBytes());
+        byte[] msg = SHA256.digest(helloWorld.getBytes());
 
         long ms = 0;
         int[] count = new int[sign.length];

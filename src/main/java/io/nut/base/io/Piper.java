@@ -124,7 +124,7 @@ public class Piper
             {
                 // Log exceptions, which are expected when a connection is closed by either party.
                 // Using a finer log level as this is often not a SEVERE application error.
-                Logger.getLogger(Piper.class.getName()).log(Level.FINER, "Piper worker '" + name + "' stopped due to IOException: " + ex.getMessage());
+                Logger.getLogger(Piper.class.getName()).log(Level.FINER, "Piper worker ''{0}'' stopped due to IOException: {1}", new Object[]{name, ex.getMessage()});
             }
             finally
             {

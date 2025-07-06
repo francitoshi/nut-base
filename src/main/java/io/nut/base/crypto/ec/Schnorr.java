@@ -21,6 +21,7 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
@@ -28,11 +29,12 @@ import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Objects;
 
 public class Schnorr extends Sign
 {    
+    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    
     public Schnorr(Curve curve)
     {
         super(curve);
@@ -40,21 +42,14 @@ public class Schnorr extends Sign
     
     private static byte[] taggedHash(String tag, byte[] msg)
     {
-        try
-        {
-            MessageDigest md = MessageDigest.getInstance(Digest.SHA256);
-            //sha256(tag)
-            byte[] tagHash = md.digest(tag.getBytes());
-            //sha256(sha256(tag)+sha256(tag)+msg)
-            md.update(tagHash);
-            md.update(tagHash);
-            md.update(msg);
-            return md.digest();
-        }
-        catch (NoSuchAlgorithmException ex)
-        {
-            throw new RuntimeException(ex);
-        }
+        MessageDigest md = SHA256.get();
+        //sha256(tag)
+        byte[] tagHash = md.digest(tag.getBytes());
+        //sha256(sha256(tag)+sha256(tag)+msg)
+        md.update(tagHash);
+        md.update(tagHash);
+        md.update(msg);
+        return md.digest();
     }
     
     @Override
@@ -124,7 +119,7 @@ public class Schnorr extends Sign
         BigInteger[] rs=null;
         for(int i=0;rs==null;i++)
         {
-            BigInteger k = Utils.asBigInteger( i==0 ? auxRand : (auxRand=Digest.sha256(auxRand)));
+            BigInteger k = Utils.asBigInteger( i==0 ? auxRand : (auxRand=SHA256.digest(auxRand)));
             rs = sign(msgNum, secKeyNum, k);
         }
         byte[] r = asBytes(rs[0]);

@@ -1,7 +1,7 @@
 /*
  *  ExtKey.java
  *
- *  Copyright (C) 2023-2024 francitoshi@gmail.com
+ *  Copyright (C) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.alt.RIPEMD160;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.encoding.Base58;
@@ -38,6 +39,8 @@ import java.util.Objects;
  */
 public class ExtKey
 {
+    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    
     static final int PUBKEY = 1;
     static final int PRVKEY = 2;
     
@@ -84,7 +87,7 @@ public class ExtKey
         bb.get(this.key = new byte[33]);
         byte[] checksum = new byte[4];
         bb.get(checksum);
-        byte[] checksum2 = Digest.sha256Twice(bytes82,0,78);
+        byte[] checksum2 = SHA256.digestTwice(bytes82,0,78);
         if(Utils.compare(checksum, 0, 4, checksum2, 0, 4)!=0)
         {
             throw new IllegalArgumentException("invalid checksum");
@@ -149,7 +152,7 @@ public class ExtKey
     public byte[] toBytes82()
     {
         byte[] bytes78 = toBytes78();
-        byte[] checksum = Arrays.copyOfRange( Digest.sha256Twice(bytes78), 0, 4);
+        byte[] checksum = Arrays.copyOfRange( SHA256.digestTwice(bytes78), 0, 4);
         return ByteBuffer.allocate(82).put(bytes78).put(checksum).array();
     }
     

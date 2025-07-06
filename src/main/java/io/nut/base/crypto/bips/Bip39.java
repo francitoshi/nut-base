@@ -24,6 +24,7 @@ package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.alt.PBKDF2SHA512;
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto;
 import io.nut.base.util.Strings;
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -75,6 +76,8 @@ public class Bip39
     }
 
     public static final int PBKDF2_ROUNDS = 2048;
+
+    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
     
     private static String[] split(String words)
     {
@@ -184,7 +187,7 @@ public class Bip39
         }
         // Take the digest of the entropy.
 
-        byte[] hash = Digest.sha256(entropy);
+        byte[] hash = SHA256.digest(entropy);
         boolean[] hashBits = bytesToBits(hash);
 
         // Check all the checksum bits.
@@ -218,7 +221,7 @@ public class Bip39
 
         // We take initial entropy of ENT bits and compute its
         // checksum by taking first ENT / 32 bits of its SHA256 hash.
-        byte[] hash = Digest.sha256(entropy);
+        byte[] hash = SHA256.digest(entropy);
         boolean[] hashBits = bytesToBits(hash);
 
         boolean[] entropyBits = bytesToBits(entropy);

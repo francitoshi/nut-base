@@ -44,6 +44,8 @@ import java.util.Objects;
  */
 public class Bip32
 {
+    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    
     private static final BigInteger N = Secp256k1.INSTANCE.n; 
     private static final ECDSA ECDSA = Sign.SECP256K1_ECDSA;
     
@@ -215,7 +217,7 @@ public class Bip32
         {
             pubKey = parent.key;
         }
-        return Arrays.copyOf(Digest.ripemd160(Digest.sha256(pubKey)),4);
+        return Arrays.copyOf(SHA256.sha256ripemd160(pubKey),4);
     }
         
     private final ExtKey masterPub;

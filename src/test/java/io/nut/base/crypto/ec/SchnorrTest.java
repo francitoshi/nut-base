@@ -21,6 +21,7 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.Utils;
 import io.nut.base.util.concurrent.pipeline.Pipe;
@@ -123,7 +124,8 @@ public class SchnorrTest
 
     static final int LOOPS = 1000;
     static final int MS_TO_LOOP = 2_000;
-    
+    static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+
     /**
      * Test of sign method, of class Schnorr.
      */
@@ -134,7 +136,7 @@ public class SchnorrTest
         Schnorr schnorr = Sign.SECP256K1_SCHNORR;
         
         String helloWorld = "Hello World!!!";
-        byte[] msg = Digest.sha256(helloWorld.getBytes());
+        byte[] msg = SHA256.digest(helloWorld.getBytes());
         long t0 = System.nanoTime();
         long t1 = 0;
         long ms = 0;
@@ -276,7 +278,7 @@ public class SchnorrTest
         }));
 
         String helloWorld = "Hello World!!!";
-        byte[] msg = Digest.sha256(helloWorld.getBytes());
+        byte[] msg = SHA256.digest(helloWorld.getBytes());
         long t0 = System.nanoTime();
         long t1 = 0;
         long ms = 0;
@@ -352,7 +354,7 @@ public class SchnorrTest
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Schnorr instance = Sign.SECP256K1_SCHNORR;
         String helloWorld = "Hello World!!!";
-        byte[] msg = Digest.sha256(helloWorld.getBytes());
+        byte[] msg = SHA256.digest(helloWorld.getBytes());
         long t0;
         long t1;
         long ms = 0;
@@ -386,7 +388,7 @@ public class SchnorrTest
         Sign instance = Sign.SECP256K1_SCHNORR;
         
         String helloWorld = "Hello World!!!";
-        BigInteger msg = Utils.asBigInteger(Digest.sha256(helloWorld.getBytes()));
+        BigInteger msg = Utils.asBigInteger(SHA256.digest(helloWorld.getBytes()));
         long t0;
         long t1;
         long ms = 0;

@@ -20,6 +20,7 @@
  */
 package io.nut.base.serializer;
 
+import io.nut.base.crypto.Derive;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyDerivation;
@@ -39,11 +40,12 @@ public class AesGcmSerializerTest
     @Test
     public void testSome() throws NoSuchAlgorithmException, InvalidKeySpecException
     {
-        Kripto kripto = Kripto.getInstance();
+        Kripto kripto = Kripto.getInstance().setMinDeriveRounds(8);
         
         char[] passphrase = "passphrase".toCharArray();
         byte[] salt = "salt".getBytes();
-        SecretKey sk = kripto.deriveSecretKey(passphrase, salt, 8, 256, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
+        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        SecretKey sk = derive.deriveSecretKey(passphrase, salt, 8, 256, SecretKeyAlgorithm.AES);
 
         StringSerializer ss = new StringSerializer();
         

@@ -9,6 +9,7 @@
 package io.nut.base.encoding;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -18,8 +19,9 @@ import java.util.Arrays;
 /**
  * Converts between an array of bytes and a Base58Check string. Not instantiable.
  */
-public final class Base58Check {
-
+public final class Base58Check 
+{
+    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
 	/*---- Static functions ----*/
 
     // Adds the checksum and converts to Base58Check. Note that the caller needs to prepend the version byte(s).
@@ -45,11 +47,11 @@ public final class Base58Check {
         return sb.reverse().toString();
     }
 
-
+    
     // Returns a new byte array by concatenating the given array with its checksum.
     static byte[] addCheckHash(byte[] data) {
         try {
-            byte[] hash = Arrays.copyOf(Digest.sha256Twice(data), 4);
+            byte[] hash = Arrays.copyOf(SHA256.digestTwice(data), 4);
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
             buf.write(data);
             buf.write(hash);
@@ -66,7 +68,7 @@ public final class Base58Check {
         byte[] concat = base58ToRawBytes(s);
         byte[] data = Arrays.copyOf(concat, concat.length - 4);
         byte[] hash = Arrays.copyOfRange(concat, concat.length - 4, concat.length);
-        byte[] rehash = Arrays.copyOf(Digest.sha256Twice(data), 4);
+        byte[] rehash = Arrays.copyOf(SHA256.digestTwice(data), 4);
         if (!Arrays.equals(rehash, hash))
             throw new IllegalArgumentException("Checksum mismatch");
         return data;

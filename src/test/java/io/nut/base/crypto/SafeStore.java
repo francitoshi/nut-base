@@ -20,6 +20,8 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
+import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.util.Utils;
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,6 +50,7 @@ public class SafeStore
     private static final int DEFAULT_ROUNDS = 600_000; // Iteraciones para PBKDF2
 
     private Kripto kripto;
+    private Derive derive;
     private final File file;
     private final char[] charKey;  // Clave como char[] (puede ser null)
     private final byte[] iv;       // Vector de inicialización
@@ -65,6 +68,7 @@ public class SafeStore
     public SafeStore(File file, char[] key, String appName, boolean atomic, int rounds, Kripto kripto) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
         this.kripto = kripto==null ? Kripto.getInstance() : kripto;
+        this.derive = kripto.getDerivePBKDF2WithHmacSHA256();
         this.file = file;
         char[] app = appName.toCharArray();
         this.charKey = (key!=null) ? key : Utils.EMPTY_CHAR_ARRAY;
@@ -84,7 +88,7 @@ public class SafeStore
     {
         if(this.secretKey==null)
         {
-            this.secretKey = kripto.deriveSecretKey(this.charKey, salt, rounds, KEY_LENGTH, Kripto.PBKDF2WITHHMACSHA256, Kripto.AES);
+            this.secretKey = derive.deriveSecretKey(this.charKey, salt, rounds, KEY_LENGTH, SecretKeyAlgorithm.AES);
         }
         return this.secretKey;
     }
@@ -100,7 +104,7 @@ public class SafeStore
 
     private Cipher getCipher(int mode) throws InvalidKeyException, NoSuchAlgorithmException, InvalidAlgorithmParameterException, NoSuchPaddingException, InvalidKeySpecException
     {
-        return kripto.getCipher(getDerivedKey(), Kripto.AES_CBC_PKCS5PADDING, getIvParameterSpec(), mode);
+        return kripto.getCipher(getDerivedKey(), SecretKeyTransformation.AES_CBC_PKCS5Padding, getIvParameterSpec(), mode);
     }
     
     interface StoreWriter

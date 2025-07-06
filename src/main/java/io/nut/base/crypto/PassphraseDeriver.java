@@ -76,6 +76,7 @@ public final class PassphraseDeriver implements AutoCloseable
     private final Map<String, CachedKeyData> cache;
 
     private final Kripto kripto;
+    private final Derive derive;
 
     /**
      * Constructs a new DeterministicKeyDeriver. The provided master passphrase
@@ -97,6 +98,7 @@ public final class PassphraseDeriver implements AutoCloseable
     PassphraseDeriver(char[] masterPassphrase, int keyBits, int rounds, boolean cache, Kripto kripto) throws GeneralSecurityException
     {
         this.kripto = kripto;
+        this.derive = kripto.getDerivePBKDF2WithHmacSHA256();
         this.keybits = keyBits;
         this.rounds = rounds;
         this.cache = (cache ? new HashMap<>() : null);
@@ -104,7 +106,7 @@ public final class PassphraseDeriver implements AutoCloseable
         // Immediately encrypt the master passphrase for secure in-memory storage.
         SecretKey protectionKey = generateAesKey();
         byte[] iv = generateIv();
-        byte[] passphraseBytes = kripto.deriveSecretKeyEncoded(masterPassphrase, MASTER_SALT, rounds, keyBits, Kripto.SecretKeyDerivation.PBKDF2WithHmacSHA256);
+        byte[] passphraseBytes = derive.deriveSecretKeyEncoded(masterPassphrase, MASTER_SALT, rounds, keyBits);
         Arrays.fill(passphraseBytes, (byte) 0);
         byte[] encryptedKey = encrypt(passphraseBytes, protectionKey, iv);
 
@@ -168,7 +170,7 @@ public final class PassphraseDeriver implements AutoCloseable
             try
             {
                 byte[] salt = label.getBytes(StandardCharsets.UTF_8);
-                return kripto.deriveSecretKeyEncoded(masterChars, salt, rounds, keybits, Kripto.SecretKeyDerivation.PBKDF2WithHmacSHA256);
+                return derive.deriveSecretKeyEncoded(masterChars, salt, rounds, keybits);
             }
             finally
             {

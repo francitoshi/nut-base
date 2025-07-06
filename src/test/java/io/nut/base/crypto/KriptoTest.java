@@ -25,7 +25,6 @@ import io.nut.base.crypto.Kripto.KeyAgreementAlgorithm;
 import io.nut.base.crypto.Kripto.KeyPairAlgorithm;
 import io.nut.base.crypto.Kripto.KeyPairTransformation;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
-import io.nut.base.crypto.Kripto.SecretKeyDerivation;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.crypto.Kripto.SignatureAlgorithm;
 import io.nut.base.encoding.Hex;
@@ -34,7 +33,6 @@ import static io.nut.base.util.CharSets.UTF8;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.io.UnsupportedEncodingException;
-import java.math.BigInteger;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -133,29 +131,6 @@ public class KriptoTest
         
         assertEquals(plainText, decText);
         
-    }
-
-    @Test
-    public void testDerive() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException
-    {
-        Kripto instance = Kripto.getInstance().setMinimumPbkdf2Rounds(2048);
-        String plainText = "this is the plaintext";
-        char[] passphrase = "this is the key".toCharArray();
-        
-        byte[] salt = instance.deriveBytesSHA256("test"+"salt");
-        byte[] iv32 = instance.deriveBytesSHA256("test"+"iv");
-
-        SecretKey key = instance.deriveSecretKey(passphrase, salt, 2048, 256, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
-        
-        IvParameterSpec iv = instance.getIv(iv32,128);
-        byte[] encryptedBytes = instance.encrypt(key, SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, plainText.getBytes());
-
-        byte[] restoredBytes = instance.decrypt(key, SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, encryptedBytes);
-
-        String restoredText = new String(restoredBytes);
-        
-        assertEquals(plainText, restoredText);
-
     }
 
     @Test
@@ -614,8 +589,8 @@ public class KriptoTest
     {
         Kripto instance = Kripto.getInstanceBouncyCastle();
 
-        SecretKeyAlgorithm aes = Kripto.AES;
-        KeyPairAlgorithm rsa = Kripto.RSA;
+        SecretKeyAlgorithm aes = SecretKeyAlgorithm.AES;
+        KeyPairAlgorithm rsa = KeyPairAlgorithm.RSA;
 
         KeyGenerator keyGen = instance.getKeyGenerator(aes, 256);
         KeyPairGenerator keyPairGen = instance.getKeyPairGenerator(rsa, 2048);
@@ -626,7 +601,7 @@ public class KriptoTest
         SecretKey secKeySrc = keyGen.generateKey();
         PrivateKey prvKeySrc = keyPairGen.generateKeyPair().getPrivate();
 
-        SecretKeyTransformation aesCBC = Kripto.AES_CBC_PKCS5PADDING;
+        SecretKeyTransformation aesCBC = SecretKeyTransformation.AES_CBC_PKCS5Padding;
         SecretKeyTransformation aesGCM = Kripto.AES_GCM_NOPADDING;
 
         IvParameterSpec iv = instance.getIv(IV16, 128);

@@ -21,6 +21,7 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto.MessageDigestAlgorithm;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -99,6 +100,7 @@ public class ECDSATest
         
     }
  
+    static final Digest SHA256 = new Digest(null, MessageDigestAlgorithm.SHA256);
     /**
      * Test of sign method, of class ECDSA.
      * @throws java.lang.Exception
@@ -109,7 +111,7 @@ public class ECDSATest
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Sign instance = Sign.SECP256K1_ECDSA;
         String helloWorld = "Hello World!!!";
-        byte[] msg = Digest.sha256(helloWorld.getBytes());
+        byte[] msg = SHA256.digest(helloWorld.getBytes());
         long t0;
         long t1;
         long ms = 0;
@@ -142,7 +144,7 @@ public class ECDSATest
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Sign instance = Sign.SECP256K1_ECDSA;
         String helloWorld = "Hello World!!!";
-        BigInteger msg = Utils.asBigInteger(Digest.sha256(helloWorld.getBytes()));
+        BigInteger msg = Utils.asBigInteger(SHA256.digest(helloWorld.getBytes()));
         long t0;
         long t1;
         long ms = 0;

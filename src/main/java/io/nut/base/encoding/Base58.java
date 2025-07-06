@@ -18,6 +18,7 @@
 package io.nut.base.encoding;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.crypto.Kripto;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -55,6 +56,8 @@ public class Base58
     public static final char[] ALPHABET = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz".toCharArray();
     private static final char ENCODED_ZERO = ALPHABET[0];
     private static final int[] INDEXES = new int[128];
+
+    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
 
     static
     {
@@ -127,7 +130,7 @@ public class Base58
         byte[] addressBytes = new byte[1 + payload.length + 4];
         addressBytes[0] = (byte) version;
         System.arraycopy(payload, 0, addressBytes, 1, payload.length);
-        byte[] checksum = Digest.sha256Twice(addressBytes, 0, payload.length + 1);
+        byte[] checksum = SHA256.digestTwice(addressBytes, 0, payload.length + 1);
         System.arraycopy(checksum, 0, addressBytes, payload.length + 1, 4);
         return Base58.encode(addressBytes);
     }
@@ -206,7 +209,7 @@ public class Base58
         }
         byte[] data = Arrays.copyOfRange(decoded, 0, decoded.length - 4);
         byte[] checksum = Arrays.copyOfRange(decoded, decoded.length - 4, decoded.length);
-        byte[] actualChecksum = Arrays.copyOfRange(Digest.sha256Twice(data), 0, 4);
+        byte[] actualChecksum = Arrays.copyOfRange(SHA256.digestTwice(data), 0, 4);
         if (!Arrays.equals(checksum, actualChecksum))
         {
             throw new FormatException.InvalidChecksum();

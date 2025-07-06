@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.encoding.Ascii85;
+import io.nut.base.crypto.stego.Steganography;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.PrintStream;
@@ -49,7 +49,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.Normalizer;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
@@ -63,7 +62,6 @@ import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
-import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
@@ -79,11 +77,6 @@ public class Kripto
     ///// Static Values ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
    
-    /**
-     * The UTF-8 charset name constant.
-     */
-    public static final String UTF8 = StandardCharsets.UTF_8.name();
-    
     private static final String NOPADDING = "NoPadding";
     private static final String GCM = "GCM";
     
@@ -108,11 +101,6 @@ public class Kripto
     public static final int UNWRAP_MODE  = Cipher.UNWRAP_MODE;
     
     /**
-     * Constant for public key type, as defined in {@link Cipher#PUBLIC_KEY}.
-     */
-    public static final int PUBLIC_KEY   = Cipher.PUBLIC_KEY;
-    
-    /**
      * Constant for private key type, as defined in {@link Cipher#PRIVATE_KEY}.
      */
     public static final int PRIVATE_KEY  = Cipher.PRIVATE_KEY;
@@ -125,40 +113,7 @@ public class Kripto
     ////////////////////////////////////////////////////////////////////////////
     ///// GOOD PRACTICES ///////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Recommended key size in bits for symmetric encryption (safe level).
-     */
-    public static final int SYMETRIC_SAFE_KEY_BITS = 128;
     
-    /**
-     * Intermediate key size in bits for symmetric encryption (half level).
-     */
-    public static final int SYMETRIC_HALF_KEY_BITS = 192;
-    
-    /**
-     * High-security key size in bits for symmetric encryption (high level).
-     */
-    public static final int SYMETRIC_HIGH_KEY_BITS = 256;
-    
-    
-    private static final int MINIMUM_PBKDF2_ROUNDS = 310000;
-    
-    /**
-     * The AES algorithm for secret key operations.
-     */
-    public static final SecretKeyAlgorithm AES = SecretKeyAlgorithm.AES;
-    
-    /**
-     * The RSA algorithm for key pair operations.
-     */
-    public static final KeyPairAlgorithm RSA = KeyPairAlgorithm.RSA;
-        
-    /**
-     * AES transformation with CBC mode and PKCS5 padding.
-     */
-    public static final SecretKeyTransformation AES_CBC_PKCS5PADDING = SecretKeyTransformation.AES_CBC_PKCS5Padding;
-
     /**
      * AES transformation with GCM mode and no padding; DO NOT REPEAT IV, ALWAYS USE A RANDOM ONE.
      */
@@ -173,16 +128,6 @@ public class Kripto
      * Signature algorithm using SHA-256 with ECDSA.
      */
     public static final SignatureAlgorithm SHA256WITHECDSA = SignatureAlgorithm.SHA256withECDSA;
-
-    /**
-     * Message digest algorithm using SHA-256.
-     */
-    public static final MessageDigestAlgorithm SHA256 = MessageDigestAlgorithm.SHA256;
-    
-    /**
-     * Secret key derivation algorithm using PBKDF2 with HMAC SHA-256.
-     */
-    public static final SecretKeyDerivation PBKDF2WITHHMACSHA256 = SecretKeyDerivation.PBKDF2WithHmacSHA256;
 
     /**
      * Secret key derivation algorithm using PBKDF2 with HMAC SHA-512.
@@ -205,7 +150,6 @@ public class Kripto
         }
     }
         
-    private volatile int minimumPbkdf2Rounds = MINIMUM_PBKDF2_ROUNDS;
     
     /**
      * Returns a default instance of {@link Kripto} with no specific provider.
@@ -285,9 +229,14 @@ public class Kripto
         }
     }    
 
-    public Kripto setMinimumPbkdf2Rounds(int value)
+//    public static final int MINIMUM_PBKDF2_ROUNDS = 310000;
+    public static final int MINIMUM_PBKDF2_ROUNDS = 125_000;
+
+    volatile int minDeriveRounds = MINIMUM_PBKDF2_ROUNDS;
+
+    public Kripto setMinDeriveRounds(int value)
     {
-        this.minimumPbkdf2Rounds = value;
+        this.minDeriveRounds = value;
         return this;
     }
     
@@ -400,10 +349,13 @@ public class Kripto
 
     public enum MessageDigestAlgorithm
     {
+        MD5("MD5"), 
+        SHA1("SHA1"), 
         SHA224("SHA-224"), 
         SHA256("SHA-256"),                                                      //GOOD
         SHA384("SHA-384"),                                                      //GOOD
-        SHA512("SHA-512");                                                      //GOOD
+        SHA512("SHA-512"),                                                      //GOOD
+        RIPEMD160("RIPEMD160");                                                 //GOOD
 
         MessageDigestAlgorithm(String code)
         {
@@ -452,19 +404,38 @@ public class Kripto
     ///// PRIVATE METHODS //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    private MessageDigest getMessageDigest(String algorithm) throws NoSuchAlgorithmException
+    
+    /**
+     * Returns a {@link MessageDigest} instance for the specified algorithm.
+     *
+     * @param algorithm the message digest algorithm to use
+     * @return a MessageDigest instance
+     */
+    protected MessageDigest getMessageDigest(String algorithm)
     {
         try
         {
             return this.providerName==null ? MessageDigest.getInstance(algorithm) : MessageDigest.getInstance(algorithm, this.providerName);
         }
-        catch(NoSuchProviderException ex)
+        catch(NoSuchAlgorithmException | NoSuchProviderException ex)
         {
             if(this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
-            return MessageDigest.getInstance(algorithm);
+            try
+            {
+                if(this.providerName!=null)
+                {
+                    return MessageDigest.getInstance(algorithm);
+                }
+                throw new RuntimeException(ex.getMessage(), ex);
+            }
+            catch(NoSuchAlgorithmException ex2)
+            {
+                Logger.getLogger(Kripto.class.getName()).log(Level.SEVERE, null, ex2);
+                throw new RuntimeException(ex2.getMessage(), ex2);
+            }
         }
     }
 
@@ -524,7 +495,7 @@ public class Kripto
         }
     }    
     
-    private SecretKeyFactory getSecretKeyFactory(String algoritm) throws NoSuchAlgorithmException
+    protected SecretKeyFactory getSecretKeyFactory(String algoritm) throws NoSuchAlgorithmException
     {
         try
         {
@@ -635,9 +606,8 @@ public class Kripto
      *
      * @param algorithm the message digest algorithm to use
      * @return a MessageDigest instance
-     * @throws NoSuchAlgorithmException if the algorithm is not available
      */
-    public MessageDigest getMessageDigest(MessageDigestAlgorithm algorithm) throws NoSuchAlgorithmException
+    public MessageDigest getMessageDigest(MessageDigestAlgorithm algorithm)
     {
         return getMessageDigest(algorithm.code);
     }
@@ -646,9 +616,8 @@ public class Kripto
      * Returns a SHA-224 {@link MessageDigest} instance.
      *
      * @return a SHA-224 MessageDigest instance
-     * @throws NoSuchAlgorithmException if SHA-224 is not available
      */
-    public MessageDigest sha224() throws NoSuchAlgorithmException
+    public MessageDigest sha224()
     {
         return this.getMessageDigest(MessageDigestAlgorithm.SHA224);
     }
@@ -657,9 +626,8 @@ public class Kripto
      * Returns a SHA-256 {@link MessageDigest} instance.
      *
      * @return a SHA-256 MessageDigest instance
-     * @throws NoSuchAlgorithmException if SHA-256 is not available
      */
-    public MessageDigest sha256() throws NoSuchAlgorithmException
+    public MessageDigest sha256()
     {
         return this.getMessageDigest(MessageDigestAlgorithm.SHA256);
     }
@@ -668,9 +636,8 @@ public class Kripto
      * Returns a SHA-384 {@link MessageDigest} instance.
      *
      * @return a SHA-384 MessageDigest instance
-     * @throws NoSuchAlgorithmException if SHA-384 is not available
      */
-    public MessageDigest sha384() throws NoSuchAlgorithmException
+    public MessageDigest sha384()
     {
         return this.getMessageDigest(MessageDigestAlgorithm.SHA384);
     }
@@ -679,9 +646,8 @@ public class Kripto
      * Returns a SHA-512 {@link MessageDigest} instance.
      *
      * @return a SHA-512 MessageDigest instance
-     * @throws NoSuchAlgorithmException if SHA-512 is not available
      */
-    public MessageDigest sha512() throws NoSuchAlgorithmException
+    public MessageDigest sha512()
     {
         return this.getMessageDigest(MessageDigestAlgorithm.SHA512);
     }
@@ -891,73 +857,6 @@ public class Kripto
         return sha256.digest();
     }
     
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Key Derivation facilities ////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    
-    /**
-     * Derives a {@link SecretKey} from a passphrase using the specified 
-     * derivation algorithm.
-     *
-     * @param passphrase the passphrase to derive from
-     * @param salt the salt to use
-     * @param rounds the number of iteration rounds
-     * @param keyBits the desired key size in bits
-     * @param derivation the key derivation algorithm
-     * @param secretKeyAlgorithm the target secret key algorithm
-     * @return the derived SecretKey
-     * @throws InvalidKeySpecException if the key specification is invalid
-     */
-    public SecretKey deriveSecretKey(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation, SecretKeyAlgorithm secretKeyAlgorithm) throws InvalidKeySpecException
-    {
-        if(rounds<this.minimumPbkdf2Rounds)
-        {
-            throw new IllegalArgumentException("rounds = "+rounds+" < "+this.minimumPbkdf2Rounds);
-        }
-        try
-        {
-            SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
-            PBEKeySpec spec = new PBEKeySpec(passphrase, salt, rounds, keyBits);
-            SecretKey genericSecretKey = factory.generateSecret(spec);
-            return this.getSecretKey(genericSecretKey.getEncoded(), secretKeyAlgorithm);
-        }
-        catch (NoSuchAlgorithmException ex)
-        {
-            throw new IllegalArgumentException("Unsupported SecretKeyFactory algorithm: " + derivation.name(), ex);
-        }
-    }
-
-    public byte[] deriveSecretKeyEncoded(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws InvalidKeySpecException
-    {
-        if(rounds<this.minimumPbkdf2Rounds)
-        {
-            throw new IllegalArgumentException("rounds = "+rounds+" < "+this.minimumPbkdf2Rounds);
-        }
-        try
-        {
-            SecretKeyFactory factory = this.getSecretKeyFactory(derivation.name());
-            PBEKeySpec spec = new PBEKeySpec(passphrase, salt, rounds, keyBits);
-            SecretKey genericSecretKey = factory.generateSecret(spec);
-            return genericSecretKey.getEncoded();
-        }
-        catch (NoSuchAlgorithmException ex)
-        {
-            throw new IllegalArgumentException("Unsupported SecretKeyFactory algorithm: " + derivation.name(), ex);
-        }
-    }
-
-    public char[] deriveSecretKeyAscii85(char[] passphrase, byte[] salt, int rounds, int keyBits, SecretKeyDerivation derivation) throws InvalidKeySpecException
-    {
-        byte[] tmp = deriveSecretKeyEncoded(passphrase, salt, rounds, keyBits, derivation);
-        try
-        {
-            return Ascii85.encode(tmp);
-        }
-        finally
-        {
-            Arrays.fill(tmp, (byte)0);
-        }
-    }
     
     ////////////////////////////////////////////////////////////////////////////
     ///// KeyAgreement Algorithms ///////////////////////////
@@ -1407,4 +1306,42 @@ public class Kripto
     {
         return new KeyStoreManager(this.getKeyStorePKCS12());
     }
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Derive data  /////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    public Derive getDerive(SecretKeyDerivation derivation)
+    {
+        return new Derive(this, derivation);
+    }
+    
+    public Derive getDerivePBKDF2WithHmacSHA256()
+    {
+        return new Derive(this, SecretKeyDerivation.PBKDF2WithHmacSHA256);
+    }
+    
+    public Derive getDerivePBKDF2WithHmacSHA512()
+    {
+        return new Derive(this, SecretKeyDerivation.PBKDF2WithHmacSHA512);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Digest data  /////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    public Digest getDigest(MessageDigestAlgorithm algorithm)
+    {
+        return new Digest(this, algorithm);
+    }
+    
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Steganography ////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    public Steganography getSteganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate)
+    {
+        return new Steganography(this, columns, splitLines, mergeLines, deflate);
+    }
+    
 }

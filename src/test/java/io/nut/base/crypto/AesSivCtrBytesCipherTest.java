@@ -22,7 +22,6 @@ package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.HMAC;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
-import io.nut.base.crypto.Kripto.SecretKeyDerivation;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
@@ -44,15 +43,16 @@ public class AesSivCtrBytesCipherTest
         byte[] macSalt = "macSalt".getBytes(StandardCharsets.UTF_8);
         byte[] keySalt = "keySalt".getBytes(StandardCharsets.UTF_8);
         
-        Kripto kripto = Kripto.getInstance(true).setMinimumPbkdf2Rounds(8);
-        SecretKey hmacKey = kripto.deriveSecretKey(passphrase, macSalt, 8, 256, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
+        Kripto kripto = Kripto.getInstance(true).setMinDeriveRounds(8);
+        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        SecretKey hmacKey = derive.deriveSecretKey(passphrase, macSalt, 8, 256, SecretKeyAlgorithm.AES);
 
         int num = 10;
         String[] s = new String[num];
         
         for(int i=0;i<num;i++)
         {
-            SecretKey key = kripto.deriveSecretKey(passphrase, keySalt, 8, 256, SecretKeyDerivation.PBKDF2WithHmacSHA256, SecretKeyAlgorithm.AES);
+            SecretKey key = derive.deriveSecretKey(passphrase, keySalt, 8, 256, SecretKeyAlgorithm.AES);
             AesSivCtrBytesCipher instance = new AesSivCtrBytesCipher(HMAC.HmacSHA256, hmacKey, key);
             
             byte[] plaintext = ("plaintext"+i).getBytes(StandardCharsets.UTF_8);
