@@ -229,7 +229,6 @@ public class Kripto
         }
     }    
 
-//    public static final int MINIMUM_PBKDF2_ROUNDS = 310000;
     public static final int MINIMUM_PBKDF2_ROUNDS = 125_000;
 
     volatile int minDeriveRounds = MINIMUM_PBKDF2_ROUNDS;
@@ -1334,6 +1333,12 @@ public class Kripto
     {
         return new Digest(this, algorithm);
     }
+
+    public final Digest md5 = getDigest(MessageDigestAlgorithm.MD5);
+    public final Digest sha1 = getDigest(MessageDigestAlgorithm.SHA1);
+    public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
+    public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
+    public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
     
     ////////////////////////////////////////////////////////////////////////////
     ///// Steganography ////////////////////////////////////////////////////////
