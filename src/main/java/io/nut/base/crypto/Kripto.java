@@ -1340,6 +1340,11 @@ public class Kripto
     public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
     public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
     
+    public byte[] ripemd160_digest_sha256_digest(byte[] input) 
+    {
+        return ripemd160.digest(sha256.digest(input));
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     ///// Steganography ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
