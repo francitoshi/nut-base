@@ -216,7 +216,7 @@ public class KriptoTest
     {
         Kripto instance = Kripto.getInstance();
         {
-            MessageDigest sha224 = instance.sha224();
+            MessageDigest sha224 = instance.sha224.get();
             byte[] a = sha224.digest("The quick brown fox jumps over the lazy dog".getBytes(UTF8));
             byte[] b = sha224.digest("The quick brown fox jumps over the lazy dog.".getBytes(UTF8));
             byte[] c = sha224.digest("".getBytes(UTF8));
@@ -225,12 +225,12 @@ public class KriptoTest
             assertEquals("d14a028c2a3a2bc9476102bb288234c415a2b01f828ea62ac5b3e42f", Hex.encode(c));
         }
         {
-            MessageDigest sha256 = instance.sha256();
+            MessageDigest sha256 = instance.sha256.get();
             byte[] a = sha256.digest("".getBytes(UTF8));
             assertEquals("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", Hex.encode(a));
         }
         {
-            MessageDigest sha512 = instance.sha512();
+            MessageDigest sha512 = instance.sha512.get();
             byte[] a = sha512.digest("".getBytes(UTF8));
             assertEquals("cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e", Hex.encode(a));
         }
@@ -497,7 +497,7 @@ public class KriptoTest
     public void testNoProvier() throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
         Kripto instance = new Kripto("fake");
-        assertNotNull(instance.sha256());
+        assertNotNull(instance.sha256.get());
 
         KeyGenerator keyGenerator = instance.getKeyGenerator(SecretKeyAlgorithm.AES, 192);
         SecretKey secretKey = keyGenerator.generateKey();
@@ -519,7 +519,7 @@ public class KriptoTest
         Kripto forced = new Kripto("fake", true);
         try
         {
-            forced.sha256();
+            forced.sha256.get();
             fail("must throw an exception like ProviderException");
         }
         catch (ProviderException ex)

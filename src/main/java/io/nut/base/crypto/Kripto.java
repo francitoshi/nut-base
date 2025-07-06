@@ -610,46 +610,6 @@ public class Kripto
     {
         return getMessageDigest(algorithm.code);
     }
-    
-    /**
-     * Returns a SHA-224 {@link MessageDigest} instance.
-     *
-     * @return a SHA-224 MessageDigest instance
-     */
-    public MessageDigest sha224()
-    {
-        return this.getMessageDigest(MessageDigestAlgorithm.SHA224);
-    }
-    
-    /**
-     * Returns a SHA-256 {@link MessageDigest} instance.
-     *
-     * @return a SHA-256 MessageDigest instance
-     */
-    public MessageDigest sha256()
-    {
-        return this.getMessageDigest(MessageDigestAlgorithm.SHA256);
-    }
-    
-    /**
-     * Returns a SHA-384 {@link MessageDigest} instance.
-     *
-     * @return a SHA-384 MessageDigest instance
-     */
-    public MessageDigest sha384()
-    {
-        return this.getMessageDigest(MessageDigestAlgorithm.SHA384);
-    }
-    
-    /**
-     * Returns a SHA-512 {@link MessageDigest} instance.
-     *
-     * @return a SHA-512 MessageDigest instance
-     */
-    public MessageDigest sha512()
-    {
-        return this.getMessageDigest(MessageDigestAlgorithm.SHA512);
-    }
 
     ////////////////////////////////////////////////////////////////////////////
     ///// HMAC facilities //////////////////////////////////////////////////////
@@ -824,7 +784,7 @@ public class Kripto
      */
     public byte[] deriveBytesSHA256(CharSequence src) throws NoSuchAlgorithmException
     {
-        MessageDigest sha256 = this.sha256();
+        MessageDigest sha256 = this.sha256.get();
         sha256.update(normalizeNFKD(src).getBytes(StandardCharsets.UTF_8));
         return sha256.digest();
     }
@@ -838,7 +798,7 @@ public class Kripto
      */
     public byte[] deriveBytesSHA256(char[]... src) throws NoSuchAlgorithmException 
     {
-        MessageDigest sha256 = this.sha256();
+        MessageDigest sha256 = this.sha256.get();
         for(char[] item : src)
         {
             sha256.update(Byter.bytesUTF8(item));
@@ -848,7 +808,7 @@ public class Kripto
 
     public byte[] deriveBytesSHA256(byte[]... src) throws NoSuchAlgorithmException 
     {
-        MessageDigest sha256 = this.sha256();
+        MessageDigest sha256 = this.sha256.get();
         for(byte[] item : src)
         {
             sha256.update(item);
@@ -1336,7 +1296,9 @@ public class Kripto
 
     public final Digest md5 = getDigest(MessageDigestAlgorithm.MD5);
     public final Digest sha1 = getDigest(MessageDigestAlgorithm.SHA1);
+    public final Digest sha224 = getDigest(MessageDigestAlgorithm.SHA224);
     public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
+    public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
     public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
     public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
     
