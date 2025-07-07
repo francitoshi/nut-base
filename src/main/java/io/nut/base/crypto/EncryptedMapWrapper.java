@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.HMAC;
+import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyDerivation;
 import io.nut.base.serializer.AesSivCtrSerializer;
@@ -54,7 +54,7 @@ public class EncryptedMapWrapper<K, V>
         SecretKey keyKey = derive.deriveSecretKey(passphrase, keySalt, rounds, keyBits, SecretKeyAlgorithm.AES);
         SecretKey valKey = derive.deriveSecretKey(passphrase, valSalt, rounds, keyBits, SecretKeyAlgorithm.AES);
                 
-        this.keySerializer = new AesSivCtrSerializer<>(HMAC.HmacSHA256, macKey, keyKey, ks, kripto);
+        this.keySerializer = new AesSivCtrSerializer<>(Hmac.HmacSHA256, macKey, keyKey, ks, kripto);
         this.valSerializer = new AesGcmSerializer<>(valKey, vs, kripto);
     }
 

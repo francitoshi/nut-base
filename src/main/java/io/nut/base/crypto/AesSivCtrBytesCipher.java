@@ -21,7 +21,7 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.HMAC;
+import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
@@ -48,7 +48,7 @@ public class AesSivCtrBytesCipher implements BytesCipher
 {
 
     private final Kripto kripto;
-    private final HMAC hmacHash;
+    private final Hmac hmacHash;
     private final SecretKey hmacKey;
     private final SecretKey encryptionKey;
 
@@ -60,11 +60,11 @@ public class AesSivCtrBytesCipher implements BytesCipher
      * Constructs a DeterministicAesCtrBytesCipher with a default Kripto
      * instance.
      *
-     * @param hmacKey The secret key used to generate the synthetic IV via HMAC.
+     * @param hmacKey The secret key used to generate the synthetic IV via Hmac.
      * @param encryptionKey The secret key used for AES-CTR encryption. It is
      * strongly recommended that this key be different from the hmacKey.
      */
-    public AesSivCtrBytesCipher(HMAC hmacHash, SecretKey hmacKey, SecretKey encryptionKey)
+    public AesSivCtrBytesCipher(Hmac hmacHash, SecretKey hmacKey, SecretKey encryptionKey)
     {
         this(hmacHash, hmacKey, encryptionKey, null);
     }
@@ -73,12 +73,12 @@ public class AesSivCtrBytesCipher implements BytesCipher
      * Constructs a DeterministicAesCtrBytesCipher with a provided Kripto
      * instance.
      *
-     * @param hmacKey The secret key used to generate the synthetic IV via HMAC.
+     * @param hmacKey The secret key used to generate the synthetic IV via Hmac.
      * @param encryptionKey The secret key used for AES-CTR encryption.
      * @param kripto An optional Kripto helper instance. If null, a default
      * instance is created.
      */
-    public AesSivCtrBytesCipher(HMAC hmacHash, SecretKey hmacKey, SecretKey encryptionKey, Kripto kripto)
+    public AesSivCtrBytesCipher(Hmac hmacHash, SecretKey hmacKey, SecretKey encryptionKey, Kripto kripto)
     {
         if (hmacKey == null)
         {
@@ -103,8 +103,8 @@ public class AesSivCtrBytesCipher implements BytesCipher
     @Override
     public byte[] encrypt(byte[] plaintext) throws Exception
     {
-        // 1. Generate a synthetic, deterministic IV by applying HMAC to the plaintext.
-        byte[] iv = Arrays.copyOf(kripto.hmac(hmacHash, hmacKey, plaintext), AES_IV_LENGTH);
+        // 1. Generate a synthetic, deterministic IV by applying Hmac to the plaintext.
+        byte[] iv = Arrays.copyOf(kripto.getHMAC(hmacHash).digest(hmacKey, plaintext), AES_IV_LENGTH);
 
         // 2. Prepare the parameters for AES-CTR.
         IvParameterSpec ivSpec = new IvParameterSpec(iv);
@@ -148,7 +148,7 @@ public class AesSivCtrBytesCipher implements BytesCipher
 
         // 4. CRITICAL: Verify integrity. Recalculate the IV from the decrypted plaintext
         // and ensure it matches the IV that was sent with the ciphertext.
-        byte[] expectedIv = Arrays.copyOf(kripto.hmac(hmacHash, hmacKey, decryptedPlaintext), AES_IV_LENGTH);
+        byte[] expectedIv = Arrays.copyOf(kripto.getHMAC(hmacHash).digest(hmacKey, decryptedPlaintext), AES_IV_LENGTH);
 
         // Use a constant-time comparison to prevent timing attacks.
         if (!MessageDigest.isEqual(iv, expectedIv))

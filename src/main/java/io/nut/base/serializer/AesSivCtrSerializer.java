@@ -22,7 +22,7 @@ package io.nut.base.serializer;
 
 import io.nut.base.crypto.AesSivCtrBytesCipher;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.HMAC;
+import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.serializer.Serializer;
 import javax.crypto.SecretKey;
 import java.util.logging.Level;
@@ -39,13 +39,13 @@ public class AesSivCtrSerializer<T> extends AesSivCtrBytesCipher implements Seri
 {
     private final Serializer<T> serializer;
 
-    public AesSivCtrSerializer(HMAC hmac, SecretKey hmacKey, SecretKey encryptionKey, Serializer<T> serializer)
+    public AesSivCtrSerializer(Hmac hmac, SecretKey hmacKey, SecretKey encryptionKey, Serializer<T> serializer)
     {
         super(hmac, hmacKey, encryptionKey);
         this.serializer = serializer;
     }
 
-    public AesSivCtrSerializer(HMAC hmac, SecretKey hmacKey, SecretKey encryptionKey, Serializer<T> serializer, Kripto kripto)
+    public AesSivCtrSerializer(Hmac hmac, SecretKey hmacKey, SecretKey encryptionKey, Serializer<T> serializer, Kripto kripto)
     {
         super(hmac, hmacKey, encryptionKey, kripto);
         this.serializer = serializer;

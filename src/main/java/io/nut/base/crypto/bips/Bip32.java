@@ -22,7 +22,7 @@ package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.HMAC;
+import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.ec.ECDSA;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.crypto.ec.Sign;
@@ -80,7 +80,8 @@ public class Bip32
     
     public static ExtKey masterKeyGeneration(byte[] seed, int keyType, ExtKey.ScriptType scriptType, ExtKey.PolicyType policyType, ExtKey.Network network) throws InvalidKeyException
     {
-        byte[] I = kripto.hmac(HMAC.HmacSHA512, BITCOIN_SEED,seed);
+
+        byte[] I = kripto.getHMAC(Hmac.HmacSHA512).digest(BITCOIN_SEED,seed);
         byte[] IL = new byte[33];
         byte[] IR = new byte[32];
         ByteBuffer.wrap(I).get(IL, 1, 32).get(IR);
@@ -141,7 +142,7 @@ public class Bip32
             ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN).put(pubKey).putInt(childNumber);
         }
         
-        byte[] I = kripto.hmac(HMAC.HmacSHA512, parent.chainCode, data);
+        byte[] I = kripto.getHMAC(Hmac.HmacSHA512).digest(parent.chainCode, data);
         byte[] IL = new byte[32];
         byte[] IR = new byte[32];
         ByteBuffer.wrap(I).get(IL).get(IR);
@@ -182,7 +183,7 @@ public class Bip32
         
         byte[] data = new byte[33+4];
         ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN).put(parent.key).putInt(childNumber);
-        byte[] I = kripto.hmac(HMAC.HmacSHA512, parent.chainCode, data);
+        byte[] I = kripto.getHMAC(Hmac.HmacSHA512).digest(parent.chainCode, data);
         byte[] IL = new byte[32];
         byte[] IR = new byte[32];
         ByteBuffer.wrap(I).get(IL).get(IR);

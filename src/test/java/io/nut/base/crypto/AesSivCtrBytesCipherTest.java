@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.HMAC;
+import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -53,7 +53,7 @@ public class AesSivCtrBytesCipherTest
         for(int i=0;i<num;i++)
         {
             SecretKey key = derive.deriveSecretKey(passphrase, keySalt, 8, 256, SecretKeyAlgorithm.AES);
-            AesSivCtrBytesCipher instance = new AesSivCtrBytesCipher(HMAC.HmacSHA256, hmacKey, key);
+            AesSivCtrBytesCipher instance = new AesSivCtrBytesCipher(Hmac.HmacSHA256, hmacKey, key);
             
             byte[] plaintext = ("plaintext"+i).getBytes(StandardCharsets.UTF_8);
             

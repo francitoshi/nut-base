@@ -51,7 +51,7 @@ public class AesSivCtrSerializerTest
 
         StringSerializer ss = new StringSerializer();
         
-        AesSivCtrSerializer<String> instance = new AesSivCtrSerializer<>(Kripto.HMAC.HmacSHA256, hmacKey, codeKey, ss, kripto);
+        AesSivCtrSerializer<String> instance = new AesSivCtrSerializer<>(Kripto.Hmac.HmacSHA256, hmacKey, codeKey, ss, kripto);
 
         String s0 = "";
         String r0 = instance.fromBytes(instance.toBytes(s0));

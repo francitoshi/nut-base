@@ -83,32 +83,32 @@ public class Kripto
     /**
      * Constant for encryption mode, as defined in {@link Cipher#ENCRYPT_MODE}.
      */
-    public static final int ENCRYPT_MODE = Cipher.ENCRYPT_MODE;
+    private static final int ENCRYPT_MODE = Cipher.ENCRYPT_MODE;
     
     /**
      * Constant for decryption mode, as defined in {@link Cipher#DECRYPT_MODE}.
      */
-    public static final int DECRYPT_MODE = Cipher.DECRYPT_MODE;
+    private static final int DECRYPT_MODE = Cipher.DECRYPT_MODE;
     
     /**
      * Constant for key wrapping mode, as defined in {@link Cipher#WRAP_MODE}.
      */
-    public static final int WRAP_MODE    = Cipher.WRAP_MODE;
+    private static final int WRAP_MODE    = Cipher.WRAP_MODE;
     
     /**
      * Constant for key unwrapping mode, as defined in {@link Cipher#UNWRAP_MODE}.
      */
-    public static final int UNWRAP_MODE  = Cipher.UNWRAP_MODE;
+    private static final int UNWRAP_MODE  = Cipher.UNWRAP_MODE;
     
     /**
      * Constant for private key type, as defined in {@link Cipher#PRIVATE_KEY}.
      */
-    public static final int PRIVATE_KEY  = Cipher.PRIVATE_KEY;
+    private static final int PRIVATE_KEY  = Cipher.PRIVATE_KEY;
     
     /**
      * Constant for secret key type, as defined in {@link Cipher#SECRET_KEY}.
      */
-    public static final int SECRET_KEY   = Cipher.SECRET_KEY;
+    private static final int SECRET_KEY   = Cipher.SECRET_KEY;
 
     ////////////////////////////////////////////////////////////////////////////
     ///// GOOD PRACTICES ///////////////////////////////////////////////////////
@@ -118,21 +118,6 @@ public class Kripto
      * AES transformation with GCM mode and no padding; DO NOT REPEAT IV, ALWAYS USE A RANDOM ONE.
      */
     public static final SecretKeyTransformation AES_GCM_NOPADDING = SecretKeyTransformation.AES_GCM_NoPadding;
-
-    /**
-     * RSA transformation with ECB mode and OAEP padding using SHA-256 and MGF1.
-     */
-    public static final KeyPairTransformation RSA_ECB_OAEPWITHSHA256ANDMGF1PADDING = KeyPairTransformation.RSA_ECB_OAEPWithSHA256AndMGF1Padding;
-
-    /**
-     * Signature algorithm using SHA-256 with ECDSA.
-     */
-    public static final SignatureAlgorithm SHA256WITHECDSA = SignatureAlgorithm.SHA256withECDSA;
-
-    /**
-     * Secret key derivation algorithm using PBKDF2 with HMAC SHA-512.
-     */
-    public static final SecretKeyDerivation PBKDF2WITHHMACSHA512 = SecretKeyDerivation.PBKDF2WithHmacSHA512;
 
     ////////////////////////////////////////////////////////////////////////////
     ///// Static Members /////////////////////////////////////////////////////
@@ -373,7 +358,7 @@ public class Kripto
         SHA256withECDSA,                                                        //GOOD
         SHA384withECDSA, SHA512withECDSA
     }
-    public enum HMAC
+    public enum Hmac
     { 
         HmacSHA224, HmacSHA256, HmacSHA384, HmacSHA512
     }
@@ -410,7 +395,7 @@ public class Kripto
      * @param algorithm the message digest algorithm to use
      * @return a MessageDigest instance
      */
-    protected MessageDigest getMessageDigest(String algorithm)
+    private MessageDigest getMessageDigest(String algorithm)
     {
         try
         {
@@ -623,55 +608,17 @@ public class Kripto
      * @param data
      * @return the HMAC facilities class.
      */
-    public byte[] hmac(HMAC hash, SecretKey key, byte[] data) 
+    public Mac getMac(Hmac hash, SecretKey key)
     {
-        return hmac(hash.name(), key, data);
+        try
+        {
+            return getMac(hash.name(), key);
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new IllegalArgumentException("Unsupported MAC algorithm: " + hash.name(), ex);
+        }
     }    
-    
-    public byte[] hmac(HMAC hash, byte[] key, byte[] data) 
-    {
-        return hmac(hash, new SecretKeySpec(key, hash.name()), data);
-    }
-    
-    public byte[] hmacSHA224(byte[] key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA224, key, data);
-    }
-    
-    public byte[] hmacSHA256(byte[] key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA256, key, data);
-    }
-    
-    public byte[] hmacSHA384(byte[] key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA384, key, data);
-    }
-    
-    public byte[] hmacSHA512(byte[] key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA512, key, data);
-    }
-    
-    public byte[] hmacSHA224(SecretKey key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA224, key, data);
-    }
-    
-    public byte[] hmacSHA256(SecretKey key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA256, key, data);
-    }
-    
-    public byte[] hmacSHA384(SecretKey key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA384, key, data);
-    }
-    
-    public byte[] hmacSHA512(SecretKey key, byte[] data) 
-    {
-        return hmac(HMAC.HmacSHA512, key, data);
-    }
     
     ////////////////////////////////////////////////////////////////////////////
     ///// Keys /////////////////////////////////////////////////////////////////
@@ -1305,6 +1252,16 @@ public class Kripto
     public byte[] ripemd160_digest_sha256_digest(byte[] input) 
     {
         return ripemd160.digest(sha256.digest(input));
+    }
+    
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Digest data  /////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    public HMAC getHMAC(Hmac algorithm)
+    {
+        return new HMAC(this, algorithm);
     }
     
     ////////////////////////////////////////////////////////////////////////////

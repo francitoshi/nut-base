@@ -57,7 +57,7 @@ public class Digest
     /**
      * The name of the message digest algorithm for this instance.
      */
-    final String algorithm;
+    final MessageDigestAlgorithm algorithm;
 
     /**
      * Creates a new Digest instance for a specific algorithm.
@@ -68,18 +68,6 @@ public class Digest
      * representing the desired algorithm.
      */
     public Digest(Kripto kripto, MessageDigestAlgorithm algorithm)
-    {
-        this(kripto, algorithm.code);
-    }
-
-    /**
-     * Creates a new Digest instance for a specific algorithm by name.
-     *
-     * @param kripto The crypto provider. If null, a default instance from
-     * {@link Kripto#getInstance()} will be used.
-     * @param algorithm The standard name of the algorithm (e.g., "SHA-256").
-     */
-    public Digest(Kripto kripto, String algorithm)
     {
         this.kripto = kripto==null ? Kripto.getInstance() : kripto;
         this.algorithm = algorithm;
