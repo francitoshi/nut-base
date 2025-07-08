@@ -65,50 +65,60 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * A utility class providing cryptographic operations including encryption, decryption,
- * key generation, digital signatures, and secure random number generation.
+ * A utility class providing cryptographic operations including encryption,
+ * decryption, key generation, digital signatures, and secure random number
+ * generation.
  *
  * @author franci
  */
 public class Kripto
 {
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Static Values ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-   
+
+    // The recommended IV size for GCM is 96 bits (12 bytes) for performance reasons.
+    public static final int GCM_IV_BITS = 96;
+    public static final int GCM_IV_LENGTH = GCM_IV_BITS / 8;
+
+    // The recommended TAG size for GCM is 128 bits (16 bytes) for security reasons.
+    public static final int GCM_TAG_BITS = 128;
+    public static final int GCM_TAG_LENGTH = GCM_TAG_BITS / 8;
+
     private static final String NOPADDING = "NoPadding";
     private static final String GCM = "GCM";
-    
+
     /**
      * Constant for encryption mode, as defined in {@link Cipher#ENCRYPT_MODE}.
      */
     private static final int ENCRYPT_MODE = Cipher.ENCRYPT_MODE;
-    
+
     /**
      * Constant for decryption mode, as defined in {@link Cipher#DECRYPT_MODE}.
      */
     private static final int DECRYPT_MODE = Cipher.DECRYPT_MODE;
-    
+
     /**
      * Constant for key wrapping mode, as defined in {@link Cipher#WRAP_MODE}.
      */
-    private static final int WRAP_MODE    = Cipher.WRAP_MODE;
-    
+    private static final int WRAP_MODE = Cipher.WRAP_MODE;
+
     /**
-     * Constant for key unwrapping mode, as defined in {@link Cipher#UNWRAP_MODE}.
+     * Constant for key unwrapping mode, as defined in
+     * {@link Cipher#UNWRAP_MODE}.
      */
-    private static final int UNWRAP_MODE  = Cipher.UNWRAP_MODE;
-    
+    private static final int UNWRAP_MODE = Cipher.UNWRAP_MODE;
+
     /**
      * Constant for private key type, as defined in {@link Cipher#PRIVATE_KEY}.
      */
-    private static final int PRIVATE_KEY  = Cipher.PRIVATE_KEY;
-    
+    private static final int PRIVATE_KEY = Cipher.PRIVATE_KEY;
+
     /**
      * Constant for secret key type, as defined in {@link Cipher#SECRET_KEY}.
      */
-    private static final int SECRET_KEY   = Cipher.SECRET_KEY;
+    private static final int SECRET_KEY = Cipher.SECRET_KEY;
 
     ////////////////////////////////////////////////////////////////////////////
     ///// GOOD PRACTICES ///////////////////////////////////////////////////////
@@ -128,14 +138,13 @@ public class Kripto
         try
         {
             return SecureRandom.getInstanceStrong();
-        } 
+        }
         catch (NoSuchAlgorithmException ex)
         {
             throw new RuntimeException("there is no strong algorithm", ex);
         }
     }
-        
-    
+
     /**
      * Returns a default instance of {@link Kripto} with no specific provider.
      *
@@ -145,34 +154,36 @@ public class Kripto
     {
         return new Kripto();
     }
-    
-    static Kripto getInstance(String providerName)
+
+    public static Kripto getInstance(String providerName)
     {
         return new Kripto(providerName);
     }
-    
+
     /**
-     * Returns an instance of {@link Kripto}, optionally preferring Bouncy Castle provider.
+     * Returns an instance of {@link Kripto}, optionally preferring Bouncy
+     * Castle provider.
      *
-     * @param preferBouncyCastle true to prefer Bouncy Castle, false for default provider
+     * @param preferBouncyCastle true to prefer Bouncy Castle, false for default
+     * provider
      * @return a new Kripto instance
      */
     public static Kripto getInstance(boolean preferBouncyCastle)
     {
         Kripto instance = preferBouncyCastle ? getInstanceBouncyCastle() : null;
-        return instance!=null ? instance : new Kripto();
+        return instance != null ? instance : new Kripto();
     }
-    
+
     private static volatile boolean registeredBouncyCastle;
-    
+
     public static boolean registerBouncyCastle()
     {
-        if(!registeredBouncyCastle)
+        if (!registeredBouncyCastle)
         {
             try
             {
                 Class<?> bcp = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
-                Security.addProvider((Provider) bcp.getDeclaredConstructor().newInstance()); 
+                Security.addProvider((Provider) bcp.getDeclaredConstructor().newInstance());
                 registeredBouncyCastle = true;
             }
             catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | InstantiationException | IllegalAccessException ex)
@@ -183,36 +194,39 @@ public class Kripto
         }
         return registeredBouncyCastle;
     }
-    
+
     /**
-     * Returns an instance of {@link Kripto} using the Bouncy Castle provider if available.
+     * Returns an instance of {@link Kripto} using the Bouncy Castle provider if
+     * available.
      *
-     * @return a new Kripto instance with Bouncy Castle provider, or null if unavailable
+     * @return a new Kripto instance with Bouncy Castle provider, or null if
+     * unavailable
      */
     public static Kripto getInstanceBouncyCastle()
     {
         return registerBouncyCastle() ? new Kripto("BC") : null;
     }
-    
+
     /**
-     * Checks if the Bouncy Castle provider's main class is available on the classpath.
+     * Checks if the Bouncy Castle provider's main class is available on the
+     * classpath.
      *
      * @return true if Bouncy Castle is present, false otherwise.
      */
-    public static boolean isBouncyCastleAvailable() 
+    public static boolean isBouncyCastleAvailable()
     {
-        try 
+        try
         {
             // Intentamos cargar la clase principal del proveedor de Bouncy Castle.
             // No necesitamos una instancia, solo verificar que la clase existe.
             Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
             return true;
-        } 
-        catch (ClassNotFoundException ex) 
+        }
+        catch (ClassNotFoundException ex)
         {
             return false;
         }
-    }    
+    }
 
     public static final int MINIMUM_PBKDF2_ROUNDS = 125_000;
 
@@ -223,7 +237,7 @@ public class Kripto
         this.minDeriveRounds = value;
         return this;
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Enums /////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -233,12 +247,12 @@ public class Kripto
     public enum SecretKeyTransformation
     {
         //Symetric Algorithms
-        AES_CBC_NoPadding("AES/CBC/NoPadding",              128, 128, 0),  //(128,192,256) iv=128
-        AES_GCM_NoPadding("AES/GCM/NoPadding",              128, 96, 128), //(128,192,256) iv=96   GOOD
-        AES_CTR_NoPadding("AES/CTR/NoPadding",              128, 128, 128),//(128,192,256) iv=128  GOOD
-        AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding",        128, 128, 0),  //(128,192,256) iv=128  GOOD
-        AES_CFB8_NoPadding("AES/CFB8/NoPadding",            128, 128, 0);  //(128)         iv=128
-        
+        AES_CBC_NoPadding("AES/CBC/NoPadding", 128, 128, 0), //(128,192,256) iv=128
+        AES_GCM_NoPadding("AES/GCM/NoPadding", 128, 96, 128), //(128,192,256) iv=96   GOOD
+        AES_CTR_NoPadding("AES/CTR/NoPadding", 128, 128, 128),//(128,192,256) iv=128  GOOD
+        AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding", 128, 128, 0), //(128,192,256) iv=128  GOOD
+        AES_CFB8_NoPadding("AES/CFB8/NoPadding", 128, 128, 0);  //(128)         iv=128
+
         public final String transformation;
         public final String algorithm;
         public final String mode;
@@ -248,7 +262,7 @@ public class Kripto
         public final int blockBits;
         public final int ivBits;
         public final int tagBits;
-        
+
         SecretKeyTransformation(String transformation, int blockBits, int ivBits, int tagBits)
         {
             String[] items = transformation.split("/");
@@ -262,9 +276,10 @@ public class Kripto
             this.ivBits = ivBits;
             this.tagBits = tagBits;
         }
-        
+
         /**
-         * Returns the maximum allowed key length for this transformation's algorithm.
+         * Returns the maximum allowed key length for this transformation's
+         * algorithm.
          *
          * @return the maximum key length in bits
          * @throws NoSuchAlgorithmException if the algorithm is not available
@@ -274,13 +289,13 @@ public class Kripto
             return Cipher.getMaxAllowedKeyLength(algorithm);
         }
     }
-    
+
     public enum KeyPairTransformation
     {
         @Deprecated
-        RSA_ECB_PKCS1Padding("RSA/ECB/PKCS1Padding"),                                  //(1024,2048)
+        RSA_ECB_PKCS1Padding("RSA/ECB/PKCS1Padding"), //(1024,2048)
         @Deprecated
-        RSA_ECB_OAEPWithSHA1AndMGF1Padding("RSA/ECB/OAEPWithSHA-1AndMGF1Padding"),     //(1024,2048)
+        RSA_ECB_OAEPWithSHA1AndMGF1Padding("RSA/ECB/OAEPWithSHA-1AndMGF1Padding"), //(1024,2048)
         RSA_ECB_OAEPWithSHA256AndMGF1Padding("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");  //(1024, 2048)  GOOD        
 
         public final String transformation;
@@ -288,7 +303,7 @@ public class Kripto
         public final String mode;
         public final String padding;
         public final boolean nopadding;
-        
+
         KeyPairTransformation(String transformation)
         {
             String[] items = transformation.split("/");
@@ -298,9 +313,10 @@ public class Kripto
             this.transformation = transformation;
             this.nopadding = NOPADDING.equalsIgnoreCase(padding);
         }
-        
+
         /**
-         * Returns the maximum allowed key length for this transformation's algorithm.
+         * Returns the maximum allowed key length for this transformation's
+         * algorithm.
          *
          * @return the maximum key length in bits
          * @throws NoSuchAlgorithmException if the algorithm is not available
@@ -310,80 +326,84 @@ public class Kripto
             return Cipher.getMaxAllowedKeyLength(algorithm);
         }
     }
-    
+
     public enum SecretKeyDerivation
     {
         PBKDF2WithHmacSHA256, PBKDF2WithHmacSHA512        //GOOD
     }
-    
+
     public enum SecretKeyAlgorithm
     {
         AES
     }
+
     public enum KeyPairAlgorithm //KeyPair Algorithms, KeyFactory Algorithms
     {
         DiffieHellman, DSA, RSA, //mandatory DiffieHellman (1024), DSA (1024), RSA (1024, 2048)
         EC                      //optional   EC (192, 256)
     }
-    
+
     public enum KeyAgreementAlgorithm
     {
         DiffieHellman, ECDH, ECMQV
     }
 
-    public enum MessageDigestAlgorithm
+        public enum MessageDigestAlgorithm
     {
-        MD5("MD5"), 
-        SHA1("SHA1"), 
-        SHA224("SHA-224"), 
-        SHA256("SHA-256"),                                                      //GOOD
-        SHA384("SHA-384"),                                                      //GOOD
-        SHA512("SHA-512"),                                                      //GOOD
+        MD5("MD5"),
+        SHA1("SHA1"),
+        SHA224("SHA-224"),
+        SHA256("SHA-256"), //GOOD
+        SHA384("SHA-384"), //GOOD
+        SHA512("SHA-512"), //GOOD
         RIPEMD160("RIPEMD160");                                                 //GOOD
 
         MessageDigestAlgorithm(String code)
         {
             this.code = code;
         }
-        final String code;
+        public final String code;
     }
 
     public enum SignatureAlgorithm
     {
-        NONEwithRSA, SHA224withRSA, 
-        SHA256withRSA,                                                          //GOOD 
+        NONEwithRSA, SHA224withRSA,
+        SHA256withRSA, //GOOD 
         SHA384withRSA, SHA512withRSA,
-        NONEwithDSA, SHA224withDSA, SHA256withDSA, 
-        NONEwithECDSA, SHA224withECDSA, 
-        SHA256withECDSA,                                                        //GOOD
+        NONEwithDSA, SHA224withDSA, SHA256withDSA,
+        NONEwithECDSA, SHA224withECDSA,
+        SHA256withECDSA, //GOOD
         SHA384withECDSA, SHA512withECDSA
     }
+
     public enum Hmac
-    { 
+    {
         HmacSHA224, HmacSHA256, HmacSHA384, HmacSHA512
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Instance Members /////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
     protected final String providerName;
     protected final boolean forceProvider;
-    
+
     protected Kripto()
     {
-        this(null,false);
+        this(null, false);
     }
+
     protected Kripto(String providerName)
     {
-        this(providerName,false);
+        this(providerName, false);
     }
+
     protected Kripto(String providerName, boolean forceProvider)
     {
         this.providerName = providerName;
         this.forceProvider = forceProvider;
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// PRIVATE METHODS //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -399,23 +419,23 @@ public class Kripto
     {
         try
         {
-            return this.providerName==null ? MessageDigest.getInstance(algorithm) : MessageDigest.getInstance(algorithm, this.providerName);
+            return this.providerName == null ? MessageDigest.getInstance(algorithm) : MessageDigest.getInstance(algorithm, this.providerName);
         }
-        catch(NoSuchAlgorithmException | NoSuchProviderException ex)
+        catch (NoSuchAlgorithmException | NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
             try
             {
-                if(this.providerName!=null)
+                if (this.providerName != null)
                 {
                     return MessageDigest.getInstance(algorithm);
                 }
                 throw new RuntimeException(ex.getMessage(), ex);
             }
-            catch(NoSuchAlgorithmException ex2)
+            catch (NoSuchAlgorithmException ex2)
             {
                 Logger.getLogger(Kripto.class.getName()).log(Level.SEVERE, null, ex2);
                 throw new RuntimeException(ex2.getMessage(), ex2);
@@ -427,11 +447,11 @@ public class Kripto
     {
         try
         {
-            return this.providerName==null ? Cipher.getInstance(transformation) : Cipher.getInstance(transformation, this.providerName);
+            return this.providerName == null ? Cipher.getInstance(transformation) : Cipher.getInstance(transformation, this.providerName);
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
@@ -439,17 +459,17 @@ public class Kripto
         }
     }
 
-    private KeyGenerator getKeyGenerator(String algorithm, int keyBits) throws NoSuchAlgorithmException 
+    private KeyGenerator getKeyGenerator(String algorithm, int keyBits) throws NoSuchAlgorithmException
     {
         try
         {
-            KeyGenerator keyGen = this.providerName==null ? KeyGenerator.getInstance(algorithm) : KeyGenerator.getInstance(algorithm, this.providerName);
+            KeyGenerator keyGen = this.providerName == null ? KeyGenerator.getInstance(algorithm) : KeyGenerator.getInstance(algorithm, this.providerName);
             keyGen.init(keyBits);
             return keyGen;
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
@@ -457,19 +477,19 @@ public class Kripto
             keyGen.init(keyBits);
             return keyGen;
         }
-    }    
+    }
 
-    private KeyPairGenerator getKeyPairGenerator(String algorithm, int keyBits) throws NoSuchAlgorithmException 
+    private KeyPairGenerator getKeyPairGenerator(String algorithm, int keyBits) throws NoSuchAlgorithmException
     {
         try
         {
-            KeyPairGenerator keyGen = this.providerName==null ? KeyPairGenerator.getInstance(algorithm) : KeyPairGenerator.getInstance(algorithm, this.providerName);
+            KeyPairGenerator keyGen = this.providerName == null ? KeyPairGenerator.getInstance(algorithm) : KeyPairGenerator.getInstance(algorithm, this.providerName);
             keyGen.initialize(keyBits);
             return keyGen;
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
@@ -477,69 +497,70 @@ public class Kripto
             keyGen.initialize(keyBits);
             return keyGen;
         }
-    }    
-    
+    }
+
     protected SecretKeyFactory getSecretKeyFactory(String algoritm) throws NoSuchAlgorithmException
     {
         try
         {
-            return this.providerName==null ? SecretKeyFactory.getInstance(algoritm) : SecretKeyFactory.getInstance(algoritm, this.providerName);
+            return this.providerName == null ? SecretKeyFactory.getInstance(algoritm) : SecretKeyFactory.getInstance(algoritm, this.providerName);
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
             return SecretKeyFactory.getInstance(algoritm);
-        }       
+        }
     }
 
     private KeyFactory getKeyFactory(String algoritm) throws NoSuchAlgorithmException
     {
         try
         {
-            return this.providerName==null ? KeyFactory.getInstance(algoritm) : KeyFactory.getInstance(algoritm, this.providerName);
+            return this.providerName == null ? KeyFactory.getInstance(algoritm) : KeyFactory.getInstance(algoritm, this.providerName);
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
             return KeyFactory.getInstance(algoritm);
-        }        
+        }
     }
-    
+
     private KeyAgreement getKeyAgreement(String algorithm) throws NoSuchAlgorithmException, NoSuchPaddingException
     {
         try
         {
             return this.providerName == null ? KeyAgreement.getInstance(algorithm) : KeyAgreement.getInstance(algorithm, this.providerName);
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
             return KeyAgreement.getInstance(algorithm);
-        }        
+        }
     }
+
     private Signature getSignature(String algorithm) throws NoSuchAlgorithmException
     {
         try
         {
-            return this.providerName==null ? Signature.getInstance(algorithm) : Signature.getInstance(algorithm, this.providerName);
+            return this.providerName == null ? Signature.getInstance(algorithm) : Signature.getInstance(algorithm, this.providerName);
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
             return Signature.getInstance(algorithm);
-        }        
+        }
     }
 
     private Mac getMac(String algorithm, SecretKey key) throws NoSuchAlgorithmException
@@ -547,16 +568,16 @@ public class Kripto
         Mac mac;
         try
         {
-            mac = this.providerName==null ? Mac.getInstance(algorithm) : Mac.getInstance(algorithm, this.providerName);
+            mac = this.providerName == null ? Mac.getInstance(algorithm) : Mac.getInstance(algorithm, this.providerName);
         }
-        catch(NoSuchProviderException ex)
+        catch (NoSuchProviderException ex)
         {
-            if(this.forceProvider)
+            if (this.forceProvider)
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
             mac = Mac.getInstance(algorithm);
-        }        
+        }
         try
         {
             mac.init(key);
@@ -566,21 +587,8 @@ public class Kripto
             throw new IllegalArgumentException("Invalid MAC key", e);
         }
         return mac;
-    }    
-    
-    private byte[] hmac(String algorithm, SecretKey key, byte[] data)
-    {
-        try
-        {
-            Mac mac = getMac(algorithm, key);
-            return mac.doFinal(data);
-        }
-        catch (NoSuchAlgorithmException ex)
-        {
-            throw new IllegalArgumentException("Unsupported MAC algorithm: " + algorithm, ex);
-        }
-    }    
-    
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Message Diggest //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -600,14 +608,6 @@ public class Kripto
     ///// HMAC facilities //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     
-    /**
-     * Returns a HMAC
-     *
-     * @param hash
-     * @param key
-     * @param data
-     * @return the HMAC facilities class.
-     */
     public Mac getMac(Hmac hash, SecretKey key)
     {
         try
@@ -618,8 +618,8 @@ public class Kripto
         {
             throw new IllegalArgumentException("Unsupported MAC algorithm: " + hash.name(), ex);
         }
-    }    
-    
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Keys /////////////////////////////////////////////////////////////////
     ///////////////////////////////////////////////////////////////////////////
@@ -637,31 +637,33 @@ public class Kripto
     }
 
     /**
-     * Returns a {@link KeyGenerator} for the specified secret key algorithm and key size.
+     * Returns a {@link KeyGenerator} for the specified secret key algorithm and
+     * key size.
      *
      * @param algorithm the secret key algorithm
      * @param keyBits the key size in bits
      * @return a KeyGenerator instance
      * @throws NoSuchAlgorithmException if the algorithm is not available
      */
-    public KeyGenerator getKeyGenerator(SecretKeyAlgorithm algorithm, int keyBits) throws NoSuchAlgorithmException 
+    public KeyGenerator getKeyGenerator(SecretKeyAlgorithm algorithm, int keyBits) throws NoSuchAlgorithmException
     {
         return getKeyGenerator(algorithm.name(), keyBits);
     }
-    
+
     /**
-     * Returns a {@link KeyPairGenerator} for the specified key pair algorithm and key size.
+     * Returns a {@link KeyPairGenerator} for the specified key pair algorithm
+     * and key size.
      *
      * @param algorithm the key pair algorithm
      * @param keyBits the key size in bits
      * @return a KeyPairGenerator instance
      * @throws NoSuchAlgorithmException if the algorithm is not available
      */
-    public KeyPairGenerator getKeyPairGenerator(KeyPairAlgorithm algorithm, int keyBits) throws NoSuchAlgorithmException 
+    public KeyPairGenerator getKeyPairGenerator(KeyPairAlgorithm algorithm, int keyBits) throws NoSuchAlgorithmException
     {
         return getKeyPairGenerator(algorithm.name(), keyBits);
-    }    
-       
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ///// IV ///////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -678,35 +680,33 @@ public class Kripto
     {
         return new IvParameterSpec(iv);
     }
-    
+
     /**
-     * Creates an {@link IvParameterSpec} from the provided IV bytes with specified bit length.
+     * Creates an {@link IvParameterSpec} from the provided IV bytes with
+     * specified bit length.
      *
      * @param iv the initialization vector bytes
      * @param ivBits the number of bits to use from the IV
      * @return an IvParameterSpec instance
-     * @throws NoSuchAlgorithmException if the algorithm is not available
-     * @throws NoSuchPaddingException if the padding is not available
      */
-    public IvParameterSpec getIv(byte[] iv, int ivBits) throws NoSuchAlgorithmException, NoSuchPaddingException
+    public IvParameterSpec getIv(byte[] iv, int ivBits)
     {
-        return new IvParameterSpec(iv, 0, ivBits/8);
+        return new IvParameterSpec(iv, 0, ivBits / 8);
     }
-    
+
     /**
-     * Creates a {@link GCMParameterSpec} for GCM mode from the provided IV bytes and bit length.
+     * Creates a {@link GCMParameterSpec} for GCM mode from the provided IV
+     * bytes and bit length.
      *
      * @param iv the initialization vector bytes
      * @param tagBits the tag length in bits
      * @return a GCMParameterSpec instance
-     * @throws NoSuchAlgorithmException if the algorithm is not available
-     * @throws NoSuchPaddingException if the padding is not available
      */
-    public GCMParameterSpec getIvGCM(byte[] iv, int tagBits) throws NoSuchAlgorithmException, NoSuchPaddingException
+    public GCMParameterSpec getIvGCM(byte[] iv, int tagBits) 
     {
         return new GCMParameterSpec(tagBits, iv);
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Salt facilities ////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -743,27 +743,26 @@ public class Kripto
      * @return the derived bytes
      * @throws NoSuchAlgorithmException if SHA-256 is not available
      */
-    public byte[] deriveBytesSHA256(char[]... src) throws NoSuchAlgorithmException 
+    public byte[] deriveBytesSHA256(char[]... src) throws NoSuchAlgorithmException
     {
         MessageDigest sha256 = this.sha256.get();
-        for(char[] item : src)
+        for (char[] item : src)
         {
             sha256.update(Byter.bytesUTF8(item));
         }
         return sha256.digest();
     }
 
-    public byte[] deriveBytesSHA256(byte[]... src) throws NoSuchAlgorithmException 
+    public byte[] deriveBytesSHA256(byte[]... src) throws NoSuchAlgorithmException
     {
         MessageDigest sha256 = this.sha256.get();
-        for(byte[] item : src)
+        for (byte[] item : src)
         {
             sha256.update(item);
         }
         return sha256.digest();
     }
-    
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// KeyAgreement Algorithms ///////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -787,13 +786,13 @@ public class Kripto
     {
         KeyFactory keyFactory = this.getKeyFactory(kpa.name());
         KeyAgreement keyAgreement = this.getKeyAgreement(kaa.name());
-        
+
         X509EncodedKeySpec foreignSpec = new X509EncodedKeySpec(foreignKeyBytes);
-        PublicKey  foreignKey = keyFactory.generatePublic(foreignSpec);
-        
+        PublicKey foreignKey = keyFactory.generatePublic(foreignSpec);
+
         PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(privateKeyBytes);
         PrivateKey privateKey = keyFactory.generatePrivate(privateSpec);
-        
+
         keyAgreement.init(privateKey);
         keyAgreement.doPhase(foreignKey, true);
         return keyAgreement.generateSecret(kpa.name());
@@ -820,9 +819,9 @@ public class Kripto
     {
         Cipher cipher = getCipher(transformation.transformation);
         cipher.init(opmode, secretKey, iv);
-        return cipher;        
+        return cipher;
     }
-    
+
     /**
      * Encrypts data using a secret key and specified transformation.
      *
@@ -840,9 +839,9 @@ public class Kripto
      */
     public byte[] encrypt(SecretKey secretKey, SecretKeyTransformation transformation, AlgorithmParameterSpec iv, byte[] data) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
-        return getCipher(secretKey, transformation, iv, ENCRYPT_MODE).doFinal(data);        
+        return getCipher(secretKey, transformation, iv, ENCRYPT_MODE).doFinal(data);
     }
-    
+
     /**
      * Decrypts data using a secret key and specified transformation.
      *
@@ -860,9 +859,9 @@ public class Kripto
      */
     public byte[] decrypt(SecretKey secretKey, SecretKeyTransformation transformation, AlgorithmParameterSpec iv, byte[] data) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
-        return getCipher(secretKey, transformation, iv, DECRYPT_MODE).doFinal(data);        
+        return getCipher(secretKey, transformation, iv, DECRYPT_MODE).doFinal(data);
     }
-    
+
     /**
      * Wraps a key using a secret key and specified transformation.
      *
@@ -880,9 +879,9 @@ public class Kripto
      */
     public byte[] wrap(SecretKey secretKey, SecretKeyTransformation transformation, AlgorithmParameterSpec iv, Key key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
-        return getCipher(secretKey, transformation, iv, WRAP_MODE).wrap(key);        
+        return getCipher(secretKey, transformation, iv, WRAP_MODE).wrap(key);
     }
-    
+
     /**
      * Unwraps a secret key using a secret key and specified transformation.
      *
@@ -901,9 +900,9 @@ public class Kripto
      */
     public SecretKey unwrap(SecretKey secretKey, SecretKeyTransformation transformation, AlgorithmParameterSpec iv, byte[] key, SecretKeyAlgorithm secretKeyAlgorithm) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
-        return (SecretKey) getCipher(secretKey, transformation, iv, UNWRAP_MODE).unwrap(key, secretKeyAlgorithm.name(), SECRET_KEY);        
+        return (SecretKey) getCipher(secretKey, transformation, iv, UNWRAP_MODE).unwrap(key, secretKeyAlgorithm.name(), SECRET_KEY);
     }
-    
+
     /**
      * Unwraps a private key using a secret key and specified transformation.
      *
@@ -922,9 +921,9 @@ public class Kripto
      */
     public PrivateKey unwrap(SecretKey secretKey, SecretKeyTransformation transformation, AlgorithmParameterSpec iv, byte[] key, KeyPairAlgorithm keyPairAlgorithm) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
-        return (PrivateKey) getCipher(secretKey, transformation, iv, UNWRAP_MODE).unwrap(key, keyPairAlgorithm.name(), PRIVATE_KEY);        
+        return (PrivateKey) getCipher(secretKey, transformation, iv, UNWRAP_MODE).unwrap(key, keyPairAlgorithm.name(), PRIVATE_KEY);
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// KeyPair Ciphers //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -945,9 +944,9 @@ public class Kripto
     {
         Cipher cipher = getCipher(transformation.transformation);
         cipher.init(opmode, pubKey);
-        return cipher;        
+        return cipher;
     }
-    
+
     /**
      * Returns a configured {@link Cipher} for private key operations.
      *
@@ -964,9 +963,9 @@ public class Kripto
     {
         Cipher cipher = getCipher(transformation.transformation);
         cipher.init(opmode, prvKey);
-        return cipher;        
+        return cipher;
     }
-    
+
     /**
      * Encrypts data using a public key and specified transformation.
      *
@@ -985,7 +984,7 @@ public class Kripto
     {
         return getCipher(pubKey, transformation, ENCRYPT_MODE).doFinal(data);
     }
-    
+
     /**
      * Decrypts data using a private key and specified transformation.
      *
@@ -1004,7 +1003,7 @@ public class Kripto
     {
         return getCipher(prvKey, transformation, DECRYPT_MODE).doFinal(data);
     }
-    
+
     /**
      * Wraps a secret key using a public key and specified transformation.
      *
@@ -1017,14 +1016,15 @@ public class Kripto
      * @throws InvalidKeyException if the key is invalid
      * @throws InvalidAlgorithmParameterException if the parameters are invalid
      * @throws IllegalBlockSizeException if the block size is invalid
-     * @throws BadPaddingException if the padding is invalid
-    // DO NOT IMPLEMENT wrap and unwrap for PublicKey or PrivateKey because it will fail, RSA will not allow such a big key as data
+     * @throws BadPaddingException if the padding is invalid // DO NOT IMPLEMENT
+     * wrap and unwrap for PublicKey or PrivateKey because it will fail, RSA
+     * will not allow such a big key as data
      */
     public byte[] wrap(PublicKey pubKey, KeyPairTransformation transformation, SecretKey key) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
         return getCipher(pubKey, transformation, WRAP_MODE).wrap(key);
     }
-    
+
     /**
      * Unwraps a secret key using a private key and specified transformation.
      *
@@ -1044,7 +1044,7 @@ public class Kripto
     {
         return (SecretKey) getCipher(prvKey, transformation, UNWRAP_MODE).unwrap(key, secretKeyAlgorithm.name(), SECRET_KEY);
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Signatures ///////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -1060,7 +1060,7 @@ public class Kripto
     {
         return this.getSignature(algorithm.name());
     }
-    
+
     /**
      * Signs data using a private key and specified signature algorithm.
      *
@@ -1082,9 +1082,10 @@ public class Kripto
         }
         return signature.sign();
     }
-    
+
     /**
-     * Verifies a signature using a public key and specified signature algorithm.
+     * Verifies a signature using a public key and specified signature
+     * algorithm.
      *
      * @param algorithm the signature algorithm to use
      * @param publicKey the public key for verification
@@ -1104,8 +1105,8 @@ public class Kripto
             signature.update(item);
         }
         return signature.verify(sign);
-    }       
-    
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Debug things /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -1117,20 +1118,20 @@ public class Kripto
      */
     public static void showProvidersInfo(PrintStream out)
     {
-        String hr10 = Strings.repeat('-',10);
-        String hr40 = Strings.repeat('-',40);
-        
-        for(Provider provider: Security.getProviders()) 
+        String hr10 = Strings.repeat('-', 10);
+        String hr40 = Strings.repeat('-', 40);
+
+        for (Provider provider : Security.getProviders())
         {
             out.println(hr40);
-            out.println(Strings.fill(hr10+' '+provider.getName()+' ','-',40));
+            out.println(Strings.fill(hr10 + ' ' + provider.getName() + ' ', '-', 40));
             out.println(hr40);
             showProviderInfo(out, provider);
             out.println(hr40);
             out.println();
         }
     }
-    
+
     /**
      * Displays information about a specific security provider.
      *
@@ -1140,9 +1141,9 @@ public class Kripto
     public static void showProviderInfo(PrintStream out, Provider provider)
     {
         out.println(provider.getInfo());
-        for (Provider.Service service: provider.getServices())
+        for (Provider.Service service : provider.getServices())
         {
-            out.println("  "+service.toString());
+            out.println("  " + service.toString());
         }
     }
 
@@ -1159,7 +1160,7 @@ public class Kripto
     {
         return strong ? StrongSecureRandomHolder.INSTANCE.secureRandom : new SecureRandom();
     }
-    
+
     public static SecureRandom getSecureRandom()
     {
         return new SecureRandom();
@@ -1169,11 +1170,12 @@ public class Kripto
     {
         return new Rand(getSecureRandom(strong));
     }
+
     public static Rand getRand()
     {
         return new Rand(getSecureRandom());
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Shared Secrets n of m share the secret key ///////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -1189,23 +1191,22 @@ public class Kripto
     {
         return new ShamirSharedSecret(n, k);
     }
-    
+
     public PassphraseDeriver getPassphraseDeriver(char[] masterPassphrase, int keyBits, int rounds, boolean cache) throws Exception
     {
         return new PassphraseDeriver(masterPassphrase, keyBits, rounds, cache, this);
     }
 
-    
     public KeyStore getKeyStore(String type) throws KeyStoreException, NoSuchProviderException
     {
-        return this.providerName==null ? KeyStore.getInstance(type) : KeyStore.getInstance(type, this.providerName);
+        return this.providerName == null ? KeyStore.getInstance(type) : KeyStore.getInstance(type, this.providerName);
     }
-    
+
     private static final String PKCS12 = "PKCS12";
-    
+
     public KeyStore getKeyStorePKCS12() throws KeyStoreException, NoSuchProviderException
     {
-        return this.providerName==null ? KeyStore.getInstance(PKCS12) : KeyStore.getInstance(PKCS12, this.providerName);
+        return this.providerName == null ? KeyStore.getInstance(PKCS12) : KeyStore.getInstance(PKCS12, this.providerName);
     }
 
     public KeyStoreManager getKeyStoreManager() throws KeyStoreException, NoSuchProviderException, Exception
@@ -1221,12 +1222,12 @@ public class Kripto
     {
         return new Derive(this, derivation);
     }
-    
+
     public Derive getDerivePBKDF2WithHmacSHA256()
     {
         return new Derive(this, SecretKeyDerivation.PBKDF2WithHmacSHA256);
     }
-    
+
     public Derive getDerivePBKDF2WithHmacSHA512()
     {
         return new Derive(this, SecretKeyDerivation.PBKDF2WithHmacSHA512);
@@ -1241,19 +1242,10 @@ public class Kripto
         return new Digest(this, algorithm);
     }
 
-    public final Digest md5 = getDigest(MessageDigestAlgorithm.MD5);
-    public final Digest sha1 = getDigest(MessageDigestAlgorithm.SHA1);
-    public final Digest sha224 = getDigest(MessageDigestAlgorithm.SHA224);
-    public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
-    public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
-    public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
-    public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
-    
-    public byte[] ripemd160_digest_sha256_digest(byte[] input) 
+    public byte[] ripemd160_digest_sha256_digest(byte[] input)
     {
         return ripemd160.digest(sha256.digest(input));
     }
-    
 
     ////////////////////////////////////////////////////////////////////////////
     ///// Digest data  /////////////////////////////////////////////////////////
@@ -1263,7 +1255,7 @@ public class Kripto
     {
         return new HMAC(this, algorithm);
     }
-    
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Steganography ////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -1272,5 +1264,16 @@ public class Kripto
     {
         return new Steganography(this, columns, splitLines, mergeLines, deflate);
     }
-    
+
+    //useful instances
+    public final Digest md5 = getDigest(MessageDigestAlgorithm.MD5);
+    public final Digest sha1 = getDigest(MessageDigestAlgorithm.SHA1);
+    public final Digest sha224 = getDigest(MessageDigestAlgorithm.SHA224);
+    public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
+    public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
+    public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
+    public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
+
+    public final Rand rand = getRand();
+
 }

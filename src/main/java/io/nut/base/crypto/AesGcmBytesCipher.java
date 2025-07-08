@@ -43,15 +43,14 @@ import java.nio.ByteBuffer; // Using ByteBuffer for cleaner array handling is a 
  */
 public class AesGcmBytesCipher implements BytesCipher
 {
-    protected static final Rand RAND = Kripto.getRand();
-    
     protected final Kripto kripto;
     protected final SecretKey key;
 
     // The recommended IV size for GCM is 96 bits (12 bytes) for performance reasons.
-    private static final int GCM_IV_BITS = 96;
-    private static final int GCM_IV_LENGTH = GCM_IV_BITS / 8;
+    private static final int GCM_IV_LENGTH = Kripto.GCM_IV_LENGTH;
 
+    // The recommended TAG size for GCM is 128 bits (16 bytes) for security reasons.
+    private static final int GCM_TAG_BITS = Kripto.GCM_TAG_BITS;
     /**
      * Constructs an AesGcmBytesCipher with a default Kripto instance.
      *
@@ -88,10 +87,10 @@ public class AesGcmBytesCipher implements BytesCipher
     public byte[] encrypt(byte[] plaintext) throws Exception
     {
         // 1. Generate a new, cryptographically random IV for each encryption. This is critical for GCM security.
-        byte[] iv = RAND.nextBytes(new byte[GCM_IV_LENGTH]);
+        byte[] iv = kripto.rand.nextBytes(new byte[GCM_IV_LENGTH]);
 
         // 2. Prepare GCM parameters.
-        GCMParameterSpec ivGCM = kripto.getIvGCM(iv, GCM_IV_BITS);
+        GCMParameterSpec ivGCM = kripto.getIvGCM(iv, GCM_TAG_BITS);
 
         // 3. Perform encryption. The result includes the authentication tag.
         byte[] encryptedData = kripto.encrypt(key, SecretKeyTransformation.AES_GCM_NoPadding, ivGCM, plaintext);
@@ -131,7 +130,7 @@ public class AesGcmBytesCipher implements BytesCipher
         byteBuffer.get(encryptedData);
 
         // 3. Prepare GCM parameters with the extracted IV.
-        GCMParameterSpec ivGCM = kripto.getIvGCM(iv, GCM_IV_BITS);
+        GCMParameterSpec ivGCM = kripto.getIvGCM(iv, GCM_TAG_BITS);
 
         // 4. Perform decryption. The underlying JCE provider will automatically
         // verify the authentication tag. If verification fails, it will throw an exception.

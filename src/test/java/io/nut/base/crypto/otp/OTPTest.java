@@ -1,5 +1,5 @@
 /*
- * TokenCalculatorTest.java
+ * OTPTest.java
  *
  * Copyright (c) 2021-2023 francitoshi@gmail.com
  *
@@ -22,15 +22,12 @@ package io.nut.base.crypto.otp;
 
 import io.nut.base.encoding.Base32String;
 import io.nut.base.encoding.Base64DecoderException;
+import io.nut.base.encoding.Hex;
 import io.nut.base.time.JavaTime;
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -38,33 +35,13 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class TokenCalculatorTest
+public class OTPTest
 {
-    
-    public TokenCalculatorTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-    static final String SECRET = "12345678901234567890";
+
+    static final String SECRET20 = "12345678901234567890";
+    static final String SECRET32 = "12345678901234567890123456789012";
+    static final String SECRET64 = "1234567890123456789012345678901234567890123456789012345678901234";
+    static final String[] SECRETS = {SECRET20, SECRET32, SECRET64};
     static String[][] TOTP_DATA =
     {
         //|  Time (sec) |   TOTP   |  Mode  |
@@ -89,20 +66,24 @@ public class TokenCalculatorTest
     };
  
     /**
-     * Test of TOTP_RFC6238 method, of class TokenCalculator.
+     * Test of TOTP_RFC6238 method, of class OTP.
      */
     @Test
-    public void testTOTP_RFC6238_5args()
+    public void testTOTP_RFC6238_5args() throws Base32String.DecodingException
     {
-        byte[] secret = "12345678901234567890".getBytes();
         for(int i=0;i<TOTP_DATA.length;i++)
         {
+            byte[] secret = SECRETS[i%3].getBytes();
             long time = Long.parseLong(TOTP_DATA[i][0]);
-            long expe = Long.parseLong(TOTP_DATA[i][1]);
-            TokenCalculator.HashAlgorithm algorithm = TokenCalculator.HashAlgorithm.valueOf(TOTP_DATA[i][2]);
+            String exps = TOTP_DATA[i][1];
+            String hash = TOTP_DATA[i][2];
+            OTP.Hmac hmac = OTP.Hmac.valueOf("Hmac"+hash);
             
-            int result = TokenCalculator.TOTP_RFC6238(secret, 30, time, 8, algorithm);
-            assertEquals(expe, result, "i="+i);
+            OTP otp = new OTP(hmac, false);
+            
+            String res = otp.TOTP(secret, 30, time, 8);
+            
+            assertEquals(exps, res, "i2="+i);
         }
     }
 
@@ -115,10 +96,12 @@ public class TokenCalculatorTest
     {
         String[] HOTP = {"755224", "287082", "359152", "969429", "338314", "254676", "287922", "162583", "399871", "520489"};
         
+        OTP otp = new OTP();
+        
         byte[] secret = "12345678901234567890".getBytes();
         for(int i=0;i<HOTP.length;i++)
         {
-            String result = TokenCalculator.HOTP(secret, i, 6, TokenCalculator.HashAlgorithm.SHA1);
+            String result = otp.HOTP(secret, i, 6);
             assertEquals(HOTP[i], result);
         }
     }
@@ -126,15 +109,15 @@ public class TokenCalculatorTest
     @Test
     public void howToUse() throws InvalidKeyException, Base32String.DecodingException, NoSuchAlgorithmException, GeneralSecurityException, Base64DecoderException, UnsupportedEncodingException
     {
-        String sharedSecret = "JBSWY3DPEHPK3PXP";
-        sharedSecret = sharedSecret.replace('0', 'O').replace('1', 'I');
-        byte[] sharedSecretBytes = Base32String.decode(sharedSecret);
-        final long counter = JavaTime.epochSecond()/TokenCalculator.TOTP_DEFAULT_PERIOD;
+        String sharedSecret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
+        int counter = (int) (JavaTime.epochSecond()/OTP.TOTP_DEFAULT_PERIOD);
+
+        OTP otp = new OTP(OTP.Hmac.HmacSHA1, true);
         
-        String otpResult = TokenCalculator.HOTP(sharedSecretBytes, counter, TokenCalculator.TOTP_DEFAULT_DIGITS, TokenCalculator.HashAlgorithm.SHA1);
+        String otpResult = otp.HOTP(sharedSecret, counter);
         
         System.out.println(otpResult);
-        System.out.println(OTP.TOTP(sharedSecret, 30, JavaTime.epochSecond()));
+        System.out.println(otp.TOTP(sharedSecret, 30, JavaTime.epochSecond()));
     }
     
 }
