@@ -89,6 +89,9 @@ public class JavaTime
     public static final DateTimeFormatter YYYY_MM_DD_HH_MM_SSxxx = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssxxx");//2019-10-04 02:03:00+02:00
 
     public static final DateTimeFormatter DD_MM_YYYY_HH_MM_SS = DateTimeFormatter.ofPattern("dd'/'MM'/'yyyy HH:mm:ss");//04-10-2019 02:03:04
+
+    public static final DateTimeFormatter HH_MM_SS = DateTimeFormatter.ofPattern("HH:mm:ss");//02:03:04
+    public static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");//02:03
     
     public static LocalDate max(LocalDate... t)
     {
