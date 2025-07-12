@@ -72,8 +72,8 @@ public class SafeStore
         this.file = file;
         char[] app = appName.toCharArray();
         this.charKey = (key!=null) ? key : Utils.EMPTY_CHAR_ARRAY;
-        this.iv = kripto.deriveBytesSHA256(IV_SEED, app, key);      //32 bytes
-        this.salt =  kripto.deriveBytesSHA256(SALT_SEED, app, key); //32 bytes
+        this.iv = kripto.deriveSaltSHA256(IV_SEED, app, key);      //32 bytes
+        this.salt =  kripto.deriveSaltSHA256(SALT_SEED, app, key); //32 bytes
         this.atomic = atomic;
         this.rounds = rounds;
     }

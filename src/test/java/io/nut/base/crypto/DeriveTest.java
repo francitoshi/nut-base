@@ -48,8 +48,8 @@ public class DeriveTest
         String plainText = "this is the plaintext";
         char[] passphrase = "this is the key".toCharArray();
         
-        byte[] salt = kripto.deriveBytesSHA256("test"+"salt");
-        byte[] iv32 = kripto.deriveBytesSHA256("test"+"iv");
+        byte[] salt = kripto.deriveSaltSHA256("test"+"salt");
+        byte[] iv32 = kripto.deriveSaltSHA256("test"+"iv");
 
         SecretKey key = derive.deriveSecretKeyAES(passphrase, salt, 2048, 256);
         

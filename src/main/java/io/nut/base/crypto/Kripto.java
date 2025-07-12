@@ -729,11 +729,11 @@ public class Kripto
      * @return the derived bytes
      * @throws NoSuchAlgorithmException if SHA-256 is not available
      */
-    public byte[] deriveBytesSHA256(CharSequence src) throws NoSuchAlgorithmException
+    public byte[] deriveSaltSHA256(CharSequence src) throws NoSuchAlgorithmException
     {
-        MessageDigest sha256 = this.sha256.get();
-        sha256.update(normalizeNFKD(src).getBytes(StandardCharsets.UTF_8));
-        return sha256.digest();
+        MessageDigest md = this.sha256.get();
+        md.update(normalizeNFKD(src).getBytes(StandardCharsets.UTF_8));
+        return md.digest();
     }
 
     /**
@@ -743,24 +743,24 @@ public class Kripto
      * @return the derived bytes
      * @throws NoSuchAlgorithmException if SHA-256 is not available
      */
-    public byte[] deriveBytesSHA256(char[]... src) throws NoSuchAlgorithmException
+    public byte[] deriveSaltSHA256(char[]... src) throws NoSuchAlgorithmException
     {
-        MessageDigest sha256 = this.sha256.get();
+        MessageDigest md = this.sha256.get();
         for (char[] item : src)
         {
-            sha256.update(Byter.bytesUTF8(item));
+            md.update(Byter.bytesUTF8(item));
         }
-        return sha256.digest();
+        return md.digest();
     }
 
-    public byte[] deriveBytesSHA256(byte[]... src) throws NoSuchAlgorithmException
+    public byte[] deriveSaltSHA256(byte[]... src) throws NoSuchAlgorithmException
     {
-        MessageDigest sha256 = this.sha256.get();
+        MessageDigest md = this.sha256.get();
         for (byte[] item : src)
         {
-            sha256.update(item);
+            md.update(item);
         }
-        return sha256.digest();
+        return md.digest();
     }
 
     ////////////////////////////////////////////////////////////////////////////
