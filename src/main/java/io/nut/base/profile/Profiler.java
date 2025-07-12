@@ -133,10 +133,10 @@ public class Profiler
                 label,
                 Long.toString(counter),
                 JavaTime.toString(Duration.ofNanos(ns), 2, resolution), 
-                counter > 0 ? perUnit(ns, counter) : "", 
+                counter > 0 ? JavaTime.toString(Duration.ofNanos(ns/counter), 2, resolution): "", 
                 counter > 0 ? perSecond(ns, counter) : "",
-                minNanos+"ns",
-                maxNanos+"ns"
+                JavaTime.toString(Duration.ofNanos(minNanos), 2, resolution),
+                JavaTime.toString(Duration.ofNanos(maxNanos), 2, resolution)
             };
         }
 
@@ -223,12 +223,6 @@ public class Profiler
         return "0s";
     }
 
-    public static String perUnit(long nanos, long count)
-    {
-        long n = nanos / count;
-        return duration(n);
-    }
-
     private static final long NANOS_PER_SECOND = TimeUnit.SECONDS.toNanos(1);
 
     public static String perSecond(long nanos, long count)
@@ -238,16 +232,16 @@ public class Profiler
     }
 
     private static final String[] UNITS = { "d", "h", "m", "s", "ms", "ns" };
-    private static final int[] MAX = { 1, 24, 60, 60, 1000, 1000_000 };
+    private static final int[] FRACTIONS = { 1, 24, 60, 60, 1000, 1000_000 };
 
     public static long[] split(long nanos)
     {
         long[] values = new long[UNITS.length];
-
+        long r = nanos;
         for (int i = UNITS.length - 1; i >= 0; i--)
         {
-            values[i] = nanos % MAX[i];
-            nanos /= MAX[i];
+            values[i] = r % FRACTIONS[i];
+            r /= FRACTIONS[i];
         }
 
         return values;

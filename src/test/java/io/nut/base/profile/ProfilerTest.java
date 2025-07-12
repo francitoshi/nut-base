@@ -20,6 +20,8 @@
  */
 package io.nut.base.profile;
 
+import io.nut.base.time.JavaTime;
+import io.nut.base.util.Utils;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -47,15 +49,17 @@ public class ProfilerTest
     @Test
     public void testExample1()
     {
-        Profiler profiler = new Profiler();
+        Profiler profiler = new Profiler(JavaTime.Resolution.MS);
         
         Profiler.Task a = profiler.getTask("a");
         
         a.start();
+        Utils.sleep(10);
         a.stop();
         a.count();
 
         a.start();
+        Utils.sleep(5);
         a.stop();
         a.count();
         
@@ -64,6 +68,7 @@ public class ProfilerTest
         Profiler.Task b = profiler.getTask("b");
         
         b.start();
+        Utils.sleep(15);
         b.stop();
         b.count();
         
