@@ -22,12 +22,8 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
-import java.io.Closeable;
-import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.MathContext;
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,10 +36,6 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -916,33 +908,7 @@ public class UtilsTest
         assertEquals(BigDecimal.ONE, Utils.add(BigDecimal.ONE, BigDecimal.ZERO));
         assertEquals(BigDecimal.valueOf(3), Utils.add(BigDecimal.ONE, BigDecimal.valueOf(2)));
         assertEquals(BigDecimal.valueOf(6), Utils.add(BigDecimal.ONE, BigDecimal.valueOf(2), BigDecimal.valueOf(3), null));
-	}
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_7()
-    {
-        assertEquals(BigInteger.ONE, Utils.bound(BigInteger.ONE, BigInteger.TEN, BigInteger.ZERO));
-        assertEquals(BigInteger.ONE, Utils.bound(BigInteger.ZERO, BigInteger.ONE, BigInteger.TEN));
-        assertEquals(BigInteger.ONE, Utils.bound(BigInteger.ZERO, BigInteger.TEN, BigInteger.ONE));
-        assertEquals(BigInteger.ONE, Utils.bound(BigInteger.ONE, BigInteger.TEN, BigInteger.ONE));
-        assertEquals(BigInteger.TEN, Utils.bound(BigInteger.ONE, BigInteger.TEN, BigInteger.TEN));
     }
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_8()
-    {
-        assertEquals(BigDecimal.ONE, Utils.bound(BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ZERO));
-        assertEquals(BigDecimal.ONE, Utils.bound(BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.TEN));
-        assertEquals(BigDecimal.ONE, Utils.bound(BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.ONE));
-        assertEquals(BigDecimal.ONE, Utils.bound(BigDecimal.ONE, BigDecimal.TEN, BigDecimal.ONE));
-        assertEquals(BigDecimal.TEN, Utils.bound(BigDecimal.ONE, BigDecimal.TEN, BigDecimal.TEN));
-    }
-    
     /**
      * Test of deepCopy method, of class Utils.
      */
@@ -1166,6 +1132,7 @@ public class UtilsTest
         assertEquals(m, Utils.bound(z, c, m));
         assertEquals(c, Utils.bound(z, c, c));
         assertEquals(c, Utils.bound(z, c, o));
+        assertEquals(c, Utils.bound(c, z, o));
     }
 
     /**
@@ -1184,6 +1151,7 @@ public class UtilsTest
         assertEquals(m, Utils.bound(z, c, m));
         assertEquals(c, Utils.bound(z, c, c));
         assertEquals(c, Utils.bound(z, c, o));
+        assertEquals(c, Utils.bound(c, z, o));
     }
 
     /**
@@ -1202,6 +1170,7 @@ public class UtilsTest
         assertEquals(m, Utils.bound(z, c, m));
         assertEquals(c, Utils.bound(z, c, c));
         assertEquals(c, Utils.bound(z, c, o));
+        assertEquals(c, Utils.bound(c, z, o));
     }
 
     /**
@@ -1220,6 +1189,7 @@ public class UtilsTest
         assertEquals(m, Utils.bound(z, c, m));
         assertEquals(c, Utils.bound(z, c, c));
         assertEquals(c, Utils.bound(z, c, o));
+        assertEquals(c, Utils.bound(c, z, o));
     }
 
     /**
@@ -1238,6 +1208,7 @@ public class UtilsTest
         assertEquals(m, Utils.bound(z, c, m), 0.0f);
         assertEquals(c, Utils.bound(z, c, c), 0.0f);
         assertEquals(c, Utils.bound(z, c, o), 0.0f);
+        assertEquals(c, Utils.bound(c, z, o));
     }
 
     /**
@@ -1256,7 +1227,48 @@ public class UtilsTest
         assertEquals(m, Utils.bound(z, c, m), 0.0);
         assertEquals(c, Utils.bound(z, c, c), 0.0);
         assertEquals(c, Utils.bound(z, c, o), 0.0);
+        assertEquals(c, Utils.bound(c, z, o));
     }
+
+        /**
+     * Test of bound method, of class Utils.
+     */
+    @Test
+    public void testBound_3args_7()
+    {
+        BigInteger z = BigInteger.ZERO;
+        BigInteger c = BigInteger.valueOf(100);
+        BigInteger n = BigInteger.valueOf(-1);
+        BigInteger m = BigInteger.valueOf(50);
+        BigInteger o = BigInteger.valueOf(127);
+        assertEquals(z, Utils.bound(z, c, n));
+        assertEquals(z, Utils.bound(z, c, z));
+        assertEquals(m, Utils.bound(z, c, m));
+        assertEquals(c, Utils.bound(z, c, c));
+        assertEquals(c, Utils.bound(z, c, o));
+        assertEquals(c, Utils.bound(c, z, o));
+    }
+
+    /**
+     * Test of bound method, of class Utils.
+     */
+    @Test
+    public void testBound_3args_8()
+    {
+        BigDecimal z = BigDecimal.ZERO;
+        BigDecimal c = BigDecimal.valueOf(100);
+        BigDecimal n = BigDecimal.valueOf(-1);
+        BigDecimal m = BigDecimal.valueOf(50);
+        BigDecimal o = BigDecimal.valueOf(127);
+        assertEquals(z, Utils.bound(z, c, n));
+        assertEquals(z, Utils.bound(z, c, z));
+        assertEquals(m, Utils.bound(z, c, m));
+        assertEquals(c, Utils.bound(z, c, c));
+        assertEquals(c, Utils.bound(z, c, o));
+        assertEquals(c, Utils.bound(c, z, o));
+    }
+    
+
     /**
      * Test of unique method, of class Utils.
      */

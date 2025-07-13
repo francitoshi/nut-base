@@ -1467,9 +1467,23 @@ public abstract class Utils
         return (a.compareTo(b) <= 0) ? a.compareTo(value) <= 0 && value.compareTo(b) <= 0 : b.compareTo(value) <= 0 && value.compareTo(a) <= 0;
     }
 
+    /**
+     * Clamps the given byte {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the byte value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
     public static byte bound(byte min, byte max, byte value)
     {
-        assert (min <= max);
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
         if (value < min)
         {
             return min;
@@ -1481,9 +1495,23 @@ public abstract class Utils
         return value;
     }
 
+    /**
+     * Clamps the given short {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the short value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
     public static short bound(short min, short max, short value)
     {
-        assert (min <= max);
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
         if (value < min)
         {
             return min;
@@ -1495,9 +1523,23 @@ public abstract class Utils
         return value;
     }
 
+    /**
+     * Clamps the given integer {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the integer value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
     public static int bound(int min, int max, int value)
     {
-        assert (min <= max);
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
         if (value < min)
         {
             return min;
@@ -1509,9 +1551,23 @@ public abstract class Utils
         return value;
     }
 
+    /**
+     * Clamps the given long {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the long value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
     public static long bound(long min, long max, long value)
     {
-        assert (min <= max);
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
         if (value < min)
         {
             return min;
@@ -1523,9 +1579,23 @@ public abstract class Utils
         return value;
     }
 
+    /**
+     * Clamps the given float {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the float value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
     public static float bound(float min, float max, float value)
     {
-        assert (min <= max);
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
         if (value < min)
         {
             return min;
@@ -1537,42 +1607,84 @@ public abstract class Utils
         return value;
     }
 
-    public static BigInteger bound(BigInteger min, BigInteger max, BigInteger value)
-    {
-        assert (min.compareTo(max) <= 0);
-        if (value.compareTo(min) < 0)
-        {
-            return min;
-        }
-        if (value.compareTo(max) > 0)
-        {
-            return max;
-        }
-        return value;
-    }
-
-    public static BigDecimal bound(BigDecimal min, BigDecimal max, BigDecimal value)
-    {
-        assert (min.compareTo(max) <= 0);
-        if (value.compareTo(min) < 0)
-        {
-            return min;
-        }
-        if (value.compareTo(max) > 0)
-        {
-            return max;
-        }
-        return value;
-    }
-
+    /**
+     * Clamps the given double {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the double value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
     public static double bound(double min, double max, double value)
     {
-        assert (min <= max);
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
         if (value < min)
         {
             return min;
         }
         if (value > max)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given {@link BigInteger} {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the BigInteger value to clamp.
+     * @return      the clamped value; {@code min} if {@code value} is less than {@code min},
+     *              {@code max} if {@code value} is greater than {@code max}, and {@code value} otherwise.
+     */
+    public static BigInteger bound(BigInteger min, BigInteger max, BigInteger value)
+    {
+        if(min.compareTo(max)>0)
+        {
+            return bound(max,min,value);
+        }
+        if (value.compareTo(min) < 0)
+        {
+            return min;
+        }
+        if (value.compareTo(max) > 0)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given {@link BigDecimal} {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the BigDecimal value to clamp.
+     * @return      the clamped value; {@code min} if {@code value} is less than {@code min},
+     *              {@code max} if {@code value} is greater than {@code max}, and {@code value} otherwise.
+     */
+    public static BigDecimal bound(BigDecimal min, BigDecimal max, BigDecimal value)
+    {
+        if(min.compareTo(max)>0)
+        {
+            return bound(max,min,value);
+        }
+        if (value.compareTo(min) < 0)
+        {
+            return min;
+        }
+        if (value.compareTo(max) > 0)
         {
             return max;
         }
