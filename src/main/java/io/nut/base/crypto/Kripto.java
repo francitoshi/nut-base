@@ -1203,15 +1203,24 @@ public class Kripto
     }
 
     private static final String PKCS12 = "PKCS12";
+    private static final String JCEKS = "JCEKS";
 
     public KeyStore getKeyStorePKCS12() throws KeyStoreException, NoSuchProviderException
     {
         return this.providerName == null ? KeyStore.getInstance(PKCS12) : KeyStore.getInstance(PKCS12, this.providerName);
     }
+    public KeyStore getKeyStoreJCEKS() throws KeyStoreException, NoSuchProviderException
+    {
+        return this.providerName == null ? KeyStore.getInstance(JCEKS) : KeyStore.getInstance(JCEKS, this.providerName);
+    }
 
-    public KeyStoreManager getKeyStoreManager() throws KeyStoreException, NoSuchProviderException, Exception
+    public KeyStoreManager getKeyStoreManagerPKCS12() throws KeyStoreException, NoSuchProviderException, Exception
     {
         return new KeyStoreManager(this.getKeyStorePKCS12());
+    }
+    public KeyStoreManager getKeyStoreManagerJCEKS() throws KeyStoreException, NoSuchProviderException, Exception
+    {
+        return new KeyStoreManager(this.getKeyStoreJCEKS());
     }
 
     ////////////////////////////////////////////////////////////////////////////

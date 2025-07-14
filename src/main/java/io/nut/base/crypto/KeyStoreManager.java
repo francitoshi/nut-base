@@ -34,6 +34,7 @@ import java.security.KeyStore.ProtectionParameter;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Manages operations on a {@link java.security.KeyStore} instance. This class
@@ -181,6 +182,20 @@ public class KeyStoreManager
     }
 
     /**
+     * Sets a secret key entry in the keystore, protecting it with a password.
+     *
+     * @param alias the alias to associate with the secret key.
+     * @param secretKey the secret key to store.
+     * @param entryPassphrase the password to protect the secret key entry.
+     * @throws Exception if the entry cannot be set.
+     */
+    public void setSecretKeyRaw(String alias, byte[] secretKey, char[] entryPassphrase) throws Exception
+    {
+        SecretKey rawKey = new SecretKeySpec(secretKey, "RAW");
+        setSecretKey(alias, rawKey, entryPassphrase);
+    }
+
+    /**
      * Retrieves a secret key from the keystore using the given alias and
      * password.
      *
@@ -199,6 +214,22 @@ public class KeyStoreManager
             return ((KeyStore.SecretKeyEntry) entry).getSecretKey();
         }
         return null;
+    }
+
+    /**
+     * Retrieves a secret key from the keystore using the given alias and
+     * password.
+     *
+     * @param alias the alias of the secret key entry.
+     * @param entryPassphrase the password to decrypt the secret key entry.
+     * @return the retrieved {@link SecretKey}, or null if the entry is not
+     * found or is not a SecretKeyEntry.
+     * @throws Exception if the entry cannot be retrieved.
+     */
+    public byte[] getSecretKeyRaw(String alias, char[] entryPassphrase) throws Exception
+    {
+        SecretKey secretKey = getSecretKey(alias, entryPassphrase);
+        return secretKey!=null ? secretKey.getEncoded() : null;
     }
 
     /**

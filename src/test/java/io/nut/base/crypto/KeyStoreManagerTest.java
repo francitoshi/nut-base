@@ -21,6 +21,7 @@
 package io.nut.base.crypto;
 
 
+import java.nio.charset.StandardCharsets;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.*;
@@ -28,6 +29,7 @@ import java.security.cert.X509Certificate;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
@@ -38,7 +40,7 @@ public class KeyStoreManagerTest
     public void testMain() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
     {
 
-        KeyStoreManager manager = Kripto.getInstance().getKeyStoreManager();
+        KeyStoreManager manager = Kripto.getInstance().getKeyStoreManagerJCEKS();
 
         String secretAlias = "secretAlias";
         char[] secretProtectionPass = "secretProtectionPass".toCharArray();
@@ -76,6 +78,15 @@ public class KeyStoreManagerTest
         PublicKey publicKey2 = manager.getCertificatePublicKey(publicCertAlias);
 
         assertEquals(publicKey1, publicKey2);
+        
+        byte[] secretKeyRaw1 = "this is a secreatKey".getBytes(StandardCharsets.UTF_8);
+        manager.setSecretKeyRaw(secretAlias, secretKeyRaw1, secretProtectionPass);
+        byte[] secretKeyRaw2 = manager.getSecretKeyRaw(secretAlias, secretProtectionPass);
+        Assertions.assertArrayEquals(secretKeyRaw1, secretKeyRaw2);
 
+        byte[] secretKeyRaw3 = "this is a very very very long secret key to test a non standard key that should fail on some KeyStore types".getBytes(StandardCharsets.UTF_8);
+        manager.setSecretKeyRaw(secretAlias, secretKeyRaw3, secretProtectionPass);
+        byte[] secretKeyRaw4 = manager.getSecretKeyRaw(secretAlias, secretProtectionPass);
+        Assertions.assertArrayEquals(secretKeyRaw3, secretKeyRaw4);
     }
 }
