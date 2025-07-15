@@ -21,6 +21,9 @@
 package io.nut.base.crypto;
 
 
+import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -30,6 +33,7 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
@@ -87,6 +91,15 @@ public class KeyStoreManagerTest
         byte[] secretKeyRaw3 = "this is a very very very long secret key to test a non standard key that should fail on some KeyStore types".getBytes(StandardCharsets.UTF_8);
         manager.setSecretKeyRaw(secretAlias, secretKeyRaw3, secretProtectionPass);
         byte[] secretKeyRaw4 = manager.getSecretKeyRaw(secretAlias, secretProtectionPass);
-        Assertions.assertArrayEquals(secretKeyRaw3, secretKeyRaw4);
+        assertArrayEquals(secretKeyRaw3, secretKeyRaw4);
+        
+        ////////// PASSPHRASES /////////////////////////////////////////////////
+        
+        String passphraseAlias = "passphraseAlias";
+        char[] passphrase = "this is a passphrase".toCharArray();
+        char[] entryPassphrase = "entryPassphrase".toCharArray();
+        manager.setPassphrase(passphraseAlias, passphrase, entryPassphrase);
+        char[] passphrase2 = manager.getPassprhase(passphraseAlias, entryPassphrase);
+        assertArrayEquals(passphrase, passphrase2);                
     }
 }

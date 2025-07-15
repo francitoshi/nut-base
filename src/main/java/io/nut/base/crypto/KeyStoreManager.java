@@ -20,6 +20,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.util.Byter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -134,16 +135,16 @@ public class KeyStoreManager
      * Loads the keystore from the given input stream.
      *
      * @param in the input stream to read the keystore from.
-     * @param chars the password used to check the integrity of the keystore.
+     * @param password the password used to check the integrity of the keystore, the password used to unlock the keystore, or null
      * @throws IOException if an I/O error occurs.
      * @throws NoSuchAlgorithmException if the algorithm used to check the
      * integrity of the keystore cannot be found.
      * @throws CertificateException if any of the certificates in the keystore
      * could not be loaded.
      */
-    public final void load(InputStream in, char[] chars) throws IOException, NoSuchAlgorithmException, CertificateException
+    public final void load(InputStream in, char[] password) throws IOException, NoSuchAlgorithmException, CertificateException
     {
-        keyStore.load(in, chars);
+        keyStore.load(in, password);
     }
 
     /**
@@ -151,18 +152,18 @@ public class KeyStoreManager
      * wraps {@link #load(InputStream, char[])}.
      *
      * @param file the file to read the keystore from.
-     * @param chars the password used to check the integrity of the keystore.
+     * @param password the password used to check the integrity of the keystore, the password used to unlock the keystore, or null
      * @throws IOException if an I/O error occurs.
      * @throws NoSuchAlgorithmException if the algorithm used to check the
      * integrity of the keystore cannot be found.
      * @throws CertificateException if any of the certificates in the keystore
      * could not be loaded.
      */
-    public final void load(File file, char[] chars) throws IOException, NoSuchAlgorithmException, CertificateException
+    public final void load(File file, char[] password) throws IOException, NoSuchAlgorithmException, CertificateException
     {
         try (FileInputStream fis = new FileInputStream(file))
         {
-            this.load(fis, chars);
+            this.load(fis, password);
         }
     }
 
@@ -196,8 +197,21 @@ public class KeyStoreManager
     }
 
     /**
-     * Retrieves a secret key from the keystore using the given alias and
-     * password.
+     * Sets a secret key entry in the keystore, protecting it with a password.
+     *
+     * @param alias the alias to associate with the secret key.
+     * @param secretKey the secret key to store.
+     * @param entryPassphrase the password to protect the secret key entry.
+     * @throws Exception if the entry cannot be set.
+     */
+    public void setPassphrase(String alias, char[] passphrase, char[] entryPassphrase) throws Exception
+    {
+        byte[] bytes = Byter.bytes(passphrase);
+        setSecretKeyRaw(alias, bytes, entryPassphrase);
+    }
+
+    /**
+     * Retrieves a secret key from the keystore using the given alias and password.
      *
      * @param alias the alias of the secret key entry.
      * @param entryPassphrase the password to decrypt the secret key entry.
@@ -217,8 +231,7 @@ public class KeyStoreManager
     }
 
     /**
-     * Retrieves a secret key from the keystore using the given alias and
-     * password.
+     * Retrieves a secret key from the keystore using the given alias and password.
      *
      * @param alias the alias of the secret key entry.
      * @param entryPassphrase the password to decrypt the secret key entry.
@@ -230,6 +243,21 @@ public class KeyStoreManager
     {
         SecretKey secretKey = getSecretKey(alias, entryPassphrase);
         return secretKey!=null ? secretKey.getEncoded() : null;
+    }
+
+    /**
+     * Retrieves a passphrase from the keystore using the given alias and password.
+     *
+     * @param alias the alias of the secret key entry.
+     * @param entryPassphrase the password to decrypt the secret key entry.
+     * @return the retrieved {@link SecretKey}, or null if the entry is not
+     * found or is not a SecretKeyEntry.
+     * @throws Exception if the entry cannot be retrieved.
+     */
+    public char[] getPassprhase(String alias, char[] entryPassphrase) throws Exception
+    {
+        byte[] bytes = getSecretKeyRaw(alias, entryPassphrase);
+        return bytes!=null ? Byter.chars(bytes) : null;
     }
 
     /**
