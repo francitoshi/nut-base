@@ -280,7 +280,7 @@ public class KeyStoreManager
         KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
         KeyStore.ProtectionParameter protectionParam = new KeyStore.PasswordProtection(protPass);
         keyStore.setEntry(alias, secretKeyEntry, protectionParam);
-        this.modified = false;
+        this.modified = true;
     }
 
     /**
@@ -307,7 +307,7 @@ public class KeyStoreManager
     {
         SecretKey rawKey = new SecretKeySpec(secretKey, "RAW");
         setSecretKey(alias, rawKey, protPass);
-        this.modified = false;
+        this.modified = true;
     }
 
     /**
@@ -333,7 +333,7 @@ public class KeyStoreManager
     public void setPassphrase(String alias, char[] passphrase, char[] protPass) throws Exception
     {
         byte[] bytes = Byter.bytes(passphrase);
-        setSecretKeyRaw(alias, bytes, protPass);
+        this.setSecretKeyRaw(alias, bytes, protPass);
     }
 
     /**
@@ -451,7 +451,8 @@ public class KeyStoreManager
     {
         PrivateKeyEntry entry = new PrivateKeyEntry(privateKey, chain);
         ProtectionParameter prot = new PasswordProtection(protPass);
-        keyStore.setEntry(alias, entry, prot);        
+        keyStore.setEntry(alias, entry, prot);
+        this.modified = true;
     }
     
     /**
@@ -505,6 +506,7 @@ public class KeyStoreManager
     public void setCertificate(String alias, X509Certificate certificate) throws Exception
     {
         keyStore.setCertificateEntry(alias, certificate);
+        this.modified = true;
     }
 
     /**
