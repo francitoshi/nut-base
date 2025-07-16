@@ -44,8 +44,46 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class KeyStoreManager
 {
-
+    public interface Passphraser
+    {
+        char[] get(String seed);
+    }
+    private static final Passphraser NULL_PASSPHRASER = new Passphraser()
+    {
+        @Override
+        public char[] get(String seed)
+        {
+            throw new ProviderException("no passphraser provided.");
+        };
+    };
+    
     private final KeyStore keyStore;
+    private final Passphraser passphraser;
+
+    /**
+     * Constructs a new KeyStoreManager with a given KeyStore instance. It
+     * initializes the KeyStore by calling {@code load(null, null)}, preparing
+     * it as an empty keystore in memory.
+     *
+     * @param keyStore The KeyStore instance to manage.
+     * @param passphraser the passphraser that will get the passphrase
+     * @throws RuntimeException if the keystore cannot be initialized.
+     */
+    public KeyStoreManager(KeyStore keyStore, Passphraser passphraser)
+    {
+        this.keyStore = keyStore;
+        this.passphraser = passphraser;
+        try
+        {
+            // Initializes an empty keystore
+            this.keyStore.load(null, null);
+        }
+        catch (IOException | CertificateException | NoSuchAlgorithmException ex)
+        {
+            // This should not happen with null arguments, but rethrow as unchecked if it does.
+            throw new RuntimeException("Failed to initialize empty keystore", ex);
+        }
+    }
 
     /**
      * Constructs a new KeyStoreManager with a given KeyStore instance. It
@@ -57,17 +95,7 @@ public class KeyStoreManager
      */
     public KeyStoreManager(KeyStore keyStore)
     {
-        this.keyStore = keyStore;
-        try
-        {
-            // Initializes an empty keystore
-            this.keyStore.load(null, null);
-        }
-        catch (IOException | CertificateException | NoSuchAlgorithmException ex)
-        {
-            // This should not happen with null arguments, but rethrow as unchecked if it does.
-            throw new RuntimeException("Failed to initialize empty keystore", ex);
-        }
+        this(keyStore,NULL_PASSPHRASER);
     }
 
     /**
@@ -97,7 +125,7 @@ public class KeyStoreManager
      * Stores this keystore to the given output stream.
      *
      * @param out the output stream to write the keystore to.
-     * @param chars the password to protect the keystore's integrity.
+     * @param password the password to protect the keystore's integrity.
      * @throws KeyStoreException if the keystore has not been initialized.
      * @throws IOException if an I/O error occurs.
      * @throws NoSuchAlgorithmException if the appropriate data integrity
@@ -105,9 +133,24 @@ public class KeyStoreManager
      * @throws CertificateException if any of the certificates in the keystore
      * could not be stored.
      */
-    public final void store(OutputStream out, char[] chars) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
+    public final void store(OutputStream out, char[] password) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
     {
-        keyStore.store(out, chars);
+        keyStore.store(out, password);
+    }
+    /**
+     * Stores this keystore to the given output stream.
+     *
+     * @param out the output stream to write the keystore to.
+     * @throws KeyStoreException if the keystore has not been initialized.
+     * @throws IOException if an I/O error occurs.
+     * @throws NoSuchAlgorithmException if the appropriate data integrity
+     * algorithm cannot be found.
+     * @throws CertificateException if any of the certificates in the keystore
+     * could not be stored.
+     */
+    public final void store(OutputStream out) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
+    {
+        this.store(out, passphraser.get(""));
     }
 
     /**
@@ -115,7 +158,7 @@ public class KeyStoreManager
      * wraps {@link #store(OutputStream, char[])}.
      *
      * @param file the file to write the keystore to.
-     * @param chars the password to protect the keystore's integrity.
+     * @param password the password to protect the keystore's integrity.
      * @throws KeyStoreException if the keystore has not been initialized.
      * @throws IOException if an I/O error occurs.
      * @throws NoSuchAlgorithmException if the appropriate data integrity
@@ -123,12 +166,28 @@ public class KeyStoreManager
      * @throws CertificateException if any of the certificates in the keystore
      * could not be stored.
      */
-    public final void store(File file, char[] chars) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
+    public final void store(File file, char[] password) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
     {
         try (FileOutputStream fos = new FileOutputStream(file))
         {
-            this.store(fos, chars);
+            this.store(fos, password);
         }
+    }
+    /**
+     * Stores this keystore to the given file. This is a convenience method that
+     * wraps {@link #store(OutputStream, char[])}.
+     *
+     * @param file the file to write the keystore to.
+     * @throws KeyStoreException if the keystore has not been initialized.
+     * @throws IOException if an I/O error occurs.
+     * @throws NoSuchAlgorithmException if the appropriate data integrity
+     * algorithm cannot be found.
+     * @throws CertificateException if any of the certificates in the keystore
+     * could not be stored.
+     */
+    public final void store(File file) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
+    {
+        this.store(file, passphraser.get("")); 
     }
 
     /**
@@ -145,6 +204,21 @@ public class KeyStoreManager
     public final void load(InputStream in, char[] password) throws IOException, NoSuchAlgorithmException, CertificateException
     {
         keyStore.load(in, password);
+    }
+
+    /**
+     * Loads the keystore from the given input stream.
+     *
+     * @param in the input stream to read the keystore from.
+     * @throws IOException if an I/O error occurs.
+     * @throws NoSuchAlgorithmException if the algorithm used to check the
+     * integrity of the keystore cannot be found.
+     * @throws CertificateException if any of the certificates in the keystore
+     * could not be loaded.
+     */
+    public final void load(InputStream in) throws IOException, NoSuchAlgorithmException, CertificateException
+    {
+        this.load(in, passphraser.get(""));
     }
 
     /**
@@ -166,19 +240,34 @@ public class KeyStoreManager
             this.load(fis, password);
         }
     }
+    /**
+     * Loads the keystore from the given file. This is a convenience method that
+     * wraps {@link #load(InputStream, char[])}.
+     *
+     * @param file the file to read the keystore from.
+     * @throws IOException if an I/O error occurs.
+     * @throws NoSuchAlgorithmException if the algorithm used to check the
+     * integrity of the keystore cannot be found.
+     * @throws CertificateException if any of the certificates in the keystore
+     * could not be loaded.
+     */
+    public final void load(File file) throws IOException, NoSuchAlgorithmException, CertificateException
+    {
+        this.load(file, passphraser.get(""));
+    }
 
     /**
      * Sets a secret key entry in the keystore, protecting it with a password.
      *
      * @param alias the alias to associate with the secret key.
      * @param secretKey the secret key to store.
-     * @param entryPassphrase the password to protect the secret key entry.
+     * @param protPass the password to protect the secret key entry.
      * @throws Exception if the entry cannot be set.
      */
-    public void setSecretKey(String alias, SecretKey secretKey, char[] entryPassphrase) throws Exception
+    public void setSecretKey(String alias, SecretKey secretKey, char[] protPass) throws Exception
     {
         KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
-        KeyStore.ProtectionParameter protectionParam = new KeyStore.PasswordProtection(entryPassphrase);
+        KeyStore.ProtectionParameter protectionParam = new KeyStore.PasswordProtection(protPass);
         keyStore.setEntry(alias, secretKeyEntry, protectionParam);
     }
 
@@ -187,13 +276,11 @@ public class KeyStoreManager
      *
      * @param alias the alias to associate with the secret key.
      * @param secretKey the secret key to store.
-     * @param entryPassphrase the password to protect the secret key entry.
      * @throws Exception if the entry cannot be set.
      */
-    public void setSecretKeyRaw(String alias, byte[] secretKey, char[] entryPassphrase) throws Exception
+    public void setSecretKey(String alias, SecretKey secretKey) throws Exception
     {
-        SecretKey rawKey = new SecretKeySpec(secretKey, "RAW");
-        setSecretKey(alias, rawKey, entryPassphrase);
+        this.setSecretKey(alias, secretKey, passphraser.get(alias));
     }
 
     /**
@@ -201,27 +288,65 @@ public class KeyStoreManager
      *
      * @param alias the alias to associate with the secret key.
      * @param secretKey the secret key to store.
-     * @param entryPassphrase the password to protect the secret key entry.
+     * @param protPass the password to protect the secret key entry.
      * @throws Exception if the entry cannot be set.
      */
-    public void setPassphrase(String alias, char[] passphrase, char[] entryPassphrase) throws Exception
+    public void setSecretKeyRaw(String alias, byte[] secretKey, char[] protPass) throws Exception
+    {
+        SecretKey rawKey = new SecretKeySpec(secretKey, "RAW");
+        setSecretKey(alias, rawKey, protPass);
+    }
+
+    /**
+     * Sets a secret key entry in the keystore, protecting it with a password.
+     *
+     * @param alias the alias to associate with the secret key.
+     * @param secretKey the secret key to store.
+     * @throws Exception if the entry cannot be set.
+     */
+    public void setSecretKeyRaw(String alias, byte[] secretKey) throws Exception
+    {
+        this.setSecretKeyRaw(alias, secretKey, passphraser.get(alias));
+    }
+
+    /**
+     * Sets a secret key entry in the keystore, protecting it with a password.
+     *
+     * @param alias the alias to associate with the secret key.
+     * @param passphrase the passphrase to store.
+     * @param protPass the password to protect the secret key entry.
+     * @throws Exception if the entry cannot be set.
+     */
+    public void setPassphrase(String alias, char[] passphrase, char[] protPass) throws Exception
     {
         byte[] bytes = Byter.bytes(passphrase);
-        setSecretKeyRaw(alias, bytes, entryPassphrase);
+        setSecretKeyRaw(alias, bytes, protPass);
+    }
+
+    /**
+     * Sets a secret key entry in the keystore, protecting it with a password.
+     *
+     * @param alias the alias to associate with the secret key.
+     * @param passphrase the passphrase to store.
+     * @throws Exception if the entry cannot be set.
+     */
+    public void setPassphrase(String alias, char[] passphrase) throws Exception
+    {
+        this.setPassphrase(alias, passphrase, passphraser.get(alias));
     }
 
     /**
      * Retrieves a secret key from the keystore using the given alias and password.
      *
      * @param alias the alias of the secret key entry.
-     * @param entryPassphrase the password to decrypt the secret key entry.
+     * @param protPass the password to decrypt the secret key entry.
      * @return the retrieved {@link SecretKey}, or null if the entry is not
      * found or is not a SecretKeyEntry.
      * @throws Exception if the entry cannot be retrieved.
      */
-    public SecretKey getSecretKey(String alias, char[] entryPassphrase) throws Exception
+    public SecretKey getSecretKey(String alias, char[] protPass) throws Exception
     {
-        KeyStore.ProtectionParameter protectionParam = new KeyStore.PasswordProtection(entryPassphrase);
+        KeyStore.ProtectionParameter protectionParam = new KeyStore.PasswordProtection(protPass);
         KeyStore.Entry entry = keyStore.getEntry(alias, protectionParam);
         if (entry instanceof KeyStore.SecretKeyEntry)
         {
@@ -234,30 +359,69 @@ public class KeyStoreManager
      * Retrieves a secret key from the keystore using the given alias and password.
      *
      * @param alias the alias of the secret key entry.
-     * @param entryPassphrase the password to decrypt the secret key entry.
      * @return the retrieved {@link SecretKey}, or null if the entry is not
      * found or is not a SecretKeyEntry.
      * @throws Exception if the entry cannot be retrieved.
      */
-    public byte[] getSecretKeyRaw(String alias, char[] entryPassphrase) throws Exception
+    public SecretKey getSecretKey(String alias) throws Exception
     {
-        SecretKey secretKey = getSecretKey(alias, entryPassphrase);
+        return this.getSecretKey(alias, passphraser.get(alias)); 
+    }
+
+    /**
+     * Retrieves a secret key from the keystore using the given alias and password.
+     *
+     * @param alias the alias of the secret key entry.
+     * @param protPass the password to decrypt the secret key entry.
+     * @return the retrieved {@link SecretKey}, or null if the entry is not
+     * found or is not a SecretKeyEntry.
+     * @throws Exception if the entry cannot be retrieved.
+     */
+    public byte[] getSecretKeyRaw(String alias, char[] protPass) throws Exception
+    {
+        SecretKey secretKey = getSecretKey(alias, protPass);
         return secretKey!=null ? secretKey.getEncoded() : null;
+    }
+
+    /**
+     * Retrieves a secret key from the keystore using the given alias and password.
+     *
+     * @param alias the alias of the secret key entry.
+     * @return the retrieved {@link SecretKey}, or null if the entry is not
+     * found or is not a SecretKeyEntry.
+     * @throws Exception if the entry cannot be retrieved.
+     */
+    public byte[] getSecretKeyRaw(String alias) throws Exception
+    {
+        return this.getSecretKeyRaw(alias, passphraser.get(alias)); 
     }
 
     /**
      * Retrieves a passphrase from the keystore using the given alias and password.
      *
      * @param alias the alias of the secret key entry.
-     * @param entryPassphrase the password to decrypt the secret key entry.
+     * @param protPass the password to decrypt the secret key entry.
      * @return the retrieved {@link SecretKey}, or null if the entry is not
      * found or is not a SecretKeyEntry.
      * @throws Exception if the entry cannot be retrieved.
      */
-    public char[] getPassprhase(String alias, char[] entryPassphrase) throws Exception
+    public char[] getPassprhase(String alias, char[] protPass) throws Exception
     {
-        byte[] bytes = getSecretKeyRaw(alias, entryPassphrase);
+        byte[] bytes = getSecretKeyRaw(alias, protPass);
         return bytes!=null ? Byter.chars(bytes) : null;
+    }
+
+    /**
+     * Retrieves a passphrase from the keystore using the given alias and password.
+     *
+     * @param alias the alias of the secret key entry.
+     * @return the retrieved {@link SecretKey}, or null if the entry is not
+     * found or is not a SecretKeyEntry.
+     * @throws Exception if the entry cannot be retrieved.
+     */
+    public char[] getPassprhase(String alias) throws Exception
+    {
+        return this.getPassprhase(alias, passphraser.get(alias)); 
     }
 
     /**
@@ -267,28 +431,55 @@ public class KeyStoreManager
      * @param alias the alias to associate with the private key.
      * @param privateKey the private key to store.
      * @param chain the certificate chain for the corresponding public key.
-     * @param entryPassphrase the password to protect the private key entry.
+     * @param protPass the password to protect the private key entry.
      * @throws Exception if the entry cannot be set.
      */
-    public void setPrivateKey(String alias, PrivateKey privateKey, Certificate[] chain, char[] entryPassphrase) throws Exception
+    public void setPrivateKey(String alias, PrivateKey privateKey, Certificate[] chain, char[] protPass) throws Exception
     {
         PrivateKeyEntry entry = new PrivateKeyEntry(privateKey, chain);
-        ProtectionParameter prot = new PasswordProtection(entryPassphrase);
+        ProtectionParameter prot = new PasswordProtection(protPass);
         keyStore.setEntry(alias, entry, prot);        
+    }
+    
+    /**
+     * Sets a private key entry, along with its associated certificate chain, in
+     * the keystore.
+     *
+     * @param alias the alias to associate with the private key.
+     * @param privateKey the private key to store.
+     * @param chain the certificate chain for the corresponding public key.
+     * @throws Exception if the entry cannot be set.
+     */
+    public void setPrivateKey(String alias, PrivateKey privateKey, Certificate[] chain) throws Exception
+    {
+        this.setPrivateKey(alias, privateKey, chain, passphraser.get(alias)); 
     }
     
     /**
      * Retrieves a private key from the keystore.
      *
      * @param alias the alias of the private key entry.
-     * @param entryPassphrase the password to decrypt the private key.
+     * @param protPass the password to decrypt the private key.
      * @return the requested {@link PrivateKey}, or null if the key for the
      * given alias does not exist.
      * @throws Exception if the key cannot be retrieved.
      */
-    public PrivateKey getPrivateKey(String alias, char[] entryPassphrase) throws Exception
+    public PrivateKey getPrivateKey(String alias, char[] protPass) throws Exception
     {
-        return (PrivateKey) keyStore.getKey(alias, entryPassphrase);
+        return (PrivateKey) keyStore.getKey(alias, protPass);
+    }
+    
+    /**
+     * Retrieves a private key from the keystore.
+     *
+     * @param alias the alias of the private key entry.
+     * @return the requested {@link PrivateKey}, or null if the key for the
+     * given alias does not exist.
+     * @throws Exception if the key cannot be retrieved.
+     */
+    public PrivateKey getPrivateKey(String alias) throws Exception
+    {
+        return this.getPrivateKey(alias, passphraser.get(alias)); 
     }
     
     /**

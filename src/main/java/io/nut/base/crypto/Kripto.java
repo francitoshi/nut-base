@@ -1223,6 +1223,15 @@ public class Kripto
         return new KeyStoreManager(this.getKeyStoreJCEKS());
     }
 
+    public KeyStoreManager getKeyStoreManagerPKCS12(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
+    {
+        return new KeyStoreManager(this.getKeyStorePKCS12(), passphraser);
+    }
+    public KeyStoreManager getKeyStoreManagerJCEKS(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
+    {
+        return new KeyStoreManager(this.getKeyStoreJCEKS(), passphraser);
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Derive data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
