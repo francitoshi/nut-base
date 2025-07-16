@@ -93,7 +93,7 @@ public class Derive
     {
         this.kripto = kripto==null ? Kripto.getInstance() : kripto;
         this.derivation = derivation;
-        this.minDeriveRounds = kripto.minDeriveRounds;
+        this.minDeriveRounds = this.kripto.minDeriveRounds;
     }
     
     /**
@@ -233,10 +233,7 @@ public class Derive
      * duration. This method should be run on the target production hardware to
      * get an accurate measurement.
      *
-     * @param deriver The configured {@link Derive} instance (e.g., using
-     * PBKDF2WithHmacSHA256).
-     * @param targetMillis The desired execution time in milliseconds (e.g.,
-     * 500).
+     * @param targetMillis The desired execution time in milliseconds (e.g., 500).
      * @return The recommended number of rounds.
      * @throws InvalidKeySpecException if the key spec is invalid during
      * derivation.

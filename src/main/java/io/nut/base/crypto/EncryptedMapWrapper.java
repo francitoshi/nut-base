@@ -33,7 +33,6 @@ import java.util.Map;
 
 public class EncryptedMapWrapper<K, V>
 {
-    private final Kripto kripto;
     private final Map<String, String> map;
 
     private final AesSivCtrSerializer<K> keySerializer;
@@ -41,7 +40,6 @@ public class EncryptedMapWrapper<K, V>
     
     public EncryptedMapWrapper(Kripto kripto, Map<String, String> map, char[] passphrase, String saltSeed, int rounds, int keyBits, Serializer<K> ks, Serializer<V> vs) throws InvalidKeySpecException
     {
-        this.kripto = kripto;
         this.map = map;
         
         byte[] macSalt = (saltSeed+"mac").getBytes(StandardCharsets.UTF_8);

@@ -29,13 +29,13 @@ import javax.crypto.spec.SecretKeySpec;
 
 /**
  * <p>This is a clean-room implementation of PBKDF2 using RFC 2898 as a reference.</p>
- * <p/>
+ *
  * <p>RFC 2898: http://tools.ietf.org/html/rfc2898#section-5.2</p>
- * <p/>
+ *
  * <p>This code passes all RFC 6070 test vectors: http://tools.ietf.org/html/rfc6070</p>
- * <p/>
+ *
  * <p>http://cryptofreek.org/2012/11/29/pbkdf2-pure-java-implementation/<br>
- * Modified to use SHA-512 - Ken Sedgwick ken@bonsai.com</p>
+ * Modified to use SHA-512 - Ken Sedgwick ken@bonsai.com<br>
  * Modified to use byte[] for P and S - francitoshi@bonsai.com</p>
  */
 public class PBKDF2SHA512 

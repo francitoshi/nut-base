@@ -1001,16 +1001,6 @@ public class StringsTest
             "Hello World!!! This is a Test.",
             "Hello World!!!\nThis is a Test."
         };
-        String[] dumpText = 
-        {
-            "00000000: 48 65 6C 6C 6F 20 57 6F 72 6C 64 21 21 21        Hello World!!!",
-
-            "00000000: 48 65 6C 6C 6F 20 57 6F 72 6C 64 21 21 21 20 54  Hello World!!! T"+
-            "00000010: 68 69 73 20 69 73 20 61 20 54 65 73 74 2E        his is a Test.",
-
-            "00000000: 48 65 6C 6C 6F 20 57 6F 72 6C 64 21 21 21 0A 54  Hello World!!!.T"+
-            "00000010: 68 69 73 20 69 73 20 61 20 54 65 73 74 2E        his is a Test."
-        };
         Appendable sb = System.out;//new StringBuilder();
 
         for(String item: plainText)

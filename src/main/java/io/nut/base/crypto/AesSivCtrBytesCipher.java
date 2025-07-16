@@ -20,7 +20,6 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import javax.crypto.SecretKey;

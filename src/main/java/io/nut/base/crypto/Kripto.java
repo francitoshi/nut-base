@@ -673,10 +673,8 @@ public class Kripto
      *
      * @param iv the initialization vector bytes
      * @return an IvParameterSpec instance
-     * @throws NoSuchAlgorithmException if the algorithm is not available
-     * @throws NoSuchPaddingException if the padding is not available
      */
-    public IvParameterSpec getIv(byte[] iv) throws NoSuchAlgorithmException, NoSuchPaddingException
+    public IvParameterSpec getIv(byte[] iv)
     {
         return new IvParameterSpec(iv);
     }
@@ -727,9 +725,8 @@ public class Kripto
      *
      * @param src the input character sequence
      * @return the derived bytes
-     * @throws NoSuchAlgorithmException if SHA-256 is not available
      */
-    public byte[] deriveSaltSHA256(CharSequence src) throws NoSuchAlgorithmException
+    public byte[] deriveSaltSHA256(CharSequence src)
     {
         MessageDigest md = this.sha256.get();
         md.update(normalizeNFKD(src).getBytes(StandardCharsets.UTF_8));
@@ -741,9 +738,8 @@ public class Kripto
      *
      * @param src the character arrays to process
      * @return the derived bytes
-     * @throws NoSuchAlgorithmException if SHA-256 is not available
      */
-    public byte[] deriveSaltSHA256(char[]... src) throws NoSuchAlgorithmException
+    public byte[] deriveSaltSHA256(char[]... src)
     {
         MessageDigest md = this.sha256.get();
         for (char[] item : src)
@@ -753,7 +749,13 @@ public class Kripto
         return md.digest();
     }
 
-    public byte[] deriveSaltSHA256(byte[]... src) throws NoSuchAlgorithmException
+    /**
+     * Derives bytes from multiple byte arrays using SHA-256.
+     *
+     * @param src the byte arrays to process
+     * @return the derived bytes
+     */
+    public byte[] deriveSaltSHA256(byte[]... src)
     {
         MessageDigest md = this.sha256.get();
         for (byte[] item : src)

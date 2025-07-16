@@ -59,6 +59,7 @@ public class KeyStoreManager
     
     private final KeyStore keyStore;
     private final Passphraser passphraser;
+    private volatile boolean modified;
 
     /**
      * Constructs a new KeyStoreManager with a given KeyStore instance. It
@@ -98,6 +99,11 @@ public class KeyStoreManager
         this(keyStore,NULL_PASSPHRASER);
     }
 
+    public boolean isModified()
+    {
+        return modified;
+    }
+
     /**
      * Deletes the entry identified by the given alias from this keystore.
      *
@@ -107,6 +113,7 @@ public class KeyStoreManager
     public final void deleteEntry(String alias) throws KeyStoreException
     {
         keyStore.deleteEntry(alias);
+        this.modified = true;
     }
 
     /**
@@ -136,6 +143,7 @@ public class KeyStoreManager
     public final void store(OutputStream out, char[] password) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
     {
         keyStore.store(out, password);
+        this.modified = false;
     }
     /**
      * Stores this keystore to the given output stream.
@@ -171,6 +179,7 @@ public class KeyStoreManager
         try (FileOutputStream fos = new FileOutputStream(file))
         {
             this.store(fos, password);
+            this.modified = false;
         }
     }
     /**
@@ -204,6 +213,7 @@ public class KeyStoreManager
     public final void load(InputStream in, char[] password) throws IOException, NoSuchAlgorithmException, CertificateException
     {
         keyStore.load(in, password);
+        this.modified = false;
     }
 
     /**
@@ -238,6 +248,7 @@ public class KeyStoreManager
         try (FileInputStream fis = new FileInputStream(file))
         {
             this.load(fis, password);
+            this.modified = false;
         }
     }
     /**
@@ -269,6 +280,7 @@ public class KeyStoreManager
         KeyStore.SecretKeyEntry secretKeyEntry = new KeyStore.SecretKeyEntry(secretKey);
         KeyStore.ProtectionParameter protectionParam = new KeyStore.PasswordProtection(protPass);
         keyStore.setEntry(alias, secretKeyEntry, protectionParam);
+        this.modified = false;
     }
 
     /**
@@ -295,6 +307,7 @@ public class KeyStoreManager
     {
         SecretKey rawKey = new SecretKeySpec(secretKey, "RAW");
         setSecretKey(alias, rawKey, protPass);
+        this.modified = false;
     }
 
     /**

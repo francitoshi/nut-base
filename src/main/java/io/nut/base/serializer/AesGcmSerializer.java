@@ -22,10 +22,7 @@ package io.nut.base.serializer;
 
 import io.nut.base.crypto.AesGcmBytesCipher;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.SecretKeyTransformation;
-import io.nut.base.serializer.Serializer;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 

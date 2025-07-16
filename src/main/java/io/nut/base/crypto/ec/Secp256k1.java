@@ -1,7 +1,7 @@
 /*
  *  Secp256k1.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -76,6 +76,7 @@ public class Secp256k1 extends Curve
 
     private static final Point INFINITY_POINT = new Point(null, (BigInteger)null, (BigInteger)null);
     
+    @Override
     public final Point add(Point p1, Point p2)
     {
         if ((p1 != null && p2 != null && p1.isInfinite() && p2.isInfinite()))
