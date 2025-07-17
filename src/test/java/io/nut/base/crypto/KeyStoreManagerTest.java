@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto;
 
-
+import static io.nut.base.util.Assert.assertTrue;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -40,9 +40,13 @@ public class KeyStoreManagerTest
     @Test
     public void testMain() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
     {
-
-        KeyStoreManager manager = Kripto.getInstance().getKeyStoreManagerJCEKS();
-
+        test(Kripto.getInstance().getKeyStoreManagerJCEKS());
+        test(Kripto.getInstance().getKeyStoreManagerBCFKS());
+        test(Kripto.getInstance(true).getKeyStoreManagerBCFKS());
+        test(Kripto.getInstance().getKeyStoreManagerPKCS12());
+    }
+    public void test(KeyStoreManager manager) throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
+    {
         String secretAlias = "secretAlias";
         char[] secretProtectionPass = "secretProtectionPass".toCharArray();
 
@@ -79,7 +83,7 @@ public class KeyStoreManagerTest
         PublicKey publicKey2 = manager.getCertificatePublicKey(publicCertAlias);
 
         assertEquals(publicKey1, publicKey2);
-        
+
         byte[] secretKeyRaw1 = "this is a secreatKey".getBytes(StandardCharsets.UTF_8);
         manager.setSecretKeyRaw(secretAlias, secretKeyRaw1, secretProtectionPass);
         byte[] secretKeyRaw2 = manager.getSecretKeyRaw(secretAlias, secretProtectionPass);
@@ -89,7 +93,7 @@ public class KeyStoreManagerTest
         manager.setSecretKeyRaw(secretAlias, secretKeyRaw3, secretProtectionPass);
         byte[] secretKeyRaw4 = manager.getSecretKeyRaw(secretAlias, secretProtectionPass);
         assertArrayEquals(secretKeyRaw3, secretKeyRaw4);
-        
+
         ////////// PASSPHRASES /////////////////////////////////////////////////
         
         String passphraseAlias = "passphraseAlias";
@@ -97,23 +101,31 @@ public class KeyStoreManagerTest
         char[] protPassphrase = "entryPassphrase".toCharArray();
         manager.setPassphrase(passphraseAlias, passphrase, protPassphrase);
         char[] passphrase2 = manager.getPassprhase(passphraseAlias, protPassphrase);
-        assertArrayEquals(passphrase, passphrase2);                
+        assertArrayEquals(passphrase, passphrase2);
+
+        assertTrue(manager.isModified());
     }
-    
+
     static final KeyStoreManager.Passphraser PASSPHRASER = new KeyStoreManager.Passphraser()
     {
         @Override
         public char[] get(String seed)
         {
-            return ("dummy"+seed).toCharArray();
+            return ("dummy" + seed).toCharArray();
         }
     };
 
     @Test
     public void testMain2() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
     {
-        KeyStoreManager manager = Kripto.getInstance().getKeyStoreManagerJCEKS(PASSPHRASER);
-
+        test2(Kripto.getInstance().getKeyStoreManagerJCEKS(PASSPHRASER));
+        test2(Kripto.getInstance().getKeyStoreManagerBCFKS(PASSPHRASER));
+        test2(Kripto.getInstance(true).getKeyStoreManagerBCFKS(PASSPHRASER));
+        test2(Kripto.getInstance().getKeyStoreManagerPKCS12(PASSPHRASER));
+    }
+    
+    public void test2(KeyStoreManager manager) throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
+    {
         String secretAlias = "secretAlias";
 
         KeyGenerator keyGen = KeyGenerator.getInstance("AES");
@@ -150,14 +162,15 @@ public class KeyStoreManagerTest
         manager.setSecretKeyRaw(secretAlias, secretKeyRaw3);
         byte[] secretKeyRaw4 = manager.getSecretKeyRaw(secretAlias);
         assertArrayEquals(secretKeyRaw3, secretKeyRaw4);
-        
+
         ////////// PASSPHRASES /////////////////////////////////////////////////
         
         String passphraseAlias = "passphraseAlias";
         char[] passphrase = "this is a passphrase".toCharArray();
         manager.setPassphrase(passphraseAlias, passphrase);
         char[] passphrase2 = manager.getPassprhase(passphraseAlias);
-        assertArrayEquals(passphrase, passphrase2);                
-    }
+        assertArrayEquals(passphrase, passphrase2);
 
+        assertTrue(manager.isModified());
+    }
 }

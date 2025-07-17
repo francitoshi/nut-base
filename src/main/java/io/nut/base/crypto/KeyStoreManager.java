@@ -295,6 +295,8 @@ public class KeyStoreManager
         this.setSecretKey(alias, secretKey, passphraser.get(alias));
     }
 
+    private volatile String raw;
+    private static final String[] RAWS = {"RAW","HmacSHA256"};//"Generic" not needed
     /**
      * Sets a secret key entry in the keystore, protecting it with a password.
      *
@@ -305,9 +307,35 @@ public class KeyStoreManager
      */
     public void setSecretKeyRaw(String alias, byte[] secretKey, char[] protPass) throws Exception
     {
-        SecretKey rawKey = new SecretKeySpec(secretKey, "RAW");
-        setSecretKey(alias, rawKey, protPass);
-        this.modified = true;
+        if(raw!=null)
+        {
+//            System.err.printf("setSecretKeyRaw=%s/%s\n", keyStore.getType(), raw);
+            SecretKey rawKey = new SecretKeySpec(secretKey, raw);
+            setSecretKey(alias, rawKey, protPass);
+            this.modified = true;
+            return;
+        }
+        int count=0;
+        for(String type : RAWS)
+        {
+            count++;
+            try
+            {
+                SecretKey rawKey = new SecretKeySpec(secretKey, type);
+                setSecretKey(alias, rawKey, protPass);
+                this.modified = true;
+                raw = type;
+//                System.err.printf("setSecretKeyRaw=%s/%s\n", keyStore.getType(), raw);
+                return;
+            }
+            catch(KeyStoreException ex)
+            {
+                if(count==RAWS.length)
+                {
+                    throw ex;
+                }
+            }
+        }
     }
 
     /**

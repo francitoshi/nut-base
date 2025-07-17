@@ -1204,6 +1204,7 @@ public class Kripto
         return this.providerName == null ? KeyStore.getInstance(type) : KeyStore.getInstance(type, this.providerName);
     }
 
+    private static final String BCFKS = "BCFKS";
     private static final String PKCS12 = "PKCS12";
     private static final String JCEKS = "JCEKS";
 
@@ -1215,6 +1216,10 @@ public class Kripto
     {
         return this.providerName == null ? KeyStore.getInstance(JCEKS) : KeyStore.getInstance(JCEKS, this.providerName);
     }
+    public KeyStore getKeyStoreBCFKS() throws KeyStoreException, NoSuchProviderException
+    {
+        return this.providerName == null ? KeyStore.getInstance(BCFKS) : KeyStore.getInstance(BCFKS, this.providerName);
+    }
 
     public KeyStoreManager getKeyStoreManagerPKCS12() throws KeyStoreException, NoSuchProviderException, Exception
     {
@@ -1224,6 +1229,10 @@ public class Kripto
     {
         return new KeyStoreManager(this.getKeyStoreJCEKS());
     }
+    public KeyStoreManager getKeyStoreManagerBCFKS() throws KeyStoreException, NoSuchProviderException, Exception
+    {
+        return new KeyStoreManager(this.getKeyStoreBCFKS());
+    }
 
     public KeyStoreManager getKeyStoreManagerPKCS12(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
     {
@@ -1232,6 +1241,10 @@ public class Kripto
     public KeyStoreManager getKeyStoreManagerJCEKS(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
     {
         return new KeyStoreManager(this.getKeyStoreJCEKS(), passphraser);
+    }
+    public KeyStoreManager getKeyStoreManagerBCFKS(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
+    {
+        return new KeyStoreManager(this.getKeyStoreBCFKS(), passphraser);
     }
 
     ////////////////////////////////////////////////////////////////////////////
