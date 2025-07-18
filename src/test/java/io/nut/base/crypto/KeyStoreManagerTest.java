@@ -20,15 +20,13 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.crypto.Kripto.KeyStoreType;
 import static io.nut.base.util.Assert.assertTrue;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import java.security.*;
 import java.security.cert.X509Certificate;
-import javax.crypto.BadPaddingException;
-import javax.crypto.IllegalBlockSizeException;
-import javax.crypto.NoSuchPaddingException;
 import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -38,14 +36,14 @@ public class KeyStoreManagerTest
 {
 
     @Test
-    public void testMain() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
+    public void testMain() throws Exception
     {
-        test(Kripto.getInstance().getKeyStoreManagerJCEKS());
-        test(Kripto.getInstance().getKeyStoreManagerBCFKS());
-        test(Kripto.getInstance(true).getKeyStoreManagerBCFKS());
+        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS));
+        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS));
+        test(Kripto.getInstance(true).getKeyStoreManager(KeyStoreType.BCFKS));
         test(Kripto.getInstance().getKeyStoreManagerPKCS12());
     }
-    public void test(KeyStoreManager manager) throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
+    public void test(KeyStoreManager manager) throws NoSuchAlgorithmException, Exception
     {
         String secretAlias = "secretAlias";
         char[] secretProtectionPass = "secretProtectionPass".toCharArray();
@@ -116,15 +114,15 @@ public class KeyStoreManagerTest
     };
 
     @Test
-    public void testMain2() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
+    public void testMain2() throws Exception 
     {
-        test2(Kripto.getInstance().getKeyStoreManagerJCEKS(PASSPHRASER));
-        test2(Kripto.getInstance().getKeyStoreManagerBCFKS(PASSPHRASER));
-        test2(Kripto.getInstance(true).getKeyStoreManagerBCFKS(PASSPHRASER));
+        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS,PASSPHRASER));
+        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS,PASSPHRASER));
+        test2(Kripto.getInstance(true).getKeyStoreManager(KeyStoreType.BCFKS,PASSPHRASER));
         test2(Kripto.getInstance().getKeyStoreManagerPKCS12(PASSPHRASER));
     }
     
-    public void test2(KeyStoreManager manager) throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, Exception
+    public void test2(KeyStoreManager manager) throws NoSuchAlgorithmException, Exception
     {
         String secretAlias = "secretAlias";
 

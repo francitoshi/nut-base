@@ -381,6 +381,10 @@ public class Kripto
         HmacSHA224, HmacSHA256, HmacSHA384, HmacSHA512
     }
 
+    public enum KeyStoreType
+    {
+        JKS, JCEKS, PKCS12, BCFKS
+    }
     ////////////////////////////////////////////////////////////////////////////
     ///// Instance Members /////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -560,6 +564,21 @@ public class Kripto
                 throw new ProviderException(ex.getMessage(), ex);
             }
             return Signature.getInstance(algorithm);
+        }
+    }
+    private KeyStore getKeyStore(String type) throws KeyStoreException
+    {
+        try
+        {
+            return this.providerName == null ? KeyStore.getInstance(type) : KeyStore.getInstance(type, this.providerName);
+        }
+        catch (NoSuchProviderException ex)
+        {
+            if(this.forceProvider)
+            {
+                throw new ProviderException(ex.getMessage(), ex);
+            }
+            return KeyStore.getInstance(type);
         }
     }
 
@@ -1199,52 +1218,41 @@ public class Kripto
         return new PassphraseDeriver(masterPassphrase, keyBits, rounds, cache, this);
     }
 
-    public KeyStore getKeyStore(String type) throws KeyStoreException, NoSuchProviderException
+    public KeyStore getKeyStore(KeyStoreType type)
     {
-        return this.providerName == null ? KeyStore.getInstance(type) : KeyStore.getInstance(type, this.providerName);
+        try
+        {
+            return getKeyStore(type.name());
+        }
+        catch (KeyStoreException ex)
+        {
+            throw new IllegalArgumentException(type.name()+": "+ex.getMessage(), ex);
+        }
     }
 
-    private static final String BCFKS = "BCFKS";
-    private static final String PKCS12 = "PKCS12";
-    private static final String JCEKS = "JCEKS";
-
-    public KeyStore getKeyStorePKCS12() throws KeyStoreException, NoSuchProviderException
+    public KeyStore getKeyStorePKCS12()
     {
-        return this.providerName == null ? KeyStore.getInstance(PKCS12) : KeyStore.getInstance(PKCS12, this.providerName);
-    }
-    public KeyStore getKeyStoreJCEKS() throws KeyStoreException, NoSuchProviderException
-    {
-        return this.providerName == null ? KeyStore.getInstance(JCEKS) : KeyStore.getInstance(JCEKS, this.providerName);
-    }
-    public KeyStore getKeyStoreBCFKS() throws KeyStoreException, NoSuchProviderException
-    {
-        return this.providerName == null ? KeyStore.getInstance(BCFKS) : KeyStore.getInstance(BCFKS, this.providerName);
+        return getKeyStore(KeyStoreType.PKCS12);
     }
 
-    public KeyStoreManager getKeyStoreManagerPKCS12() throws KeyStoreException, NoSuchProviderException, Exception
+    public KeyStoreManager getKeyStoreManager(KeyStoreType type)
     {
-        return new KeyStoreManager(this.getKeyStorePKCS12());
-    }
-    public KeyStoreManager getKeyStoreManagerJCEKS() throws KeyStoreException, NoSuchProviderException, Exception
-    {
-        return new KeyStoreManager(this.getKeyStoreJCEKS());
-    }
-    public KeyStoreManager getKeyStoreManagerBCFKS() throws KeyStoreException, NoSuchProviderException, Exception
-    {
-        return new KeyStoreManager(this.getKeyStoreBCFKS());
+        return new KeyStoreManager(this.getKeyStore(type));
     }
 
-    public KeyStoreManager getKeyStoreManagerPKCS12(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
+    public KeyStoreManager getKeyStoreManager(KeyStoreType type, KeyStoreManager.Passphraser passphraser)
     {
-        return new KeyStoreManager(this.getKeyStorePKCS12(), passphraser);
+        return new KeyStoreManager(this.getKeyStore(type), passphraser);
     }
-    public KeyStoreManager getKeyStoreManagerJCEKS(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
+
+    public KeyStoreManager getKeyStoreManagerPKCS12()
     {
-        return new KeyStoreManager(this.getKeyStoreJCEKS(), passphraser);
+        return getKeyStoreManager(KeyStoreType.PKCS12);
     }
-    public KeyStoreManager getKeyStoreManagerBCFKS(KeyStoreManager.Passphraser passphraser) throws KeyStoreException, NoSuchProviderException, Exception
+
+    public KeyStoreManager getKeyStoreManagerPKCS12(KeyStoreManager.Passphraser passphraser)
     {
-        return new KeyStoreManager(this.getKeyStoreBCFKS(), passphraser);
+        return getKeyStoreManager(KeyStoreType.PKCS12, passphraser);
     }
 
     ////////////////////////////////////////////////////////////////////////////
