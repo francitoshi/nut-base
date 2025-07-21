@@ -380,7 +380,12 @@ public class Kripto
     {
         HmacSHA224, HmacSHA256, HmacSHA384, HmacSHA512
     }
-
+    
+    public enum Hkdf
+    {
+        HkdfWithSha256, HkdfWithSha384, HkdfWithSha512
+    }
+    
     public enum KeyStoreType
     {
         JKS, JCEKS, PKCS12, BCFKS
@@ -1295,6 +1300,11 @@ public class Kripto
     public HMAC getHMAC(Hmac algorithm)
     {
         return new HMAC(this, algorithm);
+    }
+
+    public HKDF getHKDF(Hkdf algorithm)
+    {
+        return new HKDFBC(algorithm);
     }
 
     ////////////////////////////////////////////////////////////////////////////

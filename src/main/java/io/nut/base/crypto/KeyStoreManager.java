@@ -46,12 +46,12 @@ public class KeyStoreManager
 {
     public interface Passphraser
     {
-        char[] get(String seed);
+        char[] get(String label);
     }
     private static final Passphraser NULL_PASSPHRASER = new Passphraser()
     {
         @Override
-        public char[] get(String seed)
+        public char[] get(String label)
         {
             throw new ProviderException("no passphraser provided.");
         };
@@ -446,7 +446,7 @@ public class KeyStoreManager
      * found or is not a SecretKeyEntry.
      * @throws Exception if the entry cannot be retrieved.
      */
-    public char[] getPassprhase(String alias, char[] protPass) throws Exception
+    public char[] getPassphrase(String alias, char[] protPass) throws Exception
     {
         byte[] bytes = getSecretKeyRaw(alias, protPass);
         return bytes!=null ? Byter.chars(bytes) : null;
@@ -462,7 +462,7 @@ public class KeyStoreManager
      */
     public char[] getPassprhase(String alias) throws Exception
     {
-        return this.getPassprhase(alias, passphraser.get(alias)); 
+        return this.getPassphrase(alias, passphraser.get(alias)); 
     }
 
     /**

@@ -98,7 +98,7 @@ public class KeyStoreManagerTest
         char[] passphrase = "this is a passphrase".toCharArray();
         char[] protPassphrase = "entryPassphrase".toCharArray();
         manager.setPassphrase(passphraseAlias, passphrase, protPassphrase);
-        char[] passphrase2 = manager.getPassprhase(passphraseAlias, protPassphrase);
+        char[] passphrase2 = manager.getPassphrase(passphraseAlias, protPassphrase);
         assertArrayEquals(passphrase, passphrase2);
 
         assertTrue(manager.isModified());

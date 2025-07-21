@@ -1,7 +1,6 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.Hmac;
-import static io.nut.base.crypto.KriptoTest.KRIPTO;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.CharSets;
 import java.io.UnsupportedEncodingException;
