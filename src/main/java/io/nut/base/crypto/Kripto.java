@@ -1218,9 +1218,9 @@ public class Kripto
         return new ShamirSharedSecret(n, k);
     }
 
-    public PassphraseDeriver getPassphraseDeriver(char[] masterPassphrase, int keyBits, int rounds, boolean cache) throws Exception
+    public PassphraserHkdf getPassphraserHkdf(HKDF hkdf, byte[] ikm, byte[] salt) throws Exception
     {
-        return new PassphraseDeriver(masterPassphrase, keyBits, rounds, cache, this);
+        return new PassphraserHkdf(hkdf, ikm, salt);
     }
 
     public KeyStore getKeyStore(KeyStoreType type)
@@ -1245,7 +1245,7 @@ public class Kripto
         return new KeyStoreManager(this.getKeyStore(type));
     }
 
-    public KeyStoreManager getKeyStoreManager(KeyStoreType type, KeyStoreManager.Passphraser passphraser)
+    public KeyStoreManager getKeyStoreManager(KeyStoreType type, Passphraser passphraser)
     {
         return new KeyStoreManager(this.getKeyStore(type), passphraser);
     }
@@ -1255,7 +1255,7 @@ public class Kripto
         return getKeyStoreManager(KeyStoreType.PKCS12);
     }
 
-    public KeyStoreManager getKeyStoreManagerPKCS12(KeyStoreManager.Passphraser passphraser)
+    public KeyStoreManager getKeyStoreManagerPKCS12(Passphraser passphraser)
     {
         return getKeyStoreManager(KeyStoreType.PKCS12, passphraser);
     }
@@ -1327,4 +1327,8 @@ public class Kripto
 
     public final Rand rand = getRand();
 
+    public final HKDF hkdfWithSha256 = getHKDF(Kripto.Hkdf.HkdfWithSha256);
+    public final HKDF hkdfWithSha384 = getHKDF(Kripto.Hkdf.HkdfWithSha384);
+    public final HKDF hkdfWithSha512 = getHKDF(Kripto.Hkdf.HkdfWithSha512);
+    
 }

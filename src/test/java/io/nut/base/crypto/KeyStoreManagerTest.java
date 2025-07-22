@@ -104,7 +104,7 @@ public class KeyStoreManagerTest
         assertTrue(manager.isModified());
     }
 
-    static final KeyStoreManager.Passphraser PASSPHRASER = new KeyStoreManager.Passphraser()
+    static final Passphraser PASSPHRASER = new Passphraser()
     {
         @Override
         public char[] get(String seed)

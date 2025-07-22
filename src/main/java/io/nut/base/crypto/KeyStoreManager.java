@@ -20,6 +20,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.encoding.Ascii85;
 import io.nut.base.util.Byter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -44,10 +45,6 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class KeyStoreManager
 {
-    public interface Passphraser
-    {
-        char[] get(String label);
-    }
     private static final Passphraser NULL_PASSPHRASER = new Passphraser()
     {
         @Override
