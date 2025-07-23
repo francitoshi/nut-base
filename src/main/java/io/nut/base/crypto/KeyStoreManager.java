@@ -20,7 +20,6 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.encoding.Ascii85;
 import io.nut.base.util.Byter;
 import java.io.File;
 import java.io.FileInputStream;
@@ -457,7 +456,7 @@ public class KeyStoreManager
      * found or is not a SecretKeyEntry.
      * @throws Exception if the entry cannot be retrieved.
      */
-    public char[] getPassprhase(String alias) throws Exception
+    public char[] getPassphrase(String alias) throws Exception
     {
         return this.getPassphrase(alias, passphraser.get(alias)); 
     }

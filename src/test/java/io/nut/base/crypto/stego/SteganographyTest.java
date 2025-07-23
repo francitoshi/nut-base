@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Random;
-import javax.crypto.SecretKey;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -95,7 +94,7 @@ public class SteganographyTest
      * Test of encode method, of class Steganography.
      */
     @Test
-    public void testEncode() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException 
+    public void testEncode() throws IOException, InvalidKeySpecException
     {
         {
             Steganography instance = kripto.getSteganography(72, true, true, false);
@@ -117,10 +116,8 @@ public class SteganographyTest
             byte[] msg22 = instance.decode(otrashiervas2);
             assertArrayEquals(msg21, msg22);
             
-            SecretKey keyChars = instance.deriveSecretKey(passphrase);
-
-            String otrashiervas3 = instance.encode(otrashiervas, msg21, keyChars);
-            byte[] msg3 = instance.decode(otrashiervas3, keyChars);
+            String otrashiervas3 = instance.encode(otrashiervas, msg21, passphrase);
+            byte[] msg3 = instance.decode(otrashiervas3, passphrase);
             assertArrayEquals(msg21, msg3);
         }
         {
@@ -135,10 +132,8 @@ public class SteganographyTest
             byte[] msg2 = instance.decode(otrashiervas2);
             assertArrayEquals(msg1, msg2);
 
-            SecretKey keyChars = instance.deriveSecretKey(pass);
-            
-            String otrashiervas3 = instance.encode(otrashiervas, msg1, keyChars);
-            byte[] msg3 = instance.decode(otrashiervas3, keyChars);
+            String otrashiervas3 = instance.encode(otrashiervas, msg1, pass);
+            byte[] msg3 = instance.decode(otrashiervas3, pass);
             assertArrayEquals(msg1, msg3);
         }
         {

@@ -155,7 +155,7 @@ public class KriptoTest
     {
         Kripto instance = Kripto.getInstance();
         {
-            MessageDigest sha224 = instance.sha224.get();
+            MessageDigest sha224 = instance.getMessageDigest(Kripto.MessageDigestAlgorithm.SHA224);
             byte[] a = sha224.digest("The quick brown fox jumps over the lazy dog".getBytes(UTF8));
             byte[] b = sha224.digest("The quick brown fox jumps over the lazy dog.".getBytes(UTF8));
             byte[] c = sha224.digest("".getBytes(UTF8));

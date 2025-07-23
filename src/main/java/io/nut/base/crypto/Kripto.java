@@ -247,7 +247,6 @@ public class Kripto
     public enum SecretKeyTransformation
     {
         //Symetric Algorithms
-        AES_CBC_NoPadding("AES/CBC/NoPadding", 128, 128, 0), //(128,192,256) iv=128
         AES_GCM_NoPadding("AES/GCM/NoPadding", 128, 96, 128), //(128,192,256) iv=96   GOOD
         AES_CTR_NoPadding("AES/CTR/NoPadding", 128, 128, 128),//(128,192,256) iv=128  GOOD
         AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding", 128, 128, 0), //(128,192,256) iv=128  GOOD
@@ -350,8 +349,11 @@ public class Kripto
 
         public enum MessageDigestAlgorithm
     {
+        @Deprecated
         MD5("MD5"),
+        @Deprecated
         SHA1("SHA1"),
+        @Deprecated
         SHA224("SHA-224"),
         SHA256("SHA-256"), //GOOD
         SHA384("SHA-384"), //GOOD
@@ -367,18 +369,28 @@ public class Kripto
 
     public enum SignatureAlgorithm
     {
-        NONEwithRSA, SHA224withRSA,
-        SHA256withRSA, //GOOD 
-        SHA384withRSA, SHA512withRSA,
-        NONEwithDSA, SHA224withDSA, SHA256withDSA,
-        NONEwithECDSA, SHA224withECDSA,
-        SHA256withECDSA, //GOOD
-        SHA384withECDSA, SHA512withECDSA
+        @Deprecated
+        NONEwithRSA, 
+        @Deprecated
+        NONEwithDSA, 
+        @Deprecated
+        NONEwithECDSA, 
+        @Deprecated
+        SHA224withRSA,
+        @Deprecated
+        SHA224withDSA, 
+        @Deprecated
+        SHA224withECDSA,
+        SHA256withRSA, SHA384withRSA, SHA512withRSA,
+        SHA256withDSA,
+        SHA256withECDSA, SHA384withECDSA, SHA512withECDSA,
     }
 
     public enum Hmac
     {
-        HmacSHA224, HmacSHA256, HmacSHA384, HmacSHA512
+        @Deprecated
+        HmacSHA224, 
+        HmacSHA256, HmacSHA384, HmacSHA512
     }
     
     public enum Hkdf
@@ -1317,9 +1329,6 @@ public class Kripto
     }
 
     //useful instances
-    public final Digest md5 = getDigest(MessageDigestAlgorithm.MD5);
-    public final Digest sha1 = getDigest(MessageDigestAlgorithm.SHA1);
-    public final Digest sha224 = getDigest(MessageDigestAlgorithm.SHA224);
     public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
     public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
     public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);

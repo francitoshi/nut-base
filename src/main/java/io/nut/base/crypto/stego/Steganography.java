@@ -22,7 +22,6 @@ package io.nut.base.crypto.stego;
 
 import io.nut.base.crypto.Derive;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyDerivation;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.encoding.Ascii85;
@@ -63,7 +62,6 @@ public class Steganography
     private static final String LINES = "(\r?\n\r?)";
     private static final String WORDS = "[ \n\r\t\f]+";
     private static final String HOLES = "\\S+";
-    private static final byte[] IV16 = new byte[16];
     private static final SecretKeyTransformation AES_CFB8_NOPADDING = SecretKeyTransformation.AES_CFB8_NoPadding;
 
     private static final byte[] SALT = "salt".getBytes(StandardCharsets.UTF_8);
@@ -76,6 +74,7 @@ public class Steganography
     private final boolean splitLines;
     private final boolean mergeLines;
     private final boolean deflate;
+    private final int rounds;
     private final Kripto kripto;
     private final Derive derive;
     
@@ -87,9 +86,17 @@ public class Steganography
                
     public Steganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate)
     {
-        this(null, columns, splitLines, mergeLines, deflate);
+        this(null, columns, splitLines, mergeLines, deflate, ROUNDS);
+    }
+    public Steganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate, int rounds)
+    {
+        this(null, columns, splitLines, mergeLines, deflate, rounds);
     }
     public Steganography(Kripto kripto, int columns, boolean splitLines, boolean mergeLines, boolean deflate)
+    {
+        this(null, columns, splitLines, mergeLines, deflate, ROUNDS);
+    }
+    public Steganography(Kripto kripto, int columns, boolean splitLines, boolean mergeLines, boolean deflate, int rounds)
     {
         this.kripto = kripto==null ? kripto=Kripto.getInstance(true) : kripto;
         this.derive = kripto.getDerive(derivation);
@@ -97,6 +104,7 @@ public class Steganography
         this.splitLines = splitLines;
         this.mergeLines = mergeLines;
         this.deflate = deflate;
+        this.rounds = rounds;
         this.secureRandom = Kripto.getSecureRandom();
     }
 
@@ -226,11 +234,11 @@ public class Steganography
         return size;
     }
 
-    private byte[] encrypt(byte[] packet, SecretKey key) throws RuntimeException
+    private byte[] encrypt(byte[] packet, SecretKey key, byte[] iv128) throws RuntimeException
     {
         try
         {
-            IvParameterSpec iv16 = kripto.getIv(IV16);
+            IvParameterSpec iv16 = kripto.getIv(iv128);
             packet = kripto.encrypt(key, AES_CFB8_NOPADDING, iv16, packet);
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
@@ -241,11 +249,11 @@ public class Steganography
         return packet;
     }
     
-    private byte[] decrypt(byte[] packet, SecretKey key) throws RuntimeException
+    private byte[] decrypt(byte[] packet, SecretKey key, byte[] iv128) throws RuntimeException
     {
         try
         {
-            IvParameterSpec iv16 = kripto.getIv(IV16);
+            IvParameterSpec iv16 = kripto.getIv(iv128);
             packet = kripto.decrypt(key, AES_CFB8_NOPADDING, iv16, packet);
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
@@ -382,29 +390,42 @@ public class Steganography
         decodeNH(holes, d, n, h, 0, wbits);
     }
 
-    public SecretKey deriveSecretKey(char[] passphrase) throws InvalidKeySpecException
+    public SecretKey deriveSecretKeyAES(char[] passphrase) throws InvalidKeySpecException
     {
         if(passphrase==null || passphrase.length==0)
         {
             return null;
         }
-        return derive.deriveSecretKey(passphrase, SALT, ROUNDS, KEY_BITS, SecretKeyAlgorithm.AES);
-    }
-    public SecretKey getSecretKey(byte[] passphrase) throws InvalidKeySpecException
-    {
-        if(passphrase==null || passphrase.length==0)
-        {
-            return null;
-        }
-        return kripto.getSecretKey(passphrase, SecretKeyAlgorithm.AES);
+        return derive.deriveSecretKeyAES(passphrase, SALT, ROUNDS, KEY_BITS);
     }
 
-    public String encode(String text, byte[] msg, SecretKey key)
+    public byte[] deriveIV(char[] passphrase) throws InvalidKeySpecException
+    {
+        if(passphrase==null || passphrase.length==0)
+        {
+            return null;
+        }
+        return derive.deriveSecretKeyEncoded(passphrase, SALT, ROUNDS, 128); 
+    }
+
+    public String encode(String text, byte[] msg, char[] passphrase) throws InvalidKeySpecException
+    {
+        SecretKey key = this.deriveSecretKeyAES(passphrase);
+        byte[] iv128 = this.deriveIV(passphrase);
+        return this.encode(text, msg, key, iv128);
+    }
+
+    public String encode(String text, byte[] msg) 
+    {
+        return this.encode(text, msg, (SecretKey)null, null);
+    }
+
+    public String encode(String text, byte[] msg, SecretKey key, byte[] iv128)
     {
         byte[] packet = pack(msg,this.deflate);
         if(key!=null)
         {
-            packet = encrypt(packet, key);
+            packet = encrypt(packet, key, iv128);
         }
         BitSetReader rbits = BitSetReader.build(BitSet.valueOf(packet));
         
@@ -432,21 +453,29 @@ public class Steganography
         return sb.toString().trim();
     }
 
-    public String encode(String text, byte[] msg) 
-    {
-        return encode(text, msg, (SecretKey)null);
-    }
-
     public String justify(String text) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
         byte[] msg = new byte[1024];
         this.secureRandom.nextBytes(msg);
         char[] passphrase = Ascii85.encode(msg);
-        SecretKey key = derive.deriveSecretKeyAES(passphrase, SALT, ROUNDS, KEY_BITS);
-        return encode(text, msg, key);
+        SecretKey key = this.deriveSecretKeyAES(passphrase);
+        byte[] iv128 = this.deriveIV(passphrase); 
+        return this.encode(text, msg, key, iv128);
     }
 
-    public byte[] decode(String text, SecretKey key)
+    public byte[] decode(String text, char[] passphrase) throws InvalidKeySpecException
+    {
+        SecretKey key = deriveSecretKeyAES(passphrase);
+        byte[] iv128 = deriveIV(passphrase);
+        return decode(text, key, iv128);
+    }
+
+    public byte[] decode(String text)
+    {
+        return decode(text, (SecretKey)null, null);
+    }   
+            
+    public byte[] decode(String text, SecretKey key, byte[] iv128)
     {
         BitSet bitSet = new BitSet();
         BitSetWriter wbits = BitSetWriter.build(bitSet);
@@ -463,14 +492,9 @@ public class Steganography
         byte[] packet = bitSet.toByteArray();
         if(key!=null)
         {
-            packet = decrypt(packet, key);
+            packet = decrypt(packet, key, iv128);
         }
         
         return unpack(packet);
     }
-
-    public byte[] decode(String text)
-    {
-        return decode(text, (SecretKey)null);
-    }   
 }

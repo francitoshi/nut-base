@@ -166,7 +166,7 @@ public class KeyStoreManagerTest
         String passphraseAlias = "passphraseAlias";
         char[] passphrase = "this is a passphrase".toCharArray();
         manager.setPassphrase(passphraseAlias, passphrase);
-        char[] passphrase2 = manager.getPassprhase(passphraseAlias);
+        char[] passphrase2 = manager.getPassphrase(passphraseAlias);
         assertArrayEquals(passphrase, passphrase2);
 
         assertTrue(manager.isModified());
