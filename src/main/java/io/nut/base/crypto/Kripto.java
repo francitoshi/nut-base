@@ -1230,7 +1230,7 @@ public class Kripto
         return new ShamirSharedSecret(n, k);
     }
 
-    public PassphraserHkdf getPassphraserHkdf(HKDF hkdf, byte[] ikm, byte[] salt) throws Exception
+    public PassphraserHkdf getPassphraserHkdf(HKDF hkdf, byte[] ikm, byte[] salt)
     {
         return new PassphraserHkdf(hkdf, ikm, salt);
     }
