@@ -22,8 +22,12 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
+import java.io.Closeable;
+import java.io.PrintStream;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -36,6 +40,10 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -342,7 +350,6 @@ public class UtilsTest
     static final long[] longArray = {0,1,2,3,4};
     static final float[] floatArray = {0,1,2,3,4};
     static final double[] doubleArray = {0,1,2,3,4};
-    
 
     /**
      * Test of asString method, of class Utils.
@@ -2119,7 +2126,6 @@ public class UtilsTest
         assertTrue(Utils.isNullOrZero(new BigDecimal(-0.001), delta));
         assertFalse(Utils.isNullOrZero(new BigDecimal(-0.003), delta));
     }
-
 
     @Test
     public void testBitSet()
