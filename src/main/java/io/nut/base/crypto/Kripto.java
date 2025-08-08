@@ -21,6 +21,7 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.stego.Steganography;
+import io.nut.base.encoding.Base32String;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.PrintStream;
@@ -1339,5 +1340,30 @@ public class Kripto
     public final HKDF hkdfWithSha256 = getHKDF(Kripto.Hkdf.HkdfWithSha256);
     public final HKDF hkdfWithSha384 = getHKDF(Kripto.Hkdf.HkdfWithSha384);
     public final HKDF hkdfWithSha512 = getHKDF(Kripto.Hkdf.HkdfWithSha512);
+
+
+    /**
+     * Generates a 6-character Base32 Short Authentication String (SAS) from two
+     * fingerprints. The method is deterministic and commutative, meaning
+     * that getSAS(fp1, fp2) will always be equal to getSAS(fp2, fp1).
+     * This allows two parties to calculate the same SAS independently.
+     *
+     * @param ownKey The own key fingerprint (hexadecimal format, no spaces).
+     * @param friendKey The friend's key fingerprint (hexadecimal format, no 
+     * spaces).
+     * @return A 6-character formatted SAS code (e.g., "ABC-DEF"), or null if an
+     * error occurs.
+     */
+    public String getSAS(String ownKey, String friendKey)
+    {
+        if (ownKey == null || friendKey == null || ownKey.isEmpty() || friendKey.isEmpty())
+        {
+            return null;
+        }
+        String keys = (ownKey.compareTo(friendKey) < 0) ? ownKey+friendKey : friendKey+ownKey;
+        byte[] hashBytes = this.sha256.digest(keys, StandardCharsets.UTF_8);
+        String b32s = Base32String.encode(hashBytes).toUpperCase();//30bits
+        return b32s.substring(0, 3) + "-" + b32s.substring(3, 6);
+    }
     
 }

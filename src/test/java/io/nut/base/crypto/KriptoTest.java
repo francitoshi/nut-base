@@ -669,6 +669,15 @@ public class KriptoTest
         }                
     }
 
-    static final Kripto KRIPTO = Kripto.getInstance();
+    @Test
+    public void testGetSAS()
+    {
+        Kripto instance = Kripto.getInstance();
+        String s1 = "BBCA99DZC0AB3SCA0C1699BB0E9A3BFBESB7ASA9";
+        String s2 = "6694DBDE7BEBEES631BED9S0ZBDSBZ4B7F9470E6";
+        String result12 = instance.getSAS(s1,s2);
+        String result21 = instance.getSAS(s2,s1);
+        assertEquals(result12, result21);
+    }
    
 }
