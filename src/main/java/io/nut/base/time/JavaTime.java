@@ -1,7 +1,7 @@
 /*
  *  JavaTime.java
  *
- *  Copyright (c) 2020-2024 francitoshi@gmail.com
+ *  Copyright (c) 2020-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -617,7 +617,7 @@ public class JavaTime
 
     public static long epochSecond()
     {
-        return ZonedDateTime.now().toEpochSecond();
+        return Instant.now().getEpochSecond();
     }
 
     public static long epochSecond(ZonedDateTime zdt)
