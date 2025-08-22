@@ -40,10 +40,14 @@ public class PassphraserHkdf implements Passphraser, Closeable
     }
     
     @Override
-    public char[] get(String info)
+    public byte[] bytes(String info)
     {
-        byte[] key = this.hkdf.generateBytes(ikm, salt, info.getBytes(StandardCharsets.UTF_8), ikm.length);
-        return Ascii85.encode(key);
+        return this.hkdf.generateBytes(ikm, salt, info.getBytes(StandardCharsets.UTF_8), ikm.length);
+    }
+    @Override
+    public char[] chars(String info)
+    {
+        return Ascii85.encode(bytes(info));
     }
 
     @Override

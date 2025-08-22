@@ -47,7 +47,12 @@ public class KeyStoreManager
     private static final Passphraser NULL_PASSPHRASER = new Passphraser()
     {
         @Override
-        public char[] get(String label)
+        public byte[] bytes(String label)
+        {
+            throw new ProviderException("no passphraser provided.");
+        };
+        @Override
+        public char[] chars(String label)
         {
             throw new ProviderException("no passphraser provided.");
         };
@@ -154,7 +159,7 @@ public class KeyStoreManager
      */
     public final void store(OutputStream out) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
     {
-        this.store(out, passphraser.get(""));
+        this.store(out, passphraser.chars(""));
     }
 
     /**
@@ -192,7 +197,7 @@ public class KeyStoreManager
      */
     public final void store(File file) throws KeyStoreException, IOException, NoSuchAlgorithmException, CertificateException
     {
-        this.store(file, passphraser.get("")); 
+        this.store(file, passphraser.chars("")); 
     }
 
     /**
@@ -224,7 +229,7 @@ public class KeyStoreManager
      */
     public final void load(InputStream in) throws IOException, NoSuchAlgorithmException, CertificateException
     {
-        this.load(in, passphraser.get(""));
+        this.load(in, passphraser.chars(""));
     }
 
     /**
@@ -260,7 +265,7 @@ public class KeyStoreManager
      */
     public final void load(File file) throws IOException, NoSuchAlgorithmException, CertificateException
     {
-        this.load(file, passphraser.get(""));
+        this.load(file, passphraser.chars(""));
     }
 
     /**
@@ -288,7 +293,7 @@ public class KeyStoreManager
      */
     public void setSecretKey(String alias, SecretKey secretKey) throws Exception
     {
-        this.setSecretKey(alias, secretKey, passphraser.get(alias));
+        this.setSecretKey(alias, secretKey, passphraser.chars(alias));
     }
 
     private volatile String raw;
@@ -343,7 +348,7 @@ public class KeyStoreManager
      */
     public void setSecretKeyRaw(String alias, byte[] secretKey) throws Exception
     {
-        this.setSecretKeyRaw(alias, secretKey, passphraser.get(alias));
+        this.setSecretKeyRaw(alias, secretKey, passphraser.chars(alias));
     }
 
     /**
@@ -369,7 +374,7 @@ public class KeyStoreManager
      */
     public void setPassphrase(String alias, char[] passphrase) throws Exception
     {
-        this.setPassphrase(alias, passphrase, passphraser.get(alias));
+        this.setPassphrase(alias, passphrase, passphraser.chars(alias));
     }
 
     /**
@@ -402,7 +407,7 @@ public class KeyStoreManager
      */
     public SecretKey getSecretKey(String alias) throws Exception
     {
-        return this.getSecretKey(alias, passphraser.get(alias)); 
+        return this.getSecretKey(alias, passphraser.chars(alias)); 
     }
 
     /**
@@ -430,7 +435,7 @@ public class KeyStoreManager
      */
     public byte[] getSecretKeyRaw(String alias) throws Exception
     {
-        return this.getSecretKeyRaw(alias, passphraser.get(alias)); 
+        return this.getSecretKeyRaw(alias, passphraser.chars(alias)); 
     }
 
     /**
@@ -458,7 +463,7 @@ public class KeyStoreManager
      */
     public char[] getPassphrase(String alias) throws Exception
     {
-        return this.getPassphrase(alias, passphraser.get(alias)); 
+        return this.getPassphrase(alias, passphraser.chars(alias)); 
     }
 
     /**
@@ -490,7 +495,7 @@ public class KeyStoreManager
      */
     public void setPrivateKey(String alias, PrivateKey privateKey, Certificate[] chain) throws Exception
     {
-        this.setPrivateKey(alias, privateKey, chain, passphraser.get(alias)); 
+        this.setPrivateKey(alias, privateKey, chain, passphraser.chars(alias)); 
     }
     
     /**
@@ -517,7 +522,7 @@ public class KeyStoreManager
      */
     public PrivateKey getPrivateKey(String alias) throws Exception
     {
-        return this.getPrivateKey(alias, passphraser.get(alias)); 
+        return this.getPrivateKey(alias, passphraser.chars(alias)); 
     }
     
     /**

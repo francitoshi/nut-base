@@ -169,4 +169,45 @@ public final class Chars
         // If no trimming was needed, return the original array. Otherwise, return a copy of the relevant range.
         return (start>0 || end<ch.length) ? Arrays.copyOfRange(ch, start, end) : ch;
     }
+    
+    /**
+    * Checks if a character array begins with a specified prefix.
+    * This method is safe against NullPointerException.
+    *
+    * @param source The character array to check (the source).
+    * @param prefix The prefix (String) to search for at the beginning of the array.
+    * @return {@code true} if the array 'source' begins with the 'prefix',
+    * {@code false} otherwise.
+    */
+    public static boolean startsWith(char[] source, String prefix) 
+    {
+        // --- edge cases ---
+        if (source == null || prefix == null)
+        {
+            return false;
+        }
+
+        // If the prefix is longer than the source, it is impossible to start with it.
+        if (prefix.length() > source.length)
+        {
+            return false;
+        }
+
+        // An empty prefix is always true.
+        if (prefix.isEmpty())
+        {
+            return true;
+        }
+
+        // --- Character by character comparison ---
+        for (int i = 0; i < prefix.length(); i++)
+        {
+            if (source[i] != prefix.charAt(i))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }    
 }

@@ -107,7 +107,12 @@ public class KeyStoreManagerTest
     static final Passphraser PASSPHRASER = new Passphraser()
     {
         @Override
-        public char[] get(String seed)
+        public byte[] bytes(String seed)
+        {
+            return ("dummy" + seed).getBytes(StandardCharsets.UTF_8);
+        }
+        @Override
+        public char[] chars(String seed)
         {
             return ("dummy" + seed).toCharArray();
         }

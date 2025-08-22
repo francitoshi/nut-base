@@ -1354,7 +1354,7 @@ public class Kripto
      * @return A 6-character formatted SAS code (e.g., "ABC-DEF"), or null if an
      * error occurs.
      */
-    public String getSAS(String ownKey, String friendKey)
+    public String getSAS6(String ownKey, String friendKey)
     {
         if (ownKey == null || friendKey == null || ownKey.isEmpty() || friendKey.isEmpty())
         {
@@ -1362,8 +1362,32 @@ public class Kripto
         }
         String keys = (ownKey.compareTo(friendKey) < 0) ? ownKey+friendKey : friendKey+ownKey;
         byte[] hashBytes = this.sha256.digest(keys, StandardCharsets.UTF_8);
-        String b32s = Base32String.encode(hashBytes).toUpperCase();//30bits
+        String b32s = Base32String.encode(hashBytes).toUpperCase();
         return b32s.substring(0, 3) + "-" + b32s.substring(3, 6);
     }
     
+    /**
+     * Generates a 8-character Base32 Short Authentication String (SAS) from two
+     * fingerprints. The method is deterministic and commutative, meaning
+     * that getSAS8(fp1, fp2) will always be equal to getSAS8(fp2, fp1).
+     * This allows two parties to calculate the same SAS independently.
+     *
+     * @param ownKey The own key fingerprint (hexadecimal format, no spaces).
+     * @param friendKey The friend's key fingerprint (hexadecimal format, no 
+     * spaces).
+     * @return A 8-character formatted SAS code (e.g., "ABCD-EFGH"), or null if an
+     * error occurs.
+     */
+    public String getSAS8(String ownKey, String friendKey)
+    {
+        if (ownKey == null || friendKey == null || ownKey.isEmpty() || friendKey.isEmpty())
+        {
+            return null;
+        }
+        String keys = (ownKey.compareTo(friendKey) < 0) ? ownKey+friendKey : friendKey+ownKey;
+        byte[] hashBytes = this.sha256.digest(keys, StandardCharsets.UTF_8);
+        String b32s = Base32String.encode(hashBytes).toUpperCase();
+        return b32s.substring(0, 4) + "-" + b32s.substring(4, 8);
+    }
+
 }

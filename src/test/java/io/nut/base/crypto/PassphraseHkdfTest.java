@@ -42,18 +42,18 @@ public class PassphraseHkdfTest
         try (PassphraserHkdf passphraser = kripto.getPassphraserHkdf(kripto.hkdfWithSha256, key, salt))
         {
             
-            char[] pass1 = passphraser.get("database-key");
-            char[] pass2 = passphraser.get("database-key");
-            char[] apiKey = passphraser.get("external-api-key");
+            char[] pass1 = passphraser.chars("database-key");
+            char[] pass2 = passphraser.chars("database-key");
+            char[] apiKey = passphraser.chars("external-api-key");
             assertArrayEquals(pass1, pass2);
             assertFalse(Arrays.equals(pass1, apiKey));
         }
         try (PassphraserHkdf passphraser = kripto.getPassphraserHkdf(kripto.hkdfWithSha512, key, salt))
         {
             
-            char[] pass1 = passphraser.get("database-key");
-            char[] pass2 = passphraser.get("database-key");
-            char[] apiKey = passphraser.get("external-api-key");
+            char[] pass1 = passphraser.chars("database-key");
+            char[] pass2 = passphraser.chars("database-key");
+            char[] apiKey = passphraser.chars("external-api-key");
             assertArrayEquals(pass1, pass2);
             assertFalse(Arrays.equals(pass1, apiKey));
         }

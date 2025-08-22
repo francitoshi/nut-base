@@ -24,17 +24,14 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.regex.Pattern;
 
-/**
- * Created by franci on 10/08/15.
- */
 public class PasswordPolicy
 {
-    private static final Pattern letterPattern = Pattern.compile("\\p{L}");
-    private static final Pattern lowercasePattern = Pattern.compile("\\p{Ll}");
-    private static final Pattern uppercasePattern = Pattern.compile("\\p{Lu}");
-    private static final Pattern numberPattern = Pattern.compile("\\p{N}");
-    private static final Pattern punctuationPattern = Pattern.compile("\\p{P}");
-    private static final Pattern symbolPattern = Pattern.compile("\\p{S}");
+    private static final Pattern LETTER_PATTERN = Pattern.compile("\\p{L}");
+    private static final Pattern LOWERCASE_PATTERN = Pattern.compile("\\p{Ll}");
+    private static final Pattern UPPERCASE_PATTERN = Pattern.compile("\\p{Lu}");
+    private static final Pattern NUMBER_PATTERN = Pattern.compile("\\p{N}");
+    private static final Pattern PUNCTUATION_PATTERN = Pattern.compile("\\p{P}");
+    private static final Pattern SYMBOL_PATTERN = Pattern.compile("\\p{S}");
 
     public static class PolicyFaultException extends Exception
     {
@@ -129,27 +126,27 @@ public class PasswordPolicy
         {
             throw new WrongPatternException();
         }
-        if(needLetter && !letterPattern.matcher(password).find())
+        if(needLetter && !LETTER_PATTERN.matcher(password).find())
         {
             throw new NeedLetterException();
         }
-        if(needLowercase && !lowercasePattern.matcher(password).find())
+        if(needLowercase && !LOWERCASE_PATTERN.matcher(password).find())
         {
             throw new NeedLowerCaseException();
         }
-        if(needUppercase && !uppercasePattern.matcher(password).find())
+        if(needUppercase && !UPPERCASE_PATTERN.matcher(password).find())
         {
             throw new NeedUpperCaseException();
         }
-        if(needNumber && !numberPattern.matcher(password).find())
+        if(needNumber && !NUMBER_PATTERN.matcher(password).find())
         {
             throw new NeedNumberException();
         }
-        if(needPunctuation && !punctuationPattern.matcher(password).find())
+        if(needPunctuation && !PUNCTUATION_PATTERN.matcher(password).find())
         {
             throw new NeedPunctuationException();
         }
-        if(needSymbol && !symbolPattern.matcher(password).find())
+        if(needSymbol && !SYMBOL_PATTERN.matcher(password).find())
         {
             throw new NeedSymbolException();
         }

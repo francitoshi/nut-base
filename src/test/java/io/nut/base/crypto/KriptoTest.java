@@ -670,13 +670,24 @@ public class KriptoTest
     }
 
     @Test
-    public void testGetSAS()
+    public void testGetSAS6()
     {
         Kripto instance = Kripto.getInstance();
         String s1 = "BBCA99DZC0AB3SCA0C1699BB0E9A3BFBESB7ASA9";
         String s2 = "6694DBDE7BEBEES631BED9S0ZBDSBZ4B7F9470E6";
-        String result12 = instance.getSAS(s1,s2);
-        String result21 = instance.getSAS(s2,s1);
+        String result12 = instance.getSAS6(s1,s2);
+        String result21 = instance.getSAS6(s2,s1);
+        assertEquals(result12, result21);
+    }
+   
+    @Test
+    public void testGetSAS8()
+    {
+        Kripto instance = Kripto.getInstance();
+        String s1 = "BBCA99DZC0AB3SCA0C1699BB0E9A3BFBESB7ASA9";
+        String s2 = "6694DBDE7BEBEES631BED9S0ZBDSBZ4B7F9470E6";
+        String result12 = instance.getSAS8(s1,s2);
+        String result21 = instance.getSAS8(s2,s1);
         assertEquals(result12, result21);
     }
    
