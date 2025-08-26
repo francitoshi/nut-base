@@ -20,6 +20,7 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.profile.Profiler;
 import java.nio.ByteOrder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;

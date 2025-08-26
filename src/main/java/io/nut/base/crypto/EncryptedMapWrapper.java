@@ -46,7 +46,7 @@ public class EncryptedMapWrapper<K, V>
         byte[] keySalt = (saltSeed+"key").getBytes(StandardCharsets.UTF_8);
         byte[] valSalt = (saltSeed+"val").getBytes(StandardCharsets.UTF_8);
         
-        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        PBKDF2 derive = kripto.pbkdf2WithSha256;
         SecretKey macKey = derive.deriveSecretKey(passphrase, macSalt, rounds, keyBits, SecretKeyAlgorithm.AES);
         SecretKey keyKey = derive.deriveSecretKey(passphrase, keySalt, rounds, keyBits, SecretKeyAlgorithm.AES);
         SecretKey valKey = derive.deriveSecretKey(passphrase, valSalt, rounds, keyBits, SecretKeyAlgorithm.AES);

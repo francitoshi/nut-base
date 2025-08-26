@@ -20,9 +20,9 @@
  */
 package io.nut.base.serializer;
 
-import io.nut.base.crypto.Derive;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
+import io.nut.base.crypto.PBKDF2;
 import io.nut.base.util.Strings;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
@@ -39,15 +39,15 @@ public class AesSivCtrSerializerTest
     @Test
     public void testSome() throws NoSuchAlgorithmException, InvalidKeySpecException
     {
-        Kripto kripto = Kripto.getInstance().setMinDeriveRounds(8);
+        Kripto kripto = Kripto.getInstance();
         
         char[] passphrase = "passphrase".toCharArray();
         byte[] saltHmac = "salt".getBytes();
         byte[] saltKey = "salt".getBytes();
-        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        PBKDF2 pbkdf2 = kripto.pbkdf2WithSha256;
 
-        SecretKey hmacKey = derive.deriveSecretKey(passphrase, saltHmac, 8, 256, SecretKeyAlgorithm.AES);
-        SecretKey codeKey = derive.deriveSecretKey(passphrase, saltKey, 8, 256, SecretKeyAlgorithm.AES);
+        SecretKey hmacKey = pbkdf2.deriveSecretKey(passphrase, saltHmac, 8, 256, SecretKeyAlgorithm.AES);
+        SecretKey codeKey = pbkdf2.deriveSecretKey(passphrase, saltKey, 8, 256, SecretKeyAlgorithm.AES);
 
         StringSerializer ss = new StringSerializer();
         

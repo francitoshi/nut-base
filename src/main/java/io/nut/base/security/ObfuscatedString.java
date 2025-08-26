@@ -20,6 +20,8 @@
  */
 package io.nut.base.security;
 
+import io.nut.base.crypto.Kripto;
+import io.nut.base.crypto.Rand;
 import java.nio.CharBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -80,14 +82,15 @@ public final class ObfuscatedString implements SecureString
             }
         }    
     }
+
+    private static final Rand RAND = Kripto.getRand();
     
     private void scramble(int start, int end, CharSequence source)
     {
-        SecureRandom random = new SecureRandom();
         for (int i=0, j = start; j < end; j++, i++)
         {
             char originalChar = source.charAt(j);
-            int randomPad = random.nextInt();
+            int randomPad = RAND.nextInt();
             this.pad[i] = randomPad;
             this.obfuscatedChars[i] = randomPad ^ originalChar;
         }

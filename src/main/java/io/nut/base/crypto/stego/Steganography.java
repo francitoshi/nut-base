@@ -20,10 +20,11 @@
  */
 package io.nut.base.crypto.stego;
 
-import io.nut.base.crypto.Derive;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.SecretKeyDerivation;
+import io.nut.base.crypto.Kripto.Pbkdf2;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
+import io.nut.base.crypto.PBKDF2;
+import io.nut.base.crypto.Rand;
 import io.nut.base.encoding.Ascii85;
 import io.nut.base.math.Nums;
 import io.nut.base.util.BitSetReader;
@@ -58,6 +59,8 @@ import javax.crypto.spec.IvParameterSpec;
  */
 public class Steganography
 {
+    static final Pbkdf2 DERIVATION = Pbkdf2.PBKDF2WithHmacSHA256;
+    
     private static final String PARAGRAPHS = "(\r?\n\r?){2,}";
     private static final String LINES = "(\r?\n\r?)";
     private static final String WORDS = "[ \n\r\t\f]+";
@@ -76,13 +79,12 @@ public class Steganography
     private final boolean deflate;
     private final int rounds;
     private final Kripto kripto;
-    private final Derive derive;
+    private final PBKDF2 pbkdf2;
+    private final Rand rand = Kripto.getRand();
     
-    private final SecretKeyDerivation derivation = SecretKeyDerivation.PBKDF2WithHmacSHA256;
     private volatile double bitsRatio=0;
     private volatile String bitsGauge="";
     
-    private final SecureRandom secureRandom;
                
     public Steganography(int columns, boolean splitLines, boolean mergeLines, boolean deflate)
     {
@@ -99,13 +101,12 @@ public class Steganography
     public Steganography(Kripto kripto, int columns, boolean splitLines, boolean mergeLines, boolean deflate, int rounds)
     {
         this.kripto = kripto==null ? kripto=Kripto.getInstance(true) : kripto;
-        this.derive = kripto.getDerive(derivation);
+        this.pbkdf2 = kripto.getPBKDF2(DERIVATION);
         this.columns = columns;
         this.splitLines = splitLines;
         this.mergeLines = mergeLines;
         this.deflate = deflate;
         this.rounds = rounds;
-        this.secureRandom = Kripto.getSecureRandom();
     }
 
     public double getBitsRatio()
@@ -396,7 +397,7 @@ public class Steganography
         {
             return null;
         }
-        return derive.deriveSecretKeyAES(passphrase, SALT, ROUNDS, KEY_BITS);
+        return pbkdf2.deriveSecretKeyAES(passphrase, SALT, ROUNDS, KEY_BITS);
     }
 
     public byte[] deriveIV(char[] passphrase) throws InvalidKeySpecException
@@ -405,7 +406,7 @@ public class Steganography
         {
             return null;
         }
-        return derive.deriveSecretKeyEncoded(passphrase, SALT, ROUNDS, 128); 
+        return pbkdf2.deriveSecretKeyEncoded(passphrase, SALT, ROUNDS, 128); 
     }
 
     public String encode(String text, byte[] msg, char[] passphrase) throws InvalidKeySpecException
@@ -455,8 +456,7 @@ public class Steganography
 
     public String justify(String text) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
-        byte[] msg = new byte[1024];
-        this.secureRandom.nextBytes(msg);
+        byte[] msg = rand.nextBytes(new byte[1024]);
         char[] passphrase = Ascii85.encode(msg);
         SecretKey key = this.deriveSecretKeyAES(passphrase);
         byte[] iv128 = this.deriveIV(passphrase); 

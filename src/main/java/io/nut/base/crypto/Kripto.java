@@ -229,16 +229,6 @@ public class Kripto
         }
     }
 
-    public static final int MINIMUM_PBKDF2_ROUNDS = 125_000;
-
-    volatile int minDeriveRounds = MINIMUM_PBKDF2_ROUNDS;
-
-    public Kripto setMinDeriveRounds(int value)
-    {
-        this.minDeriveRounds = value;
-        return this;
-    }
-
     ////////////////////////////////////////////////////////////////////////////
     ///// Enums /////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -327,11 +317,6 @@ public class Kripto
         }
     }
 
-    public enum SecretKeyDerivation
-    {
-        PBKDF2WithHmacSHA256, PBKDF2WithHmacSHA512        //GOOD
-    }
-
     public enum SecretKeyAlgorithm
     {
         AES
@@ -394,6 +379,11 @@ public class Kripto
         HmacSHA256, HmacSHA384, HmacSHA512
     }
     
+    public enum Pbkdf2
+    {
+        PBKDF2WithHmacSHA256, PBKDF2WithHmacSHA512
+    }
+
     public enum Hkdf
     {
         HkdfWithSha256, HkdfWithSha384, HkdfWithSha512
@@ -401,7 +391,11 @@ public class Kripto
     
     public enum KeyStoreType
     {
-        JKS, JCEKS, PKCS12, BCFKS
+        @Deprecated
+        JKS, 
+        @Deprecated
+        JCEKS, 
+        PKCS12, BCFKS
     }
     ////////////////////////////////////////////////////////////////////////////
     ///// Instance Members /////////////////////////////////////////////////////
@@ -1277,35 +1271,16 @@ public class Kripto
     ///// Derive data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     
-    public Derive getDerive(SecretKeyDerivation derivation)
+    public PBKDF2 getPBKDF2(Pbkdf2 derivation)
     {
-        return new Derive(this, derivation);
+        return new PBKDF2(this, derivation);
     }
 
-    public Derive getDerivePBKDF2WithHmacSHA256()
+    public HKDF getHKDF(Hkdf algorithm)
     {
-        return new Derive(this, SecretKeyDerivation.PBKDF2WithHmacSHA256);
+        return new HKDFBC(algorithm);
     }
-
-    public Derive getDerivePBKDF2WithHmacSHA512()
-    {
-        return new Derive(this, SecretKeyDerivation.PBKDF2WithHmacSHA512);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Digest data  /////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
     
-    public Digest getDigest(MessageDigestAlgorithm algorithm)
-    {
-        return new Digest(this, algorithm);
-    }
-
-    public byte[] ripemd160_digest_sha256_digest(byte[] input)
-    {
-        return ripemd160.digest(sha256.digest(input));
-    }
-
     ////////////////////////////////////////////////////////////////////////////
     ///// Digest data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -1315,9 +1290,14 @@ public class Kripto
         return new HMAC(this, algorithm);
     }
 
-    public HKDF getHKDF(Hkdf algorithm)
+    public Digest getDigest(MessageDigestAlgorithm algorithm)
     {
-        return new HKDFBC(algorithm);
+        return new Digest(this, algorithm);
+    }
+
+    public byte[] ripemd160_digest_sha256_digest(byte[] input)
+    {
+        return ripemd160.digest(sha256.digest(input));
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1337,9 +1317,12 @@ public class Kripto
 
     public final Rand rand = getRand();
 
-    public final HKDF hkdfWithSha256 = getHKDF(Kripto.Hkdf.HkdfWithSha256);
-    public final HKDF hkdfWithSha384 = getHKDF(Kripto.Hkdf.HkdfWithSha384);
-    public final HKDF hkdfWithSha512 = getHKDF(Kripto.Hkdf.HkdfWithSha512);
+    public final PBKDF2 pbkdf2WithSha256 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA256);
+    public final PBKDF2 pbkdf2WithSha512 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA512);
+
+    public final HKDF hkdfWithSha256 = getHKDF(Hkdf.HkdfWithSha256);
+    public final HKDF hkdfWithSha384 = getHKDF(Hkdf.HkdfWithSha384);
+    public final HKDF hkdfWithSha512 = getHKDF(Hkdf.HkdfWithSha512);
 
 
     /**

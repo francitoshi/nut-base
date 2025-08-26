@@ -52,26 +52,20 @@ public class HKDFBC extends HKDF
     }   
 
     @Override
-    public byte[] generateBytes(byte[] ikm, byte[] salt, byte[] info, int keyLengthBytes) 
+    public byte[] deriveBytes(byte[] ikm, byte[] salt, byte[] info, int keyBytes) 
     {
         HKDFBytesGenerator hkdf = get(this.algorithm);
         hkdf.init(new HKDFParameters(ikm, salt, info));
-        byte[] okm = new byte[keyLengthBytes]; // OKM = Output Keying Material
-        hkdf.generateBytes(okm, 0, keyLengthBytes);
+        byte[] okm = new byte[keyBytes]; // OKM = Output Keying Material
+        hkdf.generateBytes(okm, 0, keyBytes);
         return okm;
 
     }
-    
+   
     @Override
-    public SecretKey generateSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyLengthBytes, String keyAlgorithm) 
+    public SecretKey deriveSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyBytes, Kripto.SecretKeyAlgorithm keyAlgorithm)
     {
-        return new SecretKeySpec(generateBytes(ikm, salt, info, keyLengthBytes), keyAlgorithm);
-    }
-
-    @Override
-    public SecretKey generateSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyLengthBytes, Kripto.SecretKeyAlgorithm keyAlgorithm)
-    {
-        return new SecretKeySpec(generateBytes(ikm, salt, info, keyLengthBytes), keyAlgorithm.name());
+        return new SecretKeySpec(deriveBytes(ikm, salt, info, keyBytes), keyAlgorithm.name());
     }
 
 }

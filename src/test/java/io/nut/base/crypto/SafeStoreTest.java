@@ -39,7 +39,7 @@ public class SafeStoreTest
     public void testGetDerivedKey() throws Exception
     {
         char[] key = "12345678901234567890".toCharArray();
-        Kripto kripto = Kripto.getInstance().setMinDeriveRounds(2);
+        Kripto kripto = Kripto.getInstance();
         
         File file = new File("safe-store.test");
         

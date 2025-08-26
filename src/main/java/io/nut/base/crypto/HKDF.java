@@ -33,8 +33,12 @@ public abstract class HKDF
         this.algorithm = algorithm;
     }
 
-    public abstract byte[] generateBytes(byte[] ikm, byte[] salt, byte[] info, int keyLengthBytes);
-    public abstract SecretKey generateSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyLengthBytes, String keyAlgorithm); 
-    public abstract SecretKey generateSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyLengthBytes, SecretKeyAlgorithm keyAlgorithm); 
+    public abstract byte[] deriveBytes(byte[] ikm, byte[] salt, byte[] info, int keyBytes);
+    public abstract SecretKey deriveSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyBytes, SecretKeyAlgorithm keyAlgorithm); 
+
+    public final SecretKey deriveSecretKeyAES(byte[] ikm, byte[] salt, byte[] info, int keyBytes) 
+    {
+        return deriveSecretKey(ikm, salt, info, keyBytes, SecretKeyAlgorithm.AES);
+    }
     
 }

@@ -1,25 +1,10 @@
 /*
- *  DeriveTest.java
- *
- *  Copyright (C) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/UnitTests/JUnit5TestClass.java to edit this template
  */
 package io.nut.base.crypto;
 
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -37,21 +22,21 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class DeriveTest
+public class PBKDF2Test
 {
     
     @Test
     public void testDerive() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException
     {
-        Kripto kripto = Kripto.getInstance().setMinDeriveRounds(2048);
-        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        Kripto kripto = Kripto.getInstance();
+        PBKDF2 pbkdf2 = kripto.pbkdf2WithSha256;
         String plainText = "this is the plaintext";
         char[] passphrase = "this is the key".toCharArray();
         
         byte[] salt = kripto.deriveSaltSHA256("test"+"salt");
         byte[] iv32 = kripto.deriveSaltSHA256("test"+"iv");
 
-        SecretKey key = derive.deriveSecretKeyAES(passphrase, salt, 2048, 256);
+        SecretKey key = pbkdf2.deriveSecretKeyAES(passphrase, salt, 2048, 256);
         
         IvParameterSpec iv = kripto.getIv(iv32,128);
         byte[] encryptedBytes = kripto.encrypt(key, Kripto.SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, plainText.getBytes());
@@ -66,30 +51,31 @@ public class DeriveTest
     @Test
     public void testCalibrate() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException
     {
-        Kripto kripto = Kripto.getInstance().setMinDeriveRounds(1000);
-        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        Kripto kripto = Kripto.getInstance();
+        PBKDF2 derive = kripto.pbkdf2WithSha256;
         
         int ms = 500;
         int rounds = derive.calibrateRounds(ms);
         
         System.out.printf("PBKDF2WithHmacSHA256 %d ms = %d rounds\n", ms, rounds);
 
-        derive = kripto.getDerivePBKDF2WithHmacSHA512();
+        derive = kripto.pbkdf2WithSha512;
         rounds = derive.calibrateRounds(ms);
         System.out.printf("PBKDF2WithHmacSHA512 %d ms = %d rounds\n", ms, rounds);
         
-        Derive derive2 = kripto.getDerivePBKDF2WithHmacSHA256();
+        PBKDF2 derive2 = kripto.pbkdf2WithSha256;
         
         int ms2 = 500;
         int rounds2 = derive2.calibrateRounds(ms2);
         
         System.out.printf("PBKDF2WithHmacSHA256 %d ms = %d rounds\n", ms2, rounds2);
 
-        derive2 = kripto.getDerivePBKDF2WithHmacSHA512();
+        derive2 = kripto.pbkdf2WithSha512;
         rounds2 = derive2.calibrateRounds(ms2);
         System.out.printf("PBKDF2WithHmacSHA512 %d ms = %d rounds\n", ms2, rounds2);
         
         
         
     }    
+    
 }

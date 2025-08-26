@@ -39,7 +39,7 @@ public class EncryptedMapWrapperTest
 {
     static final int ROUNDS = 8;
     static final int KEYBITS = 256;
-    static final Kripto KRIPTO = Kripto.getInstance(true).setMinDeriveRounds(ROUNDS);
+    static final Kripto KRIPTO = Kripto.getInstance(true);
 
     private static final String TEST_KEY = "test_key";
     private static final String API_KEY = "api_key";

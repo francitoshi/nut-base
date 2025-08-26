@@ -43,16 +43,16 @@ public class AesSivCtrBytesCipherTest
         byte[] macSalt = "macSalt".getBytes(StandardCharsets.UTF_8);
         byte[] keySalt = "keySalt".getBytes(StandardCharsets.UTF_8);
         
-        Kripto kripto = Kripto.getInstance(true).setMinDeriveRounds(8);
-        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
-        SecretKey hmacKey = derive.deriveSecretKey(passphrase, macSalt, 8, 256, SecretKeyAlgorithm.AES);
+        Kripto kripto = Kripto.getInstance(true);
+        PBKDF2 pbkdf2 = kripto.pbkdf2WithSha256;
+        SecretKey hmacKey = pbkdf2.deriveSecretKey(passphrase, macSalt, 8, 256, SecretKeyAlgorithm.AES);
 
         int num = 10;
         String[] s = new String[num];
         
         for(int i=0;i<num;i++)
         {
-            SecretKey key = derive.deriveSecretKey(passphrase, keySalt, 8, 256, SecretKeyAlgorithm.AES);
+            SecretKey key = pbkdf2.deriveSecretKey(passphrase, keySalt, 8, 256, SecretKeyAlgorithm.AES);
             AesSivCtrBytesCipher instance = new AesSivCtrBytesCipher(Hmac.HmacSHA256, hmacKey, key);
             
             byte[] plaintext = ("plaintext"+i).getBytes(StandardCharsets.UTF_8);

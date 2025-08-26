@@ -41,9 +41,9 @@ public class AesGcmBytesCipherTest
         char[] passphrase = "passphrase".toCharArray();
         byte[] salt = "salt".getBytes(StandardCharsets.UTF_8);
         
-        Kripto kripto = Kripto.getInstance(true).setMinDeriveRounds(8);
-        Derive derive = kripto.getDerivePBKDF2WithHmacSHA256();
-        SecretKey key = derive.deriveSecretKey(passphrase, salt, 8, 256, SecretKeyAlgorithm.AES);
+        Kripto kripto = Kripto.getInstance(true);
+        PBKDF2 pbkdf2 = kripto.pbkdf2WithSha256;
+        SecretKey key = pbkdf2.deriveSecretKey(passphrase, salt, 8, 256, SecretKeyAlgorithm.AES);
         
         AesGcmBytesCipher instance = new AesGcmBytesCipher(key);
 

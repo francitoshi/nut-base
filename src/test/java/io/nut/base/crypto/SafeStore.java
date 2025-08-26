@@ -50,7 +50,7 @@ public class SafeStore
     private static final int DEFAULT_ROUNDS = 600_000; // Iteraciones para PBKDF2
 
     private Kripto kripto;
-    private Derive derive;
+    private PBKDF2 pbkdf2;
     private final File file;
     private final char[] charKey;  // Clave como char[] (puede ser null)
     private final byte[] iv;       // Vector de inicialización
@@ -68,7 +68,7 @@ public class SafeStore
     public SafeStore(File file, char[] key, String appName, boolean atomic, int rounds, Kripto kripto) throws NoSuchAlgorithmException, InvalidKeySpecException
     {
         this.kripto = kripto==null ? Kripto.getInstance() : kripto;
-        this.derive = kripto.getDerivePBKDF2WithHmacSHA256();
+        this.pbkdf2 = kripto.pbkdf2WithSha256;
         this.file = file;
         char[] app = appName.toCharArray();
         this.charKey = (key!=null) ? key : Utils.EMPTY_CHAR_ARRAY;
@@ -88,7 +88,7 @@ public class SafeStore
     {
         if(this.secretKey==null)
         {
-            this.secretKey = derive.deriveSecretKey(this.charKey, salt, rounds, KEY_LENGTH, SecretKeyAlgorithm.AES);
+            this.secretKey = pbkdf2.deriveSecretKey(this.charKey, salt, rounds, KEY_LENGTH, SecretKeyAlgorithm.AES);
         }
         return this.secretKey;
     }

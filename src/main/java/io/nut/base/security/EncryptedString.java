@@ -20,6 +20,8 @@
  */
 package io.nut.base.security;
 
+import io.nut.base.crypto.Kripto;
+import io.nut.base.crypto.Rand;
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
@@ -30,7 +32,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.util.Arrays;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -47,7 +48,7 @@ public final class EncryptedString implements SecureString, CharSequence, AutoCl
     private static final int GCM_TAG_LENGTH = 16; // Authentication tag length
     private static final String ALGORITHM = "AES/GCM/NoPadding";
 
-    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Rand RAND = Kripto.getRand();
 
     protected final byte[] encryptedData;
     private final SecretKey secretKey;
@@ -84,12 +85,9 @@ public final class EncryptedString implements SecureString, CharSequence, AutoCl
         this.length = input.length;
 
         // Generate random key and IV
-        byte[] keyBytes = new byte[32]; // 256-bit key
-        RANDOM.nextBytes(keyBytes);
+        byte[] keyBytes = RAND.nextBytes(new byte[32]); // 256-bit key
+        this.iv = RAND.nextBytes(new byte[GCM_IV_LENGTH]);
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
-
-        this.iv = new byte[GCM_IV_LENGTH];
-        RANDOM.nextBytes(iv);
 
         // Convert char[] to byte[]
         ByteBuffer byteBuffer = StandardCharsets.UTF_8.encode(CharBuffer.wrap(input));

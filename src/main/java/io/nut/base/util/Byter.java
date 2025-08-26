@@ -28,6 +28,7 @@ import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 
 /**
  *
@@ -65,7 +66,7 @@ public class Byter
         }
         return buffer.array();
     }
-    
+
     public static byte[] bytes(int[] src, ByteOrder byteOrder)
     {
         if (src == null)
@@ -104,6 +105,7 @@ public class Byter
     {
         return bytes(src, null);
     }
+    
     public static byte[] bytes(int[] src)
     {
         return bytes(src, null);
@@ -264,6 +266,7 @@ public class Byter
         ByteBuffer byteBuffer = charset.encode(CharBuffer.wrap(src));
         byte[] byteArray = new byte[byteBuffer.remaining()];
         byteBuffer.get(byteArray);
+        Arrays.fill(byteBuffer.array(), (byte) 0); //secure clean
         return byteArray;
     }
 
@@ -277,6 +280,7 @@ public class Byter
         CharBuffer charBuffer = charset.decode(ByteBuffer.wrap(src));
         char[] charArray = new char[charBuffer.remaining()];
         charBuffer.get(charArray);
+        Arrays.fill(charBuffer.array(), '\0'); //secure clean
         return charArray;
     }
 
