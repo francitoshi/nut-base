@@ -1,6 +1,22 @@
 /*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/UnitTests/JUnit5TestClass.java to edit this template
+ *  PBKDF2Test.java
+ *
+ *  Copyright (C) 2025 francitoshi@gmail.com
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.crypto;
 
@@ -18,10 +34,6 @@ import javax.crypto.spec.IvParameterSpec;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- *
- * @author franci
- */
 public class PBKDF2Test
 {
     
@@ -52,29 +64,17 @@ public class PBKDF2Test
     public void testCalibrate() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException
     {
         Kripto kripto = Kripto.getInstance();
-        PBKDF2 derive = kripto.pbkdf2WithSha256;
-        
-        int ms = 500;
-        int rounds = derive.calibrateRounds(ms);
-        
-        System.out.printf("PBKDF2WithHmacSHA256 %d ms = %d rounds\n", ms, rounds);
-
-        derive = kripto.pbkdf2WithSha512;
-        rounds = derive.calibrateRounds(ms);
-        System.out.printf("PBKDF2WithHmacSHA512 %d ms = %d rounds\n", ms, rounds);
-        
-        PBKDF2 derive2 = kripto.pbkdf2WithSha256;
-        
-        int ms2 = 500;
-        int rounds2 = derive2.calibrateRounds(ms2);
-        
-        System.out.printf("PBKDF2WithHmacSHA256 %d ms = %d rounds\n", ms2, rounds2);
-
-        derive2 = kripto.pbkdf2WithSha512;
-        rounds2 = derive2.calibrateRounds(ms2);
-        System.out.printf("PBKDF2WithHmacSHA512 %d ms = %d rounds\n", ms2, rounds2);
-        
-        
+        PBKDF2[] pbkdf2 = { kripto.pbkdf2WithSha256, kripto.pbkdf2WithSha512};
+                
+        for(int i=1;i<6;i++)
+        {
+            int ms = i*200;
+            for(PBKDF2 derive : pbkdf2)
+            {
+                int rounds = kripto.pbkdf2WithSha256.calibrateRounds(ms);
+                System.out.printf("%s %d ms = %d rounds\n", derive.algorithm.name(), ms, rounds);
+            }
+        }
         
     }    
     

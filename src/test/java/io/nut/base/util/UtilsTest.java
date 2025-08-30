@@ -2805,4 +2805,24 @@ public class UtilsTest
         assertFalse(Utils.isEmpty(array2));
     }
 
+    @Test
+    public void testParkUntilNanoTime()
+    {
+        long now = System.nanoTime();
+        long t[] = new long[6];
+        t[0] = now + 1000L;
+        t[1] = now + 1000_000L;
+        t[2] = now + 100_000_000L;
+        t[3] = now + 200_000_000L;
+        t[4] = now + 300_000_000L;
+        t[5] = now + 400_000_000L;
+        
+        for(int i=0;i<t.length;i++)
+        {
+            Utils.parkUntilNanoTime(t[i]);
+            assertTrue( System.nanoTime() > t[i]);
+        }
+        
+    }
+
 }

@@ -56,6 +56,18 @@ public class KeyStoreManager
         {
             throw new ProviderException("no passphraser provided.");
         };
+
+        @Override
+        public byte[] bytes(byte[] info)
+        {
+            throw new ProviderException("no passphraser provided.");
+        }
+
+        @Override
+        public char[] chars(byte[] info)
+        {
+            throw new ProviderException("no passphraser provided.");
+        }
     };
     
     private final KeyStore keyStore;

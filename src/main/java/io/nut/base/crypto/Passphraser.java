@@ -22,6 +22,11 @@ package io.nut.base.crypto;
 
 public interface Passphraser
 {
-    char[] chars(String label);
-    byte[] bytes(String label);
+    byte[] bytes(byte[] info);
+    
+    byte[] bytes(String info);
+    
+    char[] chars(byte[] info);
+    
+    char[] chars(String info);
 }

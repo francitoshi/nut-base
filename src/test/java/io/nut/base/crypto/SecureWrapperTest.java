@@ -37,20 +37,21 @@ public class SecureWrapperTest
     {
         byte[] plaintext = "hello world".getBytes(StandardCharsets.UTF_8);
         byte[] info = "info".getBytes(StandardCharsets.UTF_8);
-        char[] pass = "pass".toCharArray();
         byte[] key = new byte[32];
         new Random().nextBytes(key);
-        SecureWrapper wrapper = new SecureWrapper(Kripto.getInstanceBouncyCastle(), 128, 256);
+        SecureWrapper wrapper = new SecureWrapper(key);
 
-        String ciphertext1 = wrapper.wrap(plaintext, pass);
-        byte[] result1 = wrapper.unwrap(ciphertext1, pass);
+        String ciphertext1 = wrapper.wrap(plaintext, info);
+        String ciphertext2 = wrapper.wrap(plaintext, info);
+
+        assertFalse(ciphertext1.equals(ciphertext2));
+        
+        byte[] result1 = wrapper.unwrap(ciphertext1, info);
+        byte[] result2 = wrapper.unwrap(ciphertext2, info);
         
         assertArrayEquals(plaintext, result1);
-        
-        String ciphertext2 = wrapper.wrap(plaintext, info, key);
-        byte[] result2 = wrapper.unwrap(ciphertext2, info, key);
-        
         assertArrayEquals(plaintext, result2);
+
     }
     
 }

@@ -103,16 +103,16 @@ public class Byter
     }
     public static byte[] bytes(char[] src)
     {
-        return bytes(src, null);
+        return bytes(src, (ByteOrder)null);
     }
     
     public static byte[] bytes(int[] src)
     {
-        return bytes(src, null);
+        return bytes(src, (ByteOrder)null);
     }
     public static byte[] bytes(long[] src)
     {
-        return bytes(src, null);
+        return bytes(src, (ByteOrder)null);
     }
     
     public static byte[] bytesLE(short[] src)
@@ -223,7 +223,7 @@ public class Byter
 
     public static char[] chars(byte[] src)
     {
-        return chars(src, null);
+        return chars(src, (ByteOrder)null);
     }
     
     public static int[] ints(byte[] src)
@@ -256,13 +256,12 @@ public class Byter
         return longs(src, ByteOrder.LITTLE_ENDIAN);
     }
     
-    public static byte[] bytesUTF8(char[] src)
+    public static byte[] bytes(char[] src, Charset charset)
     {
         if (src == null)
         {
             return null;
         }
-        Charset charset = StandardCharsets.UTF_8;
         ByteBuffer byteBuffer = charset.encode(CharBuffer.wrap(src));
         byte[] byteArray = new byte[byteBuffer.remaining()];
         byteBuffer.get(byteArray);
@@ -270,18 +269,27 @@ public class Byter
         return byteArray;
     }
 
-    public static char[] charsUTF8(byte[] src)
+    public static char[] chars(byte[] src, Charset charset)
     {
         if (src == null)
         {
             return null;
         }
-        Charset charset = StandardCharsets.UTF_8;
         CharBuffer charBuffer = charset.decode(ByteBuffer.wrap(src));
         char[] charArray = new char[charBuffer.remaining()];
         charBuffer.get(charArray);
         Arrays.fill(charBuffer.array(), '\0'); //secure clean
         return charArray;
+    }
+
+    public static byte[] bytesUTF8(char[] src)
+    {
+        return bytes(src, StandardCharsets.UTF_8);
+    }
+
+    public static char[] charsUTF8(byte[] src)
+    {
+        return chars(src, StandardCharsets.UTF_8);
     }
 
 }

@@ -25,6 +25,7 @@ import io.nut.base.encoding.Base32String;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
@@ -50,6 +51,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.Normalizer;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
@@ -674,11 +676,17 @@ public class Kripto
      * @param algorithm the secret key algorithm
      * @param keyBits the key size in bits
      * @return a KeyGenerator instance
-     * @throws NoSuchAlgorithmException if the algorithm is not available
      */
-    public KeyGenerator getKeyGenerator(SecretKeyAlgorithm algorithm, int keyBits) throws NoSuchAlgorithmException
+    public KeyGenerator getKeyGenerator(SecretKeyAlgorithm algorithm, int keyBits)
     {
-        return getKeyGenerator(algorithm.name(), keyBits);
+        try
+        {
+            return getKeyGenerator(algorithm.name(), keyBits);
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
 
     /**
@@ -1309,22 +1317,6 @@ public class Kripto
         return new Steganography(this, columns, splitLines, mergeLines, deflate);
     }
 
-    //useful instances
-    public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
-    public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
-    public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
-    public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
-
-    public final Rand rand = getRand();
-
-    public final PBKDF2 pbkdf2WithSha256 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA256);
-    public final PBKDF2 pbkdf2WithSha512 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA512);
-
-    public final HKDF hkdfWithSha256 = getHKDF(Hkdf.HkdfWithSha256);
-    public final HKDF hkdfWithSha384 = getHKDF(Hkdf.HkdfWithSha384);
-    public final HKDF hkdfWithSha512 = getHKDF(Hkdf.HkdfWithSha512);
-
-
     /**
      * Generates a 6-character Base32 Short Authentication String (SAS) from two
      * fingerprints. The method is deterministic and commutative, meaning
@@ -1373,4 +1365,19 @@ public class Kripto
         return b32s.substring(0, 4) + "-" + b32s.substring(4, 8);
     }
 
+    //useful instances
+    public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
+    public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
+    public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
+    public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
+
+    public final PBKDF2 pbkdf2WithSha256 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA256);
+    public final PBKDF2 pbkdf2WithSha512 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA512);
+
+    public final HKDF hkdfWithSha256 = getHKDF(Hkdf.HkdfWithSha256);
+    public final HKDF hkdfWithSha384 = getHKDF(Hkdf.HkdfWithSha384);
+    public final HKDF hkdfWithSha512 = getHKDF(Hkdf.HkdfWithSha512);
+
+    public final KeyGenerator keyGenAes256 = getKeyGenerator(SecretKeyAlgorithm.AES, 256);
+    
 }

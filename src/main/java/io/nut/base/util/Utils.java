@@ -58,6 +58,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -3106,5 +3107,24 @@ public abstract class Utils
     {
         return array == null || array.length == 0;
     }
-
+    
+    public static void parkUntilNanoTime(long deadlineNano)
+    {
+        for (;;)
+        {
+            long now = System.nanoTime();
+            long remaining = deadlineNano - now;
+            if (remaining <= 0)
+            {
+                return;
+            }
+            // Sleep the rest of the time (may wake up earlier)
+            LockSupport.parkNanos(remaining);
+        }
+    }
+    
+    public static void parkNanos(long nanos)
+    {
+        LockSupport.parkNanos(nanos);
+    }    
 }

@@ -21,15 +21,21 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.Hkdf;
-import io.nut.base.crypto.Kripto.Pbkdf2;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
+import java.nio.charset.StandardCharsets;
 
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import java.security.GeneralSecurityException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 
 /**
  * Provides a high-level API for symmetric authenticated encryption, serializing
@@ -72,89 +78,40 @@ public final class SecureWrapper
     private static final Base64.Decoder BASE64_DECODER = Base64.getDecoder();
 
     private final Kripto kripto;
-    private final HKDF hkdf;
-    private final PBKDF2 pbkdf2;
-    public final int pbkdf2Rounds;
-    private final int keyBits;
-    private final int keyBytes;
+    private final byte[] ikm;
     private final Rand rand;
+    private final HKDF hkdf;
 
-    /**
-     * Constructs a new SecureWrapper with specific cryptographic parameters.
-     *
-     * @param kripto The {@link Kripto} provider for cryptographic primitives.
-     * If null, a default instance is used.
-     * @param pbkdf2Rounds The number of iterations to use for PBKDF2 key
-     * derivation. This is the work factor.
-     * @param keyBits The desired key length in bits for AES (e.g., 128, 192,
-     * 256).
-     */
-    public SecureWrapper(Kripto kripto, int pbkdf2Rounds, int keyBits)
+    public SecureWrapper(Kripto kripto, byte[] ikm, Hkdf hkdf)
     {
         this.kripto = kripto == null ? Kripto.getInstance(true) : kripto;
+        this.ikm = ikm;
         this.rand = Kripto.getRand();
-        this.hkdf = this.kripto.hkdfWithSha512;
-        this.pbkdf2 = this.kripto.pbkdf2WithSha512;
-        this.pbkdf2Rounds = pbkdf2Rounds;
-        this.keyBits = keyBits;
-        this.keyBytes = keyBits / 8;
+        this.hkdf = this.kripto.getHKDF(hkdf);
     }
 
     /**
      * Constructor to create an instance with default parameters.
      */
-    public SecureWrapper()
+    public SecureWrapper(byte[] ikm)
     {
-        this(null, PBKDF2_ROUNDS, KEY_BITS);
+        this(null, ikm, Hkdf.HkdfWithSha512);
     }
 
-    /**
-     * Wraps and encrypts plaintext using a high-entropy master key. It uses
-     * HKDF to derive a unique encryption key for this operation. The provided
-     * {@code info} parameter is embedded in the output and verified during
-     * unwrap.
-     *
-     * @param plaintext The data to encrypt.
-     * @param info The context/domain separation data for HKDF. This is a
-     * critical security parameter.
-     * @param key The high-entropy master key (IKM for HKDF).
-     * @return A self-contained, encrypted string in the format
-     * {@code v1$salt$info$iv$ciphertext}.
-     * @throws GeneralSecurityException if any cryptographic operation fails.
-     */
-    public String wrap(byte[] plaintext, byte[] info, byte[] key) throws GeneralSecurityException
+    public String wrap(byte[] plaintext, byte[] info)
     {
         byte[] salt = this.rand.nextBytes(new byte[SALT_BYTES]);
-        SecretKey secretKey = hkdf.deriveSecretKeyAES(key, salt, info, keyBytes);
+        SecretKey secretKey = hkdf.deriveSecretKeyAES(ikm, salt, info, ikm.length);
 
         String encodedSalt = BASE64_ENCODER.encodeToString(salt);
         String encodedInfo = BASE64_ENCODER.encodeToString(info);
         String wrappedCiphertext = wrap(plaintext, secretKey);
         return String.join(SEPARATOR, FORMAT_VERSION, encodedSalt, encodedInfo, wrappedCiphertext);
     }
-
-    /**
-     * Wraps and encrypts plaintext using a low-entropy, human-memorable
-     * password. It uses PBKDF2 to stretch the password into a secure encryption
-     * key.
-     *
-     * @param plaintext The data to encrypt.
-     * @param pass The password to use for key derivation. It is a
-     * {@code char[]} for enhanced security.
-     * @return A self-contained, encrypted string in the format
-     * {@code v1$salt$rounds$iv$ciphertext}.
-     * @throws GeneralSecurityException if any cryptographic operation fails.
-     */
-    public String wrap(byte[] plaintext, char[] pass) throws GeneralSecurityException
+    
+    public String wrap(byte[] plaintext, String info)
     {
-        byte[] salt = this.rand.nextBytes(new byte[SALT_BYTES]);
-        SecretKey secretKey = this.pbkdf2.deriveSecretKeyAES(pass, salt, pbkdf2Rounds, keyBits);
-
-        String encodedSalt = BASE64_ENCODER.encodeToString(salt);
-        String encodedRounds = Integer.toString(pbkdf2Rounds);
-        String wrappedCiphertext = wrap(plaintext, secretKey);
-
-        return String.join(SEPARATOR, FORMAT_VERSION, encodedSalt, encodedRounds, wrappedCiphertext);
+        return wrap(plaintext, info.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
@@ -166,36 +123,28 @@ public final class SecureWrapper
      * separated by '$'.
      * @throws GeneralSecurityException if encryption fails.
      */
-    private String wrap(byte[] plaintext, SecretKey key) throws GeneralSecurityException
+    private String wrap(byte[] plaintext, SecretKey key)
     {
-        byte[] iv = this.rand.nextBytes(new byte[GCM_IV_BYTES]);
-
-        GCMParameterSpec ivGcm = this.kripto.getIvGCM(iv, GCM_TAG_BITS);
-        Cipher cipher = this.kripto.getCipher(key, SecretKeyTransformation.AES_GCM_NoPadding, ivGcm, Cipher.ENCRYPT_MODE);
-        byte[] ciphertext = cipher.doFinal(plaintext);
-
-        String encodedIv = BASE64_ENCODER.encodeToString(iv);
-        String encodedCiphertext = BASE64_ENCODER.encodeToString(ciphertext);
-
-        return String.join(SEPARATOR, encodedIv, encodedCiphertext);
+        try
+        {
+            byte[] iv = this.rand.nextBytes(new byte[GCM_IV_BYTES]);
+            
+            GCMParameterSpec ivGcm = this.kripto.getIvGCM(iv, GCM_TAG_BITS);
+            Cipher cipher = this.kripto.getCipher(key, SecretKeyTransformation.AES_GCM_NoPadding, ivGcm, Cipher.ENCRYPT_MODE);
+            byte[] ciphertext = cipher.doFinal(plaintext);
+            
+            String encodedIv = BASE64_ENCODER.encodeToString(iv);
+            String encodedCiphertext = BASE64_ENCODER.encodeToString(ciphertext);
+            
+            return String.join(SEPARATOR, encodedIv, encodedCiphertext);
+        }
+        catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
 
-    /**
-     * Unwraps and decrypts a string that was protected with a master key. This
-     * method re-derives the key using HKDF and verifies that the provided
-     * {@code info} parameter matches the one embedded in the
-     * {@code wrappedtext}. This check prevents context confusion attacks.
-     *
-     * @param wrappedtext The encrypted string to decrypt.
-     * @param info The **expected** context/domain separation data.
-     * @param key The master key that was originally used to wrap the data.
-     * @return The original decrypted plaintext.
-     * @throws GeneralSecurityException if decryption or authentication fails
-     * (e.g., wrong key, tampered data).
-     * @throws IllegalArgumentException if the wrapped string has an invalid
-     * format or if the {@code info} context does not match.
-     */
-    public byte[] unwrap(String wrappedtext, byte[] info, byte[] key) throws GeneralSecurityException
+    public byte[] unwrap(String wrappedtext, byte[] info)
     {
         String[] parts = wrappedtext.split(SEPARATOR_REGEX);
         if (parts.length != 5)
@@ -212,58 +161,30 @@ public final class SecureWrapper
         {
             throw new IllegalArgumentException("Mismatched info context. Expected '" + new String(info) + "' but found '" + new String(parsedInfo) + "'.");
         }
-        SecretKey secretKey = hkdf.deriveSecretKeyAES(key, salt, info, keyBytes);
+        SecretKey secretKey = hkdf.deriveSecretKeyAES(ikm, salt, info, ikm.length);
         return unwrap(parts, secretKey);
     }
-
-    /**
-     * Unwraps and decrypts a string that was protected with a password. This
-     * method re-derives the key using PBKDF2 with the parameters embedded in
-     * the {@code wrappedtext}.
-     *
-     * @param wrappedtext The encrypted string to decrypt.
-     * @param pass The password that was originally used to wrap the data.
-     * @return The original decrypted plaintext.
-     * @throws GeneralSecurityException if decryption or authentication fails
-     * (e.g., wrong password, tampered data).
-     * @throws IllegalArgumentException if the wrapped string has an invalid
-     * format.
-     */
-    public byte[] unwrap(String wrappedtext, char[] pass) throws GeneralSecurityException
+    
+    public byte[] unwrap(String wrappedtext, String info)
     {
-        String[] parts = wrappedtext.split(SEPARATOR_REGEX);
-        if (parts.length != 5)
-        {
-            throw new IllegalArgumentException("Invalid wrapped format: incorrect number of parts.");
-        }
-        if (!FORMAT_VERSION.equals(parts[0]))
-        {
-            throw new IllegalArgumentException("Unsupported version: " + parts[0]);
-        }
-        byte[] salt = BASE64_DECODER.decode(parts[1]);
-        int rounds = Integer.parseUnsignedInt(parts[2]);
-        SecretKey secretKey = pbkdf2.deriveSecretKeyAES(pass, salt, rounds, keyBits);
-        return unwrap(parts, secretKey);
+        return unwrap(wrappedtext, info.getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * Core decryption logic using a pre-derived key.
-     *
-     * @param parts The parts of the wrapped string, already split. The IV is at
-     * index 3 and ciphertext at index 4.
-     * @param key The {@link SecretKey} to use for decryption.
-     * @return The original decrypted plaintext.
-     * @throws GeneralSecurityException if decryption fails (e.g., the
-     * authentication tag is invalid).
-     */
-    private byte[] unwrap(String[] parts, SecretKey key) throws GeneralSecurityException
+    private byte[] unwrap(String[] parts, SecretKey key)
     {
-        byte[] iv = BASE64_DECODER.decode(parts[3]);
-        byte[] wrappedCiphertext = BASE64_DECODER.decode(parts[4]);
-
-        GCMParameterSpec ivGcm = kripto.getIvGCM(iv, GCM_TAG_BITS);
-        Cipher cipher = kripto.getCipher(key, SecretKeyTransformation.AES_GCM_NoPadding, ivGcm, Cipher.DECRYPT_MODE);
-        return cipher.doFinal(wrappedCiphertext);
+        try
+        {
+            byte[] iv = BASE64_DECODER.decode(parts[3]);
+            byte[] wrappedCiphertext = BASE64_DECODER.decode(parts[4]);
+            
+            GCMParameterSpec ivGcm = kripto.getIvGCM(iv, GCM_TAG_BITS);
+            Cipher cipher = kripto.getCipher(key, SecretKeyTransformation.AES_GCM_NoPadding, ivGcm, Cipher.DECRYPT_MODE);
+            return cipher.doFinal(wrappedCiphertext);
+        }
+        catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
+        {
+            throw new RuntimeException(ex);
+        }
     }
 
 }

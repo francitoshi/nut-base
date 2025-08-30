@@ -39,7 +39,8 @@ import javax.crypto.spec.SecretKeySpec;
 public class PBKDF2
 {
     private final Kripto kripto;
-    private final Pbkdf2 algorithm;
+    private final SecureRandom random = new SecureRandom();
+    public final Pbkdf2 algorithm;
 
     public PBKDF2(Kripto kripto, Pbkdf2 algorithm)
     {
@@ -97,11 +98,8 @@ public class PBKDF2
    
     // Dummy data for calibration. The content doesn't matter, but the length should be realistic.
     private static final char[] DUMMY_PASSWORD = "calibration-password-123!".toCharArray();
-    private static final int SALT_SIZE_BYTES = 16;
+    private static final int SALT_SIZE_BYTES = 32;
     private static final int KEY_BITS = 256;
-
-    // --- Configuration for the calibration process ---
-    private static final int MEASUREMENT_ITERATIONS = 25;
 
     /**
      * Calibrates the number of PBKDF2 rounds needed to achieve a target
@@ -115,51 +113,47 @@ public class PBKDF2
      */
     public int calibrateRounds(long targetMillis) throws InvalidKeySpecException
     {
-        int minRounds = 2048;
+        long targetNanos = TimeUnit.MILLISECONDS.toNanos(targetMillis);
+        int minRounds = 0;
         byte[] salt = new byte[SALT_SIZE_BYTES];
-        new SecureRandom().nextBytes(salt);
+        random.nextBytes(salt);
 
         // 1. Warm-up Phase: Run the derivation several times to allow the JIT compiler to optimize.
-        long t = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(targetMillis);
-        for (int i = 0; i < 5 || System.nanoTime() < t; i++)
+        long t = System.nanoTime() + targetNanos/8;
+        for (int i = 0; i < 8 || System.nanoTime() < t; i++)
         {
-            this.deriveSecretKeyEncoded(DUMMY_PASSWORD, salt, minRounds, KEY_BITS);
+            this.deriveSecretKeyEncoded(DUMMY_PASSWORD, salt, i+1, KEY_BITS);
+            minRounds += i+1;
         }
         
         // 2. Baseline Measurement Phase: Measure the time for a small number of rounds.
         long t0 = System.nanoTime();
-        for (int i = 0; i < MEASUREMENT_ITERATIONS; i++)
+        t = t0 + targetNanos;
+        int rounds=0;
+        for (int i = 0; i < 8  || System.nanoTime() < t; i++)
         {
             this.deriveSecretKeyEncoded(DUMMY_PASSWORD, salt, minRounds, KEY_BITS);
+            rounds += minRounds;
         }
         long t1 = System.nanoTime();
         
-        long averageNanos = (t1-t0) / MEASUREMENT_ITERATIONS;
+        long averageNanos = (t1-t0) / rounds;
+        int targetRounds = (int) (targetNanos / averageNanos);
 
-        // 3. Calculation Phase: Extrapolate to find the target number of rounds.
-        // Cost per round in nanoseconds
-        double costPerRoundNanos = (double) averageNanos / minRounds;
-        
-        long targetNanos = TimeUnit.MILLISECONDS.toNanos(targetMillis);
-
-        int calculatedRounds = (int) (targetNanos / costPerRoundNanos);
-        // It's good practice to round to a "clean" number, e.g., the nearest thousand.
-        calculatedRounds = (calculatedRounds / 1000) * 1000;
-        
         // 4. Verification Phase: Run with the calculated rounds to confirm the timing.
-        for (int i = 0; i < MEASUREMENT_ITERATIONS; i++)
+        for (int i = 0; i < 8; i++)
         {
             t0 = System.nanoTime();
-            this.deriveSecretKeyEncoded(DUMMY_PASSWORD, salt, calculatedRounds, KEY_BITS);
+            this.deriveSecretKeyEncoded(DUMMY_PASSWORD, salt, targetRounds, KEY_BITS);
             t1 = System.nanoTime();
-            long millis = TimeUnit.NANOSECONDS.toMillis(t1-t0);
-            if(millis<targetMillis)
+            long nanos = (t1-t0);
+            if(nanos>=targetNanos)
             {
-                return calculatedRounds;
+                break;
             }
-            calculatedRounds = (calculatedRounds * 1100) / 1000;
+            targetRounds = (targetRounds * 1100) / 1000;
         }
-
-        return calculatedRounds;
+        targetRounds = (targetRounds / 1000) * 1000;
+        return targetRounds;
     }
 }

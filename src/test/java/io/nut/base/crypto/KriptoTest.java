@@ -27,6 +27,7 @@ import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.crypto.Kripto.SignatureAlgorithm;
 import io.nut.base.encoding.Hex;
+import io.nut.base.security.Wiper;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
 import io.nut.base.util.Joins;

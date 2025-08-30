@@ -1,7 +1,7 @@
 /*
- *  RotatingOutputStream.java
+ *  RotatingFileOutputStream.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,11 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Locale;
 
-/**
- *
- * @author franci
- */
-public class RotatingOutputStream extends FilterOutputStream
+public class RotatingFileOutputStream extends FilterOutputStream
 {
     private final Object lock = new Object();
     
@@ -42,7 +38,7 @@ public class RotatingOutputStream extends FilterOutputStream
     private volatile OutputStream output;
     private volatile long size;
 
-    public RotatingOutputStream(String pattern, int limit, int count, boolean append) throws FileNotFoundException 
+    public RotatingFileOutputStream(String pattern, int limit, int count, boolean append) throws FileNotFoundException 
     {
         super(null);
         this.pattern = pattern;
