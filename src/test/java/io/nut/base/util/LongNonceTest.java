@@ -1,7 +1,7 @@
 /*
- * NonceTest.java
+ * LongNonceTest.java
  *
- * Copyright (c) 2021-2023 francitoshi@gmail.com
+ * Copyright (c) 2021-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -31,40 +31,15 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class NonceTest
-{
-    
-    public NonceTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
+public class LongNonceTest
+{    
     /**
-     * Test of getSequentialInstance method, of class Nonce.
+     * Test of getSequentialInstance method, of class LongNonce.
      */
     @Test
     public void testGetSequentialInstance_long()
     {
-        Nonce nonce = Nonce.getSequentialInstance(0L);
+        LongNonce nonce = LongNonce.getSequentialInstance(0L);
         
         assertEquals(0L, nonce.peek());
         assertEquals(1L, nonce.get());
@@ -72,12 +47,12 @@ public class NonceTest
     }
 
     /**
-     * Test of getSequentialInstance method, of class Nonce.
+     * Test of getSequentialInstance method, of class LongNonce.
      */
     @Test
     public void testGetSequentialInstance_0args()
     {
-        Nonce nonce = Nonce.getSequentialInstance();
+        LongNonce nonce = LongNonce.getSequentialInstance();
         
         assertEquals(0L, nonce.peek());
         assertEquals(1L, nonce.get());
@@ -85,12 +60,12 @@ public class NonceTest
     }
 
     /**
-     * Test of getCurrentMillisInstance method, of class Nonce.
+     * Test of getCurrentMillisInstance method, of class LongNonce.
      */
     @Test
     public void testGetCurrentMillisInstance_long()
     {
-        Nonce nonce = Nonce.getCurrentMillisInstance(0L);
+        LongNonce nonce = LongNonce.getCurrentMillisInstance(0L);
         
         assertEquals(0L, nonce.peek());
         
@@ -105,12 +80,12 @@ public class NonceTest
     }
 
     /**
-     * Test of getCurrentMillisInstance method, of class Nonce.
+     * Test of getCurrentMillisInstance method, of class LongNonce.
      */
     @Test
     public void testGetCurrentMillisInstance_0args()
     {
-        Nonce nonce = Nonce.getCurrentMillisInstance();
+        LongNonce nonce = LongNonce.getCurrentMillisInstance();
         
         long t0 = System.currentTimeMillis();
         long value0 = nonce.peek();

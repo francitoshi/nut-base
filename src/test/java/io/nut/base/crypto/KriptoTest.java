@@ -27,7 +27,6 @@ import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.crypto.Kripto.SignatureAlgorithm;
 import io.nut.base.encoding.Hex;
-import io.nut.base.security.Wiper;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
 import io.nut.base.util.Joins;
@@ -177,7 +176,7 @@ public class KriptoTest
     }
 
     @Test
-    public void testExampleBouncyCastleAES() throws Exception
+    public void testExampleBouncyCastle() throws Exception
     {
         Kripto instance = Kripto.getInstanceBouncyCastle();
 
@@ -186,16 +185,19 @@ public class KriptoTest
         {
             SecretKeyTransformation.AES_CBC_PKCS5Padding,
             SecretKeyTransformation.AES_GCM_NoPadding,
+            SecretKeyTransformation.ChaCha20_Poly1305,
         };
         SecretKeyAlgorithm[] secretKeyAlgorithms =
         {
             SecretKeyAlgorithm.AES,
             SecretKeyAlgorithm.AES,
+            SecretKeyAlgorithm.ChaCha20,
         };
         int[][] keyBits =
         {
             { 128, 192, 256 },
             { 128 },
+            { 256 },
         };
 
         for (int i = 0; i < secretKeyTransformations.length; i++)
@@ -691,5 +693,18 @@ public class KriptoTest
         String result21 = instance.getSAS8(s2,s1);
         assertEquals(result12, result21);
     }
-   
+
+    @Test
+    public void testIsAvailable()
+    {
+
+        Kripto instance = Kripto.getInstanceBouncyCastle();
+        
+        assertTrue(instance.isAvailable(SecretKeyTransformation.AES_GCM_NoPadding));
+        assertTrue(instance.isAvailable(SecretKeyTransformation.ChaCha20_Poly1305));
+        
+        assertTrue(instance.isAvailable(SecretKeyAlgorithm.AES));
+        assertTrue(instance.isAvailable(SecretKeyAlgorithm.ChaCha20));
+        
+    }
 }

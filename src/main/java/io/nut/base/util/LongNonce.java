@@ -1,5 +1,5 @@
 /*
- * Nonce.java
+ * LongNonce.java
  *
  * Copyright (c) 2021-2023 francitoshi@gmail.com
  *
@@ -24,30 +24,30 @@ package io.nut.base.util;
  *
  * @author franci
  */
-public abstract class Nonce
+public abstract class LongNonce
 {
-    public static Nonce getSequentialInstance(long start)
+    public static LongNonce getSequentialInstance(long start)
     {
-        return new Nonce.Sequential(start);
+        return new LongNonce.Sequential(start);
     }
-    public static Nonce getSequentialInstance()
+    public static LongNonce getSequentialInstance()
     {
-        return new Nonce.Sequential(0L);
+        return new LongNonce.Sequential(0L);
     }
-    public static Nonce getCurrentMillisInstance(long start)
+    public static LongNonce getCurrentMillisInstance(long start)
     {
-        return new Nonce.CurrentMillis(start);
+        return new LongNonce.CurrentMillis(start);
     }
-    public static Nonce getCurrentMillisInstance()
+    public static LongNonce getCurrentMillisInstance()
     {
-        return new Nonce.CurrentMillis(System.currentTimeMillis());
+        return new LongNonce.CurrentMillis(System.currentTimeMillis());
     }
     
     protected final Object lock = new Object();
     
     protected volatile long value;
 
-    protected Nonce(long value)
+    protected LongNonce(long value)
     {
         this.value = value;
     }
@@ -62,7 +62,7 @@ public abstract class Nonce
 
     public abstract long get();
     
-    private static class Sequential extends Nonce
+    private static class Sequential extends LongNonce
     {
         public Sequential(long value)
         {
@@ -77,7 +77,7 @@ public abstract class Nonce
             }
         }
     }
-    private static class CurrentMillis extends Nonce
+    private static class CurrentMillis extends LongNonce
     {
         public CurrentMillis(long value)
         {

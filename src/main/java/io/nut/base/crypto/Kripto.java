@@ -25,7 +25,6 @@ import io.nut.base.encoding.Base32String;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.PrintStream;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
@@ -51,7 +50,6 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.Normalizer;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
@@ -83,19 +81,24 @@ public class Kripto
 
     // The recommended IV size for GCM is 96 bits (12 bytes) for performance reasons.
     public static final int GCM_IV_BITS = 96;
-    public static final int GCM_IV_LENGTH = GCM_IV_BITS / 8;
+    public static final int GCM_IV_BYTES = GCM_IV_BITS / 8;
 
     // The recommended TAG size for GCM is 128 bits (16 bytes) for security reasons.
     public static final int GCM_TAG_BITS = 128;
-    public static final int GCM_TAG_LENGTH = GCM_TAG_BITS / 8;
+    public static final int GCM_TAG_BYTES = GCM_TAG_BITS / 8;
 
+    public static final int CHACHA20_IV_BITS = 96;
+    public static final int CHACHA20_IV_BYTES = CHACHA20_IV_BITS / 8;
+    public static final int CHACHA20_TAG_BITS = 128;
+    public static final int CHACHA20_TAG_BYTES = CHACHA20_TAG_BITS / 8;
+        
     private static final String NOPADDING = "NoPadding";
     private static final String GCM = "GCM";
 
     /**
      * Constant for encryption mode, as defined in {@link Cipher#ENCRYPT_MODE}.
      */
-    private static final int ENCRYPT_MODE = Cipher.ENCRYPT_MODE;
+    static final int ENCRYPT_MODE = Cipher.ENCRYPT_MODE;
 
     /**
      * Constant for decryption mode, as defined in {@link Cipher#DECRYPT_MODE}.
@@ -220,8 +223,8 @@ public class Kripto
     {
         try
         {
-            // Intentamos cargar la clase principal del proveedor de Bouncy Castle.
-            // No necesitamos una instancia, solo verificar que la clase existe.
+            // We're trying to load the Bouncy Castle provider's main class.
+            // We don't need an instance, just verify that the class exists.
             Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
             return true;
         }
@@ -237,16 +240,22 @@ public class Kripto
 
     //https://docs.oracle.com/javase/8/docs/technotes/guides/security/StandardNames.html#KeyAgreement
 
+    public enum SecretKeyAlgorithm
+    {
+        AES, ChaCha20
+    }
+
     public enum SecretKeyTransformation
     {
         //Symetric Algorithms
         AES_GCM_NoPadding("AES/GCM/NoPadding", 128, 96, 128), //(128,192,256) iv=96   GOOD
         AES_CTR_NoPadding("AES/CTR/NoPadding", 128, 128, 128),//(128,192,256) iv=128  GOOD
         AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding", 128, 128, 0), //(128,192,256) iv=128  GOOD
-        AES_CFB8_NoPadding("AES/CFB8/NoPadding", 128, 128, 0);  //(128)         iv=128
+        AES_CFB8_NoPadding("AES/CFB8/NoPadding", 128, 128, 0),  //(128)         iv=128
+        ChaCha20_Poly1305("ChaCha20-Poly1305", 512, 96, 128);  //(256)         iv=96
 
         public final String transformation;
-        public final String algorithm;
+        public final SecretKeyAlgorithm algorithm;
         public final String mode;
         public final String padding;
         public final boolean nopadding;
@@ -257,12 +266,12 @@ public class Kripto
 
         SecretKeyTransformation(String transformation, int blockBits, int ivBits, int tagBits)
         {
-            String[] items = transformation.split("/");
-            this.algorithm = items[0];
-            this.mode = items[1];
-            this.padding = items[2];
+            String[] items = transformation.split("[/-]");
+            this.algorithm = SecretKeyAlgorithm.valueOf(items[0]);
+            this.mode = items.length>1 ? items[1] : "";
+            this.padding = items.length>2 ? items[2] : "";
             this.transformation = transformation;
-            this.nopadding = NOPADDING.equalsIgnoreCase(padding);
+            this.nopadding = NOPADDING.equalsIgnoreCase(padding) || padding.isEmpty();
             this.gcm = GCM.equalsIgnoreCase(mode);
             this.blockBits = blockBits;
             this.ivBits = ivBits;
@@ -278,8 +287,14 @@ public class Kripto
          */
         public int getMaxAllowedKeyLength() throws NoSuchAlgorithmException
         {
-            return Cipher.getMaxAllowedKeyLength(algorithm);
+            return Cipher.getMaxAllowedKeyLength(algorithm.name());
         }
+    }
+
+    public enum KeyPairAlgorithm //KeyPair Algorithms, KeyFactory Algorithms
+    {
+        DiffieHellman, DSA, RSA, //mandatory DiffieHellman (1024), DSA (1024), RSA (1024, 2048)
+        EC                      //optional   EC (192, 256)
     }
 
     public enum KeyPairTransformation
@@ -291,7 +306,7 @@ public class Kripto
         RSA_ECB_OAEPWithSHA256AndMGF1Padding("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");  //(1024, 2048)  GOOD        
 
         public final String transformation;
-        public final String algorithm;
+        public final KeyPairAlgorithm algorithm;
         public final String mode;
         public final String padding;
         public final boolean nopadding;
@@ -299,9 +314,9 @@ public class Kripto
         KeyPairTransformation(String transformation)
         {
             String[] items = transformation.split("/");
-            this.algorithm = items[0];
-            this.mode = items[1];
-            this.padding = items[2];
+            this.algorithm = KeyPairAlgorithm.valueOf(items[0]);
+            this.mode = items.length>1 ? items[1] : "";
+            this.padding = items.length>2 ? items[2] : "";
             this.transformation = transformation;
             this.nopadding = NOPADDING.equalsIgnoreCase(padding);
         }
@@ -315,19 +330,8 @@ public class Kripto
          */
         public int getMaxAllowedKeyLength() throws NoSuchAlgorithmException
         {
-            return Cipher.getMaxAllowedKeyLength(algorithm);
+            return Cipher.getMaxAllowedKeyLength(algorithm.name());
         }
-    }
-
-    public enum SecretKeyAlgorithm
-    {
-        AES
-    }
-
-    public enum KeyPairAlgorithm //KeyPair Algorithms, KeyFactory Algorithms
-    {
-        DiffieHellman, DSA, RSA, //mandatory DiffieHellman (1024), DSA (1024), RSA (1024, 2048)
-        EC                      //optional   EC (192, 256)
     }
 
     public enum KeyAgreementAlgorithm
@@ -426,7 +430,7 @@ public class Kripto
     ///// PRIVATE METHODS //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    
+
     /**
      * Returns a {@link MessageDigest} instance for the specified algorithm.
      *
@@ -1379,5 +1383,32 @@ public class Kripto
     public final HKDF hkdfWithSha512 = getHKDF(Hkdf.HkdfWithSha512);
 
     public final KeyGenerator keyGenAes256 = getKeyGenerator(SecretKeyAlgorithm.AES, 256);
+    public final KeyGenerator keyGenChaCha20 = getKeyGenerator(SecretKeyAlgorithm.ChaCha20, 256);
+
+    
+    public boolean isAvailable(SecretKeyTransformation secretKeyTransformation) 
+    {
+        try
+        {
+            getCipher(secretKeyTransformation.transformation);
+            return true;
+        }
+        catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException ex)
+        {
+            return false;
+        }
+    }
+    public boolean isAvailable(SecretKeyAlgorithm secretKeyAlgorithm) 
+    {
+        try
+        {
+            getCipher(secretKeyAlgorithm.name());
+            return true;
+        }
+        catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException ex)
+        {
+            return false;
+        }
+    }
     
 }

@@ -28,8 +28,8 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Thread-safe InputStream that throttles the data flow by introducing delays
- * per byte and per line.
+ * Thread-safe InputStream wrapper that throttles the data flow by introducing 
+ * delays per byte and per line.
  */
 public final class ThrottledInputStream extends FilterInputStream
 {
@@ -41,6 +41,16 @@ public final class ThrottledInputStream extends FilterInputStream
     private volatile long lineNanoTime;
     private volatile long untilNanoTime;
 
+    /**
+     * Creates a throttled InputStream.
+     *
+     * @param in underlying InputStream (not null)
+     * @param tpb time per byte
+     * @param tpl time per line break ('\n')
+     * @param timeUnit unit for tpb/tpl
+     * @param average if true, regulates to keep average rate; if false,
+     * enforces delay per write
+     */
     public ThrottledInputStream(InputStream in, int tpb, int tpl, TimeUnit timeUnit, boolean average)
     {
         super(Objects.requireNonNull(in, "InputStream must not be null"));

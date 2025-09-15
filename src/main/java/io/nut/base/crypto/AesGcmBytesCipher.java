@@ -49,7 +49,7 @@ public class AesGcmBytesCipher implements BytesCipher
     protected final SecretKey key;
 
     // The recommended IV size for GCM is 96 bits (12 bytes) for performance reasons.
-    private static final int GCM_IV_LENGTH = Kripto.GCM_IV_LENGTH;
+    private static final int GCM_IV_BYTES = Kripto.GCM_IV_BYTES;
 
     // The recommended TAG size for GCM is 128 bits (16 bytes) for security reasons.
     private static final int GCM_TAG_BITS = Kripto.GCM_TAG_BITS;
@@ -89,7 +89,7 @@ public class AesGcmBytesCipher implements BytesCipher
     public byte[] encrypt(byte[] plaintext) throws Exception
     {
         // 1. Generate a new, cryptographically random IV for each encryption. This is critical for GCM security.
-        byte[] iv = RAND.nextBytes(new byte[GCM_IV_LENGTH]);
+        byte[] iv = RAND.nextBytes(new byte[GCM_IV_BYTES]);
 
         // 2. Prepare GCM parameters.
         GCMParameterSpec ivGCM = kripto.getIvGCM(iv, GCM_TAG_BITS);
@@ -124,7 +124,7 @@ public class AesGcmBytesCipher implements BytesCipher
         ByteBuffer byteBuffer = ByteBuffer.wrap(ciphertext);
 
         // 1. Extract the IV from the beginning of the ciphertext.
-        byte[] iv = new byte[GCM_IV_LENGTH];
+        byte[] iv = new byte[GCM_IV_BYTES];
         byteBuffer.get(iv);
 
         // 2. Extract the actual encrypted data (which also contains the authentication tag).
