@@ -1383,8 +1383,6 @@ public class Kripto
     public final HKDF hkdfWithSha512 = getHKDF(Hkdf.HkdfWithSha512);
 
     public final KeyGenerator keyGenAes256 = getKeyGenerator(SecretKeyAlgorithm.AES, 256);
-    public final KeyGenerator keyGenChaCha20 = getKeyGenerator(SecretKeyAlgorithm.ChaCha20, 256);
-
     
     public boolean isAvailable(SecretKeyTransformation secretKeyTransformation) 
     {
