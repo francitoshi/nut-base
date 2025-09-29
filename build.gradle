@@ -4,7 +4,7 @@ plugins
 }
 
 group = 'com.github.francitoshi'
-version = '0.1.36'
+version = '0.1.37'
 //remember to execute 'git tag -a x.x.x -m "Version x.x.x"'
 
 repositories 
@@ -12,17 +12,19 @@ repositories
   mavenCentral()
 }
 
+def bouncycastleVersion = '1.81'
+
 dependencies
 {
-    compileOnly 'org.bouncycastle:bcprov-jdk18on:1.81'
-    compileOnly 'org.bouncycastle:bcpkix-jdk18on:1.81'
+    compileOnly "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
+    compileOnly "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
     
     //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
 
     testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
 
-    testImplementation 'org.bouncycastle:bcprov-jdk18on:1.81'
-    testImplementation 'org.bouncycastle:bcpkix-jdk18on:1.81'
+    testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
+    testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
 
     testImplementation 'org.apache.commons:commons-csv:1.14.0'
     testImplementation 'ch.obermuhlner:big-math:2.3.2'

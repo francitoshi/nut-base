@@ -1764,4 +1764,66 @@ public class Strings
         return s==null ? 0 : s.length();
     }
 
+    /**
+     * <p>Checks if String contains a search String irrespective of case,
+     * handling <code>null</code>. This method uses
+     * {@link #contains(String, String)}.</p>
+     *
+     * <p>A <code>null</code> String will return <code>false</code>.</p>
+     *
+     * <pre>
+     * StringUtils.contains(null, *) = false
+     * StringUtils.contains(*, null) = false
+     * StringUtils.contains("", "") = true
+     * StringUtils.contains("abc", "") = true
+     * StringUtils.contains("abc", "a") = true
+     * StringUtils.contains("abc", "z") = false
+     * StringUtils.contains("abc", "A") = true
+     * StringUtils.contains("abc", "Z") = false
+     * </pre>
+     *
+     * @param str  the String to check, may be null
+     * @param searchStr  the String to find, may be null
+     * @return true if the String contains the search String irrespective of
+     * case or false if not or <code>null</code> string input
+     */
+    public static boolean containsIgnoreCase(String str, String searchStr)
+    {
+        if (str == null || searchStr == null)
+        {
+            return false;
+        }
+        return contains(str.toUpperCase(), searchStr.toUpperCase());
+    }
+
+    /**
+     * <p>Checks if String contains a search String, handling <code>null</code>.
+     * This method uses {@link String#indexOf(String)}.</p>
+     *
+     * <p>A <code>null</code> String will return <code>false</code>.</p>
+     *
+     * <pre>
+     * StringUtils.contains(null, *)     = false
+     * StringUtils.contains(*, null)     = false
+     * StringUtils.contains("", "")      = true
+     * StringUtils.contains("abc", "")   = true
+     * StringUtils.contains("abc", "a")  = true
+     * StringUtils.contains("abc", "z")  = false
+     * </pre>
+     *
+     * @param str  the String to check, may be null
+     * @param searchStr  the String to find, may be null
+     * @return true if the String contains the search String,
+     *  false if not or <code>null</code> string input
+     * @since 2.0
+     */
+    public static boolean contains(String str, String searchStr)
+    {
+        if (str == null || searchStr == null)
+        {
+            return false;
+        }
+        return str.contains(searchStr);
+    }
+    
 }
