@@ -33,6 +33,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.security.SecureRandom;
@@ -71,6 +72,45 @@ public class IO
             out.write(buf, 0, r);
         }
         return out.toByteArray();
+    }
+    
+    public static byte[] readLineBytes(InputStream in, int limitSize, boolean allowLF) throws IOException
+    {
+        if (in == null)
+        {
+            return null;
+        }
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        for(int i=0;i<limitSize;i++)
+        {
+            int b = in.read();
+            if(b<0)
+            {
+                if(i==0)
+                {
+                   return null;
+                }
+                break;
+            }
+            if(b == '\n')
+            {
+                if(allowLF)
+                {
+                    out.write(b);
+                }
+                break;
+            }
+            out.write(b);
+        }
+        return out.toByteArray();
+    }
+    
+    public static String readLine(InputStream in) throws IOException
+    {
+        byte[] line = readLineBytes(in, Integer.MAX_VALUE, false);
+        return line!=null ? new String(line) : null;
     }
     
     public static File copy(File source, File target, CopyOption... options) throws IOException
@@ -490,4 +530,12 @@ public class IO
         return false;
     }
     
+    public static PrintStream asPrintStream(OutputStream out)
+    {
+        if(out==null)
+        {
+            return null;
+        }
+        return (out instanceof PrintStream) ? (PrintStream) out : new PrintStream(out);
+    }
 }

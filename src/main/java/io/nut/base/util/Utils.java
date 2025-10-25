@@ -3108,18 +3108,44 @@ public abstract class Utils
         return array == null || array.length == 0;
     }
     
-    public static void parkUntilNanoTime(long deadlineNano)
+    /**
+     * Parks the current thread until a specified deadline, reliably handling spurious wakeups.
+     * <p>
+     * This method first calculates the total duration to wait. It then enters a loop that
+     * repeatedly parks the thread until the deadline, as measured by {@link System#nanoTime()},
+     * is reached. If the thread wakes up prematurely (due to an interrupt or a spurious wakeup),
+     * the loop re-evaluates the remaining time and parks again. This ensures that the method
+     * does not return before the deadline has passed.
+     * <p>
+     * The value returned is the initial duration calculated upon the method's entry,
+     * providing a consistent report of the intended wait time, regardless of any
+     * spurious wakeups that may have occurred.
+     *
+     * @param deadlineNano The absolute deadline time in nanoseconds, as measured by
+     *                     {@link System#nanoTime()}. This is typically calculated as
+     *                     {@code System.nanoTime() + desiredDelayInNanos}.
+     * @return The initial calculated duration to wait in nanoseconds. This value is computed
+     *         once at the beginning of the method and is not affected by how many times the
+     *         thread parked. If the deadline had already passed upon method entry, this method
+     *         returns the corresponding non-positive duration (i.e., zero or a negative number).
+     * @see System#nanoTime()
+     * @see java.util.concurrent.locks.LockSupport#parkNanos(long)
+     */
+    public static long parkUntilNanoTime(long deadlineNano)
     {
-        for (;;)
+        long now = System.nanoTime();
+        long remaining = deadlineNano - now;
+        final long waitNanos = remaining;
+        for(;;)
         {
-            long now = System.nanoTime();
-            long remaining = deadlineNano - now;
-            if (remaining <= 0)
+            if(remaining <= 0)
             {
-                return;
+                return waitNanos;
             }
             // Sleep the rest of the time (may wake up earlier)
             LockSupport.parkNanos(remaining);
+            now = System.nanoTime();
+            remaining = deadlineNano - now;
         }
     }
     

@@ -133,7 +133,7 @@ public class GPGTest
             // Datos de ejemplo
             String plaintext = "this is a secret message, for testing.";
             byte[] plaindata = plaintext.getBytes("UTF-8");
-            String passphrase = PASSPHRASE; // Puede ser null
+            char[] passphrase = PASSPHRASE.toCharArray();
             
             String signerId = "signer";
             String recipientId1 = "recipient1";
@@ -150,7 +150,7 @@ public class GPGTest
             GPG.DecryptStatus status = new GPG.DecryptStatus();
                     
             // Desencriptar y verificar
-            byte[] deciphered = gpg.decryptAndVerify(encryptedSigned, PASSPHRASE, status);
+            byte[] deciphered = gpg.decryptAndVerify(encryptedSigned, passphrase, status);
             
             assertArrayEquals(plaindata, deciphered);
             

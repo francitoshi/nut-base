@@ -36,10 +36,13 @@ public final class ThrottledInputStream extends FilterInputStream
     private final Object lock = new Object();
     private final long nanosPerByte;
     private final long nanosPerLine;
+    private final long nanosOnClose;
     private final boolean average;
     private volatile long byteNanoTime;
     private volatile long lineNanoTime;
     private volatile long untilNanoTime;
+    private volatile boolean endReached;
+    private volatile long parkedNanos;
 
     /**
      * Creates a throttled InputStream.
@@ -47,11 +50,12 @@ public final class ThrottledInputStream extends FilterInputStream
      * @param in underlying InputStream (not null)
      * @param tpb time per byte
      * @param tpl time per line break ('\n')
-     * @param timeUnit unit for tpb/tpl
+     * @param toc time on close
+     * @param timeUnit unit for tpb/tpl/toc
      * @param average if true, regulates to keep average rate; if false,
      * enforces delay per write
      */
-    public ThrottledInputStream(InputStream in, int tpb, int tpl, TimeUnit timeUnit, boolean average)
+    public ThrottledInputStream(InputStream in, int tpb, int tpl, int toc, TimeUnit timeUnit, boolean average)
     {
         super(Objects.requireNonNull(in, "InputStream must not be null"));
         if (tpb < 0 || tpl < 0)
@@ -60,6 +64,7 @@ public final class ThrottledInputStream extends FilterInputStream
         }
         this.nanosPerByte = timeUnit.toNanos(tpb);
         this.nanosPerLine = timeUnit.toNanos(tpl);
+        this.nanosOnClose = timeUnit.toNanos(toc);
         this.untilNanoTime = this.lineNanoTime = this.byteNanoTime = System.nanoTime();
         this.average = average;
     }
@@ -70,12 +75,15 @@ public final class ThrottledInputStream extends FilterInputStream
         synchronized (lock)
         {
             int b = super.read();
-            if (b != -1)
-            {
-                applyDelays(b);
-            }
+            parkedNanos = applyDelays(b);
             return b;
         }
+    }
+
+    @Override
+    public int read(byte[] b) throws IOException
+    {
+        return read(b, 0, b.length);
     }
 
     @Override
@@ -83,21 +91,35 @@ public final class ThrottledInputStream extends FilterInputStream
     {
         synchronized (lock)
         {
-            int bytesRead = super.read(b, off, len);
-            if (bytesRead > 0)
+            int bytesRead=0;
+            for(int i=0;i<len;i++)
             {
-                for (int i = 0; i < bytesRead; i++)
+                int bb = this.read();
+                if(bb==-1)
                 {
-                    applyDelays(b[off + i]);
+                    return i==0 ? bb : bytesRead;
+                }
+                b[off+bytesRead++] = (byte) bb;
+                if(bb=='\n' && parkedNanos>0)
+                {
+                    return bytesRead;
                 }
             }
             return bytesRead;
         }
     }
 
-    private void applyDelays(int b)
+    private long applyDelays(int b)
     {
-        if(average)
+        if(b==-1)
+        {
+            if(!this.endReached)
+            {
+                this.untilNanoTime += this.nanosOnClose;
+                this.endReached=true;
+            }
+        }
+        else if(average)
         {
             this.byteNanoTime += this.nanosPerByte;
             if (b == '\n')
@@ -114,7 +136,7 @@ public final class ThrottledInputStream extends FilterInputStream
                 this.lineNanoTime = Math.max(now, this.lineNanoTime) + this.nanosPerLine;
             }
         }
-        this.untilNanoTime = Math.max(this.byteNanoTime, this.lineNanoTime);
-        Utils.parkUntilNanoTime(this.untilNanoTime);
+        this.untilNanoTime = Utils.max(this.untilNanoTime, this.byteNanoTime, this.lineNanoTime);
+        return Utils.parkUntilNanoTime(this.untilNanoTime);
     }
 }

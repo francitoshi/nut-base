@@ -1,7 +1,7 @@
 /*
- *  FakeConsole.java
+ *  MockConsole.java
  *
- *  Copyright (C) 2010-2024 francitoshi@gmail.com
+ *  Copyright (C) 2010-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ import java.util.logging.Logger;
  *
  * @author franci
  */
-public class FakeConsole extends AbstractConsole implements VirtualConsole
+public class MockConsole extends AbstractConsole implements VirtualConsole
 {
     private final OutputStream out;
     private final Scanner sc;
@@ -43,7 +43,7 @@ public class FakeConsole extends AbstractConsole implements VirtualConsole
     private final PrintWriter pw;
     private final Reader reader;
 
-    public FakeConsole(InputStream in, OutputStream out)
+    public MockConsole(InputStream in, OutputStream out)
     {
         this.out = out;
         this.sc  = new Scanner(in);
@@ -61,7 +61,7 @@ public class FakeConsole extends AbstractConsole implements VirtualConsole
         if(System.console()!=null)
             return new RealConsole(System.console());
         if(debug)
-            return new FakeConsole(System.in,System.out);
+            return new MockConsole(System.in,System.out);
         throw new IOError(new Exception("There is no console"));
     }
 
@@ -74,7 +74,7 @@ public class FakeConsole extends AbstractConsole implements VirtualConsole
         }
         catch (IOException ex)
         {
-            Logger.getLogger(FakeConsole.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(MockConsole.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 

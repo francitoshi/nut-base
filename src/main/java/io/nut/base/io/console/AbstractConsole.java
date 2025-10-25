@@ -100,15 +100,15 @@ public abstract class AbstractConsole implements VirtualConsole
         return getInstance(console==null);
     }
 
-    public static VirtualConsole getInstance(boolean allowFake)
+    public static VirtualConsole getInstance(boolean allowMock)
     {
         Console console = System.console();
-        return (console==null && allowFake) ? new FakeConsole(System.in, System.out) : new RealConsole(console);
+        return (console==null && allowMock) ? new MockConsole(System.in, System.out) : new RealConsole(console);
     }
 
-    public static VirtualConsole getFakeInstance()
+    public static VirtualConsole getMockInstance()
     {
-        return new FakeConsole(System.in, System.out);
+        return new MockConsole(System.in, System.out);
     }
 
     public static VirtualConsole getRealInstance()

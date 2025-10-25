@@ -1,7 +1,7 @@
 /*
- *  FakeConsoleTest.java
+ *  MockConsoleTest.java
  *
- *  Copyright (C) 2015-2024 francitoshi@gmail.com
+ *  Copyright (C) 2015-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,10 +21,6 @@
  */
 package io.nut.base.io.console;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Timeout;
@@ -33,36 +29,11 @@ import org.junit.jupiter.api.Timeout;
  *
  * @author franci
  */
-public class FakeConsoleTest
+public class MockConsoleTest
 {
-    
-    public FakeConsoleTest()
+    MockConsole getInstance()
     {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
-    FakeConsole getInstance()
-    {
-        return new FakeConsole(System.in, System.out)
+        return new MockConsole(System.in, System.out)
         {
             @Override
             public VirtualConsole printf(String format, Object... args)
@@ -71,16 +42,15 @@ public class FakeConsoleTest
             }
         };
     }
-    
-    
+        
     /**
-     * Test of readLine method, of class FakeConsole.
+     * Test of readLine method, of class MockConsole.
      */
     @Test
     @Timeout(1)
     public void testReadLine_String_ObjectArr()
     {
-        FakeConsole instance = new FakeConsole(System.in, System.out);
+        MockConsole instance = new MockConsole(System.in, System.out);
         instance.addLine("1");
         instance.addLine("2");
         instance.addLine("3");
@@ -90,13 +60,13 @@ public class FakeConsoleTest
     }
 
     /**
-     * Test of readLine method, of class FakeConsole.
+     * Test of readLine method, of class MockConsole.
      */
     @Test
     @Timeout(1)
     public void testReadLine_0args()
     {
-        FakeConsole instance = getInstance();
+        MockConsole instance = getInstance();
         instance.addLine("1");
         instance.addLine("2");
         instance.addLine("3");
@@ -106,13 +76,13 @@ public class FakeConsoleTest
     }
 
     /**
-     * Test of readPassword method, of class FakeConsole.
+     * Test of readPassword method, of class MockConsole.
      */
     @Test
     @Timeout(1)
     public void testReadPassword_String_ObjectArr()
     {
-        FakeConsole instance = getInstance();
+        MockConsole instance = getInstance();
         instance.addLine("1");
         instance.addLine("2");
         instance.addLine("3");
@@ -122,13 +92,13 @@ public class FakeConsoleTest
     }
 
     /**
-     * Test of readPassword method, of class FakeConsole.
+     * Test of readPassword method, of class MockConsole.
      */
     @Test
     @Timeout(1)
     public void testReadPassword_0args()
     {
-        FakeConsole instance = getInstance();
+        MockConsole instance = getInstance();
         instance.addLine("1");
         instance.addLine("2");
         instance.addLine("3");

@@ -40,22 +40,23 @@ public class ThrottledInputStreamTest
 
         int msPerByte = 10;
         int msPerLine = 50;
+        int msOnClose = 200;
 
-        try (InputStream in = new ThrottledInputStream(new ByteArrayInputStream(bytes), msPerByte, msPerLine, TimeUnit.MILLISECONDS, true))
+        try (InputStream in = new ThrottledInputStream(new ByteArrayInputStream(bytes), msPerByte, msPerLine, msOnClose, TimeUnit.MILLISECONDS, true))
         {
 
-            long start = System.currentTimeMillis();
+            long start = System.nanoTime();
 
             while (in.read() != -1)
             {
                 // consume
             }
 
-            long elapsed = System.currentTimeMillis() - start;
+            long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
 
             long lines = data.chars().filter(x -> x == '\n').count();
             
-            long expected = Math.max(bytes.length*msPerByte, lines*msPerLine);
+            long expected = Math.max(bytes.length*msPerByte, lines*msPerLine)+msOnClose;
             assertInRange(elapsed, expected, 0.8, 1.2);
         }
     }

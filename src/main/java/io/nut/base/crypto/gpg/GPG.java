@@ -21,6 +21,7 @@
 package io.nut.base.crypto.gpg;
 
 import io.nut.base.util.Args;
+import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -631,7 +632,7 @@ public class GPG
      * @throws IOException Si falla GPG o I/O.
      * @throws InterruptedException Si el proceso GPG es interrumpido.
      */
-    public byte[] encryptAndSign(byte[] plaindata, String signer, String passphrase, String... recipients) throws IOException, InterruptedException
+    public byte[] encryptAndSign(byte[] plaindata, String signer, char[] passphrase, String... recipients) throws IOException, InterruptedException
     {
         // Validar parámetros
         if (plaindata == null || plaindata.length == 0)
@@ -643,7 +644,7 @@ public class GPG
             throw new IllegalArgumentException("Los recipientIds no pueden ser nulos, vacíos o contener elementos inválidos.");
         }
         
-        boolean pass = passphrase!=null && !passphrase.isEmpty();
+        boolean pass = passphrase!=null && passphrase.length!=0;
         
         GnuPG gnupg = gpg(BATCH, NOTTY).add(armor, ARMOR).add("--encrypt", "--output", "-");
         for (String recipientId : recipients)
@@ -665,7 +666,8 @@ public class GPG
         {
             if(pass)
             {
-                stdin.write((passphrase + "\n").getBytes("UTF-8"));
+                stdin.write(Byter.bytesUTF8(passphrase));
+                stdin.write('\n');
             }
             stdin.write(plaindata);
         }
@@ -755,14 +757,14 @@ public class GPG
      * @throws IOException Si falla GPG o I/O.
      * @throws InterruptedException Si el proceso GPG es interrumpido.
      */
-    public byte[] decryptAndVerify(byte[] cipherdata, String passphrase, DecryptStatus status) throws IOException, InterruptedException
+    public byte[] decryptAndVerify(byte[] cipherdata, char[] passphrase, DecryptStatus status) throws IOException, InterruptedException
     {
         // Validar entrada
         if (cipherdata==null)
         {
             throw new NullPointerException("encryptedData is null");
         }
-        boolean pass = passphrase != null && !passphrase.isEmpty();
+        boolean pass = passphrase != null && passphrase.length!=0;
         // Construir comando GPG
         GnuPG gnupg = gpg(BATCH, NOTTY, "--decrypt", "--output", "-", "--status-fd", "2");
         if (pass)
@@ -777,7 +779,8 @@ public class GPG
         {
             if (pass)
             {
-                stdin.write((passphrase + "\n").getBytes("UTF-8"));
+                stdin.write(Byter.bytesUTF8(passphrase));
+                stdin.write('\n');
             }
             stdin.write(cipherdata);
         }
@@ -887,14 +890,14 @@ public class GPG
      * @throws IOException Si falla GPG o I/O.
      * @throws InterruptedException Si el proceso GPG es interrumpido.
      */
-    public String[] getEncryptionRecipients(byte[] cipherdata, String passphrase) throws IOException, InterruptedException
+    public String[] getEncryptionRecipients(byte[] cipherdata, char[] passphrase) throws IOException, InterruptedException
     {
         // Validar entrada
         if (cipherdata == null || cipherdata.length == 0)
         {
             throw new IllegalArgumentException("Los datos cifrados no pueden ser nulos o vacíos.");
         }
-        boolean pass = passphrase != null && !passphrase.isEmpty();
+        boolean pass = passphrase != null && passphrase.length!=0;
         // Construir comando GPG
         GnuPG gnupg = gpg(BATCH, NOTTY, "--list-packets");
         if (pass)
@@ -909,7 +912,8 @@ public class GPG
         {
             if (pass)
             {
-                stdin.write((passphrase + "\n").getBytes("UTF-8"));
+                stdin.write(Byter.bytesUTF8(passphrase));
+                stdin.write('\n');
             }
             stdin.write(cipherdata);
         }
