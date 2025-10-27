@@ -1,7 +1,7 @@
 /*
  *  JavaTimeTest.java
  *
- *  Copyright (c) 2020-2024 francitoshi@gmail.com
+ *  Copyright (c) 2020-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -787,5 +787,85 @@ public class JavaTimeTest
         LocalDateTime expected = LocalDateTime.of(2014, 1, 1, 0, 0, 0);
         LocalDateTime result = JavaTime.asLocalDateTime(1388534400);
         assertEquals(expected, result);
+    }
+
+    @Test
+    public void testIsSameYear_LocalDate_LocalDate()
+    {
+        // --- Case 1: Same year ---
+        LocalDate date1 = LocalDate.of(2023, Month.JANUARY, 15);
+        LocalDate date2 = LocalDate.of(2023, Month.DECEMBER, 25);
+        assertTrue(JavaTime.isSameYear(date1, date2));
+
+        // --- Case 2: Different year ---
+        LocalDate date3 = LocalDate.of(2023, Month.OCTOBER, 31);
+        LocalDate date4 = LocalDate.of(2024, Month.FEBRUARY, 2);
+        assertFalse(JavaTime.isSameYear(date3, date4));
+        
+        // --- Case 3: Comparing with the current date ---
+        LocalDate today = LocalDate.now();
+        LocalDate otherDaySameYear = LocalDate.of(today.getYear(), Month.MARCH, 10);
+        assertTrue(JavaTime.isSameYear(today, otherDaySameYear));
+        
+        // --- Case 4 (Robust): Null Handling ---
+        LocalDate nullDate = null;
+        assertFalse(JavaTime.isSameYear(date1, nullDate));
+    }
+
+    @Test
+    public void testIsSameYear_LocalDateTime_LocalDateTime()
+    {
+        // --- Case 1: Same year ---
+        LocalDateTime date1 = LocalDate.of(2023, Month.JANUARY, 15).atStartOfDay();
+        LocalDateTime date2 = LocalDate.of(2023, Month.DECEMBER, 25).atStartOfDay();
+        assertTrue(JavaTime.isSameYear(date1, date2));
+
+        // --- Case 2: Different year ---
+        LocalDateTime date3 = LocalDate.of(2023, Month.OCTOBER, 31).atStartOfDay();
+        LocalDateTime date4 = LocalDate.of(2024, Month.FEBRUARY, 2).atStartOfDay();
+        assertFalse(JavaTime.isSameYear(date3, date4));
+        
+        // --- Case 3: Comparing with the current date ---
+        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime otherDaySameYear = LocalDate.of(today.getYear(), Month.MARCH, 10).atStartOfDay();
+        assertTrue(JavaTime.isSameYear(today, otherDaySameYear));
+        
+        // --- Case 4 (Robust): Null Handling ---
+        LocalDateTime nullDate = null;
+        assertFalse(JavaTime.isSameYear(date1, nullDate));
+    }
+
+    @Test
+    public void testIsSameYear_3args()
+    {
+        // --- Case 1: Same year ---
+        ZonedDateTime date1a = LocalDate.of(2023, Month.JANUARY, 15).atStartOfDay().atZone(JavaTime.UTC);
+        ZonedDateTime date1b = LocalDate.of(2023, Month.DECEMBER, 25).atStartOfDay().atZone(JavaTime.UTC);
+        assertTrue(JavaTime.isSameYear(date1a, date1b, JavaTime.UTC));
+
+        // --- Case 2: Different year ---
+        ZonedDateTime date2a = LocalDate.of(2023, Month.OCTOBER, 31).atStartOfDay().atZone(JavaTime.UTC);
+        ZonedDateTime date2b = LocalDate.of(2024, Month.FEBRUARY, 2).atStartOfDay().atZone(JavaTime.UTC);
+        assertFalse(JavaTime.isSameYear(date2a, date2b, JavaTime.UTC));
+        
+        // --- Case 3: Comparing with the current date ---
+        ZonedDateTime today = ZonedDateTime.now();
+        ZonedDateTime otherDaySameYear = LocalDate.of(today.getYear(), Month.MARCH, 10).atStartOfDay().atZone(JavaTime.UTC);
+        assertTrue(JavaTime.isSameYear(today, otherDaySameYear, JavaTime.UTC));
+        
+        // --- Case 4 (Robust): Null Handling ---
+        ZonedDateTime nullDate = null;
+        assertFalse(JavaTime.isSameYear(date1a, nullDate, JavaTime.UTC));
+
+        // --- Case 5 : Different year but same year ---
+        ZonedDateTime date5a = LocalDate.of(2023, Month.DECEMBER, 31).atStartOfDay().atZone(JavaTime.PacificHonolulu);
+        ZonedDateTime date5b = LocalDate.of(2024, Month.JANUARY, 1).atStartOfDay().atZone(JavaTime.AustraliaSydney);
+        assertTrue(JavaTime.isSameYear(date5a, date5b, JavaTime.UTC));
+
+        // --- Case 6 : Same year but different year ---
+        ZonedDateTime date6a = LocalDateTime.of(2024, Month.JANUARY, 1, 01, 02, 03).atZone(JavaTime.AustraliaSydney);
+        ZonedDateTime date6b = LocalDateTime.of(2024, Month.JANUARY, 1, 21, 22, 23).atZone(JavaTime.PacificHonolulu);
+        assertFalse(JavaTime.isSameYear(date6a, date6b, JavaTime.UTC));
+
     }
 }

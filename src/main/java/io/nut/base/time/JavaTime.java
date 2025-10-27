@@ -47,9 +47,11 @@ public class JavaTime
     public static final ZoneId UTC = ZoneId.of("UTC");
     
     public static final ZoneId AmericaNew_York = ZoneId.of("America/New_York");
+    public static final ZoneId AustraliaSydney = ZoneId.of("Australia/Sydney");
     public static final ZoneId EuropeMadrid = ZoneId.of("Europe/Madrid");
     public static final ZoneId EuropeLondon = ZoneId.of("Europe/London");
     public static final ZoneId EuropeParis = ZoneId.of("Europe/Paris");
+    public static final ZoneId PacificHonolulu = ZoneId.of("Pacific/Honolulu");
 
     public static final DateTimeFormatter YYYYMMDD = DateTimeFormatter.ofPattern("yyyyMMdd");
     public static final DateTimeFormatter YYYY_MM_DD = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -445,6 +447,60 @@ public class JavaTime
         return today.plusDays(1).equals(other);
     }
 
+    /**
+     * Checks if two LocalDate objects represent dates in the same year.
+     *
+     * @param a the first LocalDate to compare
+     * @param b the second LocalDate to compare
+     * @return true if both dates are in the same year and neither is null,
+     * false otherwise
+     */
+    public static boolean isSameYear(LocalDate a, LocalDate b)
+    {
+        if (a != null && b != null)
+        {
+            return a.getYear() == b.getYear();
+        }
+        return false;
+    }
+
+    /**
+     * Checks if two LocalDateTime objects represent date-times in the same
+     * year.
+     *
+     * @param a the first LocalDateTime to compare
+     * @param b the second LocalDateTime to compare
+     * @return true if both date-times are in the same year and neither is null,
+     * false otherwise
+     */
+    public static boolean isSameYear(LocalDateTime a, LocalDateTime b)
+    {
+        if (a != null && b != null)
+        {
+            return a.getYear() == b.getYear();
+        }
+        return false;
+    }
+
+    /**
+     * Checks if two ZonedDateTime objects, when converted to the specified time
+     * zone, represent date-times in the same year.
+     *
+     * @param a the first ZonedDateTime to compare
+     * @param b the second ZonedDateTime to compare
+     * @param zone the ZoneId to convert both date-times to before comparison
+     * @return true if both date-times are in the same year in the specified
+     * zone and neither is null, false otherwise
+     */
+    public static boolean isSameYear(ZonedDateTime a, ZonedDateTime b, ZoneId zone)
+    {
+        if (a != null && b != null)
+        {
+            return a.withZoneSameInstant(zone).getYear() == b.withZoneSameInstant(zone).getYear();
+        }
+        return false;
+    }
+    
     public static ZonedDateTime atStartOfDay(ZonedDateTime dateTime)
     {
         LocalDateTime localDateTime = dateTime.toLocalDateTime();
