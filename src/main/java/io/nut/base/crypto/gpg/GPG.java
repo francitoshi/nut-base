@@ -20,16 +20,20 @@
  */
 package io.nut.base.crypto.gpg;
 
+import io.nut.base.io.IO;
+import io.nut.base.io.VerboseLineReader;
 import io.nut.base.util.Args;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
 import java.util.Arrays;
 import java.util.ArrayList;
@@ -97,6 +101,11 @@ public class GPG
     
     private volatile boolean debug;
     private volatile boolean armor;
+
+    private BufferedReader debugger(BufferedReader src)
+    {
+        return this.debug ? new VerboseLineReader(src, System.out) : src;
+    }
     
     private static class GnuPG
     {
@@ -138,7 +147,8 @@ public class GPG
         @Override
         public String toString()
         {
-            StringJoiner sj = new StringJoiner(" ","gpg","");
+            StringJoiner sj = new StringJoiner(" ");
+            sj.add("gpg");
             for(String item : args.get())
             {
                 sj.add(item);
@@ -148,6 +158,12 @@ public class GPG
         
     }
 
+    private static final String PINENTRYMODE_CANCEL = "--pinentry-mode=cancel";
+    private static final String PINENTRYMODE_LOOPBACK = "--pinentry-mode=loopback";
+    private static final String PASSPHRASE_FD_0 = "--passphrase-fd=0";
+    private static final String STATUS_FD_1 = "--status-fd=1";
+    private static final String STATUS_FD_2 = "--status-fd=2";
+    
     public GPG setDebug(boolean value)
     {
         this.debug = value;
@@ -162,22 +178,6 @@ public class GPG
     private GnuPG gpg(String... params) throws IOException 
     {
         return new GnuPG(debug, params);
-    }
-
-    private String getResponse(InputStream response) throws InterruptedException, IOException
-    {
-        // capture the response (stdout + stderr combinados)
-        StringBuilder s = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(response)))
-        {
-            String line;
-            while ((line = reader.readLine()) != null)
-            {
-                if(debug) System.err.println(line);
-                s.append(line).append("\n");
-            }
-        }
-        return s.toString();
     }
     
     public void parseKeys(InputStream in, List<PubKey> pubKeys, List<SecKey> secKeys)
@@ -287,6 +287,7 @@ public class GPG
      * @param keyType rsa4096, nistp521, curve25519
      * @param keyUsage C=cert E=encrypt S=sign A=auth
      * @param nameReal real name of the owner
+     * @param comment
      * @param email email of the owner
      * @param passphrase passphrase to encrypt the key
      * @param expire 0 (never), Nd (days), Nw (weeks), Nm (months), Ny (years)
@@ -306,6 +307,7 @@ public class GPG
      * @param ssbType rsa4096, nistp521, curve25519
      * @param ssbUsage C=cert E=encrypt S=sign A=auth
      * @param nameReal real name of the owner
+     * @param comment
      * @param email email of the owner
      * @param passphrase passphrase to encrypt the key
      * @param expire 0 (never), Nd (days), Nw (weeks), Nm (months), Ny (years)
@@ -533,8 +535,6 @@ public class GPG
         }
         return exitCode;
     }
-    private static final String PINENTRYMODE_LOOPBACK = "--pinentry-mode=loopback";
-    private static final String PASSPHRASE_FD_0 = "--passphrase-fd=0";
     
     public void printKeys() throws IOException, InterruptedException
     {
@@ -618,27 +618,27 @@ public class GPG
     }
     
     /**
-     * Cifra y, opcionalmente, firma un array de bytes usando GPG.
+     * Encrypts and optionally signs a byte array using GPG.
      *
-     * @param plaindata Array de bytes a cifrar.
-     * @param signer ID del firmante (fingerprint, ID corto, email, o null
-     * para no firmar).
-     * @param recipients Array de IDs de receptores (fingerprint, ID corto,
-     * email).
-     * @param passphrase Passphrase para la clave del firmante (o null para no
-     * usar).
-     * @return Array de bytes con el contenido cifrado y firmado (si signerId no
-     * es null).
-     * @throws IOException Si falla GPG o I/O.
-     * @throws InterruptedException Si el proceso GPG es interrumpido.
+     * @param plaindata Array of bytes to encrypt.
+     * @param signer Signer ID (fingerprint, short ID, email, or null to not sign).
+     * @param recipients Array of recipient IDs (fingerprint, short ID, email).
+     * @param passphrase Passphrase for the signer's key (or null to not use).
+     * @return Byte array with the encrypted and signed content (if signerId is
+     * not null).
+     * @throws IOException If GPG or I/O fails.
+     * @throws InterruptedException If the GPG process is interrupted.
      */
     public byte[] encryptAndSign(byte[] plaindata, String signer, char[] passphrase, String... recipients) throws IOException, InterruptedException
     {
-        // Validar parámetros
         if (plaindata == null || plaindata.length == 0)
         {
             throw new IllegalArgumentException("data is null or empty");
         }
+        return encryptAndSign(new ByteArrayInputStream(plaindata), signer, passphrase, recipients);
+    }
+    public byte[] encryptAndSign(InputStream plaindata, String signer, char[] passphrase, String... recipients) throws IOException, InterruptedException
+    {
         if (recipients == null || recipients.length == 0 || Arrays.stream(recipients).anyMatch(id -> id == null || id.trim().isEmpty()))
         {
             throw new IllegalArgumentException("Los recipientIds no pueden ser nulos, vacíos o contener elementos inválidos.");
@@ -661,7 +661,7 @@ public class GPG
         }
         Process process = gnupg.start();
 
-        // Enviar passphrase (si aplica) y datos
+        // Send passphrase (if applicable) and details
         try (OutputStream stdin = process.getOutputStream())
         {
             if(pass)
@@ -669,22 +669,14 @@ public class GPG
                 stdin.write(Byter.bytesUTF8(passphrase));
                 stdin.write('\n');
             }
-            stdin.write(plaindata);
+            IO.copy(plaindata,stdin);
         }
 
-        // Leer salida cifrada
+        // Read encrypted output
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        try (InputStream stdout = process.getInputStream())
-        {
-            byte[] buffer = new byte[BUFFER_SIZE];
-            int bytesRead;
-            while ((bytesRead = stdout.read(buffer)) != -1)
-            {
-                output.write(buffer, 0, bytesRead);
-            }
-        }
+        IO.copy(process.getInputStream(), output);
 
-        // Capturar errores
+        // Capture errors
         StringBuilder errorOutput = new StringBuilder();
         try (InputStream stderr = process.getErrorStream())
         {
@@ -696,7 +688,7 @@ public class GPG
             }
         }
 
-        // Verificar resultado
+        // Check result
         int exitCode = process.waitFor();
         if (exitCode != 0)
         {
@@ -746,27 +738,29 @@ public class GPG
         }
     }
     /**
-     * Desencripta y verifica la firma de un array de bytes cifrado con GPG.
+     * Decrypts and verifies the signature of a byte array encrypted with GPG.
      *
-     * @param cipherdata Array de bytes cifrado (y posiblemente firmado).
-     * @param passphrase Passphrase para la clave privada (o null para no usar).
-     * @return Mapa con: "decrypted" (byte[] desencriptado), "signer" (ID del
-     * firmante o null), "signatureValid" (Boolean, true si la firma es válida,
-     * false si no hay firma o es inválida), "recipients" (List<String> con
-     * IDs/fingerprints de receptores).
-     * @throws IOException Si falla GPG o I/O.
-     * @throws InterruptedException Si el proceso GPG es interrumpido.
+     * @param cipherdata Encrypted (and possibly signed) byte array.
+     * @param passphrase Passphrase for the private key (or null to not use it).
+     * @return Map with: "decrypted" (decrypted byte[], "signer" (signer ID or
+     * null), "signatureValid" (Boolean, true if the signature is valid, false
+     * if there is no signature or it is invalid), "recipients" (List<String>
+     * with recipient IDs/fingerprints).
+     * @throws IOException If GPG or I/O fails.
+     * @throws InterruptedException If the GPG process is interrupted.
      */
     public byte[] decryptAndVerify(byte[] cipherdata, char[] passphrase, DecryptStatus status) throws IOException, InterruptedException
     {
-        // Validar entrada
         if (cipherdata==null)
         {
             throw new NullPointerException("encryptedData is null");
         }
+        return decryptAndVerify(new ByteArrayInputStream(cipherdata), passphrase, status);
+    }
+    public byte[] decryptAndVerify(InputStream cipherdata, char[] passphrase, DecryptStatus status) throws IOException, InterruptedException
+    {
         boolean pass = passphrase != null && passphrase.length!=0;
-        // Construir comando GPG
-        GnuPG gnupg = gpg(BATCH, NOTTY, "--decrypt", "--output", "-", "--status-fd", "2");
+        GnuPG gnupg = gpg(BATCH, NOTTY, "--decrypt", "--output", "-", STATUS_FD_2);
         if (pass)
         {
             gnupg.add(PASSPHRASE_FD_0, PINENTRYMODE_LOOPBACK);
@@ -782,22 +776,14 @@ public class GPG
                 stdin.write(Byter.bytesUTF8(passphrase));
                 stdin.write('\n');
             }
-            stdin.write(cipherdata);
+            IO.copy(cipherdata,stdin);
         }
 
-        // Leer salida desencriptada y estado
+        // Read decrypted output and status
         ByteArrayOutputStream decryptedOutput = new ByteArrayOutputStream();
-        try (InputStream stdout = process.getInputStream())
-        {
-            byte[] buffer = new byte[BUFFER_SIZE];
-            int bytesRead;
-            while ((bytesRead = stdout.read(buffer)) != -1)
-            {
-                decryptedOutput.write(buffer, 0, bytesRead);
-            }
-        }
+        IO.copy(process.getInputStream(), decryptedOutput);
 
-        // Capturar errores
+        // Capture errors
         StringBuilder errorOutput = new StringBuilder();
         try (InputStream stderr = process.getErrorStream())
         {
@@ -809,12 +795,13 @@ public class GPG
             }
         }
 
-        // Verificar resultado
+        // Check result
         int exitCode = process.waitFor();
-        if (exitCode != 0 && !errorOutput.toString().contains("DECRYPTION_OKAY"))
+        String errorString = errorOutput.toString();
+        if (exitCode != 0 && !errorString.contains("DECRYPTION_OKAY"))
         {
             throw new IOException("Error al desencriptar/verificar con GPG. Código: " + exitCode
-                    + "\nError: " + errorOutput);
+                    + "\nError: " + errorString);
         }
 
         // Procesar estado
@@ -825,7 +812,7 @@ public class GPG
         StringBuilder errorText = new StringBuilder();
         StringBuilder statusText = new StringBuilder();
 
-        String[] statusLines = errorOutput.toString().split("\n");
+        String[] statusLines = errorString.split("\n");
         for (String line : statusLines)
         {
             if (line.startsWith("[GNUPG:] GOODSIG"))
@@ -880,25 +867,28 @@ public class GPG
     }
 
     /**
-     * Obtiene los IDs o fingerprints de las claves para las que está cifrado un
-     * mensaje.
+     * Gets the IDs or fingerprints of the keys for which a message is
+     * encrypted.
      *
-     * @param cipherdata Array de bytes cifrado.
-     * @param passphrase Passphrase para acceder al mensaje (o null para no
-     * usar).
-     * @return Lista de IDs/fingerprints de los receptores.
-     * @throws IOException Si falla GPG o I/O.
-     * @throws InterruptedException Si el proceso GPG es interrumpido.
+     * @param cipherdata Array of encrypted bytes.
+     * @param passphrase Passphrase to access the message (or null to not use it).
+     * @return List of IDs/fingerprints of the recipients.
+     * @throws IOException If GPG or I/O fails.
+     * @throws InterruptedException If the GPG process is interrupted.
+     *
      */
     public String[] getEncryptionRecipients(byte[] cipherdata, char[] passphrase) throws IOException, InterruptedException
     {
-        // Validar entrada
         if (cipherdata == null || cipherdata.length == 0)
         {
             throw new IllegalArgumentException("Los datos cifrados no pueden ser nulos o vacíos.");
         }
+        return getEncryptionRecipients(new ByteArrayInputStream(cipherdata), passphrase);
+    }
+    public String[] getEncryptionRecipients(InputStream cipherdata, char[] passphrase) throws IOException, InterruptedException
+    {
         boolean pass = passphrase != null && passphrase.length!=0;
-        // Construir comando GPG
+        // Build GPG command
         GnuPG gnupg = gpg(BATCH, NOTTY, "--list-packets");
         if (pass)
         {
@@ -907,7 +897,7 @@ public class GPG
 
         Process process = gnupg.start();
 
-        // Enviar passphrase (si aplica) y datos
+        // Send passphrase (if applicable) and details
         try (OutputStream stdin = process.getOutputStream())
         {
             if (pass)
@@ -915,10 +905,10 @@ public class GPG
                 stdin.write(Byter.bytesUTF8(passphrase));
                 stdin.write('\n');
             }
-            stdin.write(cipherdata);
+            IO.copy(cipherdata,stdin);
         }
 
-        // Leer salida
+        // Read output
         StringBuilder output = new StringBuilder();
         try (InputStream stdout = process.getInputStream())
         {
@@ -930,15 +920,15 @@ public class GPG
             }
         }
 
-        // Verificar resultado
+        // Check result
         int exitCode = process.waitFor();
         if (exitCode != 0)
         {
-            throw new IOException("Error al listar paquetes con GPG. Código: " + exitCode
+            throw new IOException("Error listing packages with GPG. Code: " + exitCode
                     + "\nError: " + output);
         }
 
-        // Extraer receptores
+        // Extract receptors
         HashSet<String> recipients = new HashSet<>();
         String[] lines = output.toString().split("\n");
         for (String line : lines)
@@ -956,4 +946,152 @@ public class GPG
 
         return recipients.toArray(new String[0]);
     }
+    
+    
+    public static class PacketInfo
+    {
+        public final int off;
+        public final int ctb;
+        public final int tag;
+        public final int hlen;
+        public final int plen;
+
+        public final int version;
+        public final int algorithm;
+        public final String keyId;
+
+        public PacketInfo(int off, int ctb, int tag, int hlen, int plen, int version, int algorithm, String keyId)
+        {
+            this.off = off;
+            this.ctb = ctb;
+            this.tag = tag;
+            this.hlen = hlen;
+            this.plen = plen;
+            this.version = version;
+            this.algorithm = algorithm;
+            this.keyId = keyId;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "off=" + off + ", ctb=" + ctb + ", tag=" + tag + ", hlen=" + hlen + ", plen=" + plen + ", version=" + version + ", algorithm=" + algorithm + ", keyId=" + keyId;
+        }
+    }
+    
+    public PacketsInfo listPackets(byte[] cipherdata, char[] passphrase) throws IOException, InterruptedException
+    {
+        return listPackets(new ByteArrayInputStream(cipherdata), passphrase);
+    }
+
+    public static class PacketsInfo
+    {
+        public final String encTo;
+        public final String algo;
+        public final String subKey;
+        public final String mainKey;
+        public final String trust;
+        public final boolean decryptionOkay;
+        public final boolean goodmdc;
+        public PacketsInfo(String encTo, String algo, String subKey, String mainKey, String trust, boolean decryptionOkay, boolean goodmdc)
+        {
+            this.encTo = encTo;
+            this.algo = algo;
+            this.subKey = subKey;
+            this.mainKey = mainKey;
+            this.trust = trust;
+            this.decryptionOkay = decryptionOkay;
+            this.goodmdc = goodmdc;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "encTo=" + encTo + ", algo=" + algo + ", subKey=" + subKey + ", mainKey=" + mainKey + ", trust=" + trust + ", decryptionOkay=" + decryptionOkay + ", goodmdc=" + goodmdc;
+        }        
+    }
+    
+    public PacketsInfo listPackets(InputStream cipherdata, char[] passphrase) throws IOException, InterruptedException
+    {
+        boolean pass = passphrase != null && passphrase.length!=0;
+        // Build GPG command
+        GnuPG gnupg = gpg(BATCH, NOTTY, "--list-packets", STATUS_FD_1);
+
+        if (pass)
+        {
+            gnupg.add(PASSPHRASE_FD_0);
+        }
+        else
+        {
+            gnupg.add(PINENTRYMODE_CANCEL);
+        }
+        
+        gnupg.add("--");
+
+        Process process = gnupg.start();
+
+        // Send passphrase (if applicable) and details
+        try (OutputStream stdin = process.getOutputStream())
+        {
+            if (pass)
+            {
+                stdin.write(Byter.bytesUTF8(passphrase));
+                stdin.write('\n');
+            }
+            IO.copy(cipherdata, stdin);
+        }
+
+        String encTo=null;
+        String algo=null;
+        String subKey=null;
+        String mainKey=null;
+        String trust=null;
+        boolean decryptionOkay=false;
+        boolean goodmdc=false;
+
+        try (BufferedReader stdout = debugger(new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))))
+        {
+            String line;
+
+            while((line=stdout.readLine())!=null)
+            {
+                String[] s = line.trim().toUpperCase().split(" ");
+                String cmd = s[1].toUpperCase();
+                
+                if(cmd.equals("ENC_TO"))
+                {
+                    //[GNUPG:] ENC_TO F158E66C4BBDC041 18 0
+                    encTo = s[2];
+                    algo = s[3];
+                }
+                else if(cmd.equals("DECRYPTION_KEY"))
+                {
+                    subKey = s[2];
+                    mainKey = s[3];
+                    trust = s[4];
+                }
+                else if(cmd.equals("DECRYPTION_OKAY"))
+                {
+                    decryptionOkay=true;
+                }
+                else if(cmd.equals("GOODMDC"))
+                {
+                    goodmdc=true;
+                }
+                else if(debug)
+                {
+                    System.err.println(line);
+                }
+            }
+        }
+        // Check result
+        int exitCode = process.waitFor();
+        if (exitCode != 0 && exitCode!=2)
+        {
+            throw new IOException("Error listing packages with GPG. Code: " + exitCode);
+        }
+        
+        return new PacketsInfo(encTo, algo, subKey, mainKey, trust, decryptionOkay, goodmdc);
+    }
+    
 }

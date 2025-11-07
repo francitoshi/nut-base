@@ -36,6 +36,7 @@ import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
@@ -44,14 +45,10 @@ import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.TestMethodOrder;
 
-/**
- *
- * @author franci
- */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class GPGTest
 {
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final String EMAIL = "gpg.test@crypto.base.nut.io";
     private static final String PASSPHRASE = "PASSPHRASE";
 
@@ -129,7 +126,7 @@ public class GPGTest
     {
         try 
         {
-            GPG gpg = new GPG().setArmor(true);
+            GPG gpg = new GPG().setArmor(DEBUG);
             // Datos de ejemplo
             String plaintext = "this is a secret message, for testing.";
             byte[] plaindata = plaintext.getBytes("UTF-8");
@@ -193,6 +190,78 @@ public class GPGTest
             String id = item.main.getFingerprint();
             assertEquals(0, gpg.deletePubKeys(id));
         }
+    }
+
+    @Test
+    public void testListPackets() throws Exception
+    {
+        String msg = "-----BEGIN PGP MESSAGE-----\n" +
+        "Version: ProtonMail\n" +
+        "\n" +
+        "wV4D8VjmbEu9wEESAQdA/g5QciIQyj/yuHLCm8jNHIvpW3/X70yfgfxRbd9B\n" +
+        "pi0w22gjR/wlXDxqhqLIymPuEaKRR36AFflZxfeelO7cEdEVCtOwmiDCPusD\n" +
+        "Fr07mxFK0sCEAZzHWjaEQXDhlgaoHRFBqH9RVJsfBK3gV6KgHySdKCZhQGs2\n" +
+        "p8evtPTmT6HXoAu0CXzXKsTjUJf7oQcUnGZzsZfrq2hs4es6iPqChvLe+pEx\n" +
+        "bjqA5Eu+23/+ctYvL63FQpKf2QgqmjH67oTg8KLSxJGrnUMdUbtHZW7GJuZ/\n" +
+        "d7tgS19POj1R4LMJNQJipFFR9rcjrUiXHW3aCHv8w/H+3ANVnL88A4/nDG8N\n" +
+        "sFyHm1Ft4zf58p33oeHNC9LLejkvD8+x/s5byEq6zJcl6ONoXErLqp2Picn7\n" +
+        "Z9iyESMMAZjjOVvEQDdsyERsDENf3R/T3RGLHrU/doLrWZVZnZCmpQZc8ofC\n" +
+        "VDyW8HK5EH3aWFDzfarKNvLYg2qrmYR6iOaRDI7XbfDxO/cli/Xnj1W5a85y\n" +
+        "3z3InYbDyvSkkVq14fR1Bwf6\n" +
+        "=9T15\n" +
+        "-----END PGP MESSAGE-----\n";        
+        
+        byte[] cipherdata = msg.getBytes(StandardCharsets.UTF_8);
+        char[] passphrase = null;
+        
+        GPG instance = new GPG().setDebug(DEBUG);
+        GPG.PacketsInfo result = instance.listPackets(cipherdata, passphrase);
+  
+        if(DEBUG)
+        {
+            System.out.println(result);
+        }
+
+    }
+    @Test
+    public void testListPackets2() throws Exception
+    {
+        GPG gpg = new GPG().setDebug(DEBUG).setArmor(true);
+
+        gpg.genKey(NISTP521, SCA, NISTP521, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE, "4y");
+        gpg.genKey(NISTP521, SCA, NISTP521, E, "bob", "1", "bob@gpgtest.io", PASSPHRASE, "4y");
+        
+        byte[] plaintext = "hello world!!!".getBytes(StandardCharsets.UTF_8);
+        
+        byte[] a = gpg.encryptAndSign(plaintext, "alice@gpgtest.io", PASSPHRASE.toCharArray(), "bob@gpgtest.io");
+        byte[] b = gpg.encryptAndSign(plaintext, "bob@gpgtest.io", PASSPHRASE.toCharArray(), "alice@gpgtest.io");
+        
+        System.out.println(new String(a));
+        System.out.println("--------------------------------------------------------------------------------");
+        System.out.println(new String(b));
+        System.out.println("--------------------------------------------------------------------------------");
+
+        GPG.PacketsInfo r1 = gpg.listPackets(a, null);
+        GPG.PacketsInfo r2 = gpg.listPackets(b, null);
+
+        System.out.println(r1);
+        System.out.println("--------------------------------------------------------------------------------");
+        System.out.println(r2);
+                
+        GPG.PacketsInfo r3 = gpg.listPackets(a, PASSPHRASE.toCharArray());
+        GPG.PacketsInfo r4 = gpg.listPackets(b, PASSPHRASE.toCharArray());
+
+        System.out.println(r3);
+        System.out.println("--------------------------------------------------------------------------------");
+        System.out.println(r4);
+        
+        SecKey[] secs = gpg.getSecKeys("alice", "bob");
+        
+        for(SecKey sk : secs)
+        {
+            gpg.deleteSecAndPubKeys(sk.main.getFingerprint());
+        }
+  
     }
 
 }
