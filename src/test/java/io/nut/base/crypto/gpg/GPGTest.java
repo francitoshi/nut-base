@@ -20,7 +20,6 @@
  */
 package io.nut.base.crypto.gpg;
 
-
 import static io.nut.base.crypto.gpg.GPG.BRAINPOOLP256R1;
 import static io.nut.base.crypto.gpg.GPG.BRAINPOOLP384R1;
 import static io.nut.base.crypto.gpg.GPG.BRAINPOOLP512R1;
@@ -35,7 +34,6 @@ import static io.nut.base.crypto.gpg.GPG.RSA1024;
 import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
@@ -59,6 +57,8 @@ public class GPGTest
     public static final String SCA  = GPG.SCA;
     public static final String CA   = GPG.CA;
     public static final String SC   = GPG.SC;
+    
+    static final String THIS_IS_THE_COMMENT = "this is the comment";
     
     @Test
     @Order(1)
@@ -124,50 +124,46 @@ public class GPGTest
     @Order(3)
     public void testEncryptAndSign() throws Exception
     {
-        try 
-        {
-            GPG gpg = new GPG().setArmor(DEBUG);
-            // Datos de ejemplo
-            String plaintext = "this is a secret message, for testing.";
-            byte[] plaindata = plaintext.getBytes("UTF-8");
-            char[] passphrase = PASSPHRASE.toCharArray();
-            
-            String signerId = "signer";
-            String recipientId1 = "recipient1";
-            String recipientId2 = "recipient2";
-            
-            assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, signerId, "", EMAIL, PASSPHRASE, "4y"));
-            assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, recipientId1, "", EMAIL, PASSPHRASE, "4y"));
-            assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, recipientId2, "", EMAIL, PASSPHRASE, "4y"));
+        GPG gpg = new GPG().setDebug(true).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
+        // Datos de ejemplo
+        String plaintext = "this is a secret message, for testing.";
+        byte[] plaindata = plaintext.getBytes("UTF-8");
+        char[] passphrase = PASSPHRASE.toCharArray();
 
-            // Cifrar y firmar
-            byte[] encryptedSigned = gpg.encryptAndSign(plaindata, signerId, passphrase, recipientId1, recipientId2);
-            System.out.println("Cifrado/firmado (base64): " + Base64.getEncoder().encodeToString(encryptedSigned));
+        String signerId = "signer";
+        String recipientId1 = "recipient1";
+        String recipientId2 = "recipient2";
 
-            GPG.DecryptStatus status = new GPG.DecryptStatus();
-                    
-            // Desencriptar y verificar
-            byte[] deciphered = gpg.decryptAndVerify(encryptedSigned, passphrase, status);
-            
-            assertArrayEquals(plaindata, deciphered);
-            
-            System.out.println("Desencriptado: " + new String(status.plaintext, "UTF-8"));
-            System.out.println("Firmante: " + (status.signer != null ? status.signer : "Ninguno"));
-            System.out.println("Firma válida: " + status.validSignature);
-            System.out.println("Receptores: " + Arrays.toString(status.recipients));
+        assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, signerId, "", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, recipientId1, "", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, recipientId2, "", EMAIL, PASSPHRASE, "4y"));
 
-            // Solo receptores
-            String[] recipientList = gpg.getEncryptionRecipients(encryptedSigned, passphrase);
-            System.out.println("Receptores (solo lista): " + Arrays.deepToString(recipientList));
+        // Cifrar y firmar
+        byte[] encryptedSigned = gpg.encryptAndSign(plaindata, signerId, passphrase, recipientId1, recipientId2);
+        System.out.println("Cifrado/firmado (base64): " + Base64.getEncoder().encodeToString(encryptedSigned));
 
-            Arrays.sort(status.recipients);
-            Arrays.sort(recipientList);
-            assertArrayEquals(status.recipients, recipientList);
-        } 
-        catch (IOException | InterruptedException e) 
-        {
-            e.printStackTrace();
-        }    
+        GPG.DecryptStatus status = new GPG.DecryptStatus();
+
+        // Desencriptar y verificar
+        byte[] deciphered = gpg.decryptAndVerify(encryptedSigned, passphrase, status);
+
+        assertArrayEquals(plaindata, deciphered);
+        assertEquals(THIS_IS_THE_COMMENT, status.comment);
+        assertNotNull(status.version);
+
+        System.out.println("Desencriptado: " + new String(deciphered, "UTF-8"));
+        System.out.println("Firmante: " + (status.signer != null ? status.signer : "Ninguno"));
+        System.out.println("Firma válida: " + status.validSignature);
+        System.out.println("Receptores: " + Arrays.toString(status.getRecipients()));
+
+        // Solo receptores
+        String[] recipients1 = gpg.getEncryptionRecipients(encryptedSigned, passphrase);
+        System.out.println("Receptores (solo lista): " + Arrays.deepToString(recipients1));
+
+        String[] recipients2 = status.getRecipients();
+        Arrays.sort(recipients2);
+        Arrays.sort(recipients1);
+        assertArrayEquals(recipients2, recipients1);
     }
     
     @Test
@@ -197,6 +193,7 @@ public class GPGTest
     {
         String msg = "-----BEGIN PGP MESSAGE-----\n" +
         "Version: ProtonMail\n" +
+        "Comment: this is a comment\n" +
         "\n" +
         "wV4D8VjmbEu9wEESAQdA/g5QciIQyj/yuHLCm8jNHIvpW3/X70yfgfxRbd9B\n" +
         "pi0w22gjR/wlXDxqhqLIymPuEaKRR36AFflZxfeelO7cEdEVCtOwmiDCPusD\n" +
@@ -216,6 +213,9 @@ public class GPGTest
         
         GPG instance = new GPG().setDebug(DEBUG);
         GPG.PacketsInfo result = instance.listPackets(cipherdata, passphrase);
+        
+        assertEquals("ProtonMail", result.version);
+        assertEquals("this is a comment", result.comment);
   
         if(DEBUG)
         {
@@ -226,7 +226,7 @@ public class GPGTest
     @Test
     public void testListPackets2() throws Exception
     {
-        GPG gpg = new GPG().setDebug(DEBUG).setArmor(true);
+        GPG gpg = new GPG().setDebug(DEBUG).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
 
         gpg.genKey(NISTP521, SCA, NISTP521, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE, "4y");
         gpg.genKey(NISTP521, SCA, NISTP521, E, "bob", "1", "bob@gpgtest.io", PASSPHRASE, "4y");
@@ -254,6 +254,10 @@ public class GPGTest
         System.out.println(r3);
         System.out.println("--------------------------------------------------------------------------------");
         System.out.println(r4);
+        
+        assertEquals(THIS_IS_THE_COMMENT, r4.comment);
+        assertNotNull(r4.version);
+        
         
         SecKey[] secs = gpg.getSecKeys("alice", "bob");
         

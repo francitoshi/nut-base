@@ -43,6 +43,7 @@ public final class ThrottledInputStream extends FilterInputStream
     private volatile long untilNanoTime;
     private volatile boolean endReached;
     private volatile long parkedNanos;
+    private volatile boolean singleLine;
 
     /**
      * Creates a throttled InputStream.
@@ -67,6 +68,18 @@ public final class ThrottledInputStream extends FilterInputStream
         this.nanosOnClose = timeUnit.toNanos(toc);
         this.untilNanoTime = this.lineNanoTime = this.byteNanoTime = System.nanoTime();
         this.average = average;
+    }
+
+    /**
+     * Sets single-line mode. In this mode it always return when a LF characer
+     * is reached.
+     * @param singleLine
+     * @return
+     */
+    public ThrottledInputStream setSingleLine(boolean singleLine)
+    {
+        this.singleLine = singleLine;
+        return this;
     }
 
     @Override
@@ -100,7 +113,7 @@ public final class ThrottledInputStream extends FilterInputStream
                     return i==0 ? bb : bytesRead;
                 }
                 b[off+bytesRead++] = (byte) bb;
-                if(bb=='\n' && parkedNanos>0)
+                if(bb=='\n' && (singleLine || parkedNanos>0))
                 {
                     return bytesRead;
                 }

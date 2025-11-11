@@ -30,6 +30,7 @@ import io.nut.base.encoding.Hex;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
 import io.nut.base.util.Joins;
+import io.nut.base.util.Sorts;
 import io.nut.base.util.Utils;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
@@ -61,6 +62,7 @@ import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
 
 /**
  *
@@ -673,28 +675,6 @@ public class KriptoTest
     }
 
     @Test
-    public void testGetSAS6()
-    {
-        Kripto instance = Kripto.getInstance();
-        String s1 = "BBCA99DZC0AB3SCA0C1699BB0E9A3BFBESB7ASA9";
-        String s2 = "6694DBDE7BEBEES631BED9S0ZBDSBZ4B7F9470E6";
-        String result12 = instance.getSAS6(s1,s2);
-        String result21 = instance.getSAS6(s2,s1);
-        assertEquals(result12, result21);
-    }
-   
-    @Test
-    public void testGetSAS8()
-    {
-        Kripto instance = Kripto.getInstance();
-        String s1 = "BBCA99DZC0AB3SCA0C1699BB0E9A3BFBESB7ASA9";
-        String s2 = "6694DBDE7BEBEES631BED9S0ZBDSBZ4B7F9470E6";
-        String result12 = instance.getSAS8(s1,s2);
-        String result21 = instance.getSAS8(s2,s1);
-        assertEquals(result12, result21);
-    }
-
-    @Test
     public void testIsAvailable()
     {
 
@@ -706,5 +686,239 @@ public class KriptoTest
         assertTrue(instance.isAvailable(SecretKeyAlgorithm.AES));
         assertTrue(instance.isAvailable(SecretKeyAlgorithm.ChaCha20));
         
+    }
+    
+    static final Kripto MITM_KRIPTO = Kripto.getInstance();
+
+    @Test
+    @DisplayName("Should successfully verify when both parties use correct fingerprints")
+    void testSuccessfulAuthentication() throws NoSuchAlgorithmException
+    {
+        // Arrange: Simulate Alice and Bob with their real fingerprints
+        byte[] aliceFingerprint = "ALICE_GPG_FINGERPRINT_1234567890".getBytes(StandardCharsets.UTF_8);
+        byte[] bobFingerprint = "BOB_GPG_FINGERPRINT_0987654321".getBytes(StandardCharsets.UTF_8);
+        byte[] sharedSecret = "SecureSecret123".getBytes(StandardCharsets.UTF_8);
+
+        // Act: Alice generates her proof fragments
+        byte[][] aliceProof = MITM_KRIPTO.deriveMutualAuthProof(aliceFingerprint, bobFingerprint, sharedSecret);
+        byte[] aliceFragmentToSend = aliceProof[0];
+        byte[] aliceFragmentToExpect = aliceProof[1];
+
+        // Act: Bob generates his proof fragments
+        byte[][] bobProof = MITM_KRIPTO.deriveMutualAuthProof(bobFingerprint, aliceFingerprint, sharedSecret);
+        byte[] bobFragmentToSend = bobProof[0];
+        byte[] bobFragmentToExpect = bobProof[1];
+
+        // Assert: What Alice sends should match what Bob expects
+        assertArrayEquals(aliceFragmentToSend, bobFragmentToExpect, "Alice's fragment should match what Bob expects to receive");
+
+        // Assert: What Bob sends should match what Alice expects
+        assertArrayEquals(bobFragmentToSend, aliceFragmentToExpect, "Bob's fragment should match what Alice expects to receive");
+
+        // Assert: Fragments should be 16 bytes (half of SHA-256)
+        assertEquals(16, aliceFragmentToSend.length, "Fragment should be 16 bytes");
+        assertEquals(16, bobFragmentToSend.length, "Fragment should be 16 bytes");
+
+        // Assert: The fragments they send should be different (complementary halves)
+        assertFalse(Arrays.equals(aliceFragmentToSend, bobFragmentToSend), "Alice and Bob should send different fragments");
+    }
+
+    @Test
+    @DisplayName("Should work with reversed fingerprint order")
+    void testReversedFingerprintOrder() throws NoSuchAlgorithmException
+    {
+        // Arrange
+        byte[] fingerprint1 = "AAA_FINGERPRINT".getBytes(StandardCharsets.UTF_8);
+        byte[] fingerprint2 = "ZZZ_FINGERPRINT".getBytes(StandardCharsets.UTF_8);
+        byte[] sharedSecret = "MySecret".getBytes(StandardCharsets.UTF_8);
+
+        // Act: Generate proofs in both orders
+        byte[][] proof1 = MITM_KRIPTO.deriveMutualAuthProof(fingerprint1, fingerprint2, sharedSecret);
+        byte[][] proof2 = MITM_KRIPTO.deriveMutualAuthProof(fingerprint2, fingerprint1, sharedSecret);
+
+        // Assert: Complementary fragments should match
+        assertArrayEquals(proof1[0], proof2[1], "Fragment to send from first should match fragment to expect from second");
+        assertArrayEquals(proof1[1], proof2[0], "Fragment to expect from first should match fragment to send from second");
+    }
+
+    @Test
+    @DisplayName("Should produce different proofs with different shared secrets")
+    void testDifferentSharedSecrets() throws NoSuchAlgorithmException
+    {
+        // Arrange
+        byte[] aliceFingerprint = "ALICE_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] bobFingerprint = "BOB_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] secret1 = "Secret1".getBytes(StandardCharsets.UTF_8);
+        byte[] secret2 = "Secret2".getBytes(StandardCharsets.UTF_8);
+
+        // Act
+        byte[][] proof1 = MITM_KRIPTO.deriveMutualAuthProof(aliceFingerprint, bobFingerprint, secret1);
+        byte[][] proof2 = MITM_KRIPTO.deriveMutualAuthProof(aliceFingerprint, bobFingerprint, secret2);
+
+        // Assert: Different secrets produce different proofs
+        assertFalse(Arrays.equals(proof1[0], proof2[0]), "Different shared secrets should produce different fragments");
+        assertFalse(Arrays.equals(proof1[1], proof2[1]), "Different shared secrets should produce different fragments");
+    }
+
+    @Test
+    @DisplayName("Should detect MITM when attacker intercepts and replaces fingerprints")
+    void testMitmAttackDetection() throws NoSuchAlgorithmException
+    {
+        // Arrange: Real fingerprints
+        byte[] aliceRealFingerprint = "ALICE_REAL_FP_12345".getBytes(StandardCharsets.UTF_8);
+        byte[] bobRealFingerprint = "BOB_REAL_FP_67890".getBytes(StandardCharsets.UTF_8);
+        byte[] attackerFingerprint = "ATTACKER_FP_MITM".getBytes(StandardCharsets.UTF_8);
+        byte[] sharedSecret = "SecureSecret123".getBytes(StandardCharsets.UTF_8);
+
+        // Act: Alice thinks she's talking to Bob, but receives attacker's fingerprint
+        byte[][] aliceProof = MITM_KRIPTO.deriveMutualAuthProof(
+                aliceRealFingerprint,
+                attackerFingerprint, // MITM replaced Bob's fingerprint
+                sharedSecret
+        );
+        byte[] aliceFragmentToSend = aliceProof[0];
+        byte[] aliceFragmentToExpect = aliceProof[1];
+
+        // Act: Bob thinks he's talking to Alice, but receives attacker's fingerprint
+        byte[][] bobProof = MITM_KRIPTO.deriveMutualAuthProof(
+                bobRealFingerprint,
+                attackerFingerprint, // MITM replaced Alice's fingerprint
+                sharedSecret
+        );
+        byte[] bobFragmentToSend = bobProof[0];
+        byte[] bobFragmentToExpect = bobProof[1];
+
+        // Assert: Alice's verification should FAIL
+        assertFalse(Arrays.equals(bobFragmentToSend, aliceFragmentToExpect), "Alice should NOT receive the fragment she expects (MITM detected)");
+
+        // Assert: Bob's verification should FAIL
+        assertFalse(Arrays.equals(aliceFragmentToSend, bobFragmentToExpect), "Bob should NOT receive the fragment he expects (MITM detected)");
+    }
+
+    @Test
+    @DisplayName("Should detect MITM even if attacker relays fragments unchanged")
+    void testMitmCannotRelayFragments() throws NoSuchAlgorithmException
+    {
+        // Arrange
+        byte[] aliceFingerprint = "ALICE_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] bobFingerprint = "BOB_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] attackerFingerprint = "MITM_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] sharedSecret = "Secret".getBytes(StandardCharsets.UTF_8);
+
+        // Simulate MITM scenario
+        byte[][] aliceProof = MITM_KRIPTO.deriveMutualAuthProof(aliceFingerprint, attackerFingerprint, sharedSecret);
+        byte[][] bobProof = MITM_KRIPTO.deriveMutualAuthProof(bobFingerprint, attackerFingerprint, sharedSecret);
+
+        // Attacker tries to relay fragments without modification
+        byte[] fragmentAliceSends = aliceProof[0];
+        byte[] fragmentBobExpects = bobProof[1];
+
+        // Assert: Even with relay, verification fails
+        assertFalse(Arrays.equals(fragmentAliceSends, fragmentBobExpects), "MITM cannot succeed by simply relaying fragments");
+    }
+
+    @Test
+    @DisplayName("Should detect MITM when attacker uses wrong shared secret")
+    void testWrongSharedSecret() throws NoSuchAlgorithmException
+    {
+        // Arrange
+        byte[] aliceFingerprint = "ALICE_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] bobFingerprint = "BOB_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] correctSecret = "CorrectSecret".getBytes(StandardCharsets.UTF_8);
+        byte[] wrongSecret = "WrongSecret".getBytes(StandardCharsets.UTF_8);
+
+        // Act: Alice uses correct secret
+        byte[][] aliceProof = MITM_KRIPTO.deriveMutualAuthProof(aliceFingerprint, bobFingerprint, correctSecret);
+
+        // Act: Bob uses wrong secret (simulating compromised secret or typo)
+        byte[][] bobProof = MITM_KRIPTO.deriveMutualAuthProof(bobFingerprint, aliceFingerprint, wrongSecret);
+
+        // Assert: Verification should fail
+        assertFalse(Arrays.equals(aliceProof[0], bobProof[1]), "Verification should fail with different shared secrets");
+        assertFalse(Arrays.equals(bobProof[0], aliceProof[1]), "Verification should fail with different shared secrets");
+    }
+
+    @Test
+    @DisplayName("Should throw exception when fingerprints are identical")
+    void testIdenticalFingerprints()
+    {
+        // Arrange
+        byte[] sameFingerprint = "SAME_FP".getBytes(StandardCharsets.UTF_8);
+        byte[] sharedSecret = "Secret".getBytes(StandardCharsets.UTF_8);
+
+        // Act & Assert
+        assertThrows(IllegalArgumentException.class, () ->
+        {
+            MITM_KRIPTO.deriveMutualAuthProof(sameFingerprint, sameFingerprint, sharedSecret);
+        }, "Should throw IllegalArgumentException when fingerprints are identical");
+    }
+
+    @Test
+    @DisplayName("Should handle empty shared secret")
+    void testEmptySharedSecret() throws NoSuchAlgorithmException
+    {
+        // Arrange
+        byte[] fp1 = "FP1".getBytes(StandardCharsets.UTF_8);
+        byte[] fp2 = "FP2".getBytes(StandardCharsets.UTF_8);
+        byte[] emptySecret = new byte[0];
+
+        // Act
+        byte[][] proof = MITM_KRIPTO.deriveMutualAuthProof(fp1, fp2, emptySecret);
+
+        // Assert: Should not throw exception, but produces valid output
+        assertNotNull(proof);
+        assertEquals(2, proof.length);
+        assertEquals(16, proof[0].length);
+        assertEquals(16, proof[1].length);
+    }
+
+    @Test
+    @DisplayName("Should handle very long fingerprints")
+    void testLongFingerprints() throws NoSuchAlgorithmException
+    {
+        // Arrange: Simulate long GPG fingerprints (typical GPG fingerprints are 40 hex chars)
+        byte[] longFp1 = new byte[1024];
+        byte[] longFp2 = new byte[1024];
+        Arrays.fill(longFp1, (byte) 0xAA);
+        Arrays.fill(longFp2, (byte) 0xBB);
+        byte[] sharedSecret = "Secret".getBytes(StandardCharsets.UTF_8);
+
+        // Act
+        byte[][] proof = MITM_KRIPTO.deriveMutualAuthProof(longFp1, longFp2, sharedSecret);
+
+        // Assert
+        assertNotNull(proof);
+        assertEquals(16, proof[0].length);
+        assertEquals(16, proof[1].length);
+    }
+
+    @Test
+    @DisplayName("using and strengthener")
+    void testStrengthenerSharedSecret() throws NoSuchAlgorithmException
+    {
+        // Arrange: Simulate Alice and Bob with their real fingerprints
+        byte[] aliceFingerprint = "ALICE_GPG_FINGERPRINT_1234567890".getBytes(StandardCharsets.UTF_8);
+        byte[] bobFingerprint = "BOB_GPG_FINGERPRINT_0987654321".getBytes(StandardCharsets.UTF_8);
+        byte[] sharedSecret = "SecureSecret123".getBytes(StandardCharsets.UTF_8);
+
+        // Act: Alice generates her proof fragments
+        byte[][] aliceProof = MITM_KRIPTO.deriveMutualAuthProof(aliceFingerprint, bobFingerprint, sharedSecret, x->strengthener(x));
+        byte[] aliceFragmentToSend = aliceProof[0];
+        byte[] aliceFragmentToExpect = aliceProof[1];
+
+        // Act: Bob generates his proof fragments
+        byte[][] bobProof = MITM_KRIPTO.deriveMutualAuthProof(bobFingerprint, aliceFingerprint, sharedSecret, x->strengthener(x));
+        byte[] bobFragmentToSend = bobProof[0];
+        byte[] bobFragmentToExpect = bobProof[1];
+
+        // Assert: What Alice sends should match what Bob expects
+        assertArrayEquals(aliceFragmentToSend, bobFragmentToExpect, "Alice's fragment should match what Bob expects to receive");
+
+        // Assert: What Bob sends should match what Alice expects
+        assertArrayEquals(bobFragmentToSend, aliceFragmentToExpect, "Bob's fragment should match what Alice expects to receive");
+    }
+    public static byte[] strengthener(byte[] data)
+    {
+        return Joins.join(data, data, data);
     }
 }

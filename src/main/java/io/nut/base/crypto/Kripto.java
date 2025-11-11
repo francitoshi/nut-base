@@ -21,9 +21,9 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.stego.Steganography;
-import io.nut.base.encoding.Base32String;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
+import io.nut.base.util.Utils;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
@@ -50,6 +50,8 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.Normalizer;
+import java.util.Arrays;
+import java.util.function.UnaryOperator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
@@ -1321,54 +1323,6 @@ public class Kripto
         return new Steganography(this, columns, splitLines, mergeLines, deflate);
     }
 
-    /**
-     * Generates a 6-character Base32 Short Authentication String (SAS) from two
-     * fingerprints. The method is deterministic and commutative, meaning
-     * that getSAS(fp1, fp2) will always be equal to getSAS(fp2, fp1).
-     * This allows two parties to calculate the same SAS independently.
-     *
-     * @param ownKey The own key fingerprint (hexadecimal format, no spaces).
-     * @param friendKey The friend's key fingerprint (hexadecimal format, no 
-     * spaces).
-     * @return A 6-character formatted SAS code (e.g., "ABC-DEF"), or null if an
-     * error occurs.
-     */
-    public String getSAS6(String ownKey, String friendKey)
-    {
-        if (ownKey == null || friendKey == null || ownKey.isEmpty() || friendKey.isEmpty())
-        {
-            return null;
-        }
-        String keys = (ownKey.compareTo(friendKey) < 0) ? ownKey+friendKey : friendKey+ownKey;
-        byte[] hashBytes = this.sha256.digest(keys, StandardCharsets.UTF_8);
-        String b32s = Base32String.encode(hashBytes).toUpperCase();
-        return b32s.substring(0, 3) + "-" + b32s.substring(3, 6);
-    }
-    
-    /**
-     * Generates a 8-character Base32 Short Authentication String (SAS) from two
-     * fingerprints. The method is deterministic and commutative, meaning
-     * that getSAS8(fp1, fp2) will always be equal to getSAS8(fp2, fp1).
-     * This allows two parties to calculate the same SAS independently.
-     *
-     * @param ownKey The own key fingerprint (hexadecimal format, no spaces).
-     * @param friendKey The friend's key fingerprint (hexadecimal format, no 
-     * spaces).
-     * @return A 8-character formatted SAS code (e.g., "ABCD-EFGH"), or null if an
-     * error occurs.
-     */
-    public String getSAS8(String ownKey, String friendKey)
-    {
-        if (ownKey == null || friendKey == null || ownKey.isEmpty() || friendKey.isEmpty())
-        {
-            return null;
-        }
-        String keys = (ownKey.compareTo(friendKey) < 0) ? ownKey+friendKey : friendKey+ownKey;
-        byte[] hashBytes = this.sha256.digest(keys, StandardCharsets.UTF_8);
-        String b32s = Base32String.encode(hashBytes).toUpperCase();
-        return b32s.substring(0, 4) + "-" + b32s.substring(4, 8);
-    }
-
     //useful instances
     public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
     public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
@@ -1409,4 +1363,159 @@ public class Kripto
         }
     }
     
+    /**
+     * Derives a mutual authentication proof to detect Man-in-the-Middle (MITM)
+     * attacks in a peer-to-peer communication scenario.
+     *
+     * <p>
+     * This method implements a secure protocol where two parties can verify
+     * they are communicating directly without an intermediary attacker, using a
+     * pre-shared secret. The protocol works by:
+     * <ol>
+     * <li>Ordering both fingerprints alphabetically (lexicographically)</li>
+     * <li>Concatenating: firstFingerprint + secondFingerprint +
+     * sharedSecret</li>
+     * <li>Applying SHA-256 twice (double hashing for additional security)</li>
+     * <li>Splitting the resulting hash into two equal halves</li>
+     * <li>Determining which half to send and which to expect based on
+     * fingerprint order</li>
+     * </ol>
+     *
+     * <p>
+     * Each party generates the same hash but sends different halves. The party
+     * whose fingerprint comes first alphabetically sends the first half and
+     * expects to receive the second half. The other party does the opposite.
+     * This asymmetry prevents a MITM attacker from simply relaying the
+     * messages, as they would need to know the shared secret to generate valid
+     * fragments.
+     *
+     * <p>
+     * <strong>Security properties:</strong>
+     * <ul>
+     * <li>Resistant to active MITM attacks when combined with a shared
+     * secret</li>
+     * <li>Does not require a trusted third party or PKI infrastructure</li>
+     * <li>Suitable for decentralized P2P communications</li>
+     * <li>The shared secret should have sufficient entropy (recommended: 6+
+     * alphanumeric characters or 4+ diceware words, especially when used with
+     * key derivation functions like Argon2)</li>
+     * </ul>
+     *
+     * <p>
+     * <strong>Usage example:</strong>
+     * <pre>{@code
+     * byte[] myFingerprint = getMyGpgFingerprint();
+     * byte[] theirFingerprint = getTheirGpgFingerprint();
+     * byte[] sharedSecret = "k7Qm2pX".getBytes(StandardCharsets.UTF_8);
+     *
+     * byte[][] proof = deriveMutualAuthProof(myFingerprint, theirFingerprint, sharedSecret, null);
+     * byte[] fragmentToSend = proof[0];
+     * byte[] fragmentToExpect = proof[1];
+     *
+     * // Send fragmentToSend to peer
+     * sendToPeer(fragmentToSend);
+     *
+     * // Receive fragment from peer
+     * byte[] receivedFragment = receiveFromPeer();
+     *
+     * // Verify
+     * if (Arrays.equals(receivedFragment, fragmentToExpect)) {
+     *     System.out.println("Authentication successful - No MITM detected");
+     * } else {
+     *     System.out.println("Authentication failed - Possible MITM attack!");
+     * }
+     * }</pre>
+     *
+     * @param ownFp the fingerprint of the local party's public key
+     * (e.g., GPG key fingerprint)
+     * @param otherFp the fingerprint of the remote party's public key
+     * received during key exchange
+     * @param sharedSecret a pre-shared secret known only to both legitimate
+     * parties; should not be transmitted over the communication channel
+     * @param strengthener an strengthener for your shared secret or null
+     * @return a two-element array where:
+     * <ul>
+     * <li>index 0: the fragment to send to the other party</li>
+     * <li>index 1: the fragment expected to receive from the other party</li>
+     * </ul>
+     * Each fragment is 16 bytes long (half of the SHA-256 hash output)
+     * @throws IllegalArgumentException if both fingerprints are identical
+     * @see MessageDigest
+     */
+    public byte[][] deriveMutualAuthProof(byte[] ownFp, byte[] otherFp, byte[] sharedSecret, UnaryOperator<byte[]> strengthener)
+    {
+        // Determine alphabetical order by comparing the fingerprints
+        int cmp = Utils.compare(ownFp, otherFp);
+
+        byte[] f1stFp;
+        byte[] s2ndFp;
+        boolean mineF1st;
+
+        if (cmp < 0)
+        {
+            // My fingerprint goes first alphabetically
+            f1stFp = ownFp;
+            s2ndFp = otherFp;
+            mineF1st = true;
+        }
+        else if (cmp > 0)
+        {
+            // Their fingerprint goes first alphabetically
+            f1stFp = otherFp;
+            s2ndFp = ownFp;
+            mineF1st = false;
+        }
+        else
+        {
+            // Fingerprints are identical (should not happen in practice)
+            throw new IllegalArgumentException("Fingerprints are identical");
+        }
+        // Apply strengthener if provided        
+        sharedSecret = strengthener!=null ? strengthener.apply(sharedSecret) : sharedSecret;
+
+        byte[] hash = sha256.digest(sha256.digest(f1stFp,s2ndFp,sharedSecret));
+
+        // Split the hash into two halves
+        int half = hash.length / 2;
+        byte[] firstHalf = Arrays.copyOfRange(hash, 0, half);
+        byte[] secondHalf = Arrays.copyOfRange(hash, half, hash.length);
+
+        // Determine which half to send and which to receive
+        byte[][] result = new byte[2][];
+
+        if (mineF1st)
+        {
+            result[0] = firstHalf;   // Send the first half
+            result[1] = secondHalf;  // Receive the second half
+        }
+        else
+        {
+            result[0] = secondHalf;  // Send the second half
+            result[1] = firstHalf;   // Receive the first half
+        }
+
+        return result;
+    }
+    
+    /**
+     * Derives a mutual authentication proof without a strengthener function.
+     *
+     * <p>
+     * This is a convenience method that calls
+     * {@link #deriveMutualAuthProof(byte[], byte[], byte[], UnaryOperator)}
+     * with a null strengthener parameter.
+     *
+     * @param ownFp the fingerprint of the local party's public key
+     * @param otherFp the fingerprint of the remote party's public key
+     * @param sharedSecret a pre-shared secret known only to both legitimate
+     * parties
+     * @return a two-element array containing the fragment to send (index 0) and
+     * the fragment to expect (index 1)
+     * @throws IllegalArgumentException if both fingerprints are identical
+     * @see #deriveMutualAuthProof(byte[], byte[], byte[], UnaryOperator)
+     */
+    public byte[][] deriveMutualAuthProof(byte[] ownFp, byte[] otherFp, byte[] sharedSecret)
+    {
+        return deriveMutualAuthProof(ownFp, otherFp, sharedSecret, null);
+    }    
 }

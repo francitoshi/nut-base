@@ -23,6 +23,7 @@ package io.nut.base.crypto.gpg;
 import io.nut.base.io.IO;
 import io.nut.base.io.VerboseLineReader;
 import io.nut.base.util.Args;
+import io.nut.base.util.BashEscaper;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
 import java.io.BufferedReader;
@@ -41,6 +42,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Scanner;
 import java.util.StringJoiner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 //https://github.com/gpg/gnupg/blob/master/doc/DETAILS
 
@@ -94,26 +97,45 @@ public class GPG
     private static final String YES   = "--yes";
     private static final String NOTTY = "--no-tty";
     private static final String ARMOR = "--armor";
+    private static final String COMMENT = "--comment";
+    private static final String EMIT_VERSION = "--emit-version";
+    private static final String OUTPUT = "--output";
+    private static final String VERBOSE = "--verbose";
+
+    private static final String STATUS_FD_1 = "--status-fd=1";
+    private static final String STATUS_FD_2 = "--status-fd=2";
+
+    private static final String PINENTRYMODE_CANCEL = "--pinentry-mode=cancel";
+    private static final String PINENTRYMODE_LOOPBACK = "--pinentry-mode=loopback";
+
+    private static final String PASSPHRASE_FD_0 = "--passphrase-fd=0";
+
 
     // OTHER
     
     private static final int BUFFER_SIZE = 8*1024;
+
+    private static final Pattern GPG_ARMOR_HEADER_PATTERN = Pattern.compile("gpg: armor header: (.+): (.*)");
     
     private volatile boolean debug;
     private volatile boolean armor;
+    private volatile boolean emitVersion;
+    private volatile String comment;
 
     private BufferedReader debugger(BufferedReader src)
     {
         return this.debug ? new VerboseLineReader(src, System.out) : src;
     }
-    
+
     private static class GnuPG
     {
         final boolean debug;
+        volatile boolean mergeOutErr;
         final Args args = new Args();
         public GnuPG(boolean debug, String... params)
         {
             this.debug = debug;
+            this.mergeOutErr = false;
             this.args.add(params);
         }
         public GnuPG add(String... params)
@@ -126,43 +148,25 @@ public class GPG
             args.add(include, params);
             return this;
         }
+        public GnuPG merge()
+        {
+            mergeOutErr = true;
+            return this;
+        }
         public Process start() throws IOException
         {
             final ProcessBuilder pb = new ProcessBuilder("gpg");
             pb.command().addAll(args.get());
-            pb.redirectErrorStream(false);
+            pb.redirectErrorStream(mergeOutErr);
 
             if(debug)
             {
-                StringJoiner sb = new StringJoiner(" ");
-                for(String item : pb.command())
-                {
-                    sb.add(item);
-                }
-                System.out.println(sb.toString());
+                System.out.println(BashEscaper.buildCommandLine(pb.command()));
             }
             return pb.start();
         }
-
-        @Override
-        public String toString()
-        {
-            StringJoiner sj = new StringJoiner(" ");
-            sj.add("gpg");
-            for(String item : args.get())
-            {
-                sj.add(item);
-            }
-            return sj.toString();
-        }
-        
     }
 
-    private static final String PINENTRYMODE_CANCEL = "--pinentry-mode=cancel";
-    private static final String PINENTRYMODE_LOOPBACK = "--pinentry-mode=loopback";
-    private static final String PASSPHRASE_FD_0 = "--passphrase-fd=0";
-    private static final String STATUS_FD_1 = "--status-fd=1";
-    private static final String STATUS_FD_2 = "--status-fd=2";
     
     public GPG setDebug(boolean value)
     {
@@ -174,7 +178,19 @@ public class GPG
         this.armor = value;
         return this;
     }
+    public GPG setEmitVersion(boolean value)
+    {
+        this.emitVersion = value;
+        return this;
+    }
 
+    public GPG setComment(String comment)
+    {
+        this.comment = comment;
+        return this;
+    }
+
+    
     private GnuPG gpg(String... params) throws IOException 
     {
         return new GnuPG(debug, params);
@@ -646,7 +662,10 @@ public class GPG
         
         boolean pass = passphrase!=null && passphrase.length!=0;
         
-        GnuPG gnupg = gpg(BATCH, NOTTY).add(armor, ARMOR).add("--encrypt", "--output", "-");
+        GnuPG gnupg = gpg(BATCH, NOTTY)
+                .add(armor, ARMOR).add(emitVersion, EMIT_VERSION)
+                .add(comment!=null, COMMENT, comment)
+                .add("--encrypt", OUTPUT, "-");
         for (String recipientId : recipients)
         {
             gnupg.add("--recipient", recipientId);
@@ -699,42 +718,104 @@ public class GPG
         return output.toByteArray();
     }
 
+    public byte[] sign(byte[] plaindata, String signer, char[] passphrase) throws IOException, InterruptedException
+    {
+        if (plaindata == null || plaindata.length == 0)
+        {
+            throw new IllegalArgumentException("data is null or empty");
+        }
+        return sign(new ByteArrayInputStream(plaindata), signer, passphrase);
+    }
+    public byte[] sign(InputStream plaindata, String signer, char[] passphrase) throws IOException, InterruptedException
+    {
+        boolean pass = passphrase!=null && passphrase.length!=0;
+        
+        GnuPG gnupg = gpg(BATCH, NOTTY)
+                .add(armor, ARMOR).add(emitVersion, EMIT_VERSION)
+                .add(comment!=null, COMMENT, comment)
+                .add("--sign", "--local-user", signer)
+                .add(OUTPUT, "-");
+        if(pass)
+        {
+            gnupg.add(PASSPHRASE_FD_0, PINENTRYMODE_LOOPBACK);
+        }
+        Process process = gnupg.start();
+
+        // Send passphrase (if applicable) and details
+        try (OutputStream stdin = process.getOutputStream())
+        {
+            if(pass)
+            {
+                stdin.write(Byter.bytesUTF8(passphrase));
+                stdin.write('\n');
+            }
+            IO.copy(plaindata,stdin);
+        }
+
+        // Read encrypted output
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        IO.copy(process.getInputStream(), output);
+
+        // Capture errors
+        StringBuilder errorOutput = new StringBuilder();
+        try (InputStream stderr = process.getErrorStream())
+        {
+            byte[] buffer = new byte[BUFFER_SIZE];
+            int bytesRead;
+            while ((bytesRead = stderr.read(buffer)) != -1)
+            {
+                errorOutput.append(new String(buffer, 0, bytesRead));
+            }
+        }
+
+        // Check result
+        int exitCode = process.waitFor();
+        if (exitCode != 0)
+        {
+            throw new IOException("Error al cifrar/firmar con GPG. Código: " + exitCode
+                    + "\nError: " + errorOutput);
+        }
+
+        return output.toByteArray();
+    }
+
     public static class DecryptStatus
     {
-        volatile byte[] plaintext;
         volatile String signer;
         volatile boolean validSignature;
-        volatile String[] recipients;
-        volatile String errorText;        
-        volatile String statusText;        
-        public byte[] getPlaintext()
-        {
-            return plaintext;
-        }
+        volatile boolean decryptionOkay;
+        volatile List<String> recipients = new ArrayList<>();
+        volatile String comment;
+        volatile String hash;
+        volatile String version;
 
         public String getSigner()
         {
             return signer;
         }
-
         public boolean isValidSignature()
         {
             return validSignature;
         }
-
+        public boolean isDecryptionOkay()
+        {
+            return decryptionOkay;
+        }
         public String[] getRecipients()
         {
-            return recipients;
+            return recipients.toArray(new String[0]);
         }
-
-        public String getErrorText()
+        public String getComment()
         {
-            return errorText;
+            return comment;
         }
-
-        public String getStatusText()
+        public String getHash()
         {
-            return statusText;
+            return hash;
+        }
+        public String getVersion()
+        {
+            return version;
         }
     }
     /**
@@ -760,7 +841,7 @@ public class GPG
     public byte[] decryptAndVerify(InputStream cipherdata, char[] passphrase, DecryptStatus status) throws IOException, InterruptedException
     {
         boolean pass = passphrase != null && passphrase.length!=0;
-        GnuPG gnupg = gpg(BATCH, NOTTY, "--decrypt", "--output", "-", STATUS_FD_2);
+        GnuPG gnupg = gpg(BATCH, NOTTY, VERBOSE, "--decrypt", OUTPUT, "-", STATUS_FD_2);
         if (pass)
         {
             gnupg.add(PASSPHRASE_FD_0, PINENTRYMODE_LOOPBACK);
@@ -782,88 +863,86 @@ public class GPG
         // Read decrypted output and status
         ByteArrayOutputStream decryptedOutput = new ByteArrayOutputStream();
         IO.copy(process.getInputStream(), decryptedOutput);
-
-        // Capture errors
-        StringBuilder errorOutput = new StringBuilder();
-        try (InputStream stderr = process.getErrorStream())
+        
+        if(status==null)
         {
-            byte[] buffer = new byte[BUFFER_SIZE];
-            int bytesRead;
-            while ((bytesRead = stderr.read(buffer)) != -1)
+            status = new DecryptStatus();
+        }
+        else
+        {
+            status.recipients.clear();
+        }
+        
+        try (BufferedReader stderr = debugger(new BufferedReader(new InputStreamReader(process.getErrorStream(), StandardCharsets.UTF_8))))
+        {
+            String line;
+            Matcher matcher;
+            while((line=stderr.readLine())!=null)
             {
-                errorOutput.append(new String(buffer, 0, bytesRead));
+                String tuc = line.trim().toUpperCase();
+                
+                if (tuc.startsWith("[GNUPG:] GOODSIG"))
+                {
+                    status.validSignature = true;
+                    String[] parts = line.split(" ");
+                    if (parts.length >= 3)
+                    {
+                        status.signer = parts[2];
+                    }
+                }
+                else if (tuc.startsWith("[GNUPG:] BADSIG"))
+                {
+                    status.validSignature = false;
+                    String[] parts = line.split(" ");
+                    if (parts.length >= 3)
+                    {
+                        status.signer = parts[2];
+                    }
+                }
+                else if (tuc.startsWith("[GNUPG:] ENC_TO"))
+                {
+                    String[] parts = line.split(" ");
+                    if (parts.length >= 3)
+                    {
+                        status.recipients.add(parts[2]);
+                    }
+                }
+                else if (tuc.contains("DECRYPTION_OKAY"))
+                {
+                    status.decryptionOkay=true;
+                }
+                else if ((matcher = GPG_ARMOR_HEADER_PATTERN.matcher(line)).matches())
+                {
+                    String header = matcher.group(1).toLowerCase();
+                    String value = matcher.group(2);
+                    if (header.equals("comment"))
+                    {
+                        status.comment = value;
+                    }
+                    else if (header.equals("version"))
+                    {
+                        status.version = value;
+                    }
+                    else if (header.equals("hash"))
+                    {
+                        status.hash = value;
+                    }
+                }
+                else if(debug)
+                {
+                    System.err.println(line);
+                }
             }
         }
 
         // Check result
         int exitCode = process.waitFor();
-        String errorString = errorOutput.toString();
-        if (exitCode != 0 && !errorString.contains("DECRYPTION_OKAY"))
+        if (exitCode != 0 && (!status.validSignature || !status.decryptionOkay))
         {
-            throw new IOException("Error al desencriptar/verificar con GPG. Código: " + exitCode
-                    + "\nError: " + errorString);
+            return null;
         }
-
-        // Procesar estado
-        String signer = null;
-        boolean validSignature = false;
-        List<String> recipients = new ArrayList<>();
-
-        StringBuilder errorText = new StringBuilder();
-        StringBuilder statusText = new StringBuilder();
-
-        String[] statusLines = errorString.split("\n");
-        for (String line : statusLines)
-        {
-            if (line.startsWith("[GNUPG:] GOODSIG"))
-            {
-                validSignature = true;
-                String[] parts = line.split(" ");
-                if (parts.length >= 3)
-                {
-                    signer = parts[2];
-                }
-                statusText.append(line).append('\n');
-            }
-            else if (line.startsWith("[GNUPG:] BADSIG"))
-            {
-                validSignature = false;
-                String[] parts = line.split(" ");
-                if (parts.length >= 3)
-                {
-                    signer = parts[2];
-                }
-                statusText.append(line).append('\n');
-            }
-            else if (line.startsWith("[GNUPG:] ENC_TO"))
-            {
-                String[] parts = line.split(" ");
-                if (parts.length >= 3)
-                {
-                    recipients.add(parts[2]);
-                }
-                statusText.append(line).append('\n');
-            }
-            else if (line.startsWith("[GNUPG:]"))
-            {
-                statusText.append(line).append('\n');
-            }
-            else
-            {
-                errorText.append(line).append('\n');
-            }
-        }
-        byte[] plaintext = validSignature ? decryptedOutput.toByteArray() : null;
-        if(status!=null)
-        {
-            status.plaintext = plaintext;
-            status.signer = signer;
-            status.validSignature = validSignature;
-            status.recipients = recipients.toArray(new String[0]);
-            status.errorText = errorText.toString();
-            status.statusText = statusText.toString();
-        }
-        return plaintext;
+        
+        return status.validSignature ? decryptedOutput.toByteArray() : null;
     }
 
     /**
@@ -993,7 +1072,11 @@ public class GPG
         public final String trust;
         public final boolean decryptionOkay;
         public final boolean goodmdc;
-        public PacketsInfo(String encTo, String algo, String subKey, String mainKey, String trust, boolean decryptionOkay, boolean goodmdc)
+        public final String comment;
+        public final String hash;
+        public final String version;
+
+        public PacketsInfo(String encTo, String algo, String subKey, String mainKey, String trust, boolean decryptionOkay, boolean goodmdc, String comment, String hash, String version)
         {
             this.encTo = encTo;
             this.algo = algo;
@@ -1002,20 +1085,22 @@ public class GPG
             this.trust = trust;
             this.decryptionOkay = decryptionOkay;
             this.goodmdc = goodmdc;
+            this.comment = comment;
+            this.hash = hash;
+            this.version = version;
         }
 
         @Override
         public String toString()
         {
-            return "encTo=" + encTo + ", algo=" + algo + ", subKey=" + subKey + ", mainKey=" + mainKey + ", trust=" + trust + ", decryptionOkay=" + decryptionOkay + ", goodmdc=" + goodmdc;
-        }        
+            return "encTo=" + encTo + ", algo=" + algo + ", subKey=" + subKey + ", mainKey=" + mainKey + ", trust=" + trust + ", decryptionOkay=" + decryptionOkay + ", goodmdc=" + goodmdc + ", comment=" + comment+ ", hash=" + hash + ", version=" + version;
+        }
     }
-    
     public PacketsInfo listPackets(InputStream cipherdata, char[] passphrase) throws IOException, InterruptedException
     {
         boolean pass = passphrase != null && passphrase.length!=0;
         // Build GPG command
-        GnuPG gnupg = gpg(BATCH, NOTTY, "--list-packets", STATUS_FD_1);
+        GnuPG gnupg = gpg(BATCH, NOTTY, VERBOSE, "--list-packets", STATUS_FD_1).merge();
 
         if (pass)
         {
@@ -1048,15 +1133,18 @@ public class GPG
         String trust=null;
         boolean decryptionOkay=false;
         boolean goodmdc=false;
+        String headerComment=null;
+        String headerHash=null;
+        String headerVersion=null;
 
         try (BufferedReader stdout = debugger(new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))))
         {
             String line;
-
+            Matcher matcher;
             while((line=stdout.readLine())!=null)
             {
                 String[] s = line.trim().toUpperCase().split(" ");
-                String cmd = s[1].toUpperCase();
+                String cmd = s[1];
                 
                 if(cmd.equals("ENC_TO"))
                 {
@@ -1078,6 +1166,23 @@ public class GPG
                 {
                     goodmdc=true;
                 }
+                else if((matcher=GPG_ARMOR_HEADER_PATTERN.matcher(line)).matches())
+                {
+                    String header = matcher.group(1).toLowerCase();
+                    String value = matcher.group(2);
+                    if (header.equals("comment"))
+                    {
+                        headerComment = value;
+                    }
+                    else if (header.equals("version"))
+                    {
+                        headerVersion = value;
+                    }
+                    else if (header.equals("hash"))
+                    {
+                        headerHash = value;
+                    }
+                }
                 else if(debug)
                 {
                     System.err.println(line);
@@ -1091,7 +1196,7 @@ public class GPG
             throw new IOException("Error listing packages with GPG. Code: " + exitCode);
         }
         
-        return new PacketsInfo(encTo, algo, subKey, mainKey, trust, decryptionOkay, goodmdc);
+        return new PacketsInfo(encTo, algo, subKey, mainKey, trust, decryptionOkay, goodmdc, headerComment, headerHash, headerVersion);
     }
     
 }
