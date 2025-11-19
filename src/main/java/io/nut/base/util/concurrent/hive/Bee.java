@@ -74,10 +74,15 @@ public abstract class Bee<M>
     private final Object lock = new Object();
     private volatile int status = RUNNING;
     
+    private volatile boolean allowLogger = true;
     private volatile Executor hive;
     private final int threads;
     private final Semaphore semaphore;
     private final BlockingQueue<M> queue;
+
+    /** The last exception that occurred during message processing or lifecycle operations */
+    private volatile Exception ex;
+
     
     /**
      * Initializes a Bee system with the specified hive, thread pool size, and
@@ -146,10 +151,17 @@ public abstract class Bee<M>
     {
         this(0, null, QUEUE_SIZE);
     }
-    
-    /** The last exception that occurred during message processing or lifecycle operations */
-    private volatile Exception ex;
 
+    /**
+     * Cancel all logger outputs from this instance
+     */
+    public Bee<M> dryLogger() 
+    {
+        this.allowLogger = false;
+        return this;
+    }
+
+    
     /**
      * Returns the last exception that occurred during message processing or
      * lifecycle operations.
@@ -189,9 +201,9 @@ public abstract class Bee<M>
             }
             return true;
         }
-        catch (InterruptedException ex) 
+        catch (Exception ex) 
         {
-            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
+            if(allowLogger) Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
             this.ex = ex;
             return false;
         }
@@ -246,7 +258,7 @@ public abstract class Bee<M>
             catch (Exception ex)
             {
                 Bee.this.ex = ex;
-                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.receiveTask.run()", ex);
+                if(allowLogger) Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.receiveTask.run()", ex);
                 exception(ex);
             }
             finally
@@ -291,7 +303,7 @@ public abstract class Bee<M>
             catch (InterruptedException ex)
             {
                 Bee.this.ex = ex;
-                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.shutdownTask.run()", ex);
+                if(allowLogger) Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.shutdownTask.run()", ex);
                 exception(ex);
             }            
             finally
@@ -373,7 +385,7 @@ public abstract class Bee<M>
         catch (InterruptedException ex)
         {
             Bee.this.ex = ex;
-            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.awaitTermination()", ex);
+            if(allowLogger) Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.awaitTermination()", ex);
             exception(ex);
             return false;
         }        

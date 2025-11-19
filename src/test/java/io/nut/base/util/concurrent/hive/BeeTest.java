@@ -20,6 +20,9 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -52,5 +55,44 @@ public class BeeTest
         instance.shutdown();
     }
 
-    
+    /**
+     * Test of getException method, of class Bee.
+     */
+    @Test
+    public void testGetException() 
+    {
+        //Test Bees with no Hive work synchronously
+        Bee<String> instance = new Bee()
+        {
+            @Override
+            protected void receive(Object m) 
+            {
+                throw new NullPointerException();
+            }
+        };
+        instance.dryLogger();
+        instance.send("hello");        
+        assertNotNull(instance.getException());
+    }
+
+    /**
+     * Test of send method, of class Bee.
+     */
+    @Test
+    public void testSend() 
+    {
+        final AtomicInteger count = new AtomicInteger(0);
+        //Test Bees with no Hive work synchronously
+        Bee<String> instance = new Bee()
+        {
+            @Override
+            protected void receive(Object m) 
+            {
+                count.incrementAndGet();
+            }
+        };
+        instance.send("hello");        
+        assertEquals(1, count.get());
+    }
+   
 }
