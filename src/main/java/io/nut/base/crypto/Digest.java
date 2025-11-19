@@ -184,4 +184,16 @@ public class Digest
         return digest(s.getBytes(charset));
     }
     
+    public byte[] digestChain(byte[] bytes, int n) 
+    {
+        MessageDigest md = get();
+        byte[] current = bytes;
+        for (int i = 0; i < n; i++) 
+        {
+            md.update(current);
+            current = md.digest();  // reutiliza buffer interno del provider
+        }
+        return current;    
+    }
+
 }

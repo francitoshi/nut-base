@@ -26,9 +26,11 @@ import io.nut.base.util.Strings;
 import io.nut.base.util.Utils;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.InvalidParameterException;
 import java.security.Key;
 import java.security.KeyFactory;
 import java.security.KeyPairGenerator;
@@ -1518,4 +1520,101 @@ public class Kripto
     {
         return deriveMutualAuthProof(ownFp, otherFp, sharedSecret, null);
     }    
+
+    /**
+     * Implements the Blum Blum Shub (BBS) cryptographically secure pseudorandom
+     * number generator.
+     *
+     * <p>
+     * The Blum Blum Shub algorithm is a pseudorandom number generator based on
+     * the difficulty of integer factorization. It generates a sequence of
+     * random bits by repeatedly squaring a seed value modulo the product of two
+     * large primes.
+     *
+     * <p>
+     * The algorithm works as follows:
+     * <ol>
+     * <li>Compute n = p × q (where p and q are primes)</li>
+     * <li>Start with an initial seed value x₀</li>
+     * <li>For each iteration i: x<sub>i+1</sub> = x<sub>i</sub>² mod n</li>
+     * <li>Return the final value after the specified number of iterations</li>
+     * </ol>
+     *
+     * <p>
+     * <strong>Security requirements:</strong>
+     * <ul>
+     * <li>Both p and q must be large prime numbers</li>
+     * <li>Both p and q must be congruent to 3 (mod 4), i.e., p ≡ 3 (mod 4) and
+     * q ≡ 3 (mod 4)</li>
+     * <li>The seed must be coprime to n (gcd(seed, n) = 1)</li>
+     * <li>p and q should be kept secret for cryptographic applications</li>
+     * </ul>
+     *
+     * <p>
+     * <strong>Example usage:</strong>
+     * <pre>{@code
+     * BigInteger p = new BigInteger("499");      // Prime, 499 % 4 = 3
+     * BigInteger q = new BigInteger("547");      // Prime, 547 % 4 = 3
+     * BigInteger seed = new BigInteger("159");   // Initial seed
+     * int iterations = 1000;
+     *
+     * BigInteger result = blumBlumShub(p, q, seed, iterations);
+     * System.out.println("Random value: " + result);
+     * }</pre>
+     *
+     * <p>
+     * <strong>Performance note:</strong> This implementation uses direct
+     * multiplication and modulo operations (x × x mod n) instead of
+     * {@link BigInteger#modPow(BigInteger, BigInteger)} for better performance,
+     * as we're always squaring (exponent = 2).
+     *
+     * @param p the first prime number, must satisfy p ≡ 3 (mod 4) and be prime
+     * @param q the second prime number, must satisfy q ≡ 3 (mod 4) and be prime
+     * @param seed the initial seed value for the generator, should be coprime
+     * to p×q
+     * @param iterations the number of squaring iterations to perform, must be
+     * non-negative
+     * @return the pseudorandom value after the specified number of iterations
+     * @throws InvalidParameterException if p % 4 ≠ 3
+     * @throws InvalidParameterException if q % 4 ≠ 3
+     * @throws InvalidParameterException if p is not prime (tested with 128-bit
+     * certainty)
+     * @throws InvalidParameterException if q is not prime (tested with 128-bit
+     * certainty)
+     * @see <a href="https://en.wikipedia.org/wiki/Blum_Blum_Shub">Blum Blum
+     * Shub on Wikipedia</a>
+     */
+    public static BigInteger blumBlumShub(BigInteger p, BigInteger q, BigInteger seed, int iterations)
+    {
+        BigInteger t3th = BigInteger.valueOf(3);
+        BigInteger f4th = BigInteger.valueOf(4);
+        //assert p % 4 == 3
+        if(!p.mod(f4th).equals(t3th))
+        {
+            throw new InvalidParameterException("p % 4 != 3");
+        }
+        //assert q % 4 == 3
+        if(!q.mod(f4th).equals(t3th))
+        {
+            throw new InvalidParameterException("q % 4 != 3");
+        }
+        if(!p.isProbablePrime(128))
+        {
+            throw new InvalidParameterException("p not prime");
+        }
+        if(!q.isProbablePrime(128))
+        {
+            throw new InvalidParameterException("q not prime");
+        }
+
+        BigInteger n = p.multiply(q);
+            
+        BigInteger current = seed;
+        for (int i = 0; i < iterations; i++) 
+        {
+            //this is faster than modPow
+            current = current.multiply(current).mod(n);// x² mod n
+        }
+        return current;        
+    }
 }

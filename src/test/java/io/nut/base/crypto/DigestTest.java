@@ -24,6 +24,10 @@ import io.nut.base.crypto.Kripto.MessageDigestAlgorithm;
 import io.nut.base.encoding.Hex;
 import static io.nut.base.util.CharSets.UTF8;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -83,6 +87,25 @@ public class DigestTest
         b = sha256.digest("0123456789".getBytes());
         assertArrayEquals(a, b);
         
+    }
+
+    /**
+     * Test of digestChain method, of class Digest.
+     */
+    @Test
+    public void testDigestChain() 
+    {
+        final Digest[] digest = {md5, sha1, sha256, sha512, ripemd160};
+        byte[] bytes = "this is a test".getBytes(StandardCharsets.UTF_8);
+        for(Digest instance : digest)
+        {
+            instance.digestChain(bytes, 1000);
+            long t0 = System.nanoTime();
+            instance.digestChain(bytes, 1000_000);
+            long t1 = System.nanoTime();
+            System.out.printf("digest=%s %d ms\n", instance.algorithm, TimeUnit.NANOSECONDS.toMillis(t1-t0));
+        }
+
     }
     
 }

@@ -1,7 +1,7 @@
 /*
  *  Bee.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,9 +28,40 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * An abstract message-processing actor that manages concurrent message handling
+ * within a thread pool. A Bee receives messages of type {@code M}, queues them,
+ * and processes them asynchronously using a configurable number of worker threads.
+ *
+ * <p>The Bee class implements an actor-like pattern where messages are sent to
+ * the Bee and processed asynchronously. It supports both asynchronous (when
+ * associated with a Hive) and synchronous (when no Hive is provided) message
+ * processing modes.
+ * 
+ * <p><strong>Lifecycle states:</strong>
+ * <ul>
+ *   <li>RUNNING: Accepts new messages and processes queued messages</li>
+ *   <li>SHUTDOWN: Rejects new messages but continues processing queued messages</li>
+ *   <li>TERMINATED: All processing completed and terminate() has been called</li>
+ * </ul>
+ * 
+ * <p><strong>Usage example:</strong>
+ * <pre>{@code
+ * Hive hive = new Hive(4);
+ * Bee<String> messageBee = new Bee<String>(2, hive) {
+ *     @Override
+ *     protected void receive(String message) {
+ *         System.out.println("Processing: " + message);
+ *     }
+ * };
+ * 
+ * messageBee.send("Hello");
+ * messageBee.send("World");
+ * messageBee.shutdown();
+ * messageBee.awaitTermination(5000);
+ * }</pre>
  *
  * @author franci
- * @param <M>
+ * @param <M> the type of messages this Bee processes
  */
 public abstract class Bee<M>
 {
@@ -39,15 +70,6 @@ public abstract class Bee<M>
     private static final int TERMINATED = 2; // terminated() has completed
     
     private static final int QUEUE_SIZE = Short.MAX_VALUE;
-    
-    private static final Executor EXECUTOR = new Executor()
-    {
-        @Override
-        public void execute(Runnable task)
-        {
-            task.run();
-        }
-    };
     
     private final Object lock = new Object();
     private volatile int status = RUNNING;
@@ -58,85 +80,154 @@ public abstract class Bee<M>
     private final BlockingQueue<M> queue;
     
     /**
-     * Initializes a Bee system with the specified hive, thread pool size, and queue size.
+     * Initializes a Bee system with the specified hive, thread pool size, and
+     * queue size.
      *
-     * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
-     *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
-     * @param hive      the hive that manages and coordinates the Bee instances.
-     * @param queueSize the maximum number of messages waiting to be processed. If set to zero, threads will be used.
-     */    
-    public Bee(int threads, Hive hive, int queueSize)
+     * @param threads the maximum number of threads that a Bee can run
+     * concurrently. If set to zero, it defaults to the number of available
+     * processors as determined by
+     * {@link Runtime#getRuntime()#availableProcessors()}.
+     * @param hive the hive that manages and coordinates the Bee instances. Use
+     * null to make send() synchronous.
+     * @param queueSize the maximum number of messages waiting to be processed.
+     * If set to zero, defaults to {@link #QUEUE_SIZE}.
+     */
+    public Bee(int threads, Hive hive, int queueSize) 
     {
-        this.threads = threads!=0 ? threads : Runtime.getRuntime().availableProcessors();
-        this.hive = hive!=null ? hive : EXECUTOR;
-        this.queue = queueSize!=0 ? new LinkedBlockingQueue<>(queueSize) : new LinkedBlockingQueue<>(QUEUE_SIZE);
+        if(threads < 0) 
+        {
+            throw new IllegalArgumentException("threads < 0");
+        }
+        if(queueSize < 0) 
+        {
+            throw new IllegalArgumentException("queueSize < 0");
+        }
+        this.threads = threads != 0 ? threads : Runtime.getRuntime().availableProcessors();
+        this.hive = hive;
+        this.queue = new LinkedBlockingQueue<>(queueSize != 0 ? queueSize : QUEUE_SIZE);
         this.semaphore = new Semaphore(this.threads);
     }
+    
     /**
-     * Initializes a Bee system with the specified hive, thread pool size, and queue size.
+     * Initializes a Bee system with the specified hive and thread pool size,
+     * using the default queue size.
      *
-     * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
-     *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
-     * @param hive      the hive that manages and coordinates the Bee instances.
-     */    
-    public Bee(int threads, Hive hive)
+     * @param threads the maximum number of threads that a Bee can run
+     * concurrently. If set to zero, it defaults to the number of available
+     * processors as determined by
+     * {@link Runtime#getRuntime()#availableProcessors()}.
+     * @param hive the hive that manages and coordinates the Bee instances. Use
+     * null to make send() synchronous.
+     */
+    public Bee(int threads, Hive hive) 
     {
         this(threads, hive, QUEUE_SIZE);
     }
+    
     /**
-     * Initializes a Bee system with the specified hive and thread pool size. The queue size will be the number of threads.
+     * Initializes a Bee system with the specified thread pool size and no Hive.
+     * Messages will be processed synchronously. The queue size will be the default size.
      *
-     * @param threads   the maximum number of threads that a Bee can run concurrently. If set to zero, 
-     *                  it defaults to the number of available processors as determined by {@link Runtime#getRuntime()#availableProcessors()}.
+     * @param threads the maximum number of threads that a Bee can run concurrently. 
+     * If set to zero, it defaults to the number of available processors as 
+     * determined by {@link Runtime#getRuntime()#availableProcessors()}.
      */
     public Bee(int threads)
     {
         this(threads, null, QUEUE_SIZE);
     }
+    
     /**
-     * Initializes a Bee system with the specified hive. The number of threads and queue size will be the number of processors.
-     *
+     * Initializes a Bee system with default settings. The number of threads
+     * defaults to the number of available processors, and the queue size is set
+     * to the default size. Messages will be processed synchronously.
      */
     public Bee()
     {
         this(0, null, QUEUE_SIZE);
     }
     
+    /** The last exception that occurred during message processing or lifecycle operations */
     private volatile Exception ex;
 
+    /**
+     * Returns the last exception that occurred during message processing or
+     * lifecycle operations.
+     *
+     * @return the last exception that occurred, or null if no exception has occurred
+     */
     public Exception getException()
     {
         return ex;
     }
     
+    /**
+     * Sends a message to this Bee for processing. If a Hive is configured,
+     * the message is queued and processed asynchronously. If no Hive is
+     * configured, the message is processed synchronously on the calling thread.
+     *
+     * @param message the message to be processed
+     * @return true if the message was successfully sent or processed, false if
+     * the Bee is not in RUNNING state or an interruption occurred
+     */
     public boolean send(M message)
     {
         try 
         {
-            if(this.status==RUNNING)
+            if(this.status!=RUNNING)
+            {
+                return false;
+            }
+            if(this.hive!=null)
             {
                 this.queue.put(message);
                 this.hive.execute(receiveTask);
-                return true;
             }
+            else
+            {
+                this.receive(message);
+            }
+            return true;
         }
         catch (InterruptedException ex) 
         {
             Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
             this.ex = ex;
+            return false;
         }
-        return false;
     }
 
+    /**
+     * Processes a single message. This method must be implemented by subclasses
+     * to define the message processing logic.
+     *
+     * @param m the message to process
+     */
     protected abstract void receive(M m);
+    
+    /**
+     * Called when the Bee has been terminated and all messages have been processed.
+     * Subclasses can override this method to perform cleanup or finalization logic.
+     */
     protected void terminate()
     {
     }
+    
+    /**
+     * Called when an exception occurs during message processing or lifecycle operations.
+     * Subclasses can override this method to implement custom exception handling.
+     *
+     * @param ex the exception that occurred
+     */
     protected void exception(Exception ex)
     {
         
     }
     
+    /**
+     * Runnable task that processes queued messages. This task attempts to acquire
+     * a permit from the semaphore and then processes all available messages in the queue.
+     */
     private final Runnable receiveTask = new Runnable()
     {
         @Override
@@ -168,6 +259,12 @@ public abstract class Bee<M>
             }
         }
     };
+    
+    /**
+     * Runnable task that manages the shutdown process. This task waits for all
+     * worker threads to complete, then waits for the queue to be empty before
+     * transitioning to the TERMINATED state.
+     */
     private final Runnable shutdownTask = new Runnable()
     {
         @Override
@@ -204,28 +301,62 @@ public abstract class Bee<M>
         }
     };
         
+    /**
+     * Initiates an orderly shutdown in which previously submitted messages are
+     * processed, but no new messages will be accepted. This method does not wait
+     * for previously submitted messages to complete execution. Use
+     * {@link #awaitTermination(int)} to wait for processing to complete.
+     * 
+     * <p>This method is idempotent - calling it multiple times has no additional effect.
+     */
     public void shutdown()
     {
         synchronized(lock)
         {
             if(this.status==RUNNING)
             {
-                this.status = SHUTDOWN; 
-                this.hive.execute(shutdownTask);
+                this.status = SHUTDOWN;
+                if(this.hive!=null)
+                {
+                    this.hive.execute(shutdownTask);
+                }
+                else if(queue.isEmpty()) 
+                {
+                    status = TERMINATED;
+                    terminate();
+                }
             }
         }
     }
     
+    /**
+     * Returns true if this Bee has been shut down.
+     *
+     * @return true if shutdown has been initiated
+     */
     public boolean isShutdown()
     {
         return this.status!=RUNNING;
     }
     
+    /**
+     * Returns true if all messages have been processed following shutdown.
+     *
+     * @return true if this Bee has completed termination
+     */
     public boolean isTerminated()
     {
         return this.status==TERMINATED;
     }
     
+    /**
+     * Blocks until all messages have been processed after a shutdown request,
+     * or the timeout occurs, or the current thread is interrupted, whichever
+     * happens first.
+     *
+     * @param millis the maximum time to wait in milliseconds
+     * @return true if this Bee terminated, false if the timeout elapsed before termination
+     */
     public boolean awaitTermination(int millis)
     {
         try
@@ -248,6 +379,13 @@ public abstract class Bee<M>
         }        
     }
     
+    /**
+     * Shuts down the specified Bees and waits for their termination.
+     * This is a convenience method that calls {@link #shutdown()} and
+     * {@link #awaitTermination(int)} with a maximum timeout on each Bee.
+     *
+     * @param bees the Bees to shut down and wait for
+     */
     public static void shutdownAndAwaitTermination(Bee<?> ...bees)
     {
         for(Bee<?> item : bees)
@@ -257,6 +395,12 @@ public abstract class Bee<M>
         }
     }
 
+    /**
+     * Sets the Hive executor for this Bee. This allows the Bee to be associated
+     * with a different Hive after construction.
+     *
+     * @param hive the new Hive to use for executing tasks, or null for synchronous processing
+     */
     public void setHive(Hive hive)
     {
         this.hive = hive;

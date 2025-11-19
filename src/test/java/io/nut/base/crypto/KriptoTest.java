@@ -30,8 +30,8 @@ import io.nut.base.encoding.Hex;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
 import io.nut.base.util.Joins;
-import io.nut.base.util.Sorts;
 import io.nut.base.util.Utils;
+import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -50,6 +50,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.concurrent.TimeUnit;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
@@ -920,5 +921,27 @@ public class KriptoTest
     public static byte[] strengthener(byte[] data)
     {
         return Joins.join(data, data, data);
+    }
+
+    /**
+     * Test of blumBlumShub method, of class Utils.
+     */
+    @Test
+    public void testBlumBlumShub() 
+    {
+        int[] P = {11, 7, 11};
+        int[] Q = {23, 11,19};
+        int[] S = {3,  64, 3};
+
+        long t0 =System.nanoTime();
+        for(int i=0;i<P.length;i++)
+        {
+            BigInteger p = BigInteger.valueOf(P[i]);
+            BigInteger q = BigInteger.valueOf(Q[i]);
+            BigInteger seed = BigInteger.valueOf(S[i]);
+            BigInteger r = Kripto.blumBlumShub(p, q, seed, 20_000_000);
+        }
+        long t1 =System.nanoTime();
+        System.out.printf("%d ms\n",TimeUnit.NANOSECONDS.toMillis(t1-t0));
     }
 }
