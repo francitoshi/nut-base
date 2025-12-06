@@ -18,9 +18,9 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.crypto;
+package io.nut.base.crypto.kdf;
 
-import java.nio.charset.StandardCharsets;
+import io.nut.base.crypto.Kripto;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;

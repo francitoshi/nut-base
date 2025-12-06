@@ -146,8 +146,8 @@ public abstract class Curve
     
     public final byte[] rawPubKey(BigInteger x, BigInteger y)
     {
-        Objects.requireNonNull(x, "x is null");
-        Objects.requireNonNull(y, "y is null");
+        Objects.requireNonNull(x, "x must not be null");
+        Objects.requireNonNull(y, "y must not be null");
         
         byte[] xbytes = asBytes(x);
         byte[] ybytes = asBytes(y);
@@ -159,14 +159,14 @@ public abstract class Curve
     
     public final byte[] compressedPubKey(Point point)
     {
-        Objects.requireNonNull(point, "point is null");
+        Objects.requireNonNull(point, "point must not be null");
         
         return compressedPubKey(point.x, point.y); 
     }
     public final byte[] compressedPubKey(BigInteger x, BigInteger y)
     {
-        Objects.requireNonNull(x, "x is null");
-        Objects.requireNonNull(y, "y is null");
+        Objects.requireNonNull(x, "x must not be null");
+        Objects.requireNonNull(y, "y must not be null");
 
         byte[] xbytes = asBytes(x);
         ByteBuffer buffer = ByteBuffer.allocate(xbytes.length + 1);
@@ -177,8 +177,8 @@ public abstract class Curve
     
     public final byte[] uncompressedPubKey(BigInteger x, BigInteger y)
     {
-        Objects.requireNonNull(x, "x is null");
-        Objects.requireNonNull(y, "y is null");
+        Objects.requireNonNull(x, "x must not be null");
+        Objects.requireNonNull(y, "y must not be null");
 
         byte[] xbytes = asBytes(x);
         byte[] ybytes = asBytes(y);
@@ -192,7 +192,7 @@ public abstract class Curve
     }
     public final Point pointPubKey(byte[] pubKey) throws InvalidKeyException
     {
-        Objects.requireNonNull(pubKey, "pubKey is null");
+        Objects.requireNonNull(pubKey, "pubKey must not be null");
 
         ByteBufferCompat buffer = new ByteBufferCompat(ByteBuffer.wrap(pubKey));
 

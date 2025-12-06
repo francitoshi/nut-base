@@ -40,6 +40,7 @@ import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Scanner;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
@@ -427,57 +428,11 @@ public class GPG
             String ops;
             if(rsa)
             {
-                if(sign && encrypt && auth)
-                {
-                    ops = "8,A,Q";
-                }
-                else if(sign && encrypt)
-                {
-                    ops = "8,Q";
-                }
-                else if(sign && auth)
-                {
-                    ops = "8,E,A,Q";
-                }
-                else if(sign)
-                {
-                    ops = "4";
-                }
-                else if(encrypt && auth)
-                {
-                    ops = "8,S,A,Q";
-                }
-                else if(encrypt)
-                {
-                    ops = "6";
-                }
-                else if(auth)
-                {
-                    ops = "8,S,E,A,Q";
-                }
-                else
-                {
-                    throw new InvalidParameterException("no caps");
-                }
+                ops = getRsaOps(sign, encrypt, auth);
             }
             else if(dsa)
             {
-                if(sign && auth)
-                {
-                    ops = "8,A,Q";
-                }
-                else if(sign)
-                {
-                    ops = "8,Q";
-                }
-                else if(auth)
-                {
-                    ops = "8,S,A,Q";
-                }
-                else
-                {
-                    throw new InvalidParameterException("no caps");
-                }
+                ops = getDsaOps(sign, auth);
             }
             else if(elg)
             {
@@ -485,38 +440,7 @@ public class GPG
             }
             else if(ecc)
             {
-                if(sign && encrypt && auth)
-                {
-                    throw new InvalidParameterException("incompatible caps");
-                }
-                else if(sign && encrypt)
-                {
-                    throw new InvalidParameterException("incompatible caps");
-                }
-                else if(sign && auth)
-                {
-                    ops = "11,Q";
-                }
-                else if(sign)
-                {
-                    ops = "10";
-                }
-                else if(encrypt && auth)
-                {
-                    throw new InvalidParameterException("incompatible caps");
-                }
-                else if(encrypt)
-                {
-                    ops = "12";
-                }
-                else if(auth)
-                {
-                    ops = "11,Q";
-                }
-                else
-                {
-                    throw new InvalidParameterException("no caps");
-                }
+                ops = getEccOps(sign, encrypt, auth);
             }
             else
             {
@@ -550,6 +474,104 @@ public class GPG
             }
         }
         return exitCode;
+    }
+
+    public String getRsaOps(boolean sign, boolean encrypt, boolean auth) throws InvalidParameterException
+    {
+        String ops;
+        if(sign && encrypt && auth)
+        {
+            ops = "8,A,Q";
+        }
+        else if(sign && encrypt)
+        {
+            ops = "8,Q";
+        }
+        else if(sign && auth)
+        {
+            ops = "8,E,A,Q";
+        }
+        else if(sign)
+        {
+            ops = "4";
+        }
+        else if(encrypt && auth)
+        {
+            ops = "8,S,A,Q";
+        }
+        else if(encrypt)
+        {
+            ops = "6";
+        }
+        else if(auth)
+        {
+            ops = "8,S,E,A,Q";
+        }
+        else
+        {
+            throw new InvalidParameterException("no caps");
+        }
+        return ops;
+    }
+
+    public String getDsaOps(boolean sign, boolean auth) throws InvalidParameterException
+    {
+        String ops;
+        if(sign && auth)
+        {
+            ops = "8,A,Q";
+        }
+        else if(sign)
+        {
+            ops = "8,Q";
+        }
+        else if(auth)
+        {
+            ops = "8,S,A,Q";
+        }
+        else
+        {
+            throw new InvalidParameterException("no caps");
+        }
+        return ops;
+    }
+
+    public String getEccOps(boolean sign, boolean encrypt, boolean auth) throws InvalidParameterException
+    {
+        String ops;
+        if(sign && encrypt && auth)
+        {
+            throw new InvalidParameterException("incompatible caps");
+        }
+        else if(sign && encrypt)
+        {
+            throw new InvalidParameterException("incompatible caps");
+        }
+        else if(sign && auth)
+        {
+            ops = "11,Q";
+        }
+        else if(sign)
+        {
+            ops = "10";
+        }
+        else if(encrypt && auth)
+        {
+            throw new InvalidParameterException("incompatible caps");
+        }
+        else if(encrypt)
+        {
+            ops = "12";
+        }
+        else if(auth)
+        {
+            ops = "11,Q";
+        }
+        else
+        {
+            throw new InvalidParameterException("no caps");
+        }
+        return ops;
     }
     
     public void printKeys() throws IOException, InterruptedException
@@ -832,14 +854,12 @@ public class GPG
      */
     public byte[] decryptAndVerify(byte[] cipherdata, char[] passphrase, DecryptStatus status) throws IOException, InterruptedException
     {
-        if (cipherdata==null)
-        {
-            throw new NullPointerException("encryptedData is null");
-        }
+        Objects.requireNonNull(cipherdata, "cipherdata must not be null");
         return decryptAndVerify(new ByteArrayInputStream(cipherdata), passphrase, status);
     }
     public byte[] decryptAndVerify(InputStream cipherdata, char[] passphrase, DecryptStatus status) throws IOException, InterruptedException
     {
+        Objects.requireNonNull(cipherdata, "cipherdata must not be null");
         boolean pass = passphrase != null && passphrase.length!=0;
         GnuPG gnupg = gpg(BATCH, NOTTY, VERBOSE, "--decrypt", OUTPUT, "-", STATUS_FD_2);
         if (pass)
@@ -958,9 +978,10 @@ public class GPG
      */
     public String[] getEncryptionRecipients(byte[] cipherdata, char[] passphrase) throws IOException, InterruptedException
     {
-        if (cipherdata == null || cipherdata.length == 0)
+        Objects.requireNonNull(cipherdata, "cipherdata must not be null");
+        if (cipherdata.length == 0)
         {
-            throw new IllegalArgumentException("Los datos cifrados no pueden ser nulos o vacíos.");
+            throw new IllegalArgumentException("cipherdata must not be empty");
         }
         return getEncryptionRecipients(new ByteArrayInputStream(cipherdata), passphrase);
     }
@@ -1198,5 +1219,98 @@ public class GPG
         
         return new PacketsInfo(encTo, algo, subKey, mainKey, trust, decryptionOkay, goodmdc, headerComment, headerHash, headerVersion);
     }
-    
+
+    /**
+     * Sends public keys to the default keyserver.
+     *
+     * @param keyIds Array of key IDs (fingerprint, short ID, or email) to send
+     * @return 0 on success or GPG error codes on error
+     * @throws IOException If GPG or I/O fails
+     * @throws InterruptedException If the GPG process is interrupted
+     */
+    public int sendKeys(String... keyIds) throws IOException, InterruptedException
+    {
+        Objects.requireNonNull(keyIds, "keyIds must not be null");
+        if (keyIds.length == 0)
+        {
+            throw new IllegalArgumentException("keyIds cannot be empty");
+        }
+
+        GnuPG gnupg = gpg(BATCH, "--send-keys");
+        gnupg.add(keyIds);
+
+        Process process = gnupg.start();
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0)
+        {
+            try (Scanner sc = new Scanner(process.getInputStream()))
+            {
+                while (sc.hasNext())
+                {
+                    System.err.println(sc.nextLine());
+                }
+            }
+        }
+        return exitCode;
+    }
+    /**
+     * Receives public keys from the default keyserver.
+     *
+     * @param keyIds Array of key IDs (fingerprint, short ID, or email) to
+     * receive
+     * @return 0 on success or GPG error codes on error
+     * @throws IOException If GPG or I/O fails
+     * @throws InterruptedException If the GPG process is interrupted
+     */
+    public int receiveKeys(String... keyIds) throws IOException, InterruptedException
+    {
+        Objects.requireNonNull(keyIds, "keyIds must not be null");
+        if (keyIds.length == 0)
+        {
+            throw new IllegalArgumentException("keyIds cannot be empty");
+        }
+
+        GnuPG gnupg = gpg(BATCH, "--receive-keys");
+        gnupg.add(keyIds);
+
+        Process process = gnupg.start();
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0)
+        {
+            try (Scanner sc = new Scanner(process.getInputStream()))
+            {
+                while (sc.hasNext())
+                {
+                    System.err.println(sc.nextLine());
+                }
+            }
+        }
+        return exitCode;
+    }
+    /**
+     * Refreshes all keys from the default keyserver.
+     * 
+     * @return 0 on success or GPG error codes on error
+     * @throws IOException If GPG or I/O fails
+     * @throws InterruptedException If the GPG process is interrupted
+     */
+    public int refreshKeys() throws IOException, InterruptedException
+    {
+        Process process = gpg(BATCH, "--refresh-keys").start();
+
+        int exitCode = process.waitFor();
+        if (exitCode != 0) 
+        {
+            try (Scanner sc = new Scanner(process.getInputStream())) 
+            {
+                while(sc.hasNext())
+                {
+                    System.err.println(sc.nextLine());
+                }
+            }
+        }
+        return exitCode;
+    }    
 }

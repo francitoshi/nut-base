@@ -1,7 +1,7 @@
 /*
  *  DER.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@ import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.security.InvalidParameterException;
+import java.util.Objects;
 
 /**
  *
@@ -48,10 +49,8 @@ public class DER
     }
     public static byte[] encode(BigInteger r, BigInteger s)
     {
-        if(r==null || s==null)
-        {
-            throw new NullPointerException();
-        }
+        Objects.requireNonNull(r, "r must not be null");
+        Objects.requireNonNull(s, "s must not be null");
         return encode(r.toByteArray(), s.toByteArray());
     }
     public static byte[] encode(byte[] r, byte[] s)

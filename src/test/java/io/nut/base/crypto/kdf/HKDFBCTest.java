@@ -18,10 +18,10 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.crypto;
+package io.nut.base.crypto.kdf;
 
+import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Hex;
-import javax.crypto.SecretKey;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

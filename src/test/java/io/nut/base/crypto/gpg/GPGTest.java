@@ -34,9 +34,12 @@ import static io.nut.base.crypto.gpg.GPG.RSA1024;
 import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.MethodOrderer;
@@ -167,6 +170,18 @@ public class GPGTest
     }
     
     @Test
+    @Order(4)
+    public void testNullPointersExceptions() throws Exception
+    {
+        GPG gpg = new GPG().setDebug(true).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
+
+        char[] chars = "hello".toCharArray();
+        
+        assertThrows(NullPointerException.class, () -> { gpg.decryptAndVerify((byte[])null, chars, null);});
+        assertThrows(NullPointerException.class, () -> { gpg.decryptAndVerify((InputStream)null, chars, null);});
+    }
+    
+    @Test
     @Order(99)
     public void testDeleteSecKeys() throws Exception
     {
@@ -265,7 +280,17 @@ public class GPGTest
         {
             gpg.deleteSecAndPubKeys(sk.main.getFingerprint());
         }
-  
+    }
+
+    /**
+     * Test of refreshKeys method, of class GPG.
+     */
+    @Test
+    public void testRefreshKeys() throws Exception
+    {
+        GPG instance = new GPG();
+        int result = instance.refreshKeys();
+        assertEquals(0, result);
     }
 
 }

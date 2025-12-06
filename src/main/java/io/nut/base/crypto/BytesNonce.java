@@ -20,10 +20,8 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.time.JavaTime;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

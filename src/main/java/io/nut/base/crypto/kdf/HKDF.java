@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.crypto;
+package io.nut.base.crypto.kdf;
 
 import io.nut.base.crypto.Kripto.Hkdf;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;

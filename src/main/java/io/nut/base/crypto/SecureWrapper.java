@@ -22,6 +22,7 @@ package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.Hkdf;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
+import io.nut.base.crypto.kdf.HKDF;
 import java.nio.charset.StandardCharsets;
 
 import javax.crypto.Cipher;

@@ -20,6 +20,7 @@
  */
 package io.nut.base.math;
 
+import io.nut.base.util.Strings;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -31,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -441,21 +443,16 @@ public class Nums
     
     public static BigInteger[] serie125(BigInteger start, BigInteger end)
     {
-        if(start==null)
-        {
-            throw new NullPointerException("start == null");
-        }        
+        Objects.requireNonNull(start, "start must not be null");
+        Objects.requireNonNull(end, "end must not be null");
+        
         if(start.compareTo(BigInteger.ZERO)<=0)
         {
-            throw new InvalidParameterException("start <= 0");
+            throw new InvalidParameterException("start must be > 0 (was "+start+")");
         }
-        if(end==null)
-        {
-            throw new NullPointerException("end == null");
-        }        
         if(end.compareTo(BigInteger.ZERO)<=0)
         {
-            throw new InvalidParameterException("end <= 0");
+            throw new InvalidParameterException("end must be > 0 (was "+end+")");
         }
         if(start.equals(end))
         {
@@ -492,21 +489,15 @@ public class Nums
     
     public static BigDecimal[] serie125(BigDecimal start, BigDecimal end)
     {
-        if(start==null)
-        {
-            throw new NullPointerException("start == null");
-        }        
+        Objects.requireNonNull(start, "start must not be null");
+        Objects.requireNonNull(end, "end must not be null");
         if(start.compareTo(BigDecimal.ZERO)<=0)
         {
-            throw new InvalidParameterException("start <= 0");
+            throw new InvalidParameterException("start must be > 0");
         }
-        if(end==null)
-        {
-            throw new NullPointerException("end == null");
-        }        
         if(end.compareTo(BigDecimal.ZERO)<=0)
         {
-            throw new InvalidParameterException("end <= 0");
+            throw new InvalidParameterException("end must be > 0");
         }
         if(start.equals(end))
         {

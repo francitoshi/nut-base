@@ -18,9 +18,10 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.crypto;
+package io.nut.base.crypto.kdf;
 
 import io.nut.base.crypto.Kripto.Hkdf;
+import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.crypto.digests.SHA256Digest;
@@ -63,7 +64,7 @@ public class HKDFBC extends HKDF
     }
    
     @Override
-    public SecretKey deriveSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyBytes, Kripto.SecretKeyAlgorithm keyAlgorithm)
+    public SecretKey deriveSecretKey(byte[] ikm, byte[] salt, byte[] info, int keyBytes, SecretKeyAlgorithm keyAlgorithm)
     {
         return new SecretKeySpec(deriveBytes(ikm, salt, info, keyBytes), keyAlgorithm.name());
     }

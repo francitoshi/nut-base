@@ -52,6 +52,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
@@ -751,10 +752,9 @@ public abstract class Utils
     //java9 Arrays.compare(byte[] a, int aFromIndex, int aToIndex, byte[] b, int bFromIndex, int bToIndex)
     public static int compare(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo)
     {
-        if(a==null||b==null)
-        {
-            throw new NullPointerException();
-        }
+        Objects.requireNonNull(a, "a must not be null");
+        Objects.requireNonNull(b, "b must not be null");
+        
         if(aFrom > aTo || bFrom > bTo)
         {
             throw new IllegalArgumentException();
@@ -2591,7 +2591,6 @@ public abstract class Utils
         return (e1 == e2);
     }
 
-
     public static String getLocalHostName()
     {
         try
@@ -2749,7 +2748,6 @@ public abstract class Utils
         return equivalent(item, keys, values, null);
     }
 
-
     public static void log(Logger logger, Level level, Supplier<String> msg)
     {
         if (logger.isLoggable(level))
@@ -2795,10 +2793,9 @@ public abstract class Utils
         {
             return -1;
         }
-        if (a == null || b == null)
-        {
-            throw new NullPointerException();
-        }
+        Objects.requireNonNull(a, "a must not be null");
+        Objects.requireNonNull(b, "b must not be null");
+
         int i;
         for (i = 0; i < a.length && i < b.length; i++)
         {

@@ -1,7 +1,7 @@
 /*
  *  ECDSA.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -42,9 +42,9 @@ public class ECDSA extends Sign
     @Override
     public BigInteger[] sign(BigInteger msg, BigInteger secKey, BigInteger k) throws InvalidKeyException
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(secKey, "secKey is null");
-        Objects.requireNonNull(k, "k is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
+        Objects.requireNonNull(k, "k must not be null");
 
         Point r_point = curve.mul(curve.G, k);
         BigInteger r = r_point.x.mod(curve.n);
@@ -66,9 +66,9 @@ public class ECDSA extends Sign
     @Override
     public byte[] sign(byte[] msg, byte[] secKey, byte[] auxRand) throws InvalidKeyException
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(secKey, "secKey is null");
-        Objects.requireNonNull(auxRand, "auxRand is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
+        Objects.requireNonNull(auxRand, "auxRand must not be null");
 
         if(msg.length != curve.bytes)
         {
@@ -98,10 +98,10 @@ public class ECDSA extends Sign
     @Override
     public boolean verify(BigInteger msg, Point pubKey, BigInteger r, BigInteger s) throws InvalidKeyException
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(pubKey, "pubKey is null");
-        Objects.requireNonNull(r, "r is null");
-        Objects.requireNonNull(s, "s is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(pubKey, "pubKey must not be null");
+        Objects.requireNonNull(r, "r must not be null");
+        Objects.requireNonNull(s, "s must not be null");
 
         
         BigInteger s_inverse = s.modInverse(curve.n);
@@ -116,9 +116,9 @@ public class ECDSA extends Sign
     @Override
     public boolean verify(byte[] msg, byte[] pubKey, byte[] signature) throws InvalidKeyException
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(pubKey, "pubKey is null");
-        Objects.requireNonNull(signature, "signature is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(pubKey, "pubKey must not be null");
+        Objects.requireNonNull(signature, "signature must not be null");
 
         BigInteger mm = Utils.asBigInteger(msg);
         Point PK = this.pointPubKey(pubKey);
@@ -130,7 +130,7 @@ public class ECDSA extends Sign
     @Override
     public final Point getPubKey(BigInteger secKey) throws InvalidKeyException
     {
-        Objects.requireNonNull(secKey, "secKey is null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
 
         if(secKey.compareTo(BigInteger.ONE) < 0 || secKey.compareTo(curve.n) >= 0)
         {
@@ -142,7 +142,7 @@ public class ECDSA extends Sign
     @Override
     public final byte[] getPubKey(byte[] secKey) throws InvalidKeyException
     {
-        Objects.requireNonNull(secKey, "secKey is null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
 
         Point P = this.getPubKey(Utils.asBigInteger(secKey));
         return compressedPubKey(P.x, P.y);

@@ -22,6 +22,7 @@ package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
+import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.serializer.AesSivCtrSerializer;
 import io.nut.base.serializer.AesGcmSerializer;
 import io.nut.base.serializer.Serializer;

@@ -57,10 +57,10 @@ public class ExtKey
     
     public ExtKey(int version, byte depth, byte[] fingerprint, int childNumber, byte[] chainCode, byte[] key) throws InvalidKeyException
     {
-        Objects.requireNonNull(depth,"depth is null");
-        Objects.requireNonNull(fingerprint,"fingerprint is null");
-        Objects.requireNonNull(chainCode, "chainCode is null");
-        Objects.requireNonNull(key, "key is null");
+        Objects.requireNonNull(depth,"depth must not be null");
+        Objects.requireNonNull(fingerprint,"fingerprint must not be null");
+        Objects.requireNonNull(chainCode, "chainCode must not be null");
+        Objects.requireNonNull(key, "key must not be null");
 
         Utils.checkArgument(fingerprint.length==4,"fingerprint.length != 4");
         Utils.checkArgument(chainCode.length==32,"chainCode.length != 32");

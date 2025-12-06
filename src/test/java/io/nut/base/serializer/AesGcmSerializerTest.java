@@ -22,7 +22,7 @@ package io.nut.base.serializer;
 
 import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
-import io.nut.base.crypto.PBKDF2;
+import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.util.Strings;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;

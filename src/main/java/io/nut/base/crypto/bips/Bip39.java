@@ -101,7 +101,7 @@ public class Bip39
     
     public static byte[] seed(String[] words, String passphrase)
     {
-        Objects.requireNonNull(passphrase, "A null passphrase is not allowed.");
+        Objects.requireNonNull(passphrase, "passphrase must not be null");
         // To create binary seed from mnemonic, we use PBKDF2 function
         // with mnemonic sentence (in UTF-8) used as a password and
         // string "mnemonic" + passphrase (again in UTF-8) used as a

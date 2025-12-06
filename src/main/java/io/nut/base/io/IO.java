@@ -26,14 +26,18 @@ import io.nut.base.util.CharSets;
 import io.nut.base.util.Java;
 import io.nut.base.util.Sorts;
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.security.SecureRandom;
@@ -537,5 +541,22 @@ public class IO
             return null;
         }
         return (out instanceof PrintStream) ? (PrintStream) out : new PrintStream(out);
+    }
+    
+    public static void println(Object obj)
+    {
+        System.out.println(obj);
+    }
+
+    public static void println()
+    {
+        System.out.println();
+    }
+
+    public static void print(Object obj)
+    {
+        PrintStream out = System.out;
+        out.print(obj);
+        out.flush();
     }
 }

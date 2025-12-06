@@ -22,6 +22,7 @@ package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.crypto.Kripto.SecretKeyTransformation;
+import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.util.Utils;
 import java.io.File;
 import java.io.FileInputStream;

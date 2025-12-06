@@ -18,8 +18,9 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.crypto;
+package io.nut.base.crypto.kdf;
 
+import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.Pbkdf2;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.encoding.Ascii85;
@@ -53,7 +54,7 @@ public class PBKDF2
         try
         {
             KeySpec spec = new PBEKeySpec(password, salt, rounds, keyBits);
-            SecretKeyFactory factory = this.kripto.getSecretKeyFactory(this.algorithm.name());
+            SecretKeyFactory factory = this.kripto.getSecretKeyFactory(this.algorithm);
             return factory.generateSecret(spec).getEncoded();
         }
         catch (NoSuchAlgorithmException | InvalidKeySpecException ex)

@@ -58,7 +58,7 @@ public final class ThrottledInputStream extends FilterInputStream
      */
     public ThrottledInputStream(InputStream in, int tpb, int tpl, int toc, TimeUnit timeUnit, boolean average)
     {
-        super(Objects.requireNonNull(in, "InputStream must not be null"));
+        super(Objects.requireNonNull(in, "in must not be null"));
         if (tpb < 0 || tpl < 0)
         {
             throw new IllegalArgumentException("Delays must not be negative");

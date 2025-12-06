@@ -54,9 +54,9 @@ public class Schnorr extends Sign
     @Override
     public BigInteger[] sign(BigInteger msg, BigInteger secKey, BigInteger auxRand) throws InvalidKeyException
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(secKey, "secKey is null");
-        Objects.requireNonNull(auxRand, "auxRand is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
+        Objects.requireNonNull(auxRand, "auxRand must not be null");
         
         byte[] msgBytes = asBytes(msg);
         
@@ -100,9 +100,9 @@ public class Schnorr extends Sign
     @Override
     public byte[] sign(byte[] msg, byte[] secKey, byte[] auxRand) throws InvalidKeyException 
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(secKey, "secKey is null");
-        Objects.requireNonNull(auxRand, "auxRand is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
+        Objects.requireNonNull(auxRand, "auxRand must not be null");
 
         if(msg.length != curve.bytes)
         {
@@ -131,10 +131,10 @@ public class Schnorr extends Sign
     @Override
     public boolean verify(BigInteger msg, Point pubKey, BigInteger r, BigInteger s) throws InvalidKeyException
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(pubKey, "pubKey is null");
-        Objects.requireNonNull(r, "r is null");
-        Objects.requireNonNull(s, "s is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(pubKey, "pubKey must not be null");
+        Objects.requireNonNull(r, "r must not be null");
+        Objects.requireNonNull(s, "s must not be null");
 
         byte[] msgBytes = asBytes(msg);
 
@@ -153,9 +153,9 @@ public class Schnorr extends Sign
     @Override
     public boolean verify(byte[] msg, byte[] pubKey, byte[] signature) throws InvalidKeyException
     {
-        Objects.requireNonNull(msg, "msg is null");
-        Objects.requireNonNull(pubKey, "pubKey is null");
-        Objects.requireNonNull(signature, "signature is null");
+        Objects.requireNonNull(msg, "msg must not be null");
+        Objects.requireNonNull(pubKey, "pubKey must not be null");
+        Objects.requireNonNull(signature, "signature must not be null");
 
         BigInteger message = Utils.asBigInteger(msg);
         Point PK = this.pointPubKey(pubKey);
@@ -173,7 +173,7 @@ public class Schnorr extends Sign
     @Override
     public final Point getPubKey(BigInteger secKey) throws InvalidKeyException
     {
-        Objects.requireNonNull(secKey, "secKey is null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
 
         if(secKey.compareTo(BigInteger.ONE) < 0 || secKey.compareTo(curve.n) >= 0)
         {
@@ -191,7 +191,7 @@ public class Schnorr extends Sign
     @Override
     public final byte[] getPubKey(byte[] secKey) throws InvalidKeyException
     {
-        Objects.requireNonNull(secKey, "secKey is null");
+        Objects.requireNonNull(secKey, "secKey must not be null");
 
         Point P = this.getPubKey(Utils.asBigInteger(secKey));
         return asBytes(P.x);

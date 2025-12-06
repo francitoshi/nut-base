@@ -20,6 +20,9 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.crypto.kdf.HKDF;
+import io.nut.base.crypto.kdf.HKDFBC;
+import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.crypto.stego.Steganography;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Strings;
@@ -155,6 +158,11 @@ public class Kripto
         }
     }
 
+    private enum Holder
+    {
+        INSTANCE;
+        Kripto kripto = new Kripto();
+    }
     /**
      * Returns a default instance of {@link Kripto} with no specific provider.
      *
@@ -162,7 +170,7 @@ public class Kripto
      */
     public static Kripto getInstance()
     {
-        return new Kripto();
+        return Holder.INSTANCE.kripto;
     }
 
     public static Kripto getInstance(String providerName)
@@ -256,7 +264,8 @@ public class Kripto
         AES_CTR_NoPadding("AES/CTR/NoPadding", 128, 128, 128),//(128,192,256) iv=128  GOOD
         AES_CBC_PKCS5Padding("AES/CBC/PKCS5Padding", 128, 128, 0), //(128,192,256) iv=128  GOOD
         AES_CFB8_NoPadding("AES/CFB8/NoPadding", 128, 128, 0),  //(128)         iv=128
-        ChaCha20_Poly1305("ChaCha20-Poly1305", 512, 96, 128);  //(256)         iv=96
+        ChaCha20_Poly1305("ChaCha20-Poly1305", 512, 96, 128),  //(256)         iv=96
+        ChaCha20("ChaCha20", 512, 96, 128);  //(256)         iv=96
 
         public final String transformation;
         public final SecretKeyAlgorithm algorithm;
@@ -525,11 +534,11 @@ public class Kripto
         }
     }
 
-    protected SecretKeyFactory getSecretKeyFactory(String algoritm) throws NoSuchAlgorithmException
+    public SecretKeyFactory getSecretKeyFactory(Pbkdf2 algoritm) throws NoSuchAlgorithmException
     {
         try
         {
-            return this.providerName == null ? SecretKeyFactory.getInstance(algoritm) : SecretKeyFactory.getInstance(algoritm, this.providerName);
+            return this.providerName == null ? SecretKeyFactory.getInstance(algoritm.name()) : SecretKeyFactory.getInstance(algoritm.name(), this.providerName);
         }
         catch (NoSuchProviderException ex)
         {
@@ -537,7 +546,7 @@ public class Kripto
             {
                 throw new ProviderException(ex.getMessage(), ex);
             }
-            return SecretKeyFactory.getInstance(algoritm);
+            return SecretKeyFactory.getInstance(algoritm.name());
         }
     }
 
@@ -675,6 +684,18 @@ public class Kripto
     public SecretKey getSecretKey(byte[] secretKey, SecretKeyAlgorithm algoritm)
     {
         return new SecretKeySpec(secretKey, algoritm.name());
+    }
+
+    /**
+     * Creates a {@link SecretKey} from the provided byte array and algorithm.
+     *
+     * @param secretKey the key material
+     * @param hmac the Hmac algorithm used as SecretKey
+     * @return a new SecretKey instance
+     */
+    public SecretKey getSecretKey(byte[] secretKey, Hmac hmac)
+    {
+        return new SecretKeySpec(secretKey, hmac.name());
     }
 
     /**
@@ -1596,15 +1617,15 @@ public class Kripto
         //assert q % 4 == 3
         if(!q.mod(f4th).equals(t3th))
         {
-            throw new InvalidParameterException("q % 4 != 3");
+            throw new InvalidParameterException("q must be [q % 4 != 3]");
         }
         if(!p.isProbablePrime(128))
         {
-            throw new InvalidParameterException("p not prime");
+            throw new InvalidParameterException("p must be prime");
         }
         if(!q.isProbablePrime(128))
         {
-            throw new InvalidParameterException("q not prime");
+            throw new InvalidParameterException("q must be prime");
         }
 
         BigInteger n = p.multiply(q);

@@ -54,7 +54,7 @@ public final class ThrottledOutputStream extends FilterOutputStream
      */
     public ThrottledOutputStream(OutputStream out, int tpb, int tpl, TimeUnit timeUnit, boolean average)
     {
-        super(Objects.requireNonNull(out, "OutputStream must not be null"));
+        super(Objects.requireNonNull(out, "out must not be null"));
         if (tpb < 0 || tpl < 0)
         {
             throw new IllegalArgumentException("Delays must not be negative");
