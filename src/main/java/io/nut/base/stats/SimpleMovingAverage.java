@@ -1,7 +1,7 @@
 /*
  *  SimpleMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,10 +23,6 @@ package io.nut.base.stats;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 
-/**
- *
- * @author franci
- */
 public class SimpleMovingAverage extends MovingAverage 
 {
     private int count;
@@ -40,7 +36,7 @@ public class SimpleMovingAverage extends MovingAverage
     {
         if (period <= 0)
         {
-            throw new IllegalArgumentException("Period must be positive");
+            throw new IllegalArgumentException("period must be positive, but was: " + period);
         }
         this.period = period;
         this.queue = new ArrayBlockingQueue<>(period);
@@ -63,4 +59,9 @@ public class SimpleMovingAverage extends MovingAverage
         return sma;
     }
     
+    @Override
+    public double average()
+    {
+        return sma;
+    }
 }

@@ -1,7 +1,7 @@
 /*
  *  ExponentialMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,6 @@
  */
 package io.nut.base.stats;
 
-/**
- *
- * @author franci
- */
 public class ExponentialMovingAverage extends MovingAverage 
 {
     private int count;
@@ -35,7 +31,7 @@ public class ExponentialMovingAverage extends MovingAverage
     {
         if (period <= 0)
         {
-            throw new IllegalArgumentException("Period must be positive");
+            throw new IllegalArgumentException("period must be positive, but was: " + period);
         }
         this.alpha = 2.0 / (period + 1.0);
         this.oneMinusAlpha = 1 - alpha;
@@ -45,6 +41,12 @@ public class ExponentialMovingAverage extends MovingAverage
     public double next(double value)
     {
         return ema = (count++ == 0) ? value : value*alpha + ema*oneMinusAlpha;
+    }
+
+    @Override
+    public double average()
+    {
+        return ema;
     }
     
 }

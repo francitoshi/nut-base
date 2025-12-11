@@ -20,7 +20,7 @@
  */
 package io.nut.base.stats;
 
-import io.nut.base.stats.BigMovingAverage.Type;
+import io.nut.base.stats.MovingAverage.Type;
 import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,9 +38,9 @@ public class BigMovingAverageTest
     @Test
     public void testNext0()
     {
-        BigMovingAverage.Type[] types = {Type.SMA, Type.EMA, Type.WMA, Type.CMA};
+        
 
-        for(BigMovingAverage.Type t : types)
+        for(MovingAverage.Type t : MovingAverage.Type.values())
         {
             for(int p=1;p<10;p++)
             {
@@ -56,7 +56,7 @@ public class BigMovingAverageTest
                     {
                         instance.next(101);
                     }
-                    assertEquals(101.0, instance.next(101).doubleValue(), "t="+t+" p="+p);
+                    assertEquals(101.0, instance.next(101).doubleValue(), 0.000001, "t="+t+" p="+p);
                 }
             }
         }

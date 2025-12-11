@@ -26,18 +26,14 @@ import io.nut.base.util.CharSets;
 import io.nut.base.util.Java;
 import io.nut.base.util.Sorts;
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.security.SecureRandom;
@@ -52,8 +48,6 @@ public class IO
 {
     private static final SecureRandom RANDOM = new SecureRandom();
     
-    private static final String TAG = IO.class.getSimpleName();
-
     public static final String UTF8 = CharSets.UTF8;
     
     public static final File ROOT = new File(File.separator);

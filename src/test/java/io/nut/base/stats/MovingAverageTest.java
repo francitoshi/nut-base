@@ -1,8 +1,8 @@
 /*
  *  MovingAverageTest.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
- *-
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -37,7 +37,7 @@ public class MovingAverageTest
     @Test
     public void testNext0()
     {
-        MovingAverage.Type[] types = {Type.SMA, Type.EMA, Type.WMA, Type.CMA};
+        MovingAverage.Type[] types = {Type.SMA, Type.EMA, Type.DEMA, Type.TEMA, Type.WMA, Type.CMA};
 
         for(MovingAverage.Type t : types)
         {

@@ -1,7 +1,7 @@
 /*
  *  SimpleMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ public class BigSimpleMovingAverage extends BigMovingAverage
     {
         if (period <= 0)
         {
-            throw new IllegalArgumentException("Period must be positive");
+            throw new IllegalArgumentException("period must be positive, but was: " + period);
         }
         this.period = period;
         this.p = BigDecimal.valueOf(period);
@@ -71,5 +71,10 @@ public class BigSimpleMovingAverage extends BigMovingAverage
         count++;
         return sma;
     }
-    
+
+    @Override
+    public BigDecimal average()
+    {
+        return sma;
+    }    
 }

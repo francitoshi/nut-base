@@ -1,7 +1,7 @@
 /*
  *  ExponentialMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,10 +23,6 @@ package io.nut.base.stats;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
-/**
- *
- * @author franci
- */
 public class BigExponentialMovingAverage extends BigMovingAverage 
 {
     private static final BigDecimal TWO = BigDecimal.valueOf(2);
@@ -34,6 +30,7 @@ public class BigExponentialMovingAverage extends BigMovingAverage
     private final BigDecimal alpha;  // The smoothing factor
     private final BigDecimal oneMinusAlpha;
     private BigDecimal ema;          // Stores the current EMA value
+    private BigDecimal avg;
     private final int decimals;
     private final RoundingMode roundingMode;
   
@@ -41,7 +38,7 @@ public class BigExponentialMovingAverage extends BigMovingAverage
     {
         if (period <= 0)
         {
-            throw new IllegalArgumentException("Period must be positive");
+            throw new IllegalArgumentException("period must be positive, but was: " + period);
         }
         // Calculate alpha: 2 / (period + 1)
         this.alpha = TWO.divide(BigDecimal.valueOf(period + 1), decimals*2, RoundingMode.HALF_UP).stripTrailingZeros();
@@ -66,7 +63,13 @@ public class BigExponentialMovingAverage extends BigMovingAverage
                     .setScale(decimals*2, roundingMode);
         }
         count++;
-        return ema.setScale(decimals, roundingMode);
+        return avg = ema.setScale(decimals, roundingMode);
+    }
+    
+    @Override
+    public BigDecimal average()
+    {
+        return avg;
     }
     
 }

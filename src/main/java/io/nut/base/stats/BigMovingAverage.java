@@ -1,7 +1,7 @@
 /*
  *  MovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,12 @@
  */
 package io.nut.base.stats;
 
+import static io.nut.base.stats.MovingAverage.Type.DEMA;
+import static io.nut.base.stats.MovingAverage.Type.EMA;
+import static io.nut.base.stats.MovingAverage.Type.SMA;
+import static io.nut.base.stats.MovingAverage.Type.TEMA;
+import static io.nut.base.stats.MovingAverage.Type.WMA;
+import static io.nut.base.stats.MovingAverage.Type.ZLEMA;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.InvalidParameterException;
@@ -30,9 +36,8 @@ import java.security.InvalidParameterException;
  */
 public abstract class BigMovingAverage
 {
-    public enum Type { SMA, EMA, WMA, CMA}; 
-
     public abstract BigDecimal next(BigDecimal value);
+    public abstract BigDecimal average();
 
     public final BigDecimal next(long value)
     {
@@ -43,18 +48,24 @@ public abstract class BigMovingAverage
         return next(BigDecimal.valueOf(value));
     }
     
-    public static BigMovingAverage create(Type type, int period, int decimals, RoundingMode roundingMode)
+    public static BigMovingAverage create(MovingAverage.Type type, int period, int decimals, RoundingMode roundingMode)
     {
         switch(type)
         {
             case SMA: 
                 return createSMA(period, decimals, roundingMode);
-            case EMA: 
-                return createEMA(period, decimals, roundingMode);
             case WMA: 
                 return createWMA(period, decimals, roundingMode);
             case CMA: 
                 return createCMA(decimals, roundingMode);
+            case EMA: 
+                return createEMA(period, decimals, roundingMode);
+            case DEMA: 
+                return createDEMA(period, decimals, roundingMode);
+            case TEMA: 
+                return createTEMA(period, decimals, roundingMode);
+            case ZLEMA: 
+                return createZLEMA(period, decimals, roundingMode);
             default: 
                 throw new InvalidParameterException("Unknown type "+type);
         }
@@ -66,6 +77,18 @@ public abstract class BigMovingAverage
     public static BigExponentialMovingAverage createEMA(int period, int decimals, RoundingMode roundingMode)
     {
         return new BigExponentialMovingAverage(period, decimals, roundingMode);
+    }
+    public static BigDoubleExponentialMovingAverage createDEMA(int period, int decimals, RoundingMode roundingMode)
+    {
+        return new BigDoubleExponentialMovingAverage(period, decimals, roundingMode);
+    }
+    public static BigTripleExponentialMovingAverage createTEMA(int period, int decimals, RoundingMode roundingMode)
+    {
+        return new BigTripleExponentialMovingAverage(period, decimals, roundingMode);
+    }
+    public static BigZeroLagExponentialMovingAverage createZLEMA(int period, int decimals, RoundingMode roundingMode)
+    {
+        return new BigZeroLagExponentialMovingAverage(period, decimals, roundingMode);
     }
     public static BigWeightedMovingAverage createWMA(int period, int decimals, RoundingMode roundingMode)
     {

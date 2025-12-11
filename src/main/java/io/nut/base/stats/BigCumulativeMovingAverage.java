@@ -1,7 +1,7 @@
 /*
  *  CumulativeMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -29,18 +29,27 @@ public class BigCumulativeMovingAverage extends BigMovingAverage
     private final int scale;
     private final RoundingMode roundingMode;
     private BigDecimal sum;
+    private BigDecimal cma;
     
     public BigCumulativeMovingAverage(int scale, RoundingMode roundingMode)
     {
         this.scale = scale;
         this.roundingMode = roundingMode;
         this.sum = BigDecimal.ZERO;
+        this.cma = BigDecimal.ZERO;
     }
 
     @Override
     public BigDecimal next(BigDecimal value)
     {
         sum = sum.add(value);
-        return sum.divide(BigDecimal.valueOf(++count), scale, roundingMode);
+        return cma = sum.divide(BigDecimal.valueOf(++count), scale, roundingMode);
     }
+
+    @Override
+    public BigDecimal average()
+    {
+        return cma;
+    }
+    
 }

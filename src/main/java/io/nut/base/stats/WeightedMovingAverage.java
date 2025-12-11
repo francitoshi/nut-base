@@ -1,7 +1,7 @@
 /*
  *  WeightedMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ public class WeightedMovingAverage extends MovingAverage
     private final int period;
     private final List<Double> values;
     private double sum;
+    private double wma;
     private double weightedSum;
     private double divisor;
     private double multiplier;
@@ -38,12 +39,13 @@ public class WeightedMovingAverage extends MovingAverage
     {
         if (period <= 0)
         {
-            throw new IllegalArgumentException("Period must be positive");
+            throw new IllegalArgumentException("period must be positive, but was: " + period);
         }
         this.period = period;
         this.values = new ArrayList<>(period);
         this.sum = 0.0;
         this.weightedSum = 0.0;
+        this.wma = 0.0;
     }
 
     @Override
@@ -65,6 +67,13 @@ public class WeightedMovingAverage extends MovingAverage
         sum += value;
         weightedSum += value * multiplier;
 
-        return weightedSum/divisor;
+        return wma = weightedSum/divisor;
     }
+    
+    @Override
+    public double average()
+    {
+        return wma;
+    }
+    
 }

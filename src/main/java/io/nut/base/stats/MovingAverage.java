@@ -1,8 +1,8 @@
 /*
  *  MovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
- *-
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
@@ -28,9 +28,10 @@ import java.security.InvalidParameterException;
  */
 public abstract class MovingAverage
 {
-    public enum Type { SMA, EMA, WMA, CMA}; 
+    public enum Type { SMA, WMA, CMA, EMA, DEMA, TEMA, ZLEMA}; 
 
     public abstract double next(double value);
+    public abstract double average();
     
     public static MovingAverage create(Type type, int period)
     {
@@ -38,12 +39,18 @@ public abstract class MovingAverage
         {
             case SMA: 
                 return createSMA(period);
-            case EMA: 
-                return createEMA(period);
             case WMA: 
                 return createWMA(period);
             case CMA: 
                 return createCMA();
+            case EMA: 
+                return createEMA(period);
+            case DEMA: 
+                return createDEMA(period);
+            case TEMA: 
+                return createTEMA(period);
+            case ZLEMA: 
+                return createZLEMA(period);
             default: 
                 throw new InvalidParameterException("Unknown type "+type);
         }
@@ -55,6 +62,18 @@ public abstract class MovingAverage
     public static ExponentialMovingAverage createEMA(int period)
     {
         return new ExponentialMovingAverage(period);
+    }
+    public static DoubleExponentialMovingAverage createDEMA(int period)
+    {
+        return new DoubleExponentialMovingAverage(period);
+    }
+    public static TripleExponentialMovingAverage createTEMA(int period)
+    {
+        return new TripleExponentialMovingAverage(period);
+    }
+    public static ZeroLagExponentialMovingAverage createZLEMA(int period)
+    {
+        return new ZeroLagExponentialMovingAverage(period);
     }
     public static WeightedMovingAverage createWMA(int period)
     {

@@ -28,7 +28,6 @@ import java.util.logging.Logger;
 
 public class AesGcmSerializer<T> extends AesGcmBytesCipher implements Serializer<T>
 {
-    private final SecretKey key;
     private final Serializer<T> serializer;
 
     public AesGcmSerializer(SecretKey key, Serializer<T> serializer)
@@ -38,7 +37,6 @@ public class AesGcmSerializer<T> extends AesGcmBytesCipher implements Serializer
     public AesGcmSerializer(SecretKey key, Serializer<T> serializer, Kripto kripto)
     {
         super(key, kripto);
-        this.key = key;
         this.serializer = serializer;
     }
 

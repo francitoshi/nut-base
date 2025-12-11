@@ -1,7 +1,7 @@
 /*
  *  WeightedMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ public class BigWeightedMovingAverage extends BigMovingAverage
     private final RoundingMode roundingMode;
     private final List<BigDecimal> values;
     private BigDecimal sum;
+    private BigDecimal wma;
     private BigDecimal weightedSum;
     private BigDecimal divisor;
     private BigDecimal multiplier;
@@ -42,7 +43,7 @@ public class BigWeightedMovingAverage extends BigMovingAverage
     {
         if (period <= 0)
         {
-            throw new IllegalArgumentException("Period must be positive");
+            throw new IllegalArgumentException("period must be positive, but was: " + period);
         }
         this.period = period;
         this.scale = scale;
@@ -50,6 +51,7 @@ public class BigWeightedMovingAverage extends BigMovingAverage
         this.values = new ArrayList<>(period);
         this.sum = BigDecimal.ZERO;
         this.weightedSum = BigDecimal.ZERO;
+        this.wma = BigDecimal.ZERO;
     }
 
     @Override
@@ -71,6 +73,13 @@ public class BigWeightedMovingAverage extends BigMovingAverage
         sum = sum.add(value);
         weightedSum = weightedSum.add(value.multiply(multiplier));
 
-        return weightedSum.divide(divisor, scale, roundingMode);
+        return wma = weightedSum.divide(divisor, scale, roundingMode);
     }
+    
+    @Override
+    public BigDecimal average()
+    {
+        return wma;
+    }
+        
 }

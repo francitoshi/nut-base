@@ -1,7 +1,7 @@
 /*
  *  CumulativeMovingAverage.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,17 +23,24 @@ package io.nut.base.stats;
 public class CumulativeMovingAverage extends MovingAverage
 {
     private int count;
-    private double sum;
+    private double cma;
     
     public CumulativeMovingAverage()
     {
-        this.sum = 0.0;
+        this.cma = 0.0;
     }
 
     @Override
     public double next(double value)
     {
-        sum += value;
-        return sum/++count;
+        
+        return cma = cma + (value - cma) / ++count;
     }
+
+    @Override
+    public double average()
+    {
+        return cma;
+    }
+    
 }
