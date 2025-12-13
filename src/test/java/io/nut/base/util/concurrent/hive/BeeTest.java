@@ -1,7 +1,7 @@
 /*
  *  BeeTest.java
  *
- *  Copyright (C) 2024 francitoshi@gmail.com
+ *  Copyright (C) 2024-2025 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,9 +20,12 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import io.nut.base.util.Utils;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -81,18 +84,36 @@ public class BeeTest
     @Test
     public void testSend() 
     {
+        final AtomicBoolean eureka = new AtomicBoolean();
+        final AtomicInteger concurrent = new AtomicInteger(0);
         final AtomicInteger count = new AtomicInteger(0);
+        final Hive hive = new Hive(8,16,4,1000);
         //Test Bees with no Hive work synchronously
-        Bee<String> instance = new Bee()
+        Bee<String> instance = new Bee(8, hive)
         {
             @Override
             protected void receive(Object m) 
             {
+                int n = concurrent.incrementAndGet();
                 count.incrementAndGet();
+                if(n>4)
+                {
+                    eureka.set(true);
+                }
+                else if(eureka.get()==false)
+                {
+                    Utils.sleep(100);
+                }
+                concurrent.decrementAndGet();
             }
         };
-        instance.send("hello");        
-        assertEquals(1, count.get());
+        for(int i=0;i<100;i++)
+        {
+            instance.send("hello");
+        }
+        Utils.sleep(500);
+        assertEquals(100, count.get());
+        assertTrue(eureka.get());
     }
    
 }

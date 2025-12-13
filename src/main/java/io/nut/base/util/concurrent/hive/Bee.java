@@ -20,6 +20,7 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -154,6 +155,7 @@ public abstract class Bee<M>
 
     /**
      * Cancel all logger outputs from this instance
+     * @return this instance
      */
     public Bee<M> dryLogger() 
     {
@@ -173,42 +175,6 @@ public abstract class Bee<M>
         return ex;
     }
     
-    /**
-     * Sends a message to this Bee for processing. If a Hive is configured,
-     * the message is queued and processed asynchronously. If no Hive is
-     * configured, the message is processed synchronously on the calling thread.
-     *
-     * @param message the message to be processed
-     * @return true if the message was successfully sent or processed, false if
-     * the Bee is not in RUNNING state or an interruption occurred
-     */
-    public boolean send(M message)
-    {
-        try 
-        {
-            if(this.status!=RUNNING)
-            {
-                return false;
-            }
-            if(this.hive!=null)
-            {
-                this.queue.put(message);
-                this.hive.execute(receiveTask);
-            }
-            else
-            {
-                this.receive(message);
-            }
-            return true;
-        }
-        catch (Exception ex) 
-        {
-            if(allowLogger) Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
-            this.ex = ex;
-            return false;
-        }
-    }
-
     /**
      * Processes a single message. This method must be implemented by subclasses
      * to define the message processing logic.
@@ -237,6 +203,50 @@ public abstract class Bee<M>
     }
     
     /**
+     * Sends a message to this Bee for processing. If a Hive is configured,
+     * the message is queued and processed asynchronously. If no Hive is
+     * configured, the message is processed synchronously on the calling thread.
+     *
+     * @param message the message to be processed
+     * @return true if the message was successfully sent or processed, false if
+     * the Bee is not in RUNNING state or an interruption occurred
+     */
+    public boolean send(M message)
+    {
+        try 
+        {
+            if(this.status!=RUNNING)
+            {
+                return false;
+            }
+           
+            if(this.hive!=null)
+            {
+                this.queue.put(message);
+                // Submit task if permits available
+                if (this.semaphore.availablePermits() > 0)
+                {
+                    this.hive.execute(receiveTask);
+                }
+            }
+            else
+            {
+                this.receive(message);
+            }
+            return true;
+        }
+        catch (Exception ex) 
+        {
+            if(allowLogger)
+            {
+                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
+            }
+            this.ex = ex;
+            return false;
+        }
+    }
+
+    /**
      * Runnable task that processes queued messages. This task attempts to acquire
      * a permit from the semaphore and then processes all available messages in the queue.
      */
@@ -246,11 +256,13 @@ public abstract class Bee<M>
         public void run()
         {
             if(!semaphore.tryAcquire())
+            {
                 return;
+            }
             try
             {
                 M m;
-                while ( (m = queue.poll()) != null)
+                while ((m = queue.poll()) != null)
                 {
                     receive(m);
                 }
@@ -258,7 +270,10 @@ public abstract class Bee<M>
             catch (Exception ex)
             {
                 Bee.this.ex = ex;
-                if(allowLogger) Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.receiveTask.run()", ex);
+                if(allowLogger)
+                {
+                    Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.receiveTask.run()", ex);
+                }
                 exception(ex);
             }
             finally
@@ -282,6 +297,9 @@ public abstract class Bee<M>
         @Override
         public void run()
         {
+            //last chance for messages in the queue to be received
+            receiveTask.run();
+
             semaphore.acquireUninterruptibly(threads);
             try
             {
@@ -400,6 +418,7 @@ public abstract class Bee<M>
      */
     public static void shutdownAndAwaitTermination(Bee<?> ...bees)
     {
+        Objects.requireNonNull(bees, "bees must not be null");
         for(Bee<?> item : bees)
         {
             item.shutdown();

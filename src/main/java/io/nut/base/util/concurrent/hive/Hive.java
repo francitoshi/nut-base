@@ -21,6 +21,7 @@
 package io.nut.base.util.concurrent.hive;
 
 import io.nut.base.util.concurrent.CallerWaitsPolicy;
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -123,7 +124,7 @@ public class Hive implements AutoCloseable, Executor
      */
     public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        BlockingQueue queue = queueCapacity==0 ? new SynchronousQueue() : new LinkedBlockingQueue(queueCapacity);
+        BlockingQueue<Runnable> queue = queueCapacity==0 ? new SynchronousQueue<>() : new LinkedBlockingQueue<>(queueCapacity);
         this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, rushPoolSize, keepAliveMillis, TimeUnit.MILLISECONDS, queue, callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY); 
     }
     
@@ -172,6 +173,7 @@ public class Hive implements AutoCloseable, Executor
      */
     public Hive add(Bee<?>... bees)
     {
+        Objects.requireNonNull(bees, "bees must not be null");
         for(Bee<?> item : bees)
         {
             item.setHive(this);
@@ -188,6 +190,7 @@ public class Hive implements AutoCloseable, Executor
     @Override
     public void execute(Runnable task)
     {
+        Objects.requireNonNull(task, "task must not be null");
         this.threadPoolExecutor.execute(task);
     }
 
@@ -294,23 +297,23 @@ public class Hive implements AutoCloseable, Executor
      * smaller than the current value, excess existing threads will be terminated
      * when they next become idle.
      *
-     * @param i the new core pool size
+     * @param cps the new core pool size
      * @throws IllegalArgumentException if i is less than zero or greater than the maximum pool size
      */
-    public void setCorePoolSize(int i)
+    public void setCorePoolSize(int cps)
     {
-        threadPoolExecutor.setCorePoolSize(i);
+        threadPoolExecutor.setCorePoolSize(cps);
     }
 
     /**
      * Sets the maximum number of threads allowed in the thread pool.
      *
-     * @param i the new maximum pool size
+     * @param mps the new maximum pool size
      * @throws IllegalArgumentException if i is less than zero or less than the core pool size
      */
-    public void setMaximumPoolSize(int i)
+    public void setMaximumPoolSize(int mps)
     {
-        threadPoolExecutor.setMaximumPoolSize(i);
+        threadPoolExecutor.setMaximumPoolSize(mps);
     }
 
     /**
