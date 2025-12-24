@@ -23,6 +23,7 @@ package io.nut.base.util.concurrent;
 import io.nut.base.util.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -109,6 +110,7 @@ public class GeneratorTest
         }
         Generator<Integer> x = numbers(99, 0);
     }
+    
     /**
      * Test of shutdown method, of class Generator.
      */
@@ -127,5 +129,14 @@ public class GeneratorTest
             Utils.sleep(100);
             instance.shutdown();
         }
+        instance.reset();
+        int count=0;
+        //run instance twice it should work
+        for (Character ch : instance)
+        {
+            count++;
+        }
+        instance.shutdown();
+        assertTrue(count>0);
     }
 }

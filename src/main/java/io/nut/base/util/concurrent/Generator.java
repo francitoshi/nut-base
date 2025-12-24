@@ -30,60 +30,129 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * An abstract base class that implements a Python-style Generator pattern in
+ * Java.
+ * <p>
+ * This class allows you to produce a sequence of elements lazily using the
+ * {@link #yield(Object)} method within the {@link #run()} implementation. The
+ * generation happens in a separate background thread, allowing the consumer to
+ * iterate over elements as they are produced.
+ * </p>
  *
- * @author franci
- * @param <E>
+ * <h3>Usage Example:</h3>
+ * <pre>{@code
+ * Generator<Integer> myGen = new Generator<>() 
+ * {
+ *     @Override
+ *     public void run() 
+ *     {
+ *         for (int i = 0; i < 10; i++) 
+ *         {
+ *             yield(i);
+ *         }
+ *     }
+ * };
+ *
+ * for (Integer val : myGen) 
+ * {
+ *     System.out.println(val);
+ * }</pre>
+ *
+ * @param <E> The type of elements generated.
  */
 public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
 {
+
+    /**
+     * Internal wrapper for elements to allow null values and sentinel markers
+     * within the BlockingQueue.
+     */
     static class Item<E>
     {
+
+        final E e;
+
         public Item(E e)
         {
             this.e = e;
         }
-        final E e;
     }
 
+    /**
+     * Sentinel object placed in the queue to signal that the generator has
+     * finished producing elements.
+     */
     static final Item POISON = new Item(null);
-
+    
+    private final String tag;
     private final BlockingQueue<Item<E>> queue;
     private volatile E nextElement = null;
     private volatile boolean terminated;
 
+    /**
+     * Creates a generator with a specific buffer capacity.
+     *
+     * @param capacity If 0, uses a {@link SynchronousQueue} (hand-off). If > 0,
+     * uses a {@link LinkedBlockingQueue} with the specified capacity.
+     */
     public Generator(int capacity)
     {
+        this.tag = this.getClass().getName()+".Generator";
         this.queue = capacity==0 ? new SynchronousQueue<>() : new LinkedBlockingQueue<>(capacity);
     }
 
+    /**
+     * Creates a generator with 0 capacity (synchronous hand-off). The producer
+     * thread will block on {@code yield} until a consumer calls {@code next}.
+     */
     public Generator()
     {
         this(0);
     }
     
+    /**
+     * Forces the generator to stop. Clears the internal queue and marks the
+     * generator as terminated.
+     */
     public void shutdown()
     {
         terminated = true;
         queue.clear();
     }
    
+    /**
+     * Checks if the generator has been shut down or has finished execution.
+     *
+     * @return true if terminated, false otherwise.
+     */
     public boolean isTerminated()
     {
         return terminated;
     }
     
+    /**
+     * Produces an element and sends it to the consumer. This method blocks if
+     * the internal queue is full.
+     *
+     * @param e The element to provide to the iterator.
+     * @throws IllegalStateException if called after the generator has been
+     * terminated.
+     */
     protected final void yield(E e)
     {
         this.yield(new Item<>(e));
     }
     
+    /**
+     * Internal yield mechanism to handle the wrapping {@link Item}.
+     */
     private void yield(Item<E> item)
     {
         try
         {
             if(terminated)
             {
-                throw new IllegalStateException();
+                throw new IllegalStateException("Generator is terminated");
             }
             this.queue.put(item);
         }
@@ -93,6 +162,12 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         }
     }
     
+    /**
+     * Starts the background generator thread and returns this instance as an
+     * Iterator.
+     *
+     * @return An iterator over the generated elements.
+     */
     @Override
     public final Iterator<E> iterator()
     {
@@ -100,6 +175,11 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         return this;
     }
 
+    /**
+     * Spawns the background thread that executes the {@link #run()} method.
+     * Automatically appends the {@link #POISON} pill when the run method
+     * completes to signal the end of the stream.
+     */
     private void executeRunnable()
     {
         new Thread(new Runnable() 
@@ -113,7 +193,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                 }
                 catch(IllegalStateException ex)
                 {
-                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, null, ex);
+                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, "Generator explicitly stopped", ex);
                 }
                 finally
                 {
@@ -128,9 +208,16 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                     }
                 }
             }
-        },"Generator").start();
+        }, tag).start();
     }
 
+    /**
+     * Checks if there is another element available. This method blocks until
+     * the background thread produces an item or finishes.
+     *
+     * @return true if an element is available, false if the generator has
+     * finished.
+     */
     @Override
     public boolean hasNext()
     {
@@ -163,6 +250,12 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         }
     }
 
+    /**
+     * Retrieves the next element from the generator.
+     *
+     * @return The next element.
+     * @throws NoSuchElementException if there are no more elements.
+     */
     @Override
     public E next()
     {
@@ -175,6 +268,13 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         return currentElement;
     }
 
+    /**
+     * A thread-safe version of the Generator. Synchronizes the {@code next()}
+     * and {@code hasNext()} methods to allow multiple threads to consume from
+     * the same generator.
+     *
+     * @param <E> The type of elements generated.
+     */
     public static abstract class Safe<E> extends Generator<E>
     {
         private final Object lock = new Object();
@@ -196,12 +296,17 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                 return super.hasNext();                
             }
         }
-        
     }
 
+    /**
+     * Collects all generated elements into an Object array. Note: This will
+     * block until the generator completes.
+     *
+     * @return An array containing all elements produced by this generator.
+     */
     public Object[] toArray()
     {
-        ArrayList<E> list = new ArrayList();
+        ArrayList<E> list = new ArrayList<>();
         for(E item : this)
         {
             list.add(item);
@@ -209,9 +314,16 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         return list.toArray();
     }
 
+    /**
+     * Collects all generated elements into a typed array. Note: This will block
+     * until the generator completes.
+     *
+     * @param array The array into which the elements are to be stored.
+     * @return An array containing all elements produced by this generator.
+     */
     public E[] toArray(E[] array)
     {
-        ArrayList<E> list = new ArrayList();
+        ArrayList<E> list = new ArrayList<>();
         for(E item : this)
         {
             list.add(item);
@@ -219,5 +331,15 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         return list.toArray(array);
     }
     
-    
+    /**
+     * Resets the internal state of the generator.
+     * <b>Note:</b> This does not restart the background thread if it is already
+     * running.
+     */
+    public void reset()
+    {
+        this.terminated=false;
+        this.queue.clear();
+        this.nextElement = null;
+    }
 }
