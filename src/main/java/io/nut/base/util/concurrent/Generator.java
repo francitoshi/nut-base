@@ -56,6 +56,7 @@ import java.util.logging.Logger;
  * for (Integer val : myGen) 
  * {
  *     System.out.println(val);
+ * }
  * }</pre>
  *
  * @param <E> The type of elements generated.

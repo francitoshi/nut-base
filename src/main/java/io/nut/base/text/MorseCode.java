@@ -32,152 +32,152 @@ import java.util.HashMap;
 public class MorseCode
 {
 
-    static final int gap=0;         //1u
-    static final int dit=1;         //1u
-    static final int dah=2;         //3u
-    static final int gap_letter=3;  //3u
-    static final int gap_word=4;    //7u
-    static final int gap_error=5;
+    static final int GAP=0;         //1u
+    static final int DIT=1;         //1u
+    static final int DAH=2;         //3u
+    static final int GAP_LETTER=3;  //3u
+    static final int GAP_WORD=4;    //7u
+    static final int GAP_ERROR=5;
     
-    static final int[] units5 = {1,1,3,3,5};
-    static final int[] units7 = {1,1,3,3,7};
+    static final int[] UNITS5 = {1,1,3,3,5};
+    static final int[] UNITS7 = {1,1,3,3,7};
     static final String[] TEXTS_NORMAL = {" ","•","–","   ","       "};
     static final String[] TEXTS_BRIEF = {"","•","–"," ","  "};
     
     static final int[][] LETTERS =
     {
-        {'A', dit, dah },
-        {'B', dah, dit, dit, dit },
-        {'C', dah, dit, dah, dit },
-        {'D', dah, dit, dit },
-        {'E', dit },
-        {'F', dit, dit, dah, dit },
-        {'G', dah, dah, dit },
-        {'H', dit, dit, dit, dit },
-        {'I', dit, dit },
-        {'J', dit, dah, dah, dah },
-        {'K', dah, dit, dah },
-        {'L', dit, dah, dit, dit },
-        {'M', dah, dah },
-        {'N', dah, dit },
-        {'O', dah, dah, dah },
-        {'P', dit, dah, dah, dit },
-        {'Q', dah, dah, dit, dah },
-        {'R', dit, dah, dit },
-        {'S', dit, dit, dit },
-        {'T', dah },
-        {'U', dit, dit, dah },
-        {'V', dit, dit, dit, dah },
-        {'W', dit, dah, dah },
-        {'X', dah, dit, dit, dah },
-        {'Y', dah, dit, dah, dah },
-        {'Z', dah, dah, dit, dit },
+        {'A', DIT, DAH },
+        {'B', DAH, DIT, DIT, DIT },
+        {'C', DAH, DIT, DAH, DIT },
+        {'D', DAH, DIT, DIT },
+        {'E', DIT },
+        {'F', DIT, DIT, DAH, DIT },
+        {'G', DAH, DAH, DIT },
+        {'H', DIT, DIT, DIT, DIT },
+        {'I', DIT, DIT },
+        {'J', DIT, DAH, DAH, DAH },
+        {'K', DAH, DIT, DAH },
+        {'L', DIT, DAH, DIT, DIT },
+        {'M', DAH, DAH },
+        {'N', DAH, DIT },
+        {'O', DAH, DAH, DAH },
+        {'P', DIT, DAH, DAH, DIT },
+        {'Q', DAH, DAH, DIT, DAH },
+        {'R', DIT, DAH, DIT },
+        {'S', DIT, DIT, DIT },
+        {'T', DAH },
+        {'U', DIT, DIT, DAH },
+        {'V', DIT, DIT, DIT, DAH },
+        {'W', DIT, DAH, DAH },
+        {'X', DAH, DIT, DIT, DAH },
+        {'Y', DAH, DIT, DAH, DAH },
+        {'Z', DAH, DAH, DIT, DIT },
     };
     static final int[][] LETTERS_EXTRA=
             {
-        {'Ä', dit, dah, dit, dah },
-        {'Á', dit, dah, dah, dit, dah },
-        {'Å', dit, dah, dah, dit, dah },
+        {'Ä', DIT, DAH, DIT, DAH },
+        {'Á', DIT, DAH, DAH, DIT, DAH },
+        {'Å', DIT, DAH, DAH, DIT, DAH },
         //{'Ch',dah, dah, dah, dah },
-        {'É', dit, dit, dah, dit, dit },
-        {'Ñ', dah, dah, dit, dah, dah },
-        {'Ö', dah, dah, dah, dit },
-        {'Ü', dit, dit, dah, dah },
+        {'É', DIT, DIT, DAH, DIT, DIT },
+        {'Ñ', DAH, DAH, DIT, DAH, DAH },
+        {'Ö', DAH, DAH, DAH, DIT },
+        {'Ü', DIT, DIT, DAH, DAH },
     };
     static final int[][] NUMBERS =
     {
-        {'1', dit, dah, dah, dah, dah },
-        {'2', dit, dit, dah, dah, dah },
-        {'3', dit, dit, dit, dah, dah },
-        {'4', dit, dit, dit, dit, dah },
-        {'5', dit, dit, dit, dit, dit },
-        {'6', dah, dit, dit, dit, dit },
-        {'7', dah, dah, dit, dit, dit },
-        {'8', dah, dah, dah, dit, dit },
-        {'9', dah, dah, dah, dah, dit },
-        {'0', dah, dah, dah, dah, dah },
+        {'1', DIT, DAH, DAH, DAH, DAH },
+        {'2', DIT, DIT, DAH, DAH, DAH },
+        {'3', DIT, DIT, DIT, DAH, DAH },
+        {'4', DIT, DIT, DIT, DIT, DAH },
+        {'5', DIT, DIT, DIT, DIT, DIT },
+        {'6', DAH, DIT, DIT, DIT, DIT },
+        {'7', DAH, DAH, DIT, DIT, DIT },
+        {'8', DAH, DAH, DAH, DIT, DIT },
+        {'9', DAH, DAH, DAH, DAH, DIT },
+        {'0', DAH, DAH, DAH, DAH, DAH },
     };
     static final int[][] PUNCTUATION =
     {
-        {'.', dit, dah, dit, dah, dit, dah },
-        {',', dah, dah, dit, dit, dah, dah },
-        {':', dah, dah, dah, dit, dit, dit },       //Colon 
-        {'?', dit, dit, dah, dah, dit, dit },
-        {'\'',dit, dah, dah, dah, dah, dit },
-        {'!', dah, dit, dah, dit, dah, dah },       //Exclamation mark 
-        {'/', dah, dit, dit, dah, dit },            //Slash
-        {'(', dah, dit, dah, dah, dit},
-        {')', dah, dit, dah, dah, dit, dah },
-        {';', dah, dit, dah, dit, dah, dit },       //Semicolon
-        {'-', dah, dit, dit, dit, dit, dah },       //Hyphen, Minus 
-        {'"', dit, dah, dit, dit, dah, dit },       //Quotation mark
-        {'@', dit, dah, dah, dit, dah, dit },       //(=A+C)
-        {'=', dah, dit, dit, dit, dah },            //Double dash
-        {'+', dit, dah, dit, dah, dit },            //Plus 
-        {'_', dit, dit, dah, dah, dit, dah },       //Underscore 
-        {'$', dit, dit, dit, dah, dit, dit, dah },  //Dollar sign
-        {'&', dit, dah, dit, dit, dit }             //Ampersand, Wait
+        {'.', DIT, DAH, DIT, DAH, DIT, DAH },
+        {',', DAH, DAH, DIT, DIT, DAH, DAH },
+        {':', DAH, DAH, DAH, DIT, DIT, DIT },       //Colon 
+        {'?', DIT, DIT, DAH, DAH, DIT, DIT },
+        {'\'',DIT, DAH, DAH, DAH, DAH, DIT },
+        {'!', DAH, DIT, DAH, DIT, DAH, DAH },       //Exclamation mark 
+        {'/', DAH, DIT, DIT, DAH, DIT },            //Slash
+        {'(', DAH, DIT, DAH, DAH, DIT},
+        {')', DAH, DIT, DAH, DAH, DIT, DAH },
+        {';', DAH, DIT, DAH, DIT, DAH, DIT },       //Semicolon
+        {'-', DAH, DIT, DIT, DIT, DIT, DAH },       //Hyphen, Minus 
+        {'"', DIT, DAH, DIT, DIT, DAH, DIT },       //Quotation mark
+        {'@', DIT, DAH, DAH, DIT, DAH, DIT },       //(=A+C)
+        {'=', DAH, DIT, DIT, DIT, DAH },            //Double dash
+        {'+', DIT, DAH, DIT, DAH, DIT },            //Plus 
+        {'_', DIT, DIT, DAH, DAH, DIT, DAH },       //Underscore 
+        {'$', DIT, DIT, DIT, DAH, DIT, DIT, DAH },  //Dollar sign
+        {'&', DIT, DAH, DIT, DIT, DIT }             //Ampersand, Wait
 };
     static final int[][] NON_LATIN =
     {
-        {'Ä', dit, dah, dit, dah },
-        {'Æ', dit, dah, dit, dah },
-        {'Ą', dit, dah, dit, dah },
-        {'È', dit, dah, dit, dit, dah },
-        {'Ł', dit, dah, dit, dit, dah },
-        {'Ñ', dah, dah, dit, dah, dah }, 
-        {'Ń', dah, dah, dit, dah, dah },
-        {'À', dit, dah, dah, dit, dah },
-        {'Å', dit, dah, dah, dit, dah },
-        {'É', dit, dit, dah, dit, dit },
-        {'Đ', dit, dit, dah, dit, dit },
-        {'Ę', dit, dit, dah, dit, dit },        
-        {'Ö', dah, dah, dah, dit },
-        {'Ø', dah, dah, dah, dit },
-        {'Ó', dah, dah, dah, dit },
-        {'Ç', dah, dit, dah, dit, dit },
-        {'Ĉ', dah, dit, dah, dit, dit },
-        {'Ć', dah, dit, dah, dit, dit },
-        {'Ĝ', dah, dah, dit, dah, dit },	
-        {'Ŝ', dit, dit, dit, dah, dit },	        
+        {'Ä', DIT, DAH, DIT, DAH },
+        {'Æ', DIT, DAH, DIT, DAH },
+        {'Ą', DIT, DAH, DIT, DAH },
+        {'È', DIT, DAH, DIT, DIT, DAH },
+        {'Ł', DIT, DAH, DIT, DIT, DAH },
+        {'Ñ', DAH, DAH, DIT, DAH, DAH }, 
+        {'Ń', DAH, DAH, DIT, DAH, DAH },
+        {'À', DIT, DAH, DAH, DIT, DAH },
+        {'Å', DIT, DAH, DAH, DIT, DAH },
+        {'É', DIT, DIT, DAH, DIT, DIT },
+        {'Đ', DIT, DIT, DAH, DIT, DIT },
+        {'Ę', DIT, DIT, DAH, DIT, DIT },        
+        {'Ö', DAH, DAH, DAH, DIT },
+        {'Ø', DAH, DAH, DAH, DIT },
+        {'Ó', DAH, DAH, DAH, DIT },
+        {'Ç', DAH, DIT, DAH, DIT, DIT },
+        {'Ĉ', DAH, DIT, DAH, DIT, DIT },
+        {'Ć', DAH, DIT, DAH, DIT, DIT },
+        {'Ĝ', DAH, DAH, DIT, DAH, DIT },	
+        {'Ŝ', DIT, DIT, DIT, DAH, DIT },	        
         //{'ch', dah, dah, dah, dah },
-        {'Š', dah, dah, dah, dah },       
-        {'Ĥ', dah, dah, dah, dah },	//obsolete version was – · – – · 
-        {'Þ', dit, dah, dah, dit, dit }, // ("Thorn")	
-        {'Ð', dit, dit, dah, dah, dit }, // ("Eth")
-        {'Ĵ', dit, dah, dah, dah, dit },	
-        {'Ü', dit, dit, dah, dah },	
-        {'Ŭ', dit, dit, dah, dah },	
-        {'Ś', dit, dit, dit, dah, dit, dit, dit },	
-        {'Ź', dah, dah, dit, dit, dah, dit },	
-        {'Ż', dah, dah, dit, dit, dah },
+        {'Š', DAH, DAH, DAH, DAH },       
+        {'Ĥ', DAH, DAH, DAH, DAH },	//obsolete version was – · – – · 
+        {'Þ', DIT, DAH, DAH, DIT, DIT }, // ("Thorn")	
+        {'Ð', DIT, DIT, DAH, DAH, DIT }, // ("Eth")
+        {'Ĵ', DIT, DAH, DAH, DAH, DIT },	
+        {'Ü', DIT, DIT, DAH, DAH },	
+        {'Ŭ', DIT, DIT, DAH, DAH },	
+        {'Ś', DIT, DIT, DIT, DAH, DIT, DIT, DIT },	
+        {'Ź', DAH, DAH, DIT, DIT, DAH, DIT },	
+        {'Ż', DAH, DAH, DIT, DIT, DAH },
     };
     static final int[][] GREEK =
     {
-        {'Α', dit, dah },             // A	
-        {'Β', dah, dit, dit, dit },   // B	
-        {'Δ', dah, dit, dit },        // D	
-        {'Γ', dah, dah, dit },        // G
-        {'Ε', dit },                  // E	
-        {'Ζ', dah, dah, dit, dit },   // Z	
-        {'Η', dit, dit, dit, dit },   // H	
-        {'Θ', dah, dit, dah, dit },   // C	
-        {'Ι', dit, dit },             // I	
-        {'Κ', dah, dit, dah },        // K	
-        {'Λ', dit, dah, dit, dit },   // L	
-        {'Μ', dah, dah },             // M	
-        {'Ν', dah, dit },             // N	
-        {'Ξ', dah, dit, dit, dah, },  // X	
-        {'Ο', dah, dah, dah, },       // O	
-        {'Π', dit, dah, dah, dit },   // P	
-        {'Ρ', dit, dah, dit },        // R	
-        {'Σ', dit, dit, dit },        // S	
-        {'Τ', dah },                  // T	
-        {'Υ', dah, dit, dah, dah },   // Y	
-        {'Φ', dit, dit, dah, dit },   // F	
-        {'Χ', dah, dah, dah, dah },   // CH	
-        {'Ψ', dah, dah, dit, dah },   // Q	
-        {'Ω', dit, dah, dah },        // W	
+        {'Α', DIT, DAH },             // A	
+        {'Β', DAH, DIT, DIT, DIT },   // B	
+        {'Δ', DAH, DIT, DIT },        // D	
+        {'Γ', DAH, DAH, DIT },        // G
+        {'Ε', DIT },                  // E	
+        {'Ζ', DAH, DAH, DIT, DIT },   // Z	
+        {'Η', DIT, DIT, DIT, DIT },   // H	
+        {'Θ', DAH, DIT, DAH, DIT },   // C	
+        {'Ι', DIT, DIT },             // I	
+        {'Κ', DAH, DIT, DAH },        // K	
+        {'Λ', DIT, DAH, DIT, DIT },   // L	
+        {'Μ', DAH, DAH },             // M	
+        {'Ν', DAH, DIT },             // N	
+        {'Ξ', DAH, DIT, DIT, DAH, },  // X	
+        {'Ο', DAH, DAH, DAH, },       // O	
+        {'Π', DIT, DAH, DAH, DIT },   // P	
+        {'Ρ', DIT, DAH, DIT },        // R	
+        {'Σ', DIT, DIT, DIT },        // S	
+        {'Τ', DAH },                  // T	
+        {'Υ', DAH, DIT, DAH, DAH },   // Y	
+        {'Φ', DIT, DIT, DAH, DIT },   // F	
+        {'Χ', DAH, DAH, DAH, DAH },   // CH	
+        {'Ψ', DAH, DAH, DIT, DAH },   // Q	
+        {'Ω', DIT, DAH, DAH },        // W	
     };
     static final int[][] CYRILLIC =
     {
@@ -479,7 +479,7 @@ public class MorseCode
         //fill gaps
         for(int i=1;i<code.length;i+=2)
         {
-            code[i]=gap;
+            code[i]=GAP;
         }
         //fill dits and dah
         for(int i=0,j=1;i<code.length;i+=2,j++)
@@ -535,7 +535,7 @@ public class MorseCode
 
         //---------------------------------------------------------
 
-        this.units =  wg5u ? units5 : units7;
+        this.units =  wg5u ? UNITS5 : UNITS7;
         
         for(int[] item : LETTERS)
         {
@@ -601,8 +601,8 @@ public class MorseCode
     }
     public int[] pattern(String s, boolean endWithWordGap)
     {
-        final int lgap = units[gap_letter]* sbase;
-        final int wgap = units[gap_word]  * sbase;
+        final int lgap = units[GAP_LETTER]* sbase;
+        final int wgap = units[GAP_WORD]  * sbase;
         
         boolean lastWasWhitespace=true;
         
@@ -691,7 +691,7 @@ public class MorseCode
 
     public int[] prosign(String s, boolean endWithWordGap)
     {
-        final int wgap = units[gap_word] * sbase;
+        final int wgap = units[GAP_WORD] * sbase;
 
         int count=1;
         int size = s.length();

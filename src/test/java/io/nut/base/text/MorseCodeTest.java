@@ -20,6 +20,8 @@
  */
 package io.nut.base.text;
 
+import io.nut.base.util.Strings;
+import java.util.Arrays;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -109,6 +111,17 @@ public class MorseCodeTest
         assertArrayEquals(abc, mc.pattern("abc xyz pq mn 0123456789."));
         assertArrayEquals(txt, mc.pattern("aeiou abcdefghijklmnopqrstuvwxyz 0123456789 1 22 333 4444 55555 666666 7777777 88888888 999999999"));
         
+        String paris20 = Strings.repeat("paris ", 20);
+        int[] paris = mc.pattern(paris20);
+        System.out.println("paris="+Arrays.toString(paris));
+        int total = 0;
+        for(int i : paris)
+        {
+            total += i;
+        }
+        System.out.println("total="+total);
+        
+            
     }
     static int[] pattern12to20(int[] pattern12)
     {
