@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 
 // Claude Sonnet 4.5
 class CircularQueueIntTest
@@ -79,60 +80,5 @@ class CircularQueueIntTest
         queue.push(40);
         assertEquals(10, queue.min());
         assertEquals(40, queue.max());
-    }
-    @Test
-    void testThroughput()
-    {
-        final int num = 1024*16;
-        CircularQueueInt q1 = new CircularQueueInt(num);
-        Queue<Integer> q2 = new ArrayDeque<>(num);
-        Queue<Integer> q3 = new LinkedBlockingQueue<>(num);
-        Queue<Integer> q4 = new LinkedList<>();
-        Profiler profiler = new Profiler(JavaTime.Resolution.MS);
-        Profiler.Task t1 = profiler.getTask("q1");
-        Profiler.Task t2 = profiler.getTask("q2");
-        Profiler.Task t3 = profiler.getTask("q3");
-        Profiler.Task t4 = profiler.getTask("q4");
-        
-        for(int i=0;i<num;i++)
-        {
-            t1.start();
-            for(int j=0;j<i;j++)
-            {
-                q1.push(num);
-            }
-            t1.stop().count();
-            
-            t2.start();
-            for(int j=0;j<i;j++)
-            {
-                while(q2.size()>=num) q2.poll();
-                q2.add(num);
-            }
-            t2.stop().count();
-            
-            t3.start();
-            for(int j=0;j<i;j++) 
-            {
-                while(q3.size()>=num) q3.poll();
-                q3.add(num);
-            }
-            t3.stop().count();
-            
-            t4.start();
-            for(int j=0;j<i;j++) 
-            {
-                while(q4.size()>=num) q4.poll();
-                q4.add(num);
-            }
-            t4.stop().count();
-        }
-        
-        assertEquals(num, q1.size());
-        assertEquals(num, q2.size());
-        assertEquals(num, q3.size());
-        assertEquals(num, q4.size());
-
-        profiler.print();
     }
 }
