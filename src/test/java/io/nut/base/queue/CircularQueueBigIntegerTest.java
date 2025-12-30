@@ -20,6 +20,7 @@
  */
 package io.nut.base.queue;
 
+import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,7 +63,7 @@ class CircularQueueBigIntegerTest
         queue.push(new BigInteger("30"));
         queue.push(new BigInteger("60"));
         queue.push(new BigInteger("90"));
-        assertEquals(new BigInteger("60"), queue.average());
+        assertEquals(new BigDecimal("60"), queue.average());
     }
 
     @Test

@@ -245,4 +245,102 @@ public class CircularQueueBigDecimal
         }
         return buffer[(head + n) % capacity];
     }
+    
+    public static CircularQueueBigDecimal getSynchronized(CircularQueueBigDecimal queue)
+    {
+        return new CircularQueueBigDecimal(queue.capacity)
+        {
+            final Object lock = new Object();
+            @Override
+            public BigDecimal get(int n)
+            {
+                synchronized(lock)
+                {
+                    return super.get(n);
+                }
+            }
+
+            @Override
+            public BigDecimal max()
+            {
+                synchronized(lock)
+                {
+                    return super.max();
+                }
+            }
+
+            @Override
+            public BigDecimal min()
+            {
+                synchronized(lock)
+                {
+                    return super.min();
+                }
+            }
+
+            @Override
+            public BigDecimal sum()
+            {
+                synchronized(lock)
+                {
+                    return super.sum();
+                }
+            }
+
+            @Override
+            public BigDecimal average()
+            {
+                synchronized(lock)
+                {
+                    return super.average();
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public BigDecimal[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<BigDecimal> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
+            public BigDecimal pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
+            @Override
+            public BigDecimal push(BigDecimal value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+            
+        };
+    }    
 }

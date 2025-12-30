@@ -20,6 +20,7 @@
  */
 package io.nut.base.queue;
 
+import java.util.function.Consumer;
 import java.util.function.DoubleConsumer;
 
 // Claude Sonnet 4.5
@@ -158,4 +159,103 @@ public class CircularQueueDouble
         }
         return buffer[(head + n) % capacity];
     }
+    
+    public static CircularQueueDouble getSynchronized(CircularQueueDouble queue)
+    {
+        return new CircularQueueDouble(queue.capacity)
+        {
+            final Object lock = new Object();
+            @Override
+            public double get(int n)
+            {
+                synchronized(lock)
+                {
+                    return super.get(n);
+                }
+            }
+
+            @Override
+            public double max()
+            {
+                synchronized(lock)
+                {
+                    return super.max();
+                }
+            }
+
+            @Override
+            public double min()
+            {
+                synchronized(lock)
+                {
+                    return super.min();
+                }
+            }
+
+            @Override
+            public double sum()
+            {
+                synchronized(lock)
+                {
+                    return super.sum();
+                }
+            }
+
+            @Override
+            public double average()
+            {
+                synchronized(lock)
+                {
+                    return super.average();
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public double[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(DoubleConsumer consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
+            public double pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
+            @Override
+            public double push(double value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+            
+        };
+    }
+    
 }

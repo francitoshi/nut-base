@@ -239,4 +239,102 @@ public class CircularQueueShort
         }
         return buffer[(head + n) % capacity];
     }
+
+    public static CircularQueueShort getSynchronized(CircularQueueShort queue)
+    {
+        return new CircularQueueShort(queue.capacity)
+        {
+            final Object lock = new Object();
+            @Override
+            public short get(int n)
+            {
+                synchronized(lock)
+                {
+                    return super.get(n);
+                }
+            }
+
+            @Override
+            public short max()
+            {
+                synchronized(lock)
+                {
+                    return super.max();
+                }
+            }
+
+            @Override
+            public short min()
+            {
+                synchronized(lock)
+                {
+                    return super.min();
+                }
+            }
+
+            @Override
+            public long sum()
+            {
+                synchronized(lock)
+                {
+                    return super.sum();
+                }
+            }
+
+            @Override
+            public double average()
+            {
+                synchronized(lock)
+                {
+                    return super.average();
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public short[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<Short> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
+            public short pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
+            @Override
+            public short push(short value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+            
+        };
+    }
 }

@@ -20,6 +20,7 @@
  */
 package io.nut.base.queue;
 
+import java.util.function.Consumer;
 import java.util.function.LongConsumer;
 
 // Claude Sonnet 4.5
@@ -145,7 +146,7 @@ public class CircularQueueLong
         {
             return 0;
         }
-        return (double) sum() / size;
+        return sum() / (double) size;
     }
 
     /**
@@ -228,4 +229,103 @@ public class CircularQueueLong
         }
         return buffer[(head + n) % capacity];
     }
+    
+    public static CircularQueueLong getSynchronized(CircularQueueLong queue)
+    {
+        return new CircularQueueLong(queue.capacity)
+        {
+            final Object lock = new Object();
+            @Override
+            public long get(int n)
+            {
+                synchronized(lock)
+                {
+                    return super.get(n);
+                }
+            }
+
+            @Override
+            public long max()
+            {
+                synchronized(lock)
+                {
+                    return super.max();
+                }
+            }
+
+            @Override
+            public long min()
+            {
+                synchronized(lock)
+                {
+                    return super.min();
+                }
+            }
+
+            @Override
+            public long sum()
+            {
+                synchronized(lock)
+                {
+                    return super.sum();
+                }
+            }
+
+            @Override
+            public double average()
+            {
+                synchronized(lock)
+                {
+                    return super.average();
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public long[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(LongConsumer consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
+            public long pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
+            @Override
+            public long push(long value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+            
+        };
+    }
+    
 }

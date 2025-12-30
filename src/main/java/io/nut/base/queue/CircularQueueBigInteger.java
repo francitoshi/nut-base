@@ -20,6 +20,7 @@
  */
 package io.nut.base.queue;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.function.Consumer;
 
@@ -150,13 +151,13 @@ public class CircularQueueBigInteger
      *
      * @return the average of the elements, or {@code BigInteger.ZERO} if the queue is empty.
      */
-    public BigInteger average()
+    public BigDecimal average()
     {
         if (size == 0)
         {
-            return BigInteger.ZERO;
+            return BigDecimal.ZERO;
         }
-        return sum().divide(BigInteger.valueOf(size));
+        return new BigDecimal(sum()).divide(BigDecimal.valueOf(size));
     }
 
     /**
@@ -222,5 +223,103 @@ public class CircularQueueBigInteger
             return null;
         }
         return buffer[(head + n) % capacity];
+    }
+    
+    public static CircularQueueBigInteger getSynchronized(CircularQueueBigInteger queue)
+    {
+        return new CircularQueueBigInteger(queue.capacity)
+        {
+            final Object lock = new Object();
+            @Override
+            public BigInteger get(int n)
+            {
+                synchronized(lock)
+                {
+                    return super.get(n);
+                }
+            }
+
+            @Override
+            public BigInteger max()
+            {
+                synchronized(lock)
+                {
+                    return super.max();
+                }
+            }
+
+            @Override
+            public BigInteger min()
+            {
+                synchronized(lock)
+                {
+                    return super.min();
+                }
+            }
+
+            @Override
+            public BigInteger sum()
+            {
+                synchronized(lock)
+                {
+                    return super.sum();
+                }
+            }
+
+            @Override
+            public BigDecimal average()
+            {
+                synchronized(lock)
+                {
+                    return super.average();
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public BigInteger[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<BigInteger> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
+            public BigInteger pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
+            @Override
+            public BigInteger push(BigInteger value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+            
+        };
     }
 }

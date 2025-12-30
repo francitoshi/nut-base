@@ -20,11 +20,6 @@
  */
 package io.nut.base.queue;
 
-import java.util.Comparator;
-import java.util.function.Consumer;
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Arrays;
 
 // Claude Sonnet 4.5
 import java.util.ArrayList;
@@ -304,5 +299,85 @@ public class CircularQueue<T>
             return null;
         }
         return buffer.get((head + n) % capacity);
+    }
+
+    public static <E> CircularQueue<E> getSynchronized(CircularQueue<E> queue)
+    {
+        return new CircularQueue<E>(queue.capacity)
+        {
+            final Object lock = new Object();
+            @Override
+            public E get(int n)
+            {
+                synchronized(lock)
+                {
+                    return super.get(n);
+                }
+            }
+
+            @Override
+            public E max()
+            {
+                synchronized(lock)
+                {
+                    return super.max();
+                }
+            }
+
+            @Override
+            public E min()
+            {
+                synchronized(lock)
+                {
+                    return super.min();
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public E[] array(E[] e)
+            {
+                synchronized(lock)
+                {
+                    return super.array(e);
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<E> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
+            public E pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
+            @Override
+            public E push(E value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+            
+        };
     }
 }
