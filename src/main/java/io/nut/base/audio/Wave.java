@@ -1,7 +1,7 @@
 /*
  * Wave.java
  *
- * Copyright (c) 2025 francitoshi@gmail.com
+ * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -415,4 +415,14 @@ public abstract class Wave
 
         return uval;
     }
+    
+    public static double[] hanningWindow(double[] window)
+    {
+        for (int i = 0; i < window.length; i++)
+        {
+            window[i] = 0.5 * (1 - Math.cos(2 * Math.PI * i / (window.length - 1)));
+        }
+        return window;
+    }
+    
 }

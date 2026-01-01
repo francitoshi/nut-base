@@ -1,7 +1,7 @@
 /*
  * Audio.java
  *
- * Copyright (c) 2025 francitoshi@gmail.com
+ * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,10 @@
  */
 package io.nut.base.audio;
 
+import io.nut.base.util.Java;
+import java.io.File;
 import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioFormat.Encoding;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
@@ -132,6 +135,37 @@ public class Audio
         }
         return AudioSystem.getAudioInputStream(dstFmt, src);
     }
+        
+    public static AudioFormat getFloatMono(AudioFormat fmt, boolean bigEndian)
+    {
+        Encoding encoding = fmt.getEncoding();
+        float sampleRate = fmt.getSampleRate();
+        int sampleSizeInBits = fmt.getSampleSizeInBits();
+        int channels = fmt.getChannels();
+        
+        if(encoding.equals(Encoding.PCM_FLOAT) && channels==1 && sampleSizeInBits==Java.FLOAT_BITS && bigEndian==fmt.isBigEndian())
+        {
+            return fmt;
+        }
+        float frameRate = fmt.getFrameRate();
+        return new AudioFormat(Encoding.PCM_FLOAT, sampleRate, Java.FLOAT_BITS, 1, Float.BYTES, frameRate, bigEndian);
+    }
+    
+    public static AudioFormat getDoubleMono(AudioFormat fmt, boolean bigEndian)
+    {
+        Encoding encoding = fmt.getEncoding();
+        float sampleRate = fmt.getSampleRate();
+        int sampleSizeInBits = fmt.getSampleSizeInBits();
+        int channels = fmt.getChannels();
+        
+        if(encoding.equals(Encoding.PCM_FLOAT) && channels==1 && sampleSizeInBits==Java.DOUBLE_BITS &&  bigEndian==fmt.isBigEndian())
+        {
+            return fmt;
+        }
+        float frameRate = fmt.getFrameRate();
+        return new AudioFormat(Encoding.PCM_FLOAT, sampleRate, Java.DOUBLE_BITS, 1, Double.BYTES, frameRate, false);
+    }
+
 
     /**
      * Calculates the number of bytes required to hold a specific duration of audio.

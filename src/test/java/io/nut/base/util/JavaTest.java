@@ -1,7 +1,7 @@
 /*
  *  Java.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -62,6 +62,19 @@ public class JavaTest
     public void testSomeMethod()
     {
         assertEquals(8, Java.JAVA_INT_VERSION);
+    }
+    
+    @Test
+    public void testBitsConstants()
+    {
+        assertEquals(8, Java.BYTE_BITS);
+        assertEquals(16, Java.SHORT_BITS);
+        assertEquals(16, Java.CHAR_BITS);
+        assertEquals(32, Java.INT_BITS);
+        assertEquals(64, Java.LONG_BITS);
+        assertEquals(32, Java.FLOAT_BITS);
+        assertEquals(64, Java.DOUBLE_BITS);
+
     }
     
 }

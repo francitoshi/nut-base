@@ -1,7 +1,7 @@
 /*
  * AudioTest.java
  *
- * Copyright (c) 2025 francitoshi@gmail.com
+ * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,8 +20,50 @@
  */
 package io.nut.base.audio;
 
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.zip.GZIPInputStream;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import org.junit.jupiter.api.Test;
+
 public class AudioTest
 {
-
+    @Test
+    public void testGetFloatMono() throws LineUnavailableException, IOException, UnsupportedAudioFileException
+    {        
+        InputStream in = new BufferedInputStream(new GZIPInputStream(AudioTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz")));
+        AudioInputStream ais = AudioSystem.getAudioInputStream(in);
+        AudioFormat fmt = Audio.getFloatMono(ais.getFormat(), false);
+        try (AudioInputStream mono = Audio.getAudioInputStream(ais, fmt))
+        {
+            byte[] buffer = new byte[(int)(fmt.getSampleRate()*Float.BYTES)];
+            while(mono.available()>0)
+            {
+                mono.read(buffer);
+            }
+        }
+    }
+    
+    @Test
+    public void testGetDoubleMono() throws LineUnavailableException, IOException, UnsupportedAudioFileException
+    {        
+        InputStream in = new BufferedInputStream(new GZIPInputStream(AudioTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz")));
+        AudioInputStream ais = AudioSystem.getAudioInputStream(in);
+        AudioFormat fmt = Audio.getDoubleMono(ais.getFormat(), false);
+        try (AudioInputStream mono = Audio.getAudioInputStream(ais, fmt))
+        {
+            byte[] buffer = new byte[(int)(fmt.getSampleRate()*Double.BYTES)];
+            while(mono.available()>0)
+            {
+                mono.read(buffer);
+            }
+        }
+    }
+    
     
 }

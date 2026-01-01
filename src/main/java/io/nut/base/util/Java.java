@@ -1,7 +1,7 @@
 /*
  *  Java.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -50,5 +50,13 @@ public class Java
     public static final String USER_HOME = System.getProperty("user.home", null);
     public static final String USER_DIR = System.getProperty("user.dir", null);
     public static final String JAVA_CLASS_PATH = System.getProperty("java.class.path", null);
+    
+    public static int BYTE_BITS = 8;
+    public static int SHORT_BITS = Short.BYTES * 8;
+    public static int CHAR_BITS = Character.BYTES * 8;
+    public static int INT_BITS = Integer.BYTES * 8;
+    public static int LONG_BITS = Long.BYTES * 8;
+    public static int FLOAT_BITS = Float.BYTES * 8;
+    public static int DOUBLE_BITS = Double.BYTES * 8;
     
 }
