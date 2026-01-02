@@ -64,6 +64,23 @@ public class AudioTest
             }
         }
     }
-    
+
+    /**
+     * Test of getAudioInputStream method, of class Audio.
+     */
+    @Test
+    public void testGetAudioInputStream_InputStream() throws Exception
+    {
+        InputStream src = new GZIPInputStream(AudioTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz"));
+
+        try (AudioInputStream ais = Audio.getAudioInputStream(src))
+        {
+            byte[] buffer = new byte[(int)(ais.getFormat().getSampleRate()*Double.BYTES)];
+            while(ais.available()>0)
+            {
+                ais.read(buffer);
+            }
+        }
+    }
     
 }

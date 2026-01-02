@@ -21,7 +21,11 @@
 package io.nut.base.audio;
 
 import io.nut.base.util.Java;
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioFormat.Encoding;
 import javax.sound.sampled.AudioInputStream;
@@ -29,6 +33,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
 
 /**
  * Utility class for managing audio formats, hardware lines, and stream conversions
@@ -136,6 +141,27 @@ public class Audio
         return AudioSystem.getAudioInputStream(dstFmt, src);
     }
         
+    public static AudioInputStream getAudioInputStream(TargetDataLine line)
+    {
+        return new AudioInputStream(line);
+    }
+    
+    public static AudioInputStream getAudioInputStream(TargetDataLine line, AudioFormat dstFmt)
+    {
+        return getAudioInputStream(new AudioInputStream(line), dstFmt);
+    }
+        
+    public static AudioInputStream getAudioInputStream(InputStream input) throws UnsupportedAudioFileException, IOException
+    {
+        input = (input instanceof BufferedInputStream) ? input : new BufferedInputStream(input);
+        return AudioSystem.getAudioInputStream(input);
+    }
+    
+    public static AudioInputStream getAudioInputStream(File file) throws UnsupportedAudioFileException, IOException
+    {
+        return getAudioInputStream(new FileInputStream(file));
+    }
+    
     public static AudioFormat getFloatMono(AudioFormat fmt, boolean bigEndian)
     {
         Encoding encoding = fmt.getEncoding();

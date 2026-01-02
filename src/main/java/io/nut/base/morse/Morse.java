@@ -23,6 +23,7 @@ package io.nut.base.morse;
 import static io.nut.base.text.MorseCode.FLAG_WG5U;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.StringJoiner;
@@ -152,6 +153,7 @@ public class Morse
 
     public final int ditMillis;
     public final int dahMillis;
+    public final int gapMillis;
     public final int charGapMillis;
     public final int wordGapMillis;
     
@@ -192,6 +194,7 @@ public class Morse
 
         this.ditMillis = c * DIT;
         this.dahMillis = c * DAH;
+        this.gapMillis = s;
         this.charGapMillis = s * 3;
         this.wordGapMillis = s * (wg5u ? 5 : 7);
         
@@ -293,6 +296,38 @@ public class Morse
         return units;
     }
 
+    public int[] encodePattern(String plainText)
+    {
+        return join(encodeUnits(plainText));
+    }
+
+    public int[] join(byte[][][] units)
+    {
+        ArrayList<Integer> pattern = new ArrayList<>();
+        int gap = 0;
+        for(byte[][] word : units)
+        {
+            for(byte[] letter : word)
+            {
+                for(byte unit : letter)
+                {
+                    pattern.add(gap);
+                    pattern.add(unit*this.ditMillis);
+                    gap = this.gapMillis;
+                }
+                gap = this.charGapMillis;
+            }
+            gap = this.wordGapMillis;
+        }
+        pattern.add(gap);
+        int[] ret = new int[pattern.size()];
+        for(int i=0;i<pattern.size();i++)
+        {
+            ret[i] = pattern.get(i);
+        }
+        return ret;
+    }
+    
     public String join(String[][] morse)
     {
         StringJoiner plainText = new StringJoiner(" / ");

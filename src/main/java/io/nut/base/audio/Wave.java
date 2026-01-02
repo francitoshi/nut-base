@@ -198,7 +198,7 @@ public abstract class Wave
         int sampleBytes = sampleBits / 8;
         int samples = bytes.length / (sampleBytes * channels);
         ByteBuffer buffer = ByteBuffer.wrap(bytes).order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
-        if (hz != 0)
+        if (hz != 0 && volume != 0)
         {
             for (int i = 0; i < samples; i++)
             {

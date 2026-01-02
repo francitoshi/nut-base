@@ -1,7 +1,7 @@
 /*
  * MorseTest.java
  *
- * Copyright (c) 2025 francitoshi@gmail.com
+ * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -44,6 +44,7 @@ public class MorseTest
     static final String[][] H_E_L_L_O_W_O_R_L_D = {{H,E,L,L,O},{W,O,R,L,D}};
     static final String HELLO_WORLD_MORSE = ".... . .-.. .-.. --- / .-- --- .-. .-.. -..";
     static final byte[][][] HELLO_WORLD_UNITS = {{{DIT,DIT,DIT,DIT}, {DIT}, {DIT,DAH,DIT,DIT}, {DIT,DAH,DIT,DIT}, {DAH,DAH,DAH}}, {{DIT,DAH,DAH}, {DAH,DAH,DAH}, {DIT,DAH,DIT}, {DIT,DAH,DIT,DIT}, {DAH,DIT,DIT}}};
+    static final int[] HELLO_WORLD_PATTERN = {0,60,60,60,60,60,60,60,180,60,180,60,60,180,60,60,60,60,180,60,60,180,60,60,60,60,180,180,60,180,60,180,420,60,60,180,60,180,180,180,60,180,60,180,180,60,60,180,60,60,180,60,60,180,60,60,60,60,180,180,60,60,60,60,420};
     
     static final String ABC = "abcdefghijklmnopqrstuvwxyz.,0123456789";
     static final String ABC_MORSE = ".- -... -.-. -.. . ..-. --. .... .. .--- -.- .-.. -- -. --- .--. --.- .-. ... - ..- ...- .-- -..- -.-- --.. .-.-.- --..-- ----- .---- ..--- ...-- ....- ..... -.... --... ---.. ----.";
@@ -103,8 +104,7 @@ public class MorseTest
         String[][] m1 = morse.encode(s1);
         
         String j0 = morse.join(m0);
-        String j1 = morse.join(m1);
-        
+        String j1 = morse.join(m1);        
         
         assertEquals(s0, morse.decode(j0));
         assertEquals(s1, morse.decode(j1));
@@ -121,4 +121,14 @@ public class MorseTest
         assertArrayEquals(HELLO_WORLD_UNITS, instance.encodeUnits(HELLO_WORLD));
     }
 
+    /**
+     * Test of encodePattern method, of class Morse.
+     */
+    @Test
+    public void testEncodePattern()
+    {
+        Morse instance = new Morse();
+        assertArrayEquals(HELLO_WORLD_PATTERN, instance.encodePattern(HELLO_WORLD));
+    }
+ 
 }
