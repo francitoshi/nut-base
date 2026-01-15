@@ -1,7 +1,7 @@
 /*
  *  CircularQueueIntTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,43 +20,58 @@
  */
 package io.nut.base.queue;
 
-import io.nut.base.profile.Profiler;
-import io.nut.base.time.JavaTime;
-import java.util.ArrayDeque;
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.LinkedBlockingQueue;
 import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 
 // Claude Sonnet 4.5
 class CircularQueueIntTest
 {
 
-    private CircularQueueInt queue;
-
-    @BeforeEach
-    void setUp()
+    @Test
+    void testConstructorWithData()
     {
-        queue = new CircularQueueInt(3);
+        CircularQueueInt queue = new CircularQueueInt(new int[]{100,200});
+
+        assertEquals(2, queue.size());
+
+        assertEquals(100, queue.push(300));
+        assertEquals(200, queue.push(400));
+        
+        assertEquals(2, queue.size());
+        
+        assertEquals(300, queue.push(500));
+        assertEquals(400, queue.push(600));
+        
+        assertEquals(2, queue.size());
+        
+        assertEquals(500, queue.pop());
+        assertEquals(600, queue.pop());
+
+        assertEquals(0, queue.size());
     }
 
     @Test
     void testPushAndPop()
     {
+        CircularQueueInt queue = new CircularQueueInt(3);
+
+        assertEquals(0, queue.size());
+
         queue.push(100);
         queue.push(200);
+
         assertEquals(100, queue.pop());
         assertEquals(200, queue.pop());
+        assertEquals(0, queue.size());
         assertEquals(0, queue.pop());
+
+
     }
 
     @Test
     void testSum()
     {
+        CircularQueueInt queue = new CircularQueueInt(3);
         queue.push(5);
         queue.push(10);
         queue.push(15);
@@ -66,6 +81,7 @@ class CircularQueueIntTest
     @Test
     void testAverage()
     {
+        CircularQueueInt queue = new CircularQueueInt(3);
         queue.push(10);
         queue.push(20);
         queue.push(30);
@@ -75,6 +91,7 @@ class CircularQueueIntTest
     @Test
     void testMinMax()
     {
+        CircularQueueInt queue = new CircularQueueInt(3);
         queue.push(25);
         queue.push(10);
         queue.push(40);

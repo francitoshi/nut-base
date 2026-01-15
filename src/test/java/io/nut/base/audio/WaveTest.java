@@ -1,7 +1,7 @@
 /*
  * WaveTest.java
  *
- * Copyright (c) 2025 francitoshi@gmail.com
+ * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
-import org.junit.jupiter.api.Disabled;
 
 /**
  *
@@ -32,37 +31,39 @@ import org.junit.jupiter.api.Disabled;
  */
 public class WaveTest
 {
-    
+    static final boolean ALLOW_SOUND = false;
+    static final boolean FADING = true;
     @Test
-    @Disabled("this test is only to test manually beacuse will be slow and will actually produce noise")
     public void main() throws LineUnavailableException
     {
        
         AudioFormat[] formats = {Audio.PCM_CD_MONO, Audio.PCM_CD_STEREO, Audio.PCM_STUDIO_STEREO, Audio.PCM_RADIO_MONO, Audio.PCM_VOICE_WIDEBAND, Audio.PCM_8BIT_MONO, Audio.ALAW_TELEPHONY};
         
-        for(int millis=0;millis<128;)
+        for(int millis=0;millis<100;millis += formats.length)
         {
             for(AudioFormat format : formats)
             {
-                millis++;
-                System.out.printf("MILLIS = %d\n", millis);
+                int size = Audio.bytesNeeded(format, millis);
+                int fading = FADING ? Audio.bytesNeeded(format, 5) : 0;
+                byte[] buffer = new byte[size];
+
                 Wave wave = Wave.WAVES[millis%Wave.WAVES.length];
+                wave.build(format, 440, buffer, 0.50, fading);
                 
-                try (SourceDataLine lineOut = Audio.getLineOut(format))
+                if(ALLOW_SOUND)
                 {
-                    lineOut.start();
-                    int size = Audio.bytesNeeded(format, millis);
-                    byte[] buffer = new byte[size];
+                    System.out.printf("MILLIS = %d | fading = %d\n", millis, fading);
+                    try (SourceDataLine lineOut = Audio.getLineOut(format))
+                    {
+                        lineOut.start();
+                        long t0 = System.nanoTime();
+                        lineOut.write(buffer, 0, buffer.length);
 
-                    wave.build(format, 440, buffer, 0.50);
-
-                    long t0 = System.nanoTime();
-                    lineOut.write(buffer, 0, buffer.length);
-
-                    lineOut.drain();
-                    long t1 = System.nanoTime();
-                    //System.out.printf("%s %d ms\n", wave.name, TimeUnit.NANOSECONDS.toMillis(t1-t0));
-                    lineOut.stop();
+                        lineOut.drain();
+                        long t1 = System.nanoTime();
+                        //System.out.printf("%s %d ms\n", wave.name, TimeUnit.NANOSECONDS.toMillis(t1-t0));
+                        lineOut.stop();
+                    }
                 }
             }
         }

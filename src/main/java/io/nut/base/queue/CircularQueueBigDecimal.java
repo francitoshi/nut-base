@@ -1,7 +1,7 @@
 /*
  *  CircularQueueBigDecimal.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,25 +20,23 @@
  */
 package io.nut.base.queue;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.util.function.Consumer;
-
 // Claude Sonnet 4.5
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.util.Objects;
+import java.util.function.Consumer;
+
 /**
- * A fixed-size circular queue (ring buffer) implementation for
- * {@code BigDecimal} objects.
+ * A fixed-size circular queue (ring buffer) implementation for {@code BigDecimal} objects.
  * <p>
- * This structure operates with a fixed capacity. When elements are pushed into
- * a full queue, the oldest element (head) is automatically removed/overwritten
- * to make room for the new element.
+ * This structure operates with a fixed capacity. When elements are pushed into a full queue,
+ * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
 public class CircularQueueBigDecimal
 {
-
     private final BigDecimal[] buffer;
     private final int capacity;
     private int head;
@@ -49,8 +47,7 @@ public class CircularQueueBigDecimal
      * Constructs a new CircularQueueBigDecimal with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
-     * @throws IllegalArgumentException if the capacity is less than or equal to
-     * 0.
+     * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
     public CircularQueueBigDecimal(int capacity)
     {
@@ -65,15 +62,28 @@ public class CircularQueueBigDecimal
         this.size = 0;
     }
 
+    public CircularQueueBigDecimal(BigDecimal[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.buffer = data.clone();
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
+
     /**
      * Adds a value to the end of the queue.
      * <p>
-     * If the queue is currently at maximum capacity, the oldest element (at the
-     * head) is overwritten/removed to accommodate the new value.
+     * If the queue is currently at maximum capacity, the oldest element (at the head) 
+     * is overwritten/removed to accommodate the new value.
      *
-     * @param value the BigDecimal value to add.
-     * @return the value that was overwritten if the queue was full, otherwise
-     * {@code null}.
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise {@code null}.
      */
     public BigDecimal push(BigDecimal value)
     {
@@ -90,11 +100,18 @@ public class CircularQueueBigDecimal
         return removed;
     }
 
+    public void pushAll(BigDecimal[] value)
+    {
+        for(BigDecimal v : value)
+        {
+            push(v);
+        }
+    }
+
     /**
      * Removes and returns the element at the head of the queue.
      *
-     * @return the oldest element in the queue, or {@code null} if the queue is
-     * empty.
+     * @return the oldest element in the queue, or {@code null} if the queue is empty.
      */
     public BigDecimal pop()
     {
@@ -109,8 +126,25 @@ public class CircularQueueBigDecimal
     }
 
     /**
-     * Performs the given action for each element in the queue. Elements are
-     * processed in order from head (oldest) to tail (newest).
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or {@code null} if the index is out of bounds (n < 0 or n >= size).
+     */
+    public BigDecimal get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return null;
+        }
+        return buffer[(head + n) % capacity];
+    }
+
+    /**
+     * Performs the given action for each element in the queue. 
+     * Elements are processed in order from head (oldest) to tail (newest).
      *
      * @param consumer the action to perform on each element.
      */
@@ -123,8 +157,8 @@ public class CircularQueueBigDecimal
     }
 
     /**
-     * Returns a copy of the current queue elements as an array. The array is
-     * ordered from head (oldest) to tail (newest).
+     * Returns a copy of the current queue elements as an array.
+     * The array is ordered from head (oldest) to tail (newest).
      *
      * @return a new BigDecimal array containing the queue elements.
      */
@@ -148,37 +182,9 @@ public class CircularQueueBigDecimal
         return size;
     }
 
-    /**
-     * Calculates the arithmetic mean of the values in the queue.
-     * <p>
-     * The calculation is performed with a scale of <b>10</b> and uses
-     * {@link RoundingMode#HALF_UP} for division.
-     *
-     * @return the average of the elements, or {@code BigDecimal.ZERO} if the
-     * queue is empty.
-     */
-    public BigDecimal average()
+    public boolean isEmpty()
     {
-        if (size == 0)
-        {
-            return BigDecimal.ZERO;
-        }
-        return sum().divide(BigDecimal.valueOf(size), 10, RoundingMode.HALF_UP);
-    }
-
-    /**
-     * Calculates the sum of all values in the queue.
-     *
-     * @return the sum of all elements.
-     */
-    public BigDecimal sum()
-    {
-        BigDecimal total = BigDecimal.ZERO;
-        for (int i = 0; i < size; i++)
-        {
-            total = total.add(buffer[(head + i) % capacity]);
-        }
-        return total;
+        return size==0;
     }
 
     /**
@@ -228,35 +234,114 @@ public class CircularQueueBigDecimal
     }
 
     /**
-     * Retrieves the element at a specific index relative to the head of the
-     * queue.
+     * Calculates the arithmetic mean of the values in the queue.
      * <p>
-     * Index 0 corresponds to the head (oldest element).
+     * The calculation is performed with a scale of <b>10</b> and uses
+     * {@link RoundingMode#HALF_UP} for division.
      *
-     * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or {@code null} if the index
-     * is out of bounds (n < 0 or n >= size).
+     * @return the average of the elements, or {@code BigDecimal.ZERO} if the
+     * queue is empty.
      */
-    public BigDecimal get(int n)
+    public BigDecimal average()
     {
-        if (n < 0 || n >= size)
+        if (size == 0)
         {
-            return null;
+            return BigDecimal.ZERO;
         }
-        return buffer[(head + n) % capacity];
+        return sum().divide(BigDecimal.valueOf(size), 10, RoundingMode.HALF_UP);
     }
+    
+    /**
+     * Calculates the sum of all values in the queue.
+     *
+     * @return the sum of all elements.
+     */
+    public BigDecimal sum()
+    {
+        BigDecimal total = BigDecimal.ZERO;
+        for (int i = 0; i < size; i++)
+        {
+            total = total.add(buffer[(head + i) % capacity]);
+        }
+        return total;
+    }
+
     
     public static CircularQueueBigDecimal getSynchronized(CircularQueueBigDecimal queue)
     {
         return new CircularQueueBigDecimal(queue.capacity)
         {
             final Object lock = new Object();
+
+            @Override
+            public BigDecimal push(BigDecimal value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+
+            @Override
+            public void pushAll(BigDecimal[] value)
+            {
+                synchronized(lock)
+                {
+                    super.pushAll(value);
+                }
+            }
+
+            @Override
+            public BigDecimal pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
             @Override
             public BigDecimal get(int n)
             {
                 synchronized(lock)
                 {
                     return super.get(n);
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return super.isEmpty();
+                }
+            }
+
+            @Override
+            public BigDecimal[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<BigDecimal> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
                 }
             }
 
@@ -296,51 +381,6 @@ public class CircularQueueBigDecimal
                 }
             }
 
-            @Override
-            public int size()
-            {
-                synchronized(lock)
-                {
-                    return super.size();
-                }
-            }
-
-            @Override
-            public BigDecimal[] array()
-            {
-                synchronized(lock)
-                {
-                    return super.array();
-                }
-            }
-
-            @Override
-            public void foreach(Consumer<BigDecimal> consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public BigDecimal pop()
-            {
-                synchronized(lock)
-                {
-                    return super.pop();
-                }
-            }
-
-            @Override
-            public BigDecimal push(BigDecimal value)
-            {
-                synchronized(lock)
-                {
-                    return super.push(value);
-                }
-            }
-            
         };
     }    
 }

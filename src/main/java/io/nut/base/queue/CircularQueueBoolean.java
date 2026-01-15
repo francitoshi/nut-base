@@ -33,9 +33,9 @@ import java.util.function.Consumer;
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
-public class CircularQueueByte
+public class CircularQueueBoolean
 {
-    private final byte[] buffer;
+    private final boolean [] buffer;
     private final int capacity;
     private int head;
     private int tail;
@@ -47,20 +47,20 @@ public class CircularQueueByte
      * @param capacity the maximum number of elements the queue can hold.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
-    public CircularQueueByte(int capacity)
+    public CircularQueueBoolean(int capacity)
     {
         if (capacity <= 0)
         {
             throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
         }
         this.capacity = capacity;
-        this.buffer = new byte[capacity];
+        this.buffer = new boolean[capacity];
         this.head = 0;
         this.tail = 0;
         this.size = 0;
     }
 
-    public CircularQueueByte(byte[] data)
+    public CircularQueueBoolean(boolean[] data)
     {
         Objects.requireNonNull(data, "data cannot be null");
         if (data.length <= 0)
@@ -81,11 +81,11 @@ public class CircularQueueByte
      * is overwritten/removed to accommodate the new value.
      *
      * @param value the element to add.
-     * @return the element that was overwritten if the queue was full, otherwise 0.
+     * @return the element that was overwritten if the queue was full, otherwise false.
      */
-    public byte push(byte value)
+    public boolean push(boolean value)
     {
-        byte removed = 0;
+        boolean removed = false;
         if (size == capacity)
         {
             removed = buffer[head];
@@ -98,9 +98,9 @@ public class CircularQueueByte
         return removed;
     }
 
-    public void pushAll(byte[] value)
+    public void pushAll(boolean[] value)
     {
-        for(byte v : value)
+        for(boolean v : value)
         {
             push(v);
         }
@@ -109,15 +109,15 @@ public class CircularQueueByte
     /**
      * Removes and returns the element at the head of the queue.
      *
-     * @return the oldest element in the queue, or 0 if the queue is empty.
+     * @return the oldest element in the queue, or false if the queue is empty.
      */
-    public byte pop()
+    public boolean pop()
     {
         if (size == 0)
         {
-            return 0;
+            return false;
         }
-        byte value = buffer[head];
+        boolean value = buffer[head];
         head = (head + 1) % capacity;
         size--;
         return value;
@@ -131,22 +131,22 @@ public class CircularQueueByte
      * @param n the relative index of the element to retrieve.
      * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
      */
-    public byte get(int n)
+    public boolean get(int n)
     {
         if (n < 0 || n >= size)
         {
-            return 0;
+            return false;
         }
         return buffer[(head + n) % capacity];
     }
-
+    
     /**
      * Performs the given action for each element in the queue.
      * Elements are processed in order from head (oldest) to tail (newest).
      *
      * @param consumer the action to perform on each element.
      */
-    public void foreach(Consumer<Byte> consumer)
+    public void foreach(Consumer<Boolean> consumer)
     {
         for (int i = 0; i < size; i++)
         {
@@ -158,11 +158,11 @@ public class CircularQueueByte
      * Returns a copy of the current queue elements as an array.
      * The array is ordered from head (oldest) to tail (newest).
      *
-     * @return a new boolean array containing the queue elements.
+     * @return a new byte array containing the queue elements.
      */
-    public byte[] array()
+    public boolean[] array()
     {
-        byte[] result = new byte[size];
+        boolean[] result = new boolean[size];
         for (int i = 0; i < size; i++)
         {
             result[i] = buffer[(head + i) % capacity];
@@ -210,7 +210,7 @@ public class CircularQueueByte
         long total = 0;
         for (int i = 0; i < size; i++)
         {
-            total += buffer[(head + i) % capacity];
+            total += buffer[(head + i) % capacity] ? 1 : 0;
         }
         return total;
     }
@@ -218,22 +218,18 @@ public class CircularQueueByte
     /**
      * Finds the minimum value currently in the queue.
      *
-     * @return the smallest value, or 0 if the queue is empty.
+     * @return the smallest value, or false if the queue is empty.
      */
-    public byte min()
+    public boolean min()
     {
         if (size == 0)
         {
-            return 0;
+            return false;
         }
-        byte minValue = buffer[head];
-        for (int i = 1; i < size; i++)
+        boolean minValue = buffer[head];
+        for (int i = 1; i < size && minValue; i++)
         {
-            byte value = buffer[(head + i) % capacity];
-            if (value < minValue)
-            {
-                minValue = value;
-            }
+            minValue = buffer[(head + i) % capacity];
         }
         return minValue;
     }
@@ -241,34 +237,30 @@ public class CircularQueueByte
     /**
      * Finds the maximum value currently in the queue.
      *
-     * @return the largest value, or 0 if the queue is empty.
+     * @return the largest value, or false if the queue is empty.
      */
-    public byte max()
+    public boolean max()
     {
         if (size == 0)
         {
-            return 0;
+            return false;
         }
-        byte maxValue = buffer[head];
-        for (int i = 1; i < size; i++)
+        boolean maxValue = buffer[head];
+        for (int i = 1; i < size && !maxValue; i++)
         {
-            byte value = buffer[(head + i) % capacity];
-            if (value > maxValue)
-            {
-                maxValue = value;
-            }
+            maxValue = buffer[(head + i) % capacity];
         }
         return maxValue;
     }
 
-    public static CircularQueueByte getSynchronized(CircularQueueByte queue)
+    public static CircularQueueBoolean getSynchronized(CircularQueueBoolean queue)
     {
-        return new CircularQueueByte(queue.capacity)
+        return new CircularQueueBoolean(queue.capacity)
         {
             final Object lock = new Object();
             
             @Override
-            public byte push(byte value)
+            public boolean push(boolean value)
             {
                 synchronized(lock)
                 {
@@ -277,7 +269,7 @@ public class CircularQueueByte
             }
 
             @Override
-            public void pushAll(byte[] value)
+            public void pushAll(boolean[] value)
             {
                 synchronized(lock)
                 {
@@ -286,7 +278,7 @@ public class CircularQueueByte
             }
 
             @Override
-            public byte pop()
+            public boolean pop()
             {
                 synchronized(lock)
                 {
@@ -295,7 +287,7 @@ public class CircularQueueByte
             }
 
             @Override
-            public byte get(int n)
+            public boolean get(int n)
             {
                 synchronized(lock)
                 {
@@ -322,7 +314,7 @@ public class CircularQueueByte
             }
 
             @Override
-            public byte[] array()
+            public boolean[] array()
             {
                 synchronized(lock)
                 {
@@ -331,16 +323,16 @@ public class CircularQueueByte
             }
 
             @Override
-            public void foreach(Consumer<Byte> consumer)
+            public void foreach(Consumer<Boolean> consumer)
             {
                 synchronized(lock)
                 {
                     super.foreach(consumer);
                 }
             }
-
+            
             @Override
-            public byte max()
+            public boolean max()
             {
                 synchronized(lock)
                 {
@@ -349,7 +341,7 @@ public class CircularQueueByte
             }
 
             @Override
-            public byte min()
+            public boolean min()
             {
                 synchronized(lock)
                 {

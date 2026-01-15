@@ -1,7 +1,7 @@
 /*
  *  CircularQueueLong.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,10 @@
  */
 package io.nut.base.queue;
 
-import java.util.function.Consumer;
-import java.util.function.LongConsumer;
-
 // Claude Sonnet 4.5
+
+import java.util.Objects;
+import java.util.function.LongConsumer;
 
 /**
  * A fixed-size circular queue (ring buffer) implementation for {@code long} primitives.
@@ -60,11 +60,25 @@ public class CircularQueueLong
         this.size = 0;
     }
 
+    public CircularQueueLong(long[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.buffer = data.clone();
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
+
     /**
      * Adds a value to the end of the queue.
      * <p>
-     * If the queue is currently at maximum capacity, the oldest element (at the head)
-     * is overwritten/removed to accommodate the new value.
+     * If the queue is currently at maximum capacity, the oldest element (at the
+     * head) is overwritten/removed to accommodate the new value.
      *
      * @param value the long value to add.
      * @return the value that was overwritten if the queue was full, otherwise 0.
@@ -82,6 +96,14 @@ public class CircularQueueLong
         tail = (tail + 1) % capacity;
         size++;
         return removed;
+    }
+
+    public void pushAll(long[] value)
+    {
+        for(long v : value)
+        {
+            push(v);
+        }
     }
 
     /**
@@ -102,6 +124,23 @@ public class CircularQueueLong
     }
 
     /**
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
+     */
+    public long get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return 0;
+        }
+        return buffer[(head + n) % capacity];
+    }
+    
+    /**
      * Performs the given action for each element in the queue.
      * Elements are processed in order from head (oldest) to tail (newest).
      *
@@ -115,6 +154,12 @@ public class CircularQueueLong
         }
     }
 
+    /**
+     * Returns a copy of the current queue elements as an array. 
+     * The array is ordered from head (oldest) to tail (newest).
+     *
+     * @return a new long array containing the queue elements.
+     */
     public long[] array()
     {
         long[] result = new long[size];
@@ -133,6 +178,11 @@ public class CircularQueueLong
     public int size()
     {
         return size;
+    }
+
+    public boolean isEmpty()
+    {
+        return size==0;
     }
 
     /**
@@ -213,28 +263,39 @@ public class CircularQueueLong
         return maxValue;
     }
 
-    /**
-     * Retrieves the element at a specific index relative to the head of the queue.
-     * <p>
-     * Index 0 corresponds to the head (oldest element).
-     *
-     * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
-     */
-    public long get(int n)
-    {
-        if (n < 0 || n >= size)
-        {
-            return 0;
-        }
-        return buffer[(head + n) % capacity];
-    }
-    
     public static CircularQueueLong getSynchronized(CircularQueueLong queue)
     {
         return new CircularQueueLong(queue.capacity)
         {
             final Object lock = new Object();
+            
+            @Override
+            public long push(long value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+
+            @Override
+            public void pushAll(long[] value)
+            {
+                synchronized(lock)
+                {
+                    super.pushAll(value);
+                }
+            }
+
+            @Override
+            public long pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
             @Override
             public long get(int n)
             {
@@ -244,6 +305,42 @@ public class CircularQueueLong
                 }
             }
 
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return super.isEmpty();
+                }
+            }
+
+            @Override
+            public long[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(LongConsumer consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+            
             @Override
             public long max()
             {
@@ -280,52 +377,6 @@ public class CircularQueueLong
                 }
             }
 
-            @Override
-            public int size()
-            {
-                synchronized(lock)
-                {
-                    return super.size();
-                }
-            }
-
-            @Override
-            public long[] array()
-            {
-                synchronized(lock)
-                {
-                    return super.array();
-                }
-            }
-
-            @Override
-            public void foreach(LongConsumer consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public long pop()
-            {
-                synchronized(lock)
-                {
-                    return super.pop();
-                }
-            }
-
-            @Override
-            public long push(long value)
-            {
-                synchronized(lock)
-                {
-                    return super.push(value);
-                }
-            }
-            
         };
     }
-    
 }

@@ -1,7 +1,7 @@
 /*
  *  Nums.java
  *
- *  Copyright (c) 2024-2025 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,6 @@
  */
 package io.nut.base.math;
 
-import io.nut.base.util.Strings;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -151,6 +150,15 @@ public class Nums
         return value.testBit(0)==true;
     }
     
+    public static long sum(byte... values)
+    {
+        long ret = 0;
+        for (int v : values)
+        {
+            ret += v;
+        }
+        return ret;
+    }
     public static long sum(int... values)
     {
         long ret = 0;

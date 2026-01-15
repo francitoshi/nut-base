@@ -1,7 +1,7 @@
 /*
  *  Byter.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -23,6 +23,8 @@ package io.nut.base.util;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.CharBuffer;
+import java.nio.DoubleBuffer;
+import java.nio.FloatBuffer;
 import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
@@ -96,6 +98,36 @@ public class Byter
         }
         return buffer.array();
     }
+
+    public static byte[] bytes(float[] src, ByteOrder byteOrder)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(src.length * Float.BYTES);
+        buffer = (byteOrder==null) ? buffer : buffer.order(byteOrder);
+        for (float item : src)
+        {
+            buffer.putFloat(item);
+        }
+        return buffer.array();
+    }
+
+    public static byte[] bytes(double[] src, ByteOrder byteOrder)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        ByteBuffer buffer = ByteBuffer.allocate(src.length * Double.BYTES);
+        buffer = (byteOrder==null) ? buffer : buffer.order(byteOrder);
+        for (double item : src)
+        {
+            buffer.putDouble(item);
+        }
+        return buffer.array();
+    }
     
     public static byte[] bytes(short[] src)
     {
@@ -115,6 +147,16 @@ public class Byter
         return bytes(src, (ByteOrder)null);
     }
     
+    public static byte[] bytes(float[] src)
+    {
+        return bytes(src, (ByteOrder)null);
+    }
+    
+    public static byte[] bytes(double[] src)
+    {
+        return bytes(src, (ByteOrder)null);
+    }
+    
     public static byte[] bytesLE(short[] src)
     {
         return bytes(src, ByteOrder.LITTLE_ENDIAN);
@@ -128,6 +170,16 @@ public class Byter
         return bytes(src, ByteOrder.LITTLE_ENDIAN);
     }
     public static byte[] bytesLE(long[] src)
+    {
+        return bytes(src, ByteOrder.LITTLE_ENDIAN);
+    }
+
+    public static byte[] bytesLE(float[] src)
+    {
+        return bytes(src, ByteOrder.LITTLE_ENDIAN);
+    }
+
+    public static byte[] bytesLE(double[] src)
     {
         return bytes(src, ByteOrder.LITTLE_ENDIAN);
     }
@@ -216,6 +268,48 @@ public class Byter
         return dst.array();
     }
     
+    public static float[] floats(byte[] src, ByteOrder byteOrder)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        if(src.length % Float.BYTES != 0)
+        {
+            throw new IllegalArgumentException("byte[] size is not multiple of " + Float.BYTES);
+        }
+        int nfloats=  src.length / Float.BYTES;
+        ByteBuffer buffer = ByteBuffer.wrap(src);
+        buffer = (byteOrder==null) ? buffer : buffer.order(byteOrder);
+        FloatBuffer dst = FloatBuffer.wrap(new float[nfloats]);
+        for (int i = 0; i < nfloats ; i++)
+        {
+            dst.put(buffer.getFloat());
+        }
+        return dst.array();
+    }
+    
+    public static double[] doubles(byte[] src, ByteOrder byteOrder)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        if(src.length % Double.BYTES != 0)
+        {
+            throw new IllegalArgumentException("byte[] size is not multiple of " + Double.BYTES);
+        }
+        int ndoubles=  src.length / Double.BYTES;
+        ByteBuffer buffer = ByteBuffer.wrap(src);
+        buffer = (byteOrder==null) ? buffer : buffer.order(byteOrder);
+        DoubleBuffer dst = DoubleBuffer.wrap(new double[ndoubles]);
+        for (int i = 0; i < ndoubles ; i++)
+        {
+            dst.put(buffer.getDouble());
+        }
+        return dst.array();
+    }
+    
     public static short[] shorts(byte[] src)
     {
         return shorts(src, null);
@@ -254,6 +348,16 @@ public class Byter
     public static long[] longsLE(byte[] src)
     {
         return longs(src, ByteOrder.LITTLE_ENDIAN);
+    }
+    
+    public static float[] floatsLE(byte[] src)
+    {
+        return floats(src, ByteOrder.LITTLE_ENDIAN);
+    }
+    
+    public static double[] doublesLE(byte[] src)
+    {
+        return doubles(src, ByteOrder.LITTLE_ENDIAN);
     }
     
     public static byte[] bytes(char[] src, Charset charset)

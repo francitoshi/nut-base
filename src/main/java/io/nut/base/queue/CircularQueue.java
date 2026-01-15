@@ -1,7 +1,7 @@
 /*
  *  CircularQueue.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,12 +20,13 @@
  */
 package io.nut.base.queue;
 
-
 // Claude Sonnet 4.5
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -38,11 +39,11 @@ import java.util.function.Consumer;
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  *
- * @param <T> the type of elements held in this queue.
+ * @param <E> the type of elements held in this queue.
  */
-public class CircularQueue<T>
+public class CircularQueue<E>
 {
-    private final List<T> buffer;
+    private final List<E> buffer;
     private final int capacity;
     private int head;
     private int tail;
@@ -72,6 +73,20 @@ public class CircularQueue<T>
         this.size = 0;
     }
 
+    public CircularQueue(E[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.buffer = Arrays.asList(data);
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
+
     /**
      * Adds a value to the end of the queue.
      * <p>
@@ -81,9 +96,9 @@ public class CircularQueue<T>
      * @param value the element to add.
      * @return the element that was overwritten if the queue was full, otherwise {@code null}.
      */
-    public T push(T value)
+    public E push(E value)
     {
-        T removed = null;
+        E removed = null;
         if (size == capacity)
         {
             removed = buffer.get(head);
@@ -96,25 +111,47 @@ public class CircularQueue<T>
         return removed;
     }
 
+    public void pushAll(E[] value)
+    {
+        for(E v : value)
+        {
+            push(v);
+        }
+    }
+
     /**
      * Removes and returns the element at the head of the queue.
-     * <p>
-     * This method also sets the internal buffer slot to {@code null} to assist
-     * the Garbage Collector.
      *
      * @return the oldest element in the queue, or {@code null} if the queue is empty.
      */
-    public T pop()
+    public E pop()
     {
         if (size == 0)
         {
             return null;
         }
-        T value = buffer.get(head);
+        E value = buffer.get(head);
         buffer.set(head, null); // Helps GC
         head = (head + 1) % capacity;
         size--;
         return value;
+    }
+    
+    /**
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or {@code null} if the index is out of bounds (n < 0 or n >= size).
+     */
+    public E get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return null;
+        }
+        return buffer.get((head + n) % capacity);
     }
 
     /**
@@ -123,7 +160,7 @@ public class CircularQueue<T>
      *
      * @param consumer the action to perform on each element.
      */
-    public void foreach(Consumer<T> consumer)
+    public void foreach(Consumer<E> consumer)
     {
         for (int i = 0; i < size; i++)
         {
@@ -131,9 +168,9 @@ public class CircularQueue<T>
         }
     }
 
-    public List<T> list()
+    public List<E> list()
     {
-        List<T> result = new ArrayList<>(size);
+        List<E> result = new ArrayList<>(size);
         for (int i = 0; i < size; i++)
         {
             result.add(buffer.get((head + i) % capacity));
@@ -153,7 +190,7 @@ public class CircularQueue<T>
      *          otherwise, a new array of the same runtime type is allocated for this purpose.
      * @return an array containing the elements of the queue.
      */
-    public T[] array(T[] a)
+    public E[] array(E[] a)
     {
         if (a.length != size)
         {
@@ -176,6 +213,11 @@ public class CircularQueue<T>
         return size;
     }
 
+    public boolean isEmpty()
+    {
+        return size==0;
+    }
+
     /**
      * Finds the minimum value currently in the queue based on the natural ordering of the elements.
      *
@@ -183,23 +225,23 @@ public class CircularQueue<T>
      * @throws ClassCastException if the elements in the queue are not {@link Comparable}.
      */
     @SuppressWarnings("unchecked")
-    public T min()
+    public E min()
     {
         if (size == 0)
         {
             return null;
         }
 
-        T minValue = buffer.get(head);
-        Comparable<T> comparable = (Comparable<T>) minValue;
+        E minValue = buffer.get(head);
+        Comparable<E> comparable = (Comparable<E>) minValue;
 
         for (int i = 1; i < size; i++)
         {
-            T value = buffer.get((head + i) % capacity);
+            E value = buffer.get((head + i) % capacity);
             if (comparable.compareTo(value) > 0)
             {
                 minValue = value;
-                comparable = (Comparable<T>) minValue;
+                comparable = (Comparable<E>) minValue;
             }
         }
         return minValue;
@@ -211,17 +253,17 @@ public class CircularQueue<T>
      * @param comparator the comparator to determine the order of the queue.
      * @return the smallest element, or {@code null} if the queue is empty.
      */
-    public T min(Comparator<T> comparator)
+    public E min(Comparator<E> comparator)
     {
         if (size == 0)
         {
             return null;
         }
 
-        T minValue = buffer.get(head);
+        E minValue = buffer.get(head);
         for (int i = 1; i < size; i++)
         {
-            T value = buffer.get((head + i) % capacity);
+            E value = buffer.get((head + i) % capacity);
             if (comparator.compare(value, minValue) < 0)
             {
                 minValue = value;
@@ -237,23 +279,23 @@ public class CircularQueue<T>
      * @throws ClassCastException if the elements in the queue are not {@link Comparable}.
      */
     @SuppressWarnings("unchecked")
-    public T max()
+    public E max()
     {
         if (size == 0)
         {
             return null;
         }
 
-        T maxValue = buffer.get(head);
-        Comparable<T> comparable = (Comparable<T>) maxValue;
+        E maxValue = buffer.get(head);
+        Comparable<E> comparable = (Comparable<E>) maxValue;
 
         for (int i = 1; i < size; i++)
         {
-            T value = buffer.get((head + i) % capacity);
+            E value = buffer.get((head + i) % capacity);
             if (comparable.compareTo(value) < 0)
             {
                 maxValue = value;
-                comparable = (Comparable<T>) maxValue;
+                comparable = (Comparable<E>) maxValue;
             }
         }
         return maxValue;
@@ -265,17 +307,17 @@ public class CircularQueue<T>
      * @param comparator the comparator to determine the order of the queue.
      * @return the largest element, or {@code null} if the queue is empty.
      */
-    public T max(Comparator<T> comparator)
+    public E max(Comparator<E> comparator)
     {
         if (size == 0)
         {
             return null;
         }
 
-        T maxValue = buffer.get(head);
+        E maxValue = buffer.get(head);
         for (int i = 1; i < size; i++)
         {
-            T value = buffer.get((head + i) % capacity);
+            E value = buffer.get((head + i) % capacity);
             if (comparator.compare(value, maxValue) > 0)
             {
                 maxValue = value;
@@ -283,35 +325,82 @@ public class CircularQueue<T>
         }
         return maxValue;
     }
-
-    /**
-     * Retrieves the element at a specific index relative to the head of the queue.
-     * <p>
-     * Index 0 corresponds to the head (oldest element).
-     *
-     * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or {@code null} if the index is out of bounds (n < 0 or n >= size).
-     */
-    public T get(int n)
-    {
-        if (n < 0 || n >= size)
-        {
-            return null;
-        }
-        return buffer.get((head + n) % capacity);
-    }
-
+    
     public static <E> CircularQueue<E> getSynchronized(CircularQueue<E> queue)
     {
         return new CircularQueue<E>(queue.capacity)
         {
             final Object lock = new Object();
+
+            @Override
+            public E push(E value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+            
+            @Override
+            public void pushAll(E[] value)
+            {
+                synchronized(lock)
+                {
+                    super.pushAll(value);
+                }
+            }
+            
+            @Override
+            public E pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
             @Override
             public E get(int n)
             {
                 synchronized(lock)
                 {
                     return super.get(n);
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+            
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return super.isEmpty();
+                }
+            }
+            
+            @Override
+            public E[] array(E[] e)
+            {
+                synchronized(lock)
+                {
+                    return super.array(e);
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<E> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
                 }
             }
 
@@ -332,52 +421,6 @@ public class CircularQueue<T>
                     return super.min();
                 }
             }
-
-            @Override
-            public int size()
-            {
-                synchronized(lock)
-                {
-                    return super.size();
-                }
-            }
-
-            @Override
-            public E[] array(E[] e)
-            {
-                synchronized(lock)
-                {
-                    return super.array(e);
-                }
-            }
-
-            @Override
-            public void foreach(Consumer<E> consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public E pop()
-            {
-                synchronized(lock)
-                {
-                    return super.pop();
-                }
-            }
-
-            @Override
-            public E push(E value)
-            {
-                synchronized(lock)
-                {
-                    return super.push(value);
-                }
-            }
-            
         };
     }
 }

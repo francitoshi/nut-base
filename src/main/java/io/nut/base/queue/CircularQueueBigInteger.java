@@ -1,7 +1,7 @@
 /*
  *  CircularQueueBigInteger.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,11 +20,12 @@
  */
 package io.nut.base.queue;
 
+// Claude Sonnet 4.5
+
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Objects;
 import java.util.function.Consumer;
-
-// Claude Sonnet 4.5
 
 /**
  * A fixed-size circular queue (ring buffer) implementation for {@code BigInteger} objects.
@@ -61,14 +62,28 @@ public class CircularQueueBigInteger
         this.size = 0;
     }
 
+    public CircularQueueBigInteger(BigInteger[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.buffer = data.clone();
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
+
     /**
      * Adds a value to the end of the queue.
      * <p>
      * If the queue is currently at maximum capacity, the oldest element (at the head)
      * is overwritten/removed to accommodate the new value.
      *
-     * @param value the BigInteger value to add.
-     * @return the value that was overwritten if the queue was full, otherwise {@code null}.
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise {@code null}.
      */
     public BigInteger push(BigInteger value)
     {
@@ -83,6 +98,14 @@ public class CircularQueueBigInteger
         tail = (tail + 1) % capacity;
         size++;
         return removed;
+    }
+
+    public void pushAll(BigInteger[] value)
+    {
+        for(BigInteger v : value)
+        {
+            push(v);
+        }
     }
 
     /**
@@ -102,6 +125,23 @@ public class CircularQueueBigInteger
         return value;
     }
 
+    /**
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or {@code null} if the index is out of bounds (n < 0 or n >= size).
+     */
+     public BigInteger get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return null;
+        }
+        return buffer[(head + n) % capacity];
+    }
+    
     /**
      * Performs the given action for each element in the queue.
      * Elements are processed in order from head (oldest) to tail (newest).
@@ -142,14 +182,19 @@ public class CircularQueueBigInteger
         return size;
     }
 
+    public boolean isEmpty()
+    {
+        return size==0;
+    }
+
     /**
      * Calculates the arithmetic mean of the values in the queue.
      * <p>
-     * <b>Note:</b> Since {@code BigInteger} supports only integer arithmetic,
-     * this method performs integer division. Any fractional part of the average
-     * is discarded (truncated).
+     * The calculation is performed with a scale of <b>10</b> and uses
+     * {@link RoundingMode#HALF_UP} for division.
      *
-     * @return the average of the elements, or {@code BigInteger.ZERO} if the queue is empty.
+     * @return the average of the elements, or {@code BigDecimal.ZERO} if the
+     * queue is empty.
      */
     public BigDecimal average()
     {
@@ -198,6 +243,11 @@ public class CircularQueueBigInteger
         return minValue;
     }
 
+    /**
+     * Finds the maximum value currently in the queue.
+     *
+     * @return the largest value, or {@code null} if the queue is empty.
+     */
     public BigInteger max()
     {
         if (size == 0)
@@ -216,26 +266,72 @@ public class CircularQueueBigInteger
         return maxValue;
     }
 
-    public BigInteger get(int n)
-    {
-        if (n < 0 || n >= size)
-        {
-            return null;
-        }
-        return buffer[(head + n) % capacity];
-    }
-    
     public static CircularQueueBigInteger getSynchronized(CircularQueueBigInteger queue)
     {
         return new CircularQueueBigInteger(queue.capacity)
         {
             final Object lock = new Object();
+            
+            @Override
+            public BigInteger push(BigInteger value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+
+            @Override
+            public void pushAll(BigInteger[] value)
+            {
+                synchronized(lock)
+                {
+                    super.pushAll(value);
+                }
+            }
+
+            @Override
+            public BigInteger pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
             @Override
             public BigInteger get(int n)
             {
                 synchronized(lock)
                 {
                     return super.get(n);
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return super.isEmpty();
+                }
+            }
+
+            @Override
+            public BigInteger[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
                 }
             }
 
@@ -257,6 +353,16 @@ public class CircularQueueBigInteger
                 }
             }
 
+
+            @Override
+            public void foreach(Consumer<BigInteger> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
             @Override
             public BigInteger sum()
             {
@@ -275,51 +381,6 @@ public class CircularQueueBigInteger
                 }
             }
 
-            @Override
-            public int size()
-            {
-                synchronized(lock)
-                {
-                    return super.size();
-                }
-            }
-
-            @Override
-            public BigInteger[] array()
-            {
-                synchronized(lock)
-                {
-                    return super.array();
-                }
-            }
-
-            @Override
-            public void foreach(Consumer<BigInteger> consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public BigInteger pop()
-            {
-                synchronized(lock)
-                {
-                    return super.pop();
-                }
-            }
-
-            @Override
-            public BigInteger push(BigInteger value)
-            {
-                synchronized(lock)
-                {
-                    return super.push(value);
-                }
-            }
-            
         };
     }
 }

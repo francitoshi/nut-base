@@ -1,7 +1,7 @@
 /*
  *  ByterTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -34,6 +34,8 @@ public class ByterTest
     private static final char[] CHARS = "hello world".toCharArray();
     private static final int[] INTS = {1,2,3,4,5,6,7,8,9,0};
     private static final long[] LONGS = {1,2,3,4,5,6,7,8,9,0};
+    private static final float[] FLOATS = {1,2,3,4,5,6,7,8,9,0};
+    private static final double[] DOUBLES = {1,2,3,4,5,6,7,8,9,0};
 
     /**
      * Test of bytes method, of class Byter.
@@ -100,6 +102,40 @@ public class ByterTest
 
             assertNull(Byter.bytes((long[])null, order));
             assertNull(Byter.longs(null, order));
+        }
+    }
+
+    /**
+     * Test of bytes method, of class Byter.
+     */
+    @Test
+    public void testBytes_floatArr_ByteOrder()
+    {
+        for(ByteOrder order : BYTE_ORDER)
+        {
+            byte[] bytes = Byter.bytes(FLOATS, order);
+            float[] back = Byter.floats(bytes, order);
+            assertArrayEquals(FLOATS, back);
+
+            assertNull(Byter.bytes((float[])null, order));
+            assertNull(Byter.floats(null, order));
+        }
+    }
+
+    /**
+     * Test of bytes method, of class Byter.
+     */
+    @Test
+    public void testBytes_doubleArr_ByteOrder()
+    {
+        for(ByteOrder order : BYTE_ORDER)
+        {
+            byte[] bytes = Byter.bytes(DOUBLES, order);
+            double[] back = Byter.doubles(bytes, order);
+            assertArrayEquals(DOUBLES, back);
+
+            assertNull(Byter.bytes((double[])null, order));
+            assertNull(Byter.doubles(null, order));
         }
     }
 
@@ -223,6 +259,34 @@ public class ByterTest
 
         assertNull(Byter.bytesLE((long[])null));
         assertNull(Byter.longsLE(null));
+    }
+
+    /**
+     * Test of bytesLE method, of class Byter.
+     */
+    @Test
+    public void testBytesLE_floatArr()
+    {
+        byte[] bytes = Byter.bytesLE(FLOATS);
+        float[] back = Byter.floatsLE(bytes);
+        assertArrayEquals(FLOATS, back);
+
+        assertNull(Byter.bytesLE((float[])null));
+        assertNull(Byter.longsLE(null));
+    }
+
+    /**
+     * Test of bytesLE method, of class Byter.
+     */
+    @Test
+    public void testBytesLE_doubleArr()
+    {
+        byte[] bytes = Byter.bytesLE(DOUBLES);
+        double[] back = Byter.doublesLE(bytes);
+        assertArrayEquals(DOUBLES, back);
+
+        assertNull(Byter.bytesLE((double[])null));
+        assertNull(Byter.doublesLE(null));
     }
 
     /**

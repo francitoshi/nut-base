@@ -177,15 +177,24 @@ public abstract class Wave
 
     public byte[] build(AudioFormat format, int hz, byte[] bytes, double volume)
     {
+        return build(format, hz, bytes, volume, 0);
+    }
+    
+    public byte[] build(AudioFormat format, int hz, byte[] bytes, double volume, int fading)
+    {
         AudioFormat.Encoding encoding = format.getEncoding();
         int sampleRate = (int) format.getFrameRate();
         int channels = format.getChannels();
         boolean bigEndian = format.isBigEndian();
         int sampleBits = format.getSampleSizeInBits();
-        return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, bytes, volume);
+        return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, bytes, volume, fading);
     }
 
     public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, byte[] bytes, double volume)
+    {
+        return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, bytes, volume, 0);
+    }
+    public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, byte[] bytes, double volume, int fading)
     {
         Objects.requireNonNull(bytes, "bytes must not be null");
 
@@ -200,9 +209,11 @@ public abstract class Wave
         ByteBuffer buffer = ByteBuffer.wrap(bytes).order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
         if (hz != 0 && volume != 0)
         {
+            fading = Math.min(fading, samples/3);
             for (int i = 0; i < samples; i++)
             {
-                double value = this.getValue(sampleRate, i, hz, volume);
+                double vol = (fading <= 0) ? volume : volume * Math.max(0, Math.min(1.0, Math.min((double) i / fading, (double) (samples - 1 - i) / fading)));
+                double value = this.getValue(sampleRate, i, hz, vol);
                 
                 for (int ch = 0; ch < channels; ch++)
                 {
@@ -414,6 +425,15 @@ public abstract class Wave
         }
 
         return uval;
+    }
+    
+    public static float[] hanningWindow(float[] window)
+    {
+        for (int i = 0; i < window.length; i++)
+        {
+            window[i] = (float) (0.5 * (1 - Math.cos(2 * Math.PI * i / (window.length - 1))));
+        }
+        return window;
     }
     
     public static double[] hanningWindow(double[] window)

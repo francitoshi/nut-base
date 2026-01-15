@@ -26,6 +26,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.ShortBuffer;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioFormat.Encoding;
 import javax.sound.sampled.AudioInputStream;
@@ -228,5 +231,130 @@ public class Audio
     public static int roundUpToFrameSize(int bytes, int bytesPerFrame) 
     {
         return ((bytes + bytesPerFrame - 1) / bytesPerFrame) * bytesPerFrame;
+    }
+  
+    public static double goertzelPower(double[] data, float sampleRate, double hz)
+    {
+        double sPrev = 0, sPrev2 = 0;
+        double normalizedFreq = 2.0 * Math.PI * hz / sampleRate;
+        double coeff = 2.0 * Math.cos(normalizedFreq);
+        int i = 0;
+        for (double d : data)
+        {
+            double s = d + coeff * sPrev - sPrev2;
+            sPrev2 = sPrev;
+            sPrev = s;
+            i++;
+        }
+        return sPrev2 * sPrev2 + sPrev * sPrev - coeff * sPrev * sPrev2;
+    }
+
+    public static float detectHz(double[] data, float sampleRate, float threshold)
+    {
+        int crossings = -1;
+        int firstCrossingIdx = -1;
+        int lastCrossingIdx = -1;
+
+        // 1 = looking for an upward crossing, -1 = looking for a downward crossing
+        int state = 0;
+
+        for (int i = 0; i < data.length; i++)
+        {
+            // We only process if the signal exceeds the threshold (there is sound)
+            if(state == 0 && data[i] > threshold)
+            {
+                state = 1;
+            }
+            else if(state == 0 && data[i] < -threshold)
+            {
+                state = -1;
+            }
+            else if (state != 1 && data[i] > threshold)
+            {
+                state = 1;
+                crossings++;
+                if (firstCrossingIdx == -1)
+                {
+                    firstCrossingIdx = i;
+                    if(i>0 && data[i-1] >= 0)
+                    {
+                        firstCrossingIdx--;
+                    }
+                }
+                lastCrossingIdx = i;
+            }
+            else if (state != -1 && data[i] < -threshold)
+            {
+                state = -1;
+                crossings++;
+                if (firstCrossingIdx == -1)
+                {
+                    firstCrossingIdx = i;
+                    if(i>0 && data[i-1] <= 0)
+                    {
+                        firstCrossingIdx--;
+                    }
+                }
+                lastCrossingIdx = i;
+            }
+        }
+
+        // If there were not enough crossings or the signal is very weak, there is no tone.
+        if (crossings < 10)
+        {
+            return 0;
+        }
+        
+        float durationSec = (lastCrossingIdx - firstCrossingIdx) / sampleRate;
+        float frequency = (crossings/2) / durationSec;
+        
+        return frequency;
+    }    
+    
+    static double[] i16ToDouble(byte[] src, boolean bigEndian)
+    {
+        ShortBuffer buffer = ByteBuffer.wrap(src).order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+        
+        double[] dst = new double[src.length/Short.BYTES];
+        
+        for(int i=0;i<dst.length;i++)
+        {
+            dst[i] = buffer.get(i)/(double)Short.MAX_VALUE;
+        }
+        return dst;
+    }
+    
+    private static float[] i16ToFloat(byte[] src, boolean bigEndian)
+    {
+        ShortBuffer buffer = ByteBuffer.wrap(src).order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+        
+        float[] dst = new float[src.length/Short.BYTES];
+        
+        for(int i=0;i<dst.length;i++)
+        {
+            dst[i] = buffer.get(i)/(float)Short.MAX_VALUE;
+        }
+        return dst;
+    }
+
+    static double[] i8ToDouble(byte[] src)
+    {
+        double[] dst = new double[src.length];
+        
+        for(int i=0;i<dst.length;i++)
+        {
+            dst[i] = src[i]/(double)Byte.MAX_VALUE;
+        }
+        return dst;
+    }
+    static float[] i8ToFloat(byte[] src)
+    {
+        float[] dst = new float[src.length];
+        
+        for(int i=0;i<dst.length;i++)
+        {
+            dst[i] = src[i]/(float)Byte.MAX_VALUE;
+        }
+        return dst;
     }
 }

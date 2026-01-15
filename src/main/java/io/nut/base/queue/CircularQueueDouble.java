@@ -1,7 +1,7 @@
 /*
  *  CircularQueueDouble.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,19 +20,33 @@
  */
 package io.nut.base.queue;
 
-import java.util.function.Consumer;
+// Claude Sonnet 4.5
+
+import java.util.Objects;
 import java.util.function.DoubleConsumer;
 
-// Claude Sonnet 4.5
+/**
+ * A fixed-size circular queue (ring buffer) implementation for {@code double} primitives.
+ * <p>
+ * This structure operates with a fixed capacity. When elements are pushed into a full queue,
+ * the oldest element (head) is automatically removed/overwritten to make room for the new element.
+ * <p>
+ * <b>Note:</b> This implementation is not thread-safe.
+ */
 public class CircularQueueDouble
 {
-
     private final double[] buffer;
     private final int capacity;
     private int head;
     private int tail;
     private int size;
 
+    /**
+     * Constructs a new CircularQueueDouble with the specified capacity.
+     *
+     * @param capacity the maximum number of elements the queue can hold.
+     * @throws IllegalArgumentException if the capacity is less than or equal to 0.
+     */
     public CircularQueueDouble(int capacity)
     {
         if (capacity <= 0)
@@ -46,6 +60,29 @@ public class CircularQueueDouble
         this.size = 0;
     }
 
+    public CircularQueueDouble(double[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.buffer = data.clone();
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
+    
+    /**
+     * Adds a new element to the end of the queue.
+     * <p>
+     * If the queue is currently at maximum capacity, the oldest element (at the head)
+     * is overwritten/removed to accommodate the new value.
+     *
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise 0.
+     */
     public double push(double value)
     {
         double removed = 0;
@@ -61,6 +98,19 @@ public class CircularQueueDouble
         return removed;
     }
 
+    public void pushAll(double[] value)
+    {
+        for(double v : value)
+        {
+            push(v);
+        }
+    }
+
+    /**
+     * Removes and returns the element at the head of the queue.
+     *
+     * @return the oldest element in the queue, or 0 if the queue is empty.
+     */
     public double pop()
     {
         if (size == 0)
@@ -73,6 +123,29 @@ public class CircularQueueDouble
         return value;
     }
 
+    /**
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
+     */
+    public double get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return 0;
+        }
+        return buffer[(head + n) % capacity];
+    }
+    
+    /**
+     * Performs the given action for each element in the queue.
+     * Elements are processed in order from head (oldest) to tail (newest).
+     *
+     * @param consumer the action to perform on each element.
+     */
     public void foreach(DoubleConsumer consumer)
     {
         for (int i = 0; i < size; i++)
@@ -81,6 +154,12 @@ public class CircularQueueDouble
         }
     }
 
+    /**
+     * Returns a copy of the current queue elements as an array.
+     * The array is ordered from head (oldest) to tail (newest).
+     *
+     * @return a new double array containing the queue elements.
+     */
     public double[] array()
     {
         double[] result = new double[size];
@@ -91,11 +170,26 @@ public class CircularQueueDouble
         return result;
     }
 
+    /**
+     * Returns the number of elements currently in the queue.
+     *
+     * @return the current size.
+     */
     public int size()
     {
         return size;
     }
 
+    public boolean isEmpty()
+    {
+        return size==0;
+    }
+
+    /**
+     * Calculates the arithmetic mean of the values in the queue.
+     *
+     * @return the average of the elements, or 0.0 if the queue is empty.
+     */
     public double average()
     {
         if (size == 0)
@@ -105,6 +199,14 @@ public class CircularQueueDouble
         return sum() / size;
     }
 
+    /**
+     * Calculates the sum of all values in the queue.
+     * <p>
+     * Note: This method returns a standard {@code double}, so overflow may occur
+     * if the sum of elements exceeds {@code Double.MAX_VALUE}.
+     *
+     * @return the sum of all elements.
+     */
     public double sum()
     {
         double total = 0;
@@ -115,6 +217,11 @@ public class CircularQueueDouble
         return total;
     }
 
+    /**
+     * Finds the minimum value currently in the queue.
+     *
+     * @return the smallest value, or 0 if the queue is empty.
+     */
     public double min()
     {
         if (size == 0)
@@ -133,6 +240,11 @@ public class CircularQueueDouble
         return minValue;
     }
 
+    /**
+     * Finds the maximum value currently in the queue.
+     *
+     * @return the largest value, or 0 if the queue is empty.
+     */
     public double max()
     {
         if (size == 0)
@@ -151,26 +263,81 @@ public class CircularQueueDouble
         return maxValue;
     }
 
-    public double get(int n)
-    {
-        if (n < 0 || n >= size)
-        {
-            return 0;
-        }
-        return buffer[(head + n) % capacity];
-    }
-    
     public static CircularQueueDouble getSynchronized(CircularQueueDouble queue)
     {
         return new CircularQueueDouble(queue.capacity)
         {
             final Object lock = new Object();
+            
+            @Override
+            public double push(double value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+
+            @Override
+            public void pushAll(double[] value)
+            {
+                synchronized(lock)
+                {
+                    super.pushAll(value);
+                }
+            }
+
+            @Override
+            public double pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
             @Override
             public double get(int n)
             {
                 synchronized(lock)
                 {
                     return super.get(n);
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return super.isEmpty();
+                }
+            }
+
+            @Override
+            public double[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(DoubleConsumer consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
                 }
             }
 
@@ -210,52 +377,6 @@ public class CircularQueueDouble
                 }
             }
 
-            @Override
-            public int size()
-            {
-                synchronized(lock)
-                {
-                    return super.size();
-                }
-            }
-
-            @Override
-            public double[] array()
-            {
-                synchronized(lock)
-                {
-                    return super.array();
-                }
-            }
-
-            @Override
-            public void foreach(DoubleConsumer consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public double pop()
-            {
-                synchronized(lock)
-                {
-                    return super.pop();
-                }
-            }
-
-            @Override
-            public double push(double value)
-            {
-                synchronized(lock)
-                {
-                    return super.push(value);
-                }
-            }
-            
         };
-    }
-    
+    }    
 }

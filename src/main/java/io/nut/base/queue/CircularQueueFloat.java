@@ -1,7 +1,7 @@
 /*
  *  CircularQueueFloat.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,23 +19,22 @@
  *  Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.queue;
-import java.util.function.Consumer;
 
 // Claude Sonnet 4.5
 
+import java.util.Objects;
+import java.util.function.Consumer;
+
 /**
- * A fixed-size circular queue (ring buffer) implementation for {@code float}
- * primitives.
+ * A fixed-size circular queue (ring buffer) implementation for {@code float} primitives.
  * <p>
- * This structure operates with a fixed capacity. When elements are pushed into
- * a full queue, the oldest element (head) is automatically removed/overwritten
- * to make room for the new element.
+ * This structure operates with a fixed capacity. When elements are pushed into a full queue,
+ * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
 public class CircularQueueFloat
 {
-
     private final float[] buffer;
     private final int capacity;
     private int head;
@@ -46,8 +45,7 @@ public class CircularQueueFloat
      * Constructs a new CircularQueueFloat with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
-     * @throws IllegalArgumentException if the capacity is less than or equal to
-     * 0.
+     * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
     public CircularQueueFloat(int capacity)
     {
@@ -62,15 +60,28 @@ public class CircularQueueFloat
         this.size = 0;
     }
 
+    public CircularQueueFloat(float[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.buffer = data.clone();
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
+    
     /**
-     * Adds a value to the end of the queue.
+     * Adds a new element to the end of the queue.
      * <p>
-     * If the queue is currently at maximum capacity, the oldest element (at the
-     * head) is overwritten/removed to accommodate the new value.
+     * If the queue is currently at maximum capacity, the oldest element (at the head)
+     * is overwritten/removed to accommodate the new value.
      *
-     * @param value the float value to add.
-     * @return the value that was overwritten if the queue was full, otherwise
-     * 0.0f.
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise 0.
      */
     public float push(float value)
     {
@@ -87,10 +98,18 @@ public class CircularQueueFloat
         return removed;
     }
 
+    public void pushAll(float[] value)
+    {
+        for(float v : value)
+        {
+            push(v);
+        }
+    }
+
     /**
      * Removes and returns the element at the head of the queue.
      *
-     * @return the oldest element in the queue, or 0.0f if the queue is empty.
+     * @return the oldest element in the queue, or 0 if the queue is empty.
      */
     public float pop()
     {
@@ -105,8 +124,25 @@ public class CircularQueueFloat
     }
 
     /**
-     * Performs the given action for each element in the queue. Elements are
-     * processed in order from head (oldest) to tail (newest).
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
+     */
+    public float get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return 0;
+        }
+        return buffer[(head + n) % capacity];
+    }
+
+    /**
+     * Performs the given action for each element in the queue.
+     * Elements are processed in order from head (oldest) to tail (newest).
      *
      * @param consumer the action to perform on each element.
      */
@@ -119,8 +155,8 @@ public class CircularQueueFloat
     }
 
     /**
-     * Returns a copy of the current queue elements as an array. The array is
-     * ordered from head (oldest) to tail (newest).
+     * Returns a copy of the current queue elements as an array.
+     * The array is ordered from head (oldest) to tail (newest).
      *
      * @return a new float array containing the queue elements.
      */
@@ -144,6 +180,11 @@ public class CircularQueueFloat
         return size;
     }
 
+    public boolean isEmpty()
+    {
+        return size==0;
+    }
+
     /**
      * Calculates the arithmetic mean of the values in the queue.
      *
@@ -161,8 +202,8 @@ public class CircularQueueFloat
     /**
      * Calculates the sum of all values in the queue.
      * <p>
-     * The result is returned as a {@code double} to provide higher precision
-     * and prevent potential overflow associated with single-precision floats.
+     * Note: This method returns a standard {@code double}, so overflow may occur
+     * if the sum of elements exceeds {@code Double.MAX_VALUE}.
      *
      * @return the sum of all elements.
      */
@@ -179,7 +220,7 @@ public class CircularQueueFloat
     /**
      * Finds the minimum value currently in the queue.
      *
-     * @return the smallest value, or 0.0f if the queue is empty.
+     * @return the smallest value, or 0 if the queue is empty.
      */
     public float min()
     {
@@ -202,7 +243,7 @@ public class CircularQueueFloat
     /**
      * Finds the maximum value currently in the queue.
      *
-     * @return the largest value, or 0.0f if the queue is empty.
+     * @return the largest value, or 0 if the queue is empty.
      */
     public float max()
     {
@@ -222,36 +263,81 @@ public class CircularQueueFloat
         return maxValue;
     }
 
-    /**
-     * Retrieves the element at a specific index relative to the head of the
-     * queue.
-     * <p>
-     * Index 0 corresponds to the head (oldest element).
-     *
-     * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or 0.0f if the index is out
-     * of bounds (n < 0 or n >= size).
-     */
-    public float get(int n)
-    {
-        if (n < 0 || n >= size)
-        {
-            return 0;
-        }
-        return buffer[(head + n) % capacity];
-    }
-
     public static CircularQueueFloat getSynchronized(CircularQueueFloat queue)
     {
         return new CircularQueueFloat(queue.capacity)
         {
             final Object lock = new Object();
+
+            @Override
+            public float push(float value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+
+            @Override
+            public void pushAll(float[] value)
+            {
+                synchronized(lock)
+                {
+                    super.pushAll(value);
+                }
+            }
+
+            @Override
+            public float pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
             @Override
             public float get(int n)
             {
                 synchronized(lock)
                 {
                     return super.get(n);
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return super.isEmpty();
+                }
+            }
+
+            @Override
+            public float[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<Float> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
                 }
             }
 
@@ -291,51 +377,6 @@ public class CircularQueueFloat
                 }
             }
 
-            @Override
-            public int size()
-            {
-                synchronized(lock)
-                {
-                    return super.size();
-                }
-            }
-
-            @Override
-            public float[] array()
-            {
-                synchronized(lock)
-                {
-                    return super.array();
-                }
-            }
-
-            @Override
-            public void foreach(Consumer<Float> consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public float pop()
-            {
-                synchronized(lock)
-                {
-                    return super.pop();
-                }
-            }
-
-            @Override
-            public float push(float value)
-            {
-                synchronized(lock)
-                {
-                    return super.push(value);
-                }
-            }
-            
         };
     }
 }

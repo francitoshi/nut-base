@@ -1,7 +1,7 @@
 /*
  *  Utils.java
  *
- *  Copyright (c) 2023-2025 francitoshi@gmail.com
+ *  Copyright (c) 2023-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -2983,20 +2983,37 @@ public abstract class Utils
      * the task, thread name, and daemon status. The thread is immediately
      * started after creation.</p>
      *
-     * @param task the {@link Runnable} task to be executed in the new thread
+     * @param action the {@link Runnable} task to be executed in the new thread
      * @param name the name to assign to the new thread
      * @param daemon {@code true} if the new thread should be a daemon thread;
      * {@code false} otherwise
      * @return the {@link Thread} that was created and started
      */
-    public static Thread execute(Runnable task, String name, boolean daemon)
+    public static Thread execute(Runnable action, String name, boolean daemon)
     {
-        Thread thread = new Thread(task, name);
+        Thread thread = new Thread(action, name);
         thread.setDaemon(daemon);
         thread.start();
         return thread;
     }
     
+    /**
+     * Creates and starts a new {@link Thread} to execute the given task.
+     *
+     * <p>
+     * This method simplifies thread creation by allowing the caller to specify
+     * the task. The thread is immediately started after creation.</p>
+     *
+     * @param action the {@link Runnable} task to be executed in the new thread
+     * @return the {@link Thread} that was created and started
+     */
+    public static Thread execute(Runnable action)
+    {
+        Thread thread = new Thread(action);
+        thread.start();
+        return thread;
+    }
+
     public static void ansiTitle(String s)
     {
         ansiTitle(System.out, s);

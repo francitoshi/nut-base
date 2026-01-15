@@ -1,7 +1,7 @@
 /*
  *  CircularQueueInt.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,17 +20,16 @@
  */
 package io.nut.base.queue;
 
-import java.util.function.IntConsumer;
-
 // Claude Sonnet 4.5
 
+import java.util.Objects;
+import java.util.function.IntConsumer;
+
 /**
- * A fixed-size circular queue (ring buffer) implementation for {@code int}
- * primitives.
+ * A fixed-size circular queue (ring buffer) implementation for {@code int} primitives.
  * <p>
- * This structure operates with a fixed capacity. When elements are pushed into
- * a full queue, the oldest element (head) is automatically removed/overwritten
- * to make room for the new element.
+ * This structure operates with a fixed capacity. When elements are pushed into a full queue,
+ * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
@@ -46,8 +45,7 @@ public class CircularQueueInt
      * Constructs a new CircularQueueInt with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
-     * @throws IllegalArgumentException if the capacity is less than or equal to
-     * 0.
+     * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
     public CircularQueueInt(int capacity)
     {
@@ -61,16 +59,29 @@ public class CircularQueueInt
         this.tail = 0;
         this.size = 0;
     }
+    
+    public CircularQueueInt(int[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.buffer = data.clone();
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
 
     /**
-     * Adds a value to the end of the queue.
+     * Adds a new element to the end of the queue.
      * <p>
-     * If the queue is currently at maximum capacity, the oldest element (at the
-     * head) is overwritten/removed to accommodate the new value.
+     * If the queue is currently at maximum capacity, the oldest element (at the head)
+     * is overwritten/removed to accommodate the new value.
      *
-     * @param value the int value to add.
-     * @return the value that was overwritten if the queue was full, otherwise
-     * 0.
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise 0.
      */
     public int push(int value)
     {
@@ -85,6 +96,14 @@ public class CircularQueueInt
         tail = (tail + 1) % capacity;
         size++;
         return removed;
+    }
+    
+    public void pushAll(int[] value)
+    {
+        for(int v : value)
+        {
+            push(v);
+        }
     }
 
     /**
@@ -105,8 +124,25 @@ public class CircularQueueInt
     }
 
     /**
-     * Performs the given action for each element in the queue. Elements are
-     * processed in order from head (oldest) to tail (newest).
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
+     */
+    public int get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return 0;
+        }
+        return buffer[(head + n) % capacity];
+    }
+    
+    /**
+     * Performs the given action for each element in the queue.
+     * Elements are processed in order from head (oldest) to tail (newest).
      *
      * @param consumer the action to perform on each element.
      */
@@ -119,8 +155,8 @@ public class CircularQueueInt
     }
 
     /**
-     * Returns a copy of the current queue elements as an array. The array is
-     * ordered from head (oldest) to tail (newest).
+     * Returns a copy of the current queue elements as an array.
+     * The array is ordered from head (oldest) to tail (newest).
      *
      * @return a new int array containing the queue elements.
      */
@@ -144,6 +180,11 @@ public class CircularQueueInt
         return size;
     }
 
+    public boolean isEmpty()
+    {
+        return size==0;
+    }
+
     /**
      * Calculates the arithmetic mean of the values in the queue.
      *
@@ -161,8 +202,8 @@ public class CircularQueueInt
     /**
      * Calculates the sum of all values in the queue.
      * <p>
-     * The result is returned as a {@code long} to prevent overflow when summing
-     * multiple large integers.
+     * Note: This method returns a standard {@code double}, so overflow may occur
+     * if the sum of elements exceeds {@code Long.MAX_VALUE}.
      *
      * @return the sum of all elements.
      */
@@ -222,30 +263,39 @@ public class CircularQueueInt
         return maxValue;
     }
 
-    /**
-     * Retrieves the element at a specific index relative to the head of the
-     * queue.
-     * <p>
-     * Index 0 corresponds to the head (oldest element).
-     *
-     * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or 0 if the index is out of
-     * bounds (n < 0 or n >= size).
-     */
-    public int get(int n)
-    {
-        if (n < 0 || n >= size)
-        {
-            return 0;
-        }
-        return buffer[(head + n) % capacity];
-    }
-    
     public static CircularQueueInt getSynchronized(CircularQueueInt queue)
     {
         return new CircularQueueInt(queue.capacity)
         {
             final Object lock = new Object();
+
+            @Override
+            public int push(int value)
+            {
+                synchronized(lock)
+                {
+                    return super.push(value);
+                }
+            }
+
+            @Override
+            public void pushAll(int[] value)
+            {
+                synchronized(lock)
+                {
+                    super.pushAll(value);
+                }
+            }
+
+            @Override
+            public int pop()
+            {
+                synchronized(lock)
+                {
+                    return super.pop();
+                }
+            }
+
             @Override
             public int get(int n)
             {
@@ -255,6 +305,42 @@ public class CircularQueueInt
                 }
             }
 
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return super.size();
+                }
+            }
+
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return super.isEmpty();
+                }
+            }
+
+            @Override
+            public int[] array()
+            {
+                synchronized(lock)
+                {
+                    return super.array();
+                }
+            }
+
+            @Override
+            public void foreach(IntConsumer consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+            
             @Override
             public int max()
             {
@@ -291,51 +377,6 @@ public class CircularQueueInt
                 }
             }
 
-            @Override
-            public int size()
-            {
-                synchronized(lock)
-                {
-                    return super.size();
-                }
-            }
-
-            @Override
-            public int[] array()
-            {
-                synchronized(lock)
-                {
-                    return super.array();
-                }
-            }
-
-            @Override
-            public void foreach(IntConsumer consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public int pop()
-            {
-                synchronized(lock)
-                {
-                    return super.pop();
-                }
-            }
-
-            @Override
-            public int push(int value)
-            {
-                synchronized(lock)
-                {
-                    return super.push(value);
-                }
-            }
-            
         };
     }
 }

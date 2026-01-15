@@ -1,7 +1,7 @@
 /*
  * Morse.java
  *
- * Copyright (c) 2013-2025 francitoshi@gmail.com
+ * Copyright (c) 2013-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,13 +20,17 @@
  */
 package io.nut.base.morse;
 
-import static io.nut.base.text.MorseCode.FLAG_WG5U;
+import io.nut.base.math.Nums;
+import io.nut.base.queue.CircularQueueInt;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.StringJoiner;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -129,6 +133,9 @@ public class Morse
     
     public static final int FLAG_MIDLE = 1; //use middle characters
     public static final int FLAG_BOLD  = 2; // use bold characters
+    public static final int FLAG_WG5U  = 8; //word gap 5 units (default 7)
+    
+    public static final int FLAG_LAST_WGAP  = 16; // word gap at end of patterns
 
     public static final int DEFAULT_WMP = 20;
 
@@ -157,6 +164,10 @@ public class Morse
     public final int charGapMillis;
     public final int wordGapMillis;
     
+    public final boolean lastWGap;
+    public final int maxUnits;
+    public final int maxTerms;
+    
     private static class Letter
     {
         final String letter;
@@ -184,6 +195,8 @@ public class Morse
         boolean bold     = (flags & FLAG_BOLD)     == FLAG_BOLD;
         boolean wg5u     = (flags & FLAG_WG5U)     == FLAG_WG5U;
 
+        this.lastWGap = (flags & FLAG_LAST_WGAP)== FLAG_LAST_WGAP;
+        
         //wpm must be as fast as ewpm
         wpm = Math.max(wpm,ewpm);
 
@@ -201,6 +214,9 @@ public class Morse
         char[] morse = bold ? TEXTS_BOLD : ( middle ? TEXTS_MIDDLE : TEXTS_ASCII);  
         List<char[][]> list = Utils.listOf(LETTERS, NUMBERS, PUNCTUATION, ACCENTED_LETTERS);
         
+        int maxUnits = 0;
+        int maxTerms = 0;
+        
         for(char[][] item : list)
         {
             for(char[] subitem : item)
@@ -208,6 +224,8 @@ public class Morse
                 Letter letter = inflateLetter(subitem, morse);
                 encodeMap.put(subitem[0], letter);
                 decodeMap.put(letter.morse, letter);
+                maxUnits = Math.max(maxUnits, (int)(Nums.sum(letter.units)+letter.units.length));
+                maxTerms = Math.max(maxTerms, letter.units.length);
             }            
         }
         for(String item : PROSIGNS)
@@ -232,14 +250,18 @@ public class Morse
             {
                 throw new RuntimeException("Prosign collision"+letter.letter+" > "+collision.letter);
             }
+            maxUnits = Math.max(maxUnits, (int)(Nums.sum(units)+units.length));
+            maxTerms = Math.max(maxTerms, (int)units.length); 
         }
+        this.maxUnits = maxUnits;
+        this.maxTerms = maxTerms;
     }
     
     private final static Pattern PROSIGN_PATTERN = Pattern.compile("<([A-Za-z]+)>");
     
     public String[][] encode(String plainText)
     {
-        String[] plainWords = plainText.toUpperCase().split("\\s+");
+        String[] plainWords = plainText.trim().toUpperCase().split("\\s+");
         String[][] codes = new String[plainWords.length][];
         for(int i=0;i<plainWords.length;i++)
         {
@@ -274,11 +296,22 @@ public class Morse
     
     public byte[][][] encodeUnits(String plainText)
     {
-        String[] plainWords = plainText.toUpperCase().split("\\s+");
+        String[] plainWords = plainText.trim().toUpperCase().split("\\s+");
         byte[][][] units = new byte[plainWords.length][][];
         for(int i=0;i<plainWords.length;i++)
         {
-            char[] plainChars = plainWords[i].toCharArray();
+            String word = plainWords[i];
+            Matcher matcher = PROSIGN_PATTERN.matcher(word);
+            if(matcher.matches())
+            {
+                Letter prosign = prosignMap.getOrDefault(matcher.group(1), null);
+                if(prosign!=null)
+                {
+                    units[i] = new byte[][]{prosign.units};
+                    continue;
+                }
+            }
+            char[] plainChars = word.toCharArray();
             units[i] = new byte[plainChars.length][];
             for(int j=0;j<plainChars.length;j++)
             {
@@ -289,13 +322,14 @@ public class Morse
                 }
                 else
                 {
-                    System.err.println("uknown code "+plainChars[j]);
+                    units[i][j] = new byte[0];
                 }
             }            
         }
         return units;
     }
 
+    //pattern always start with a 0 gap
     public int[] encodePattern(String plainText)
     {
         return join(encodeUnits(plainText));
@@ -319,7 +353,10 @@ public class Morse
             }
             gap = this.wordGapMillis;
         }
-        pattern.add(gap);
+        if(this.lastWGap)
+        {
+            pattern.add(gap);
+        }
         int[] ret = new int[pattern.size()];
         for(int i=0;i<pattern.size();i++)
         {
@@ -365,5 +402,97 @@ public class Morse
             text.add(word);
         }
         return text.toString();
+    }
+
+    public void decodePattern(Iterable<int[]> pattern, Consumer<String> action)
+    {
+        Objects.requireNonNull(pattern, "pattern must not be null");
+        Objects.requireNonNull(action, "action must not be null");
+
+        StringBuilder currentLetter = new StringBuilder();
+        
+        final AtomicInteger count = new AtomicInteger(0);
+        for(int[] item : pattern)
+        {
+            CircularQueueInt cqi = new CircularQueueInt(item);
+            
+            long unitT = baseUnit(cqi.array());
+            long pulseThreshold = unitT * 2;
+            long gapInterCharacterThreshold = unitT * 2;
+            long gapInterWordThreshold = unitT * 5;
+
+            cqi.foreach((ms) ->
+            {
+                boolean isPulse = (count.getAndIncrement() % 2 == 1);
+                if (isPulse)
+                {
+                    // Decidir si es punto o raya
+                    currentLetter.append(ms < pulseThreshold ? "." : "-");
+                }
+                else if(currentLetter.length()>maxTerms)
+                {
+                    //too long discard
+                    action.accept("<?> ");
+                }
+                else
+                {
+                    // Es un silencio, decidir si termina letra o palabra
+                    if (ms >= gapInterWordThreshold)
+                    {
+                        decodeLetter(currentLetter, action);
+                        action.accept(" ");// Espacio entre palabras
+                    }
+                    else if (ms >= gapInterCharacterThreshold)
+                    {
+                        decodeLetter(currentLetter, action);
+                    }
+                    // Si el silencio es muy corto, es solo la separación interna de la letra (se ignora)
+                }
+            });
+        }
+
+        // Procesar la última letra si quedó algo pendiente
+        decodeLetter(currentLetter, action);
+    }
+    
+    protected void decodeLetter(StringBuilder currentLetter, Consumer<String> action)
+    {
+        if (currentLetter.length() > 0)
+        {
+            String symbol = currentLetter.toString();
+            Letter letter = decodeMap.getOrDefault(symbol, null);
+            if(letter==null)
+            {
+                action.accept("?");
+            }
+            else if(letter.prosign)
+            {
+                action.accept('<'+letter.letter+'>');
+            }
+            else
+            {
+                action.accept(letter.letter);
+            }
+            currentLetter.setLength(0); // Limpiar para la siguiente letra
+        }
+    }
+    
+    public String decodePattern(int[] pattern)
+    {
+        StringBuilder decodedMessage = new StringBuilder();
+        List<int[]> list = new ArrayList<>();
+        list.add(pattern);
+        decodePattern(list, (letter) -> decodedMessage.append(letter));
+        return decodedMessage.toString();
+    } 
+
+    static int baseUnit(int[] pattern)
+    {
+        int m = Integer.MAX_VALUE;
+        for(int p : pattern)
+        {
+            m = (p>0) ? Math.min(m,p) : m;
+        }
+        return m;
     }
 }

@@ -28,16 +28,22 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.UnsupportedAudioFileException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
 public class AudioTest
 {
+    static InputStream getIS() throws UnsupportedAudioFileException, IOException
+    {
+        return new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz")));
+    }
+    
     @Test
     public void testGetFloatMono() throws LineUnavailableException, IOException, UnsupportedAudioFileException
     {        
-        InputStream in = new BufferedInputStream(new GZIPInputStream(AudioTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz")));
-        AudioInputStream ais = AudioSystem.getAudioInputStream(in);
+        AudioInputStream ais = AudioSystem.getAudioInputStream(getIS());
         AudioFormat fmt = Audio.getFloatMono(ais.getFormat(), false);
         try (AudioInputStream mono = Audio.getAudioInputStream(ais, fmt))
         {
@@ -52,8 +58,7 @@ public class AudioTest
     @Test
     public void testGetDoubleMono() throws LineUnavailableException, IOException, UnsupportedAudioFileException
     {        
-        InputStream in = new BufferedInputStream(new GZIPInputStream(AudioTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz")));
-        AudioInputStream ais = AudioSystem.getAudioInputStream(in);
+        AudioInputStream ais = AudioSystem.getAudioInputStream(getIS());
         AudioFormat fmt = Audio.getDoubleMono(ais.getFormat(), false);
         try (AudioInputStream mono = Audio.getAudioInputStream(ais, fmt))
         {
@@ -71,7 +76,7 @@ public class AudioTest
     @Test
     public void testGetAudioInputStream_InputStream() throws Exception
     {
-        InputStream src = new GZIPInputStream(AudioTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz"));
+        InputStream src = getIS();
 
         try (AudioInputStream ais = Audio.getAudioInputStream(src))
         {
@@ -80,6 +85,65 @@ public class AudioTest
             {
                 ais.read(buffer);
             }
+        }
+    }
+    
+    static final boolean ALLOW_SOUND = false;
+    static final boolean SHOW = false;
+    
+    /**
+     * Test of detectHz method, of class Audio.
+     */
+    @Test
+    public void testDetectHz1() throws LineUnavailableException
+    {
+        Wave wave = Wave.SINE;
+        AudioFormat format = Audio.PCM_8BIT_MONO;
+
+        SourceDataLine lineOut = ALLOW_SOUND ? Audio.getLineOut(format) : null;
+        
+        for(int hz=400;hz<1200; hz += 100)
+        {
+            byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.33);
+            double[] dst = Audio.i8ToDouble(src);
+            double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
+
+            if(lineOut!=null)
+            {
+                lineOut.write(src, 0, src.length);
+                lineOut.drain();
+            }            
+            if(SHOW)
+            {
+                System.out.printf("%d => %.1f\n", hz, result);
+            }
+            assertEquals(hz, result, 0.1);
+        }
+    }
+    @Test
+    public void testDetectHz2() throws LineUnavailableException
+    {
+        Wave wave = Wave.SINE;
+        AudioFormat format = Audio.PCM_CD_MONO;
+
+        SourceDataLine lineOut = ALLOW_SOUND ? Audio.getLineOut(format) : null;
+        
+        for(int hz=400;hz<1200; hz += 100)
+        {
+            byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.33);
+            double[] dst = Audio.i16ToDouble(src, format.isBigEndian());
+            double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
+
+            if(lineOut!=null)
+            {
+                lineOut.write(src, 0, src.length);
+                lineOut.drain();
+            }
+            if(SHOW)
+            {
+                System.out.printf("%d => %.1f\n", hz, result);
+            }
+            assertEquals(hz, result, 0.1);
         }
     }
     
