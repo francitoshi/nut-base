@@ -31,19 +31,18 @@ import org.junit.jupiter.api.Test;
 
 public class MorseGoertzelTest
 {
+    static final String MORSE1 = "morse-quixote-8000-mono-u8.wav.gz";
+    
     static final int HZ = 550;
     static final int BR = 8000;
     static final boolean SHOW = false;
     
     static AudioInputStream getAIS() throws UnsupportedAudioFileException, IOException
     {
-        InputStream in = new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz")));
+        InputStream in = new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream(MORSE1)));
         return AudioSystem.getAudioInputStream(in);
     }
 
-    /**
-     * Test of run method, of class MorseGoertzel.
-     */
     @Test
     public void testRun() throws UnsupportedAudioFileException, IOException
     {
@@ -52,9 +51,9 @@ public class MorseGoertzelTest
         int num = 0;
         
         if(SHOW) System.out.println("testRun");
-        for(double item : mg)
+        for(double[] item : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n",item);
+            if(SHOW) System.out.printf("%.2f\n", item[0]);
             if(num++>BR)break;
         }
     }
@@ -70,9 +69,9 @@ public class MorseGoertzelTest
 
         int num = 0;
         if(SHOW) System.out.println("testRunHann");
-        for(double item : mg)
+        for(double[] item : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n",item);
+            if(SHOW) System.out.printf("%.2f\n",item[0]);
             if(num++>BR)break;
         }
     }
@@ -88,9 +87,9 @@ public class MorseGoertzelTest
 
         int num = 0;
         if(SHOW) System.out.println("testRunOverlap");
-        for(double item : mg)
+        for(double[] item : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n",item);
+            if(SHOW) System.out.printf("%.2f\n",item[0]);
             if(num++>BR)break;
         }
     }
@@ -106,9 +105,9 @@ public class MorseGoertzelTest
 
         int num = 0;
         if(SHOW) System.out.println("testRunHannOverlap");
-        for(double item : mg)
+        for(double[] item : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n",item);
+            if(SHOW) System.out.printf("%.2f\n",item[0]);
             if(num++>BR)break;
         }
     }   

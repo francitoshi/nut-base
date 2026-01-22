@@ -20,7 +20,6 @@
  */
 package io.nut.base.audio;
 
-import io.nut.base.stats.MovingAverage;
 import io.nut.base.util.concurrent.Generator;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -31,15 +30,13 @@ import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 
-public class AudioGoertzel extends Generator<Double>
+public class AudioGoertzel extends Generator<double[]>
 {
-    private volatile boolean active;
     private final AudioInputStream ais;
     private final int hz;
     private final boolean hannWindow;
     private final boolean overlap;
     private final int blockMillis;
-    private volatile double threshold;
 
     public AudioGoertzel(AudioInputStream ais, int hz, boolean hannWindow, boolean overlap, int blockMillis, int capacity)
     {
@@ -56,7 +53,6 @@ public class AudioGoertzel extends Generator<Double>
     {
         try
         {
-            this.active = true;
             AudioFormat fmt = Audio.getFloatMono(ais.getFormat(), false);
             int blockSize = Audio.bytesNeeded(fmt, blockMillis);
             float sampleRate = fmt.getFrameRate();
@@ -64,13 +60,14 @@ public class AudioGoertzel extends Generator<Double>
             
             AudioInputStream input = Audio.getAudioInputStream(ais, fmt);          
             
-            double[] hann = hannWindow ? Wave.hanningWindow(new double[blockSize]) : null;
+            double[] hann = hannWindow ? Wave.hannWindow(new double[blockSize]) : null;
             double[] work = new double[blockSize];
             double[][] half = overlap ? new double[2][blockSize/2] : new double[1][blockSize];
             byte[] read = new byte[Float.BYTES*half[0].length];
+            double[] energies = new double[3];
             FloatBuffer buffer = ByteBuffer.wrap(read).order(be ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
             int w = overlap ? 1 : 0;
-            for(int round=0;this.active;round++)
+            for(int round=0; !isShutdown() ;round++)
             {
                 int r = input.read(read);
                 if(r<0)
@@ -106,9 +103,21 @@ public class AudioGoertzel extends Generator<Double>
                             work[i] *= hann[i]; 
                         }
                     }
-                    double energy = freq!=0 ? Audio.goertzelPower(work, sampleRate, freq) : 0;
-                    threshold = updateThresholdSimple(energy);
-                    this.yield(energy);                    
+                    
+                    if(freq!=0)
+                    {
+                        energies[0] = Audio.goertzelPower(work, sampleRate, freq);
+                        energies[1] = Audio.goertzelPower(work, 0, work.length/2, sampleRate, freq);
+                        energies[2] = Audio.goertzelPower(work, work.length/2, work.length, sampleRate, freq);
+//                        System.out.printf("e = %.2f %.2f %.2f \n", energies[0], energies[1], energies[2]);
+                    }
+                    else
+                    {
+                        energies[0] = 0;
+                        energies[1] = 0;
+                        energies[2] = 0;
+                    }
+                    this.yield(energies.clone());                    
                 }
                 if(overlap)
                 {
@@ -122,49 +131,5 @@ public class AudioGoertzel extends Generator<Double>
         {
             Logger.getLogger(AudioGoertzel.class.getName()).log(Level.SEVERE, null, ex);
         }
-        finally
-        {
-            this.active = false;
-        }
     }
- 
-// Parámetros de configuración
-    private static final double ALPHA_FAST = 0.1;    // Adaptación rápida (señal)
-    private static final double ALPHA_SLOW = 0.01;   // Adaptación lenta (ruido)
-    private static final double ALPHA_VARIANCE = 0.05; // Para varianza
-    private static final double INITIAL_THRESHOLD = 0.015;
-    private static final double MIN_THRESHOLD = 0.005;
-    private static final double MAX_THRESHOLD = 0.5;
-    
-    // Estado interno (lo único que guardamos)
-    private volatile double emaSignal = INITIAL_THRESHOLD * 2;   // Media móvil exponencial de señal
-    private volatile double emaNoise = INITIAL_THRESHOLD * 0.5;       // Media móvil exponencial de ruido
-    private volatile double emaVariance = 0.001;    // Varianza estimada
-    private volatile double currentThreshold = INITIAL_THRESHOLD;
-    private volatile boolean lastWasTone = false;
-
-    private double updateThresholdSimple(double energy) 
-    {
-        // Decidir si actualizar como señal o ruido
-        if (energy > threshold) 
-        {
-            emaSignal = 0.9 * emaSignal + 0.1 * energy;
-        } 
-        else 
-        {
-            emaNoise = 0.99 * emaNoise + 0.01 * energy;
-        }
-        
-        // Umbral = promedio ponderado
-        threshold = 0.3 * emaNoise + 0.7 * emaSignal;
-        threshold = Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, threshold));
-        
-        return threshold;
-    }    
-
-    public double getThreshold()
-    {
-        return threshold;
-    }
-    
 }

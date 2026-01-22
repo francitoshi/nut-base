@@ -59,7 +59,7 @@ public class AudioModem implements Closeable
     }
     public AudioModem(TargetDataLine lineIn, SourceDataLine lineOut, int cacheCapacity, Wave wave)
     {
-        this(Audio.getAudioInputStream(lineIn), lineOut, cacheCapacity, wave);
+        this(lineIn!=null ? Audio.getAudioInputStream(lineIn) : null, lineOut, cacheCapacity, wave);
     }
 
     public AudioModem(AudioInputStream lineIn, SourceDataLine lineOut)

@@ -21,92 +21,118 @@
 package io.nut.base.audio;
 
 import io.nut.base.morse.Morse;
-import io.nut.base.stats.SimpleMovingAverage;
+import io.nut.base.stats.MovingAverage;
 import io.nut.base.util.concurrent.Generator;
 import java.util.Arrays;
 import javax.sound.sampled.AudioInputStream;
 
 public class AudioMorse extends Generator<String>
 {
-    private volatile boolean active;
     private final AudioInputStream ais;
     private final int blockMillis;
     private final int flushMillis;
     private final Morse morse;
 
-    private volatile double threshold  = 5;
-    
+    private volatile double threshold;
     private final AudioGoertzel audioGoertzel;
+    private final MovingAverage quietEMA;
+    private final MovingAverage pulseEMA;
+    static final double BETA = 0.2; // Factor para cálculo conservador del umbral (0.1-0.3)
+
     public AudioMorse(AudioInputStream ais, int hz, boolean hannWindow, boolean overlap, int blockMillis, int capacity)
     {
         super(capacity);
         this.ais = ais;
         this.blockMillis = blockMillis;
-        this.audioGoertzel = new AudioGoertzel(ais, hz, hannWindow, overlap, blockMillis, capacity);
         this.morse = new Morse();
-        this.flushMillis = Math.max(blockMillis*this.morse.maxUnits*4, 2000);
+        this.flushMillis = Math.max(blockMillis*this.morse.maxUnits*2, 400);
+
+        this.threshold = blockMillis*blockMillis;
+        this.audioGoertzel = new AudioGoertzel(ais, hz, hannWindow, overlap, blockMillis, capacity);
+        this.quietEMA = MovingAverage.createEMA(10);
+        this.pulseEMA = MovingAverage.createEMA(10);
     }
     
-    private final Generator<Integer> audio2pattern = new Generator<Integer>()
+    private void updateThreshold(boolean pulse, double e)
+    {
+        double p;
+        double q;
+
+        if(pulse)
+        {
+            p = pulseEMA.next(e);
+            q = quietEMA.average();
+        }
+        else
+        {
+            p = pulseEMA.average();
+            q = quietEMA.next(e);
+        }
+
+        threshold = p>q ? q + BETA * (p - q) : Math.max(threshold, q*10);
+    }
+    
+    private final Generator<Integer> audio2pattern = new Generator<Integer>(capacity)
     {
         @Override
         public void run()
         {
             int status = 0;
-
-            SimpleMovingAverage sma = new SimpleMovingAverage(blockMillis);
-            int i=0;
+            
             int ms = 0;
-
-            for(double e : audioGoertzel)
+            for(double[] e : audioGoertzel)
             {
-                if(!active) 
+                if(isTerminated()) 
                 {
                     return;
                 }
                 
-                //666 threshold = audioGoertzel.getThreshold();
+                if(status>0 && e[0]>threshold)
+                {
+                    status = 1;
+                    ms += blockMillis;
+                    updateThreshold(true, e[0]);
+                    continue;
+                }
+                else if(status<=0 && e[0]<=threshold)
+                {
+                    status = -1;
+                    ms += blockMillis;
+                    updateThreshold(false, e[0]);
+                    continue;
+                }
                 
-                if(status>0 && e>threshold)
+                if(e[0]>threshold)
                 {
                     status = 1;
-                    ms += blockMillis;
-                    continue;
+                    updateThreshold(true, e[0]);
                 }
-                else if(status<=0 && e<=threshold)
+                else if(e[0]<=threshold)
                 {
                     status = -1;
-                    ms += blockMillis;
-                    continue;
+                    updateThreshold(false, e[0]);
                 }
-
+                
+//666                System.out.printf("%d %d %.2f | %.2f %.2f %.2f\n", status, ms, threshold, e[0], e[1], e[2]);
+                
                 this.yield(ms);
-
-                if(e>threshold)
-                {
-                    status = 1;
-                }
-                else if(e<=threshold)
-                {
-                    status = -1;
-                }
                 ms = blockMillis;
             }
             this.yield(ms);
         }
     };
 
-    private final Generator<int[]> pattern2chunks = new Generator<int[]>()
+    private final Generator<int[]> pattern2chunks = new Generator<int[]>(capacity)
     {
         @Override
         public void run()
         {
             int count = 0;
             int acum = 0;
-            int[] chunk = new int[flushMillis];
+            int[] chunk = new int[(int)flushMillis];
             for(int ms : audio2pattern)
             {
-                if(!active) 
+                if(isTerminated()) 
                 {
                     return;
                 }
@@ -131,15 +157,34 @@ public class AudioMorse extends Generator<String>
     @Override
     public void run()
     {
-        active = true;
         try
         {
             morse.decodePattern(pattern2chunks, (letter) -> this.yield(letter));
         }
         finally
         {
-            active = false;
+
         }
     }
+
+    @Override
+    public void shutdownNow()
+    {
+        audioGoertzel.shutdownNow();
+        audio2pattern.shutdownNow();
+        pattern2chunks.shutdownNow();
+        super.shutdownNow();
+    }
+
+    @Override
+    public void shutdown()
+    {
+        audioGoertzel.shutdown();
+        audio2pattern.shutdown();
+        pattern2chunks.shutdown();
+        super.shutdown();
+    }
+    
+    
     
 }

@@ -23,6 +23,8 @@ package io.nut.base.util.concurrent;
 import io.nut.base.util.Utils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,30 +37,6 @@ import org.junit.jupiter.api.Test;
 public class GeneratorTest
 {
 
-    public GeneratorTest()
-    {
-    }
-
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-
-    @BeforeEach
-    public void setUp()
-    {
-    }
-
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
     static Generator<Character> letters(int n, int capacity)
     {
         return new Generator.Safe<Character>()
@@ -66,7 +44,7 @@ public class GeneratorTest
             @Override
             public void run()
             {
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < n && !isShutdown(); i++)
                 {
                     this.yield((char) ('A' + i));
                 }
@@ -81,7 +59,7 @@ public class GeneratorTest
             @Override
             public void run()
             {
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < n && !isShutdown(); i++)
                 {
                     this.yield(i);
                 }
@@ -120,13 +98,13 @@ public class GeneratorTest
         Generator<Character> instance = letters(26, 0);
         for (Character ch : instance)
         {
-            Utils.sleep(100);
+            Utils.sleep(ch);
             instance.shutdown();
         }
         instance = letters(26, 10);
         for (Character ch : instance)
         {
-            Utils.sleep(100);
+            Utils.sleep(ch);
             instance.shutdown();
         }
         instance.reset();
@@ -137,6 +115,31 @@ public class GeneratorTest
             count++;
         }
         instance.shutdown();
+        assertTrue(count>0);
+    }
+    /**
+     * Test of shutdown method, of class Generator.
+     */
+    @Test
+    public void testShutdownNow()
+    {
+        Generator<Character> instance = letters(26, 20);
+        int count = 0;
+        for (Character ch : instance)
+        {
+            count++;
+            Utils.sleep(100);
+            instance.shutdownNow();
+        }
+        assertEquals(1,count);
+        instance.reset();
+        count=0;
+        //run instance twice it should work
+        for (Character ch : instance)
+        {
+            count++;
+            instance.shutdownNow();
+        }
         assertTrue(count>0);
     }
 }

@@ -157,6 +157,9 @@ public class Morse
     private final HashMap<Character,Letter> encodeMap = new HashMap<>();
     private final HashMap<String,Letter> prosignMap = new HashMap<>();
     private final HashMap<String,Letter> decodeMap = new HashMap<>();
+    private final String[] allowedLetters;
+    private final String[] allowedProsigns;
+    private final String[] allowedItems;
 
     public final int ditMillis;
     public final int dahMillis;
@@ -213,6 +216,10 @@ public class Morse
         
         char[] morse = bold ? TEXTS_BOLD : ( middle ? TEXTS_MIDDLE : TEXTS_ASCII);  
         List<char[][]> list = Utils.listOf(LETTERS, NUMBERS, PUNCTUATION, ACCENTED_LETTERS);
+
+        List<String> letterList = new ArrayList<>();
+        List<String> prosignList = new ArrayList<>();
+        List<String> itemList = new ArrayList<>();
         
         int maxUnits = 0;
         int maxTerms = 0;
@@ -226,6 +233,8 @@ public class Morse
                 decodeMap.put(letter.morse, letter);
                 maxUnits = Math.max(maxUnits, (int)(Nums.sum(letter.units)+letter.units.length));
                 maxTerms = Math.max(maxTerms, letter.units.length);
+                letterList.add(letter.letter);
+                itemList.add(letter.letter);
             }            
         }
         for(String item : PROSIGNS)
@@ -252,9 +261,14 @@ public class Morse
             }
             maxUnits = Math.max(maxUnits, (int)(Nums.sum(units)+units.length));
             maxTerms = Math.max(maxTerms, (int)units.length); 
+            prosignList.add(letter.letter);
+            itemList.add(letter.letter);
         }
         this.maxUnits = maxUnits;
         this.maxTerms = maxTerms;
+        this.allowedLetters = letterList.toArray(new String[0]);
+        this.allowedProsigns = prosignList.toArray(new String[0]);
+        this.allowedItems = itemList.toArray(new String[0]);
     }
     
     private final static Pattern PROSIGN_PATTERN = Pattern.compile("<([A-Za-z]+)>");
@@ -332,11 +346,16 @@ public class Morse
     //pattern always start with a 0 gap
     public int[] encodePattern(String plainText)
     {
-        return join(encodeUnits(plainText));
+        return join(encodeUnits(plainText), true);
     }
 
-    public int[] join(byte[][][] units)
+    public int[] join(byte[][][] units, boolean useMillis)
     {
+        final int ditMs = useMillis ? this.ditMillis : 1;
+        final int gapMs = useMillis ? this.gapMillis : 1;
+        final int charGapMs = useMillis ? this.charGapMillis : 1;
+        final int wordGapMs = useMillis ? this.wordGapMillis : 1;
+        
         ArrayList<Integer> pattern = new ArrayList<>();
         int gap = 0;
         for(byte[][] word : units)
@@ -346,12 +365,12 @@ public class Morse
                 for(byte unit : letter)
                 {
                     pattern.add(gap);
-                    pattern.add(unit*this.ditMillis);
-                    gap = this.gapMillis;
+                    pattern.add(unit*ditMs);
+                    gap = gapMs;
                 }
-                gap = this.charGapMillis;
+                gap = charGapMs;
             }
-            gap = this.wordGapMillis;
+            gap = wordGapMs;
         }
         if(this.lastWGap)
         {
@@ -494,5 +513,22 @@ public class Morse
             m = (p>0) ? Math.min(m,p) : m;
         }
         return m;
+    }
+    
+    public String[] allowed(boolean letters, boolean prosigns)
+    {
+        if(letters && prosigns)
+        {
+            return this.allowedItems.clone();
+        }
+        if(letters)
+        {
+            return this.allowedLetters.clone();
+        }
+        if(prosigns)
+        {
+            return this.allowedProsigns.clone();
+        }
+        return new String[0];
     }
 }

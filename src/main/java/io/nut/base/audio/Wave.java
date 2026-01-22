@@ -174,6 +174,7 @@ public abstract class Wave
     };
     
     public static final Wave[] WAVES = { SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE, WHITE_NOISE, BROWNIAN_NOISE};
+    public static final Wave[] CLEAN_WAVES = { SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
 
     public byte[] build(AudioFormat format, int hz, byte[] bytes, double volume)
     {
@@ -427,7 +428,7 @@ public abstract class Wave
         return uval;
     }
     
-    public static float[] hanningWindow(float[] window)
+    public static float[] hannWindow(float[] window)
     {
         for (int i = 0; i < window.length; i++)
         {
@@ -436,7 +437,7 @@ public abstract class Wave
         return window;
     }
     
-    public static double[] hanningWindow(double[] window)
+    public static double[] hannWindow(double[] window)
     {
         for (int i = 0; i < window.length; i++)
         {
@@ -444,5 +445,24 @@ public abstract class Wave
         }
         return window;
     }
+    
+    public static float[] hammingWindow(float[] window)
+    {
+        for (int i = 0; i < window.length; i++)
+        {
+            window[i] = (float) (0.54 - 0.46 * Math.cos(2 * Math.PI * i / (window.length - 1)));
+        }
+        return window;
+    }
+    
+    public static double[] hammingWindow(double[] window)
+    {
+        for (int i = 0; i < window.length; i++)
+        {
+            window[i] = 0.54 - 0.46 * Math.cos(2 * Math.PI * i / (window.length - 1));
+        }
+        return window;
+    }
+    
     
 }

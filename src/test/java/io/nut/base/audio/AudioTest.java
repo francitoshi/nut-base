@@ -35,9 +35,11 @@ import org.junit.jupiter.api.Test;
 
 public class AudioTest
 {
+    static final String MORSE1 = "morse-quixote-8000-mono-u8.wav.gz";
+
     static InputStream getIS() throws UnsupportedAudioFileException, IOException
     {
-        return new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream("morse-8000hz-mono-u8.wav.gz")));
+        return new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream(MORSE1)));
     }
     
     @Test

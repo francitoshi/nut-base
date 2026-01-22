@@ -63,7 +63,6 @@ import java.util.logging.Logger;
  */
 public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
 {
-
     /**
      * Internal wrapper for elements to allow null values and sentinel markers
      * within the BlockingQueue.
@@ -85,11 +84,13 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
      */
     static final Item POISON = new Item(null);
     
+    public final int capacity;
     private final String tag;
     private final BlockingQueue<Item<E>> queue;
     private volatile E nextElement = null;
+    private volatile boolean shutdownRequested;
     private volatile boolean terminated;
-
+    
     /**
      * Creates a generator with a specific buffer capacity.
      *
@@ -98,6 +99,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
      */
     public Generator(int capacity)
     {
+        this.capacity = capacity;
         this.tag = this.getClass().getName()+".Generator";
         this.queue = capacity==0 ? new SynchronousQueue<>() : new LinkedBlockingQueue<>(capacity);
     }
@@ -112,12 +114,20 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     }
     
     /**
-     * Forces the generator to stop. Clears the internal queue and marks the
-     * generator as terminated.
+     * Signals the generator to stop but accepting more yields.
      */
     public void shutdown()
     {
-        terminated = true;
+        shutdownRequested = true;
+    }
+    
+    /**
+     * Forces the generator to stop immediately. Clears the internal queue and 
+     * marks the generator as terminated.
+     */
+    public void shutdownNow()
+    {
+        shutdownRequested = terminated = true;
         queue.clear();
     }
    
@@ -130,7 +140,30 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     {
         return terminated;
     }
-    
+
+    /**
+     * Checks if shutdown has been requested (either shutdown() or
+     * shutdownNow()).
+     *
+     * @return true if shutdown has been requested, false otherwise.
+     */
+    public boolean isShutdown()
+    {
+        return shutdownRequested;
+    }
+
+    /**
+     * Checks if the generator is in the process of terminating (shutdown
+     * requested but still accepting yields).
+     *
+     * @return true if shutdown requested but not yet terminated, false
+     * otherwise.
+     */
+    public boolean isTerminating()
+    {
+        return shutdownRequested && !terminated;
+    }
+
     /**
      * Produces an element and sends it to the consumer. This method blocks if
      * the internal queue is full.
@@ -204,7 +237,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                     }
                     catch (InterruptedException ex)
                     {
-                        terminated = true;
+                        shutdownRequested = terminated = true;
                         Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
@@ -237,7 +270,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
 
             if(POISON.equals(item))
             {
-                terminated = true;
+                shutdownRequested = terminated = true;
                 return false;
             }
             this.nextElement = item.e;
@@ -246,7 +279,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         catch (InterruptedException ex) 
         {
             Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
-            this.terminated=true;
+            shutdownRequested = terminated = true;
             return false;
         }
     }
@@ -340,6 +373,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     public void reset()
     {
         this.terminated=false;
+        this.shutdownRequested=false;
         this.queue.clear();
         this.nextElement = null;
     }

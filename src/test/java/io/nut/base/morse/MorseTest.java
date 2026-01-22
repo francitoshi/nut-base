@@ -20,12 +20,16 @@
  */
 package io.nut.base.morse;
 
+import io.nut.base.math.Nums;
 import static io.nut.base.morse.Morse.DAH;
 import static io.nut.base.morse.Morse.DIT;
 import io.nut.base.util.Strings;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.TreeSet;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Disabled;
 
 /**
  *
@@ -193,6 +197,7 @@ public class MorseTest
         assertArrayEquals(abc, morse.encodePattern("abc xyz pq mn 0123456789."));
         assertArrayEquals(txt, morse.encodePattern("aeiou abcdefghijklmnopqrstuvwxyz 0123456789 1 22 333 4444 55555 666666 7777777 88888888 999999999"));
     }
+    
     /**
      * Test of decodeRobust method, of class MorseDecoder.
      */
@@ -210,6 +215,70 @@ public class MorseTest
             total += i;
         }
         assertEquals(60000, total);
+    }
+    
+    static class Item implements Comparable<Item>
+    {
+        final String s;
+        final int units;
+        public Item(String s, int units)
+        {
+            this.s = s;
+            this.units = units;
+        }
+
+        @Override
+        public int compareTo(Item other)
+        {
+            int ret = Integer.compare(this.units, other.units);
+            if(ret==0)
+            {
+                ret = this.s.compareTo(other.s);
+            }
+            return ret;
+        }
+
+        @Override
+        public String toString()
+        {
+            return s + "=" + units;
+        }
+        
+    }
+
+    @Test
+    @Disabled("this test is still incomplete")
+    public void testShortest()
+    {
+        Morse morse = new Morse(20, 20, Morse.FLAG_LAST_WGAP);
+        String[] items = morse.allowed(true, true);
+        TreeSet<Item> set = new TreeSet<>();
+        int[] data = new int[4];
+        
+        rotate(0, data, items, set);
+        set.forEach((x) -> System.out.println(x));
+    }
+    
+    static final Morse MORSE = new Morse(20, 20, 0);
+    
+    static void rotate(int index, int[] data, String[] items, Set<Item> set)
+    {
+        if(index>= data.length) return;
+        StringBuilder sb = new StringBuilder();
+        for(int i=0;i<index;i++)
+        {
+            sb.append(items[data[i]]);
+        }
+        String s = sb.toString();
+        int[] pattern = MORSE.join(MORSE.encodeUnits(s), false);
+        int units = (int) Nums.sum(pattern);
+        set.add(new Item(s, units));
+        
+        for(int i=0;i<items.length;i++)
+        {
+            data[index] = i;
+            rotate(index+1, data, items, set);
+        }
     }
     
 }

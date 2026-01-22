@@ -108,6 +108,22 @@ public class Audio
         lineIn.start();
         return lineIn;
     }
+    /**
+     * Obtains, opens, and starts a {@link TargetDataLine} (Microphone/Input) 
+     * for the specified format.
+     *
+     * @param format The desired audio format for the input line.
+     * @param bufferSize the size of the buffer
+     * @return An opened and started TargetDataLine.
+     * @throws LineUnavailableException If the line cannot be opened due to resource restrictions.
+     */
+    public static TargetDataLine getLineIn(AudioFormat format, int bufferSize) throws LineUnavailableException
+    {
+        TargetDataLine lineIn = AudioSystem.getTargetDataLine(format);
+        lineIn.open(format, bufferSize);
+        lineIn.start();
+        return lineIn;
+    }
 
     /**
      * Obtains, opens, and starts a {@link SourceDataLine} (Speakers/Output) 
@@ -203,7 +219,7 @@ public class Audio
      * @param millis The duration in milliseconds.
      * @return The number of bytes corresponding to the duration.
      */
-    public static int bytesNeeded(AudioFormat format, int millis)
+    public static int bytesNeeded(AudioFormat format, float millis)
     {
         float sampleRate = format.getFrameRate();
         int channels = format.getChannels();
@@ -221,7 +237,7 @@ public class Audio
      * @param millis     The duration in milliseconds.
      * @return The number of bytes corresponding to the duration.
      */
-    public static int bytesNeeded(float sampleRate, int sampleBits, int channels, int millis)
+    public static int bytesNeeded(float sampleRate, int sampleBits, int channels, float millis)
     {
         int sampleBytes = sampleBits / 8;
         int frameBytes = sampleBytes * channels;
@@ -235,20 +251,92 @@ public class Audio
   
     public static double goertzelPower(double[] data, float sampleRate, double hz)
     {
+        return goertzelPower(data, 0, data.length, sampleRate, hz);
+    }
+    public static double goertzelPower(double[] data, int start, int stop, float sampleRate, double hz)
+    {
         double sPrev = 0, sPrev2 = 0;
         double normalizedFreq = 2.0 * Math.PI * hz / sampleRate;
         double coeff = 2.0 * Math.cos(normalizedFreq);
-        int i = 0;
-        for (double d : data)
+        
+        for(int i=start;i<stop;i++)
         {
-            double s = d + coeff * sPrev - sPrev2;
+            double s = data[i] + coeff * sPrev - sPrev2;
             sPrev2 = sPrev;
             sPrev = s;
-            i++;
         }
         return sPrev2 * sPrev2 + sPrev * sPrev - coeff * sPrev * sPrev2;
     }
+    public static double[] slidingGoertzelPower(double[] data, float sampleRate, double hz, double[] energy)
+    {
+        int windowSize = data.length / 2;
+        int step = windowSize / energy.length;
+        int start = 0;
+        int end = start +  windowSize;
 
+        for(int i=0;i<energy.length;i++, start+=step, end+=step)
+        {
+            energy[i] = goertzelPower(data, start, end, sampleRate, hz);
+        }
+        return energy;
+    }
+    
+    public static double[] slidingGoertzelPower(double[] data, float sampleRate, double hz)
+    {
+        int total = data.length;
+        int windowSize = total / 2;
+
+        int step = Math.max(1, Math.round(sampleRate / 1000f)); // 1 ms
+        int windows = (windowSize + step - 1) / step;
+
+        double[] result = new double[windows];
+
+        double omega = 2.0 * Math.PI * hz / sampleRate;
+        double coeff = 2.0 * Math.cos(omega);
+
+        double s0 = 0.0, s1 = 0.0, s2 = 0.0;
+
+        /* --- inicialización O(N) --- */
+        for (int i = 0; i < windowSize; i++)
+        {
+            s0 = data[i] + coeff * s1 - s2;
+            s2 = s1;
+            s1 = s0;
+        }
+
+        int out = 0;
+        int start = 0;
+        int end = windowSize;
+
+        while (end <= total)
+        {
+            // potencia Goertzel
+            result[out++] = s1 * s1 + s2 * s2 - coeff * s1 * s2;
+
+            // avanzar 1 ms
+            for (int k = 0; k < step && end < total; k++)
+            {
+                double xNew = data[end];
+                double xOld = data[start];
+
+                s0 = xNew - xOld + coeff * s1 - s2;
+                s2 = s1;
+                s1 = s0;
+
+                start++;
+                end++;
+            }
+        }
+
+        if (out != result.length)
+        {
+            double[] trimmed = new double[out];
+            System.arraycopy(result, 0, trimmed, 0, out);
+            return trimmed;
+        }
+
+        return result;
+    }
     public static float detectHz(double[] data, float sampleRate, float threshold)
     {
         int crossings = -1;
