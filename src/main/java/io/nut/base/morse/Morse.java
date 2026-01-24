@@ -443,7 +443,11 @@ public class Morse
             cqi.foreach((ms) ->
             {
                 boolean isPulse = (count.getAndIncrement() % 2 == 1);
-                if (isPulse)
+                if(ms==0)
+                {
+                    //do nothink is a dummy pulse
+                }
+                else if(isPulse)
                 {
                     // Decidir si es punto o raya
                     currentLetter.append(ms < pulseThreshold ? "." : "-");
@@ -453,20 +457,17 @@ public class Morse
                     //too long discard
                     action.accept("<?> ");
                 }
-                else
-                {
-                    // Es un silencio, decidir si termina letra o palabra
-                    if (ms >= gapInterWordThreshold)
-                    {
-                        decodeLetter(currentLetter, action);
-                        action.accept(" ");// Espacio entre palabras
-                    }
-                    else if (ms >= gapInterCharacterThreshold)
-                    {
-                        decodeLetter(currentLetter, action);
-                    }
-                    // Si el silencio es muy corto, es solo la separación interna de la letra (se ignora)
+                else if(ms >= gapInterWordThreshold)
+                {   
+                    //It is a silence, deciding whether to finish a letter or a word.
+                    decodeLetter(currentLetter, action);
+                    action.accept(" ");
                 }
+                else if (ms >= gapInterCharacterThreshold)
+                {
+                    decodeLetter(currentLetter, action);
+                }
+                //If the silence is very short, it is only the internal separation of the letter (it is ignored)
             });
         }
 

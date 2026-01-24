@@ -1,3 +1,23 @@
+/*
+ * AudioMorseTest.java
+ *
+ * Copyright (c) 2026 francitoshi@gmail.com
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Report bugs or new features to: francitoshi@gmail.com
+ */
 package io.nut.base.audio;
 
 import static io.nut.base.audio.Wave.DUTY_CYCLE_025;
@@ -6,7 +26,6 @@ import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
 import static io.nut.base.audio.Wave.TRIANGLE;
 import io.nut.base.morse.Morse;
-import io.nut.base.util.Strings;
 import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -111,6 +130,7 @@ public class AudioMorseTest
     }
 
     static final String PANGRAM = "Quick nymph bugs vex fjord waltz.";
+    static final String PANGRAM2 = "Quick nymph bugs vex fjord waltz. 01234 56789";
 //    static final String ETIANS = "ETIANS";
 //    static final String ETIANS = "ETIANS TIANSE IANSET ANSETI NSETIA SETIAN";
     
@@ -141,18 +161,18 @@ public class AudioMorseTest
 
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
-    public void testRun0() throws UnsupportedAudioFileException, IOException, LineUnavailableException
+    public void testFindMaxSpeed() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
         Wave[] cleanWaves = { SQUARE, SINE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025};
         int hz = 800;
         String plaintext = PANGRAM;
         ArrayList<Wave> waves = new ArrayList<>(Arrays.asList(cleanWaves));
-        for(int wpm=30;waves.size()>0;wpm++)
+        for(int wpm=20;!waves.isEmpty();wpm++)
         {
             int count = 0;
             for(Wave wave : waves.toArray(new Wave[0]))
             {
-                System.out.println("---------- "+wave.name+" "+wpm+" ----------");
+                System.out.println("---------- "+wave.name+" "+hz+"Hz "+wpm+"wpm ----------");
                 final AudioModem am = new AudioModem((TargetDataLine)null, Audio.getLineOut(Audio.PCM_CD_MONO), 16, wave);
                 AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO, 441000));
                 AudioMorse instance = new AudioMorse(ais, hz, true, true, 5, 1000);
@@ -168,9 +188,9 @@ public class AudioMorseTest
                 {
                     try
                     {
-                        am.play(0, 2000, 1);
+                        am.play(0, 1000, 1);
                         am.play(hz, pattern, 1);
-                        am.play(0, 4000, 1);
+                        am.play(0, 1000, 1);
                         am.drain();
                     }
                     catch (IOException ex)
@@ -211,11 +231,10 @@ public class AudioMorseTest
     }
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
-    public void testRun1() throws UnsupportedAudioFileException, IOException, LineUnavailableException
+    public void testListenCW() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
-        
         AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO));
-        AudioMorse instance = new AudioMorse(ais, 800, true, true, 4, 0);
+        AudioMorse instance = new AudioMorse(ais, 800, true, true, 4, 100);
 
         StringBuilder word = new StringBuilder();
         for(String s : instance)

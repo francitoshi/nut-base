@@ -1,5 +1,5 @@
 /*
- * MorseDepattern.java
+ * AudioMorse.java
  *
  * Copyright (c) 2026 francitoshi@gmail.com
  *
@@ -45,7 +45,7 @@ public class AudioMorse extends Generator<String>
         this.ais = ais;
         this.blockMillis = blockMillis;
         this.morse = new Morse();
-        this.flushMillis = Math.max(blockMillis*this.morse.maxUnits*2, 400);
+        this.flushMillis = Math.max(blockMillis*this.morse.maxUnits*7, 400);
 
         this.threshold = blockMillis*blockMillis;
         this.audioGoertzel = new AudioGoertzel(ais, hz, hannWindow, overlap, blockMillis, capacity);
@@ -77,8 +77,9 @@ public class AudioMorse extends Generator<String>
         @Override
         public void run()
         {
+            final MovingAverage splitMillisEMA = MovingAverage.createEMA(7);
             int status = 0;
-            
+            int splitMillis = 1234;
             int ms = 0;
             for(double[] e : audioGoertzel)
             {
@@ -99,6 +100,12 @@ public class AudioMorse extends Generator<String>
                     status = -1;
                     ms += blockMillis;
                     updateThreshold(false, e[0]);
+                    if(ms>splitMillis)
+                    {
+                        this.yield(ms);
+                        this.yield(0);
+                        ms = 0;
+                    }
                     continue;
                 }
                 
@@ -112,9 +119,7 @@ public class AudioMorse extends Generator<String>
                     status = -1;
                     updateThreshold(false, e[0]);
                 }
-                
-//666                System.out.printf("%d %d %.2f | %.2f %.2f %.2f\n", status, ms, threshold, e[0], e[1], e[2]);
-                
+                splitMillis = (int) splitMillisEMA.next(ms*7+1); 
                 this.yield(ms);
                 ms = blockMillis;
             }
@@ -129,7 +134,7 @@ public class AudioMorse extends Generator<String>
         {
             int count = 0;
             int acum = 0;
-            int[] chunk = new int[(int)flushMillis];
+            int[] chunk = new int[flushMillis];
             for(int ms : audio2pattern)
             {
                 if(isTerminated()) 
