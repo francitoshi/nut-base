@@ -1,7 +1,7 @@
 /*
  *  CardinalFormat.java
  *
- *  Copyright (C) 2011-2024 francitoshi@gmail.com
+ *  Copyright (C) 2011-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.util.ResourceBundles;
+import io.nut.base.resources.ResourceBundles;
 import java.security.InvalidParameterException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
@@ -181,11 +181,9 @@ public class CardinalFormat
         Arrays.sort(rules,cmp);
     }
 
-    static final Locale rootLocale = new Locale("","","");
     ResourceBundle getResourceBundle(Locale locale, boolean strictLocale)
     {
-        return strictLocale ? ResourceBundle.getBundle(CardinalFormat.class.getName(), locale) 
-                            : ResourceBundles.getStrictBundle(CardinalFormat.class.getName(), locale, rootLocale);
+        return ResourceBundles.getBundle(CardinalFormat.class.getName(), locale, strictLocale); 
     }
     public String format(long num)
     {

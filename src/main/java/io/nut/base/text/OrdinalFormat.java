@@ -1,7 +1,7 @@
 /*
  *  GermanOrdinalFormat.java
  *
- *  Copyright (C) 2014-2024 francitoshi@gmail.com
+ *  Copyright (C) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,7 +20,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.util.ResourceBundles;
+import io.nut.base.resources.ResourceBundles;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
@@ -45,8 +45,7 @@ class GermanOrdinalFormat extends OrdinalFormat
     @Override
     ResourceBundle getResourceBundle(Locale locale, boolean strictLocale)
     {
-        return strictLocale ? ResourceBundle.getBundle(CardinalFormat.class.getName(), locale) 
-                            : ResourceBundles.getStrictBundle(CardinalFormat.class.getName(), locale, rootLocale);
+        return ResourceBundles.getBundle(CardinalFormat.class.getName(), locale, strictLocale);
     }
     static String[][] endings=
     {
@@ -93,8 +92,7 @@ public class OrdinalFormat extends CardinalFormat
     @Override
     ResourceBundle getResourceBundle(Locale locale, boolean strictLocale)
     {
-        return strictLocale ? ResourceBundle.getBundle(OrdinalFormat.class.getName(), locale) 
-                            : ResourceBundles.getStrictBundle(OrdinalFormat.class.getName(), locale, rootLocale);
+        return ResourceBundles.getBundle(OrdinalFormat.class.getName(), locale, strictLocale);
     }
     static public OrdinalFormat getInstance(Locale locale, Gender gender) 
     {

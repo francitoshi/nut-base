@@ -1,7 +1,7 @@
 /*
  * ResourceBundles.java
  *
- * Copyright (c) 2014-2024 francitoshi@gmail.com
+ * Copyright (c) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,8 +18,9 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.resources;
 
+import io.nut.base.util.Locales;
 import java.util.Locale;
 import java.util.ResourceBundle;
 
@@ -29,9 +30,17 @@ import java.util.ResourceBundle;
  */
 public class ResourceBundles
 {
+    static final Locale ROOT_LOCALE = new Locale("","","");
+
     public static ResourceBundle getStrictBundle(String baseName, Locale locale, Locale defaultLocale)
     {
         ResourceBundle bundle = ResourceBundle.getBundle(baseName, locale);
         return Locales.contains(bundle.getLocale(), locale) ? bundle : ResourceBundle.getBundle(baseName, defaultLocale);
     }
+    
+    public static ResourceBundle getBundle(String baseName, Locale locale, boolean strictLocale)
+    {
+        return strictLocale ? ResourceBundle.getBundle(baseName, locale) : getStrictBundle(baseName, locale, ROOT_LOCALE);
+    }
+    
 }
