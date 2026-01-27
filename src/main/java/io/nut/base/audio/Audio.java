@@ -219,13 +219,12 @@ public class Audio
      * @param millis The duration in milliseconds.
      * @return The number of bytes corresponding to the duration.
      */
-    public static int bytesNeeded(AudioFormat format, float millis)
+    public static int requiredBytes(AudioFormat format, float millis)
     {
         float sampleRate = format.getFrameRate();
         int channels = format.getChannels();
         int sampleBits = format.getSampleSizeInBits();
-
-        return bytesNeeded(sampleRate, sampleBits, channels, millis);
+        return requiredBytes(sampleRate, sampleBits, channels, millis);
     }
 
     /**
@@ -237,23 +236,37 @@ public class Audio
      * @param millis     The duration in milliseconds.
      * @return The number of bytes corresponding to the duration.
      */
-    public static int bytesNeeded(float sampleRate, int sampleBits, int channels, float millis)
+    public static int requiredBytes(float sampleRate, int sampleBits, int channels, float millis)
     {
         int sampleBytes = sampleBits / 8;
         int frameBytes = sampleBytes * channels;
         int bytes = (int) ((sampleRate * frameBytes * millis) / 1000);
         return roundUpToFrameSize(bytes, frameBytes);
     }
+    
+    /**
+     * Calculates the number of samples required to hold a specific duration of audio.
+     *
+     * @param format The audio format to use for calculation.
+     * @param millis The duration in milliseconds.
+     * @return The number of samples corresponding to the duration.
+     */
+    public static int requiredSamples(AudioFormat format, float millis)
+    {
+        float sampleRate = format.getFrameRate();
+        return (int)((sampleRate * millis) / 1000);
+    }
+    
     public static int roundUpToFrameSize(int bytes, int bytesPerFrame) 
     {
         return ((bytes + bytesPerFrame - 1) / bytesPerFrame) * bytesPerFrame;
     }
   
-    public static double goertzelPower(double[] data, float sampleRate, double hz)
+    public static double goertzelPower(float[] data, float sampleRate, double hz)
     {
         return goertzelPower(data, 0, data.length, sampleRate, hz);
     }
-    public static double goertzelPower(double[] data, int start, int stop, float sampleRate, double hz)
+    public static double goertzelPower(float[] data, int start, int stop, float sampleRate, double hz)
     {
         double sPrev = 0, sPrev2 = 0;
         double normalizedFreq = 2.0 * Math.PI * hz / sampleRate;
@@ -267,7 +280,7 @@ public class Audio
         }
         return sPrev2 * sPrev2 + sPrev * sPrev - coeff * sPrev * sPrev2;
     }
-    public static double[] slidingGoertzelPower(double[] data, float sampleRate, double hz, double[] energy)
+    public static double[] slidingGoertzelPower(float[] data, float sampleRate, double hz, double[] energy)
     {
         int windowSize = data.length / 2;
         int step = windowSize / energy.length;
@@ -337,7 +350,7 @@ public class Audio
 
         return result;
     }
-    public static float detectHz(double[] data, float sampleRate, float threshold)
+    public static float detectHz(float[] data, float sampleRate, float threshold)
     {
         int crossings = -1;
         int firstCrossingIdx = -1;
@@ -397,6 +410,49 @@ public class Audio
         float frequency = (crossings/2) / durationSec;
         
         return frequency;
+    }
+ 
+    public static void applyFadeIn(float[] samples)
+    {
+        for (int i = 0; i < samples.length; i++)
+        {
+            float ramp = (float) i / samples.length;
+            samples[i] *= ramp;
+        }
+    }    
+    public static void applyFadeIn(double[] samples)
+    {
+        for (int i = 0; i < samples.length; i++)
+        {
+            float ramp = (float) i / samples.length;
+            samples[i] *= ramp;
+        }
+    }
+    
+    /**
+     * Determines if an audio buffer is in the stabilization phase (DC Offset alto).
+     *
+     * @param samples Array of floats between -1.0 and 1.0
+     * @param threshold Tolerance threshold (0.05 is a good starting point)
+     * @return true If the audio is "dirty" or stabilizing, false if it is centered.
+     */
+    public static boolean detectDCOff(float[] samples, float sampleRate, float threshold)
+    {
+        if (samples == null || samples.length == 0)
+        {
+            return false;
+        }
+
+        double sum = 0;
+        for (float sample : samples)
+        {
+            sum += Math.abs(sample);
+        }
+
+        double average = sum / samples.length;
+
+        // If the absolute average is greater than the threshold, and does not cross 0 few times, it is DC Offset
+        return Math.abs(average) > threshold && detectHz(samples, sampleRate, threshold)<10;
     }    
     
     static double[] i16ToDouble(byte[] src, boolean bigEndian)
@@ -412,7 +468,7 @@ public class Audio
         return dst;
     }
     
-    private static float[] i16ToFloat(byte[] src, boolean bigEndian)
+    public static float[] i16ToFloat(byte[] src, boolean bigEndian)
     {
         ShortBuffer buffer = ByteBuffer.wrap(src).order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN).asShortBuffer();
         

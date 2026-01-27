@@ -154,17 +154,13 @@ public class CardinalFormat
     
     public CardinalFormat(Locale locale, Gender gender, int style)
     {
-        this(locale, gender, style, false);
-    }
-    public CardinalFormat(Locale locale, Gender gender, int style, boolean strictLocale)
-    {
         if(style!=CardinalFormat.SHORT && style!=CardinalFormat.LONG)
         {
             throw new InvalidParameterException();
         }
         this.locale = locale;
         this.gender = gender;
-        ResourceBundle rb = getResourceBundle( locale, strictLocale);
+        ResourceBundle rb = getResourceBundle(locale);
         ArrayList<NumberRule> tokens = new ArrayList<>();
 
         for(Enumeration<String> e = rb.getKeys(); e.hasMoreElements();)
@@ -181,9 +177,9 @@ public class CardinalFormat
         Arrays.sort(rules,cmp);
     }
 
-    ResourceBundle getResourceBundle(Locale locale, boolean strictLocale)
+    ResourceBundle getResourceBundle(Locale locale)
     {
-        return ResourceBundles.getBundle(CardinalFormat.class.getName(), locale, strictLocale); 
+        return ResourceBundles.getBundle(CardinalFormat.class, locale); 
     }
     public String format(long num)
     {

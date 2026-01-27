@@ -32,7 +32,7 @@ class GermanOrdinalFormat extends OrdinalFormat
     public GermanOrdinalFormat(Locale locale, Gender gender, int style)
     {
         super(locale, gender, style);
-        ResourceBundle rb = super.getResourceBundle( locale, false);
+        ResourceBundle rb = super.getResourceBundle( locale);
         for(Enumeration<String> e = rb.getKeys(); e.hasMoreElements();)
         {
             String id = e.nextElement();
@@ -43,9 +43,9 @@ class GermanOrdinalFormat extends OrdinalFormat
     }
 
     @Override
-    ResourceBundle getResourceBundle(Locale locale, boolean strictLocale)
+    ResourceBundle getResourceBundle(Locale locale)
     {
-        return ResourceBundles.getBundle(CardinalFormat.class.getName(), locale, strictLocale);
+        return ResourceBundles.getBundle(CardinalFormat.class, locale);
     }
     static String[][] endings=
     {
@@ -90,9 +90,9 @@ public class OrdinalFormat extends CardinalFormat
     }
     
     @Override
-    ResourceBundle getResourceBundle(Locale locale, boolean strictLocale)
+    ResourceBundle getResourceBundle(Locale locale)
     {
-        return ResourceBundles.getBundle(OrdinalFormat.class.getName(), locale, strictLocale);
+        return ResourceBundles.getBundle(OrdinalFormat.class, locale);
     }
     static public OrdinalFormat getInstance(Locale locale, Gender gender) 
     {

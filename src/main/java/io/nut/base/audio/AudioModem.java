@@ -23,6 +23,7 @@ package io.nut.base.audio;
 import io.nut.base.cache.Cache;
 import io.nut.base.cache.TinyLFUCache;
 import io.nut.base.util.tuple.Pair;
+import io.nut.base.util.tuple.Trio;
 import java.io.Closeable;
 import java.io.IOException;
 import javax.sound.sampled.AudioFormat;
@@ -42,64 +43,86 @@ public class AudioModem implements Closeable
     private final SourceDataLine lineOut;
     private final AudioFormat formatIn;
     private final AudioFormat formatOut;
-    private final Wave wave;
-    private final Cache<Pair<Integer, Double>, byte[]> playCache;
+    private final Wave defaultWave;
+    private final Cache<Trio<Integer, Double, String>, byte[]> playCache;
 
-    public AudioModem(SourceDataLine lineOut)
-    {
-        this((AudioInputStream)null, lineOut, DEFAULT_CACHE_SIZE, Wave.SINE);
-    }
-    public AudioModem(TargetDataLine lineIn, SourceDataLine lineOut)
-    {
-        this(Audio.getAudioInputStream(lineIn), lineOut, DEFAULT_CACHE_SIZE, Wave.SINE);
-    }
-    public AudioModem(TargetDataLine lineIn, SourceDataLine lineOut, int cacheCapacity)
-    {
-        this(Audio.getAudioInputStream(lineIn), lineOut, cacheCapacity, Wave.SINE);
-    }
-    public AudioModem(TargetDataLine lineIn, SourceDataLine lineOut, int cacheCapacity, Wave wave)
-    {
-        this(lineIn!=null ? Audio.getAudioInputStream(lineIn) : null, lineOut, cacheCapacity, wave);
-    }
-
-    public AudioModem(AudioInputStream lineIn, SourceDataLine lineOut)
-    {
-        this(lineIn, lineOut, 64, Wave.SINE);
-    }
-    public AudioModem(AudioInputStream lineIn, SourceDataLine lineOut, int cacheCapacity)
-    {
-        this(lineIn, lineOut, cacheCapacity, Wave.SINE);
-    }
-    public AudioModem(AudioInputStream lineIn, SourceDataLine lineOut, int cacheCapacity, Wave wave)
+    public AudioModem(AudioInputStream lineIn, SourceDataLine lineOut, int cacheCapacity, Wave defaultWave)
     {
         this.lineIn = lineIn;
         this.lineOut = lineOut;
         this.formatIn = lineIn != null ? lineIn.getFormat() : null;
         this.formatOut = lineOut != null ? lineOut.getFormat() : null;
         this.playCache = new TinyLFUCache<>(cacheCapacity);
-        this.wave = wave;
+        this.defaultWave = defaultWave;
     }
 
-    public void play(int hz, int ms, double vol) throws IOException
+//    public AudioModem(AudioInputStream lineIn, SourceDataLine lineOut, int cacheCapacity)
+//    {
+//        this(lineIn, lineOut, cacheCapacity, Wave.SINE);
+//    }
+//    public AudioModem(AudioInputStream lineIn, SourceDataLine lineOut)
+//    {
+//        this(lineIn, lineOut, DEFAULT_CACHE_SIZE, Wave.SINE);
+//    }
+//
+//    public AudioModem(TargetDataLine lineIn, SourceDataLine lineOut, int cacheCapacity, Wave defaultWave)
+//    {
+//        this(lineIn!=null ? Audio.getAudioInputStream(lineIn) : null, lineOut, cacheCapacity, defaultWave);
+//    }
+//    public AudioModem(TargetDataLine lineIn, SourceDataLine lineOut, int cacheCapacity)
+//    {
+//        this(Audio.getAudioInputStream(lineIn), lineOut, cacheCapacity, Wave.SINE);
+//    }
+//    public AudioModem(TargetDataLine lineIn, SourceDataLine lineOut)
+//    {
+//        this(Audio.getAudioInputStream(lineIn), lineOut, DEFAULT_CACHE_SIZE, Wave.SINE);
+//    }
+//
+    public AudioModem(SourceDataLine lineOut, int cacheCapacity, Wave defaultWave)
     {
-        int playBytes = Audio.bytesNeeded(this.formatOut, ms);
-        Pair<Integer, Double> key = new Pair<>(hz, vol);
+        this((AudioInputStream)null, lineOut, cacheCapacity, defaultWave);
+    }
+    public AudioModem(SourceDataLine lineOut, int cacheCapacity)
+    {
+        this((AudioInputStream)null, lineOut, cacheCapacity, Wave.SINE);
+    }
+    public AudioModem(SourceDataLine lineOut)
+    {
+        this((AudioInputStream)null, lineOut, DEFAULT_CACHE_SIZE, Wave.SINE);
+    }
+
+    public void play(int hz, int ms, double vol, Wave wave) throws IOException
+    {
+        wave = wave!=null ? wave : defaultWave;
+        int playBytes = Audio.requiredBytes(this.formatOut, ms);
+        Trio<Integer, Double, String> key = new Trio<>(hz, vol, wave.name);
         byte[] bytes = this.playCache.get(key);
         if (bytes == null || bytes.length < playBytes)
         {
-            bytes = this.wave.build(formatOut, hz, new byte[playBytes * 3], vol);
+            bytes = wave.build(formatOut, hz, new byte[playBytes * 3], vol);
             this.playCache.put(key, bytes);
         }
         this.lineOut.write(bytes, 0, playBytes);
     }
     
-    public void play(int hz, int[] pattern, double vol) throws IOException
+    public void play(int hz, int ms, double vol) throws IOException
+    {
+        play(hz, ms, vol, defaultWave);
+    }
+    
+    public void play(int hz, int[] pattern, double vol, Wave wave) throws IOException
     {
         for(int i=0;i<pattern.length;i++)
         {
-            play(hz, pattern[i], i%2!=0 ? vol : 0);
+            play(hz, pattern[i], i%2!=0 ? vol : 0, wave);
         }
     }
+    
+    public void play(int hz, int[] pattern, double vol) throws IOException
+    {
+        play(hz, pattern, vol, defaultWave);
+    }
+
     public void drain()
     {
         this.lineOut.drain();

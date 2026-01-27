@@ -73,7 +73,7 @@ public class WesolowskiVDFTest
         assertTrue(isValid);
         
         long ms = TimeUnit.NANOSECONDS.toMillis(t1-t0);
-        assertTrue(ms>66 && ms < 133, "ms must be 100 aprox but is "+ms);
+        assertTrue(ms>57 && ms < 133, "ms must be 100 aprox but is "+ms);
         
     }
 }

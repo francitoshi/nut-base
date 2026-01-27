@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
 
 public class AudioTest
 {
-    static final String MORSE1 = "morse-quixote-8000-mono-u8.wav.gz";
+    static final String MORSE1 = "morse1-quixote-8000-mono-u8.wav.gz";
 
     static InputStream getIS() throws UnsupportedAudioFileException, IOException
     {
@@ -107,7 +107,7 @@ public class AudioTest
         for(int hz=400;hz<1200; hz += 100)
         {
             byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.33);
-            double[] dst = Audio.i8ToDouble(src);
+            float[] dst = Audio.i8ToFloat(src);
             double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
 
             if(lineOut!=null)
@@ -133,7 +133,7 @@ public class AudioTest
         for(int hz=400;hz<1200; hz += 100)
         {
             byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.33);
-            double[] dst = Audio.i16ToDouble(src, format.isBigEndian());
+            float[] dst = Audio.i16ToFloat(src, format.isBigEndian());
             double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
 
             if(lineOut!=null)

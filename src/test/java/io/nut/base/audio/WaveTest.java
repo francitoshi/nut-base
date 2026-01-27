@@ -43,8 +43,8 @@ public class WaveTest
         {
             for(AudioFormat format : formats)
             {
-                int size = Audio.bytesNeeded(format, millis);
-                int fading = FADING ? Audio.bytesNeeded(format, 5) : 0;
+                int size = Audio.requiredBytes(format, millis);
+                int fading = FADING ? Audio.requiredBytes(format, 5) : 0;
                 byte[] buffer = new byte[size];
 
                 Wave wave = Wave.WAVES[millis%Wave.WAVES.length];

@@ -134,8 +134,6 @@ public class Morse
     public static final int FLAG_MIDLE = 1; //use middle characters
     public static final int FLAG_BOLD  = 2; // use bold characters
     public static final int FLAG_WG5U  = 8; //word gap 5 units (default 7)
-    
-    public static final int FLAG_LAST_WGAP  = 16; // word gap at end of patterns
 
     public static final int DEFAULT_WMP = 20;
 
@@ -166,8 +164,8 @@ public class Morse
     public final int gapMillis;
     public final int charGapMillis;
     public final int wordGapMillis;
+    public volatile int startGapMillis;
     
-    public final boolean lastWGap;
     public final int maxUnits;
     public final int maxTerms;
     
@@ -189,17 +187,15 @@ public class Morse
     
     public Morse()
     {
-        this(DEFAULT_WMP, DEFAULT_WMP, 0);
+        this(DEFAULT_WMP, DEFAULT_WMP, 0, 0);
     }
     
-    public Morse(int wpm, int ewpm, int flags)
+    public Morse(int wpm, int ewpm, int flags, int startGapMultiplier)
     {
         boolean middle   = (flags & FLAG_MIDLE)    == FLAG_MIDLE;
         boolean bold     = (flags & FLAG_BOLD)     == FLAG_BOLD;
         boolean wg5u     = (flags & FLAG_WG5U)     == FLAG_WG5U;
 
-        this.lastWGap = (flags & FLAG_LAST_WGAP)== FLAG_LAST_WGAP;
-        
         //wpm must be as fast as ewpm
         wpm = Math.max(wpm,ewpm);
 
@@ -213,6 +209,7 @@ public class Morse
         this.gapMillis = s;
         this.charGapMillis = s * 3;
         this.wordGapMillis = s * (wg5u ? 5 : 7);
+        this.startGapMillis = startGapMultiplier * this.wordGapMillis;
         
         char[] morse = bold ? TEXTS_BOLD : ( middle ? TEXTS_MIDDLE : TEXTS_ASCII);  
         List<char[][]> list = Utils.listOf(LETTERS, NUMBERS, PUNCTUATION, ACCENTED_LETTERS);
@@ -357,7 +354,7 @@ public class Morse
         final int wordGapMs = useMillis ? this.wordGapMillis : 1;
         
         ArrayList<Integer> pattern = new ArrayList<>();
-        int gap = 0;
+        int gap = startGapMillis;
         for(byte[][] word : units)
         {
             for(byte[] letter : word)
@@ -372,16 +369,74 @@ public class Morse
             }
             gap = wordGapMs;
         }
-        if(this.lastWGap)
-        {
-            pattern.add(gap);
-        }
+
         int[] ret = new int[pattern.size()];
         for(int i=0;i<pattern.size();i++)
         {
             ret[i] = pattern.get(i);
         }
         return ret;
+    }
+    public int[] join(int[]... patterns)
+    {
+        if (patterns == null || patterns.length == 0)
+        {
+            return new int[0];
+        }
+
+        List<Integer> out = new ArrayList<>();
+
+        boolean prevEndsWithSilence = false;
+
+        for (int[] p : patterns)
+        {
+            if (p == null || p.length == 0)
+            {
+                continue;
+            }
+
+            if (out.isEmpty())
+            {
+                // Primer patrón: se copia tal cual
+                for (int v : p)
+                {
+                    out.add(v);
+                }
+            }
+            else if (prevEndsWithSilence)
+            {
+                // último era silencio → sumar con el primer silencio del nuevo
+                int lastIndex = out.size() - 1;
+                out.set(lastIndex, out.get(lastIndex) + p[0]);
+
+                // copiar el resto
+                for (int i = 1; i < p.length; i++)
+                {
+                    out.add(p[i]);
+                }
+            }
+            else
+            {
+                // último era pulso → al primer silencio se le suma 444
+                out.add(p[0] + this.wordGapMillis);
+
+                for (int i = 1; i < p.length; i++)
+                {
+                    out.add(p[i]);
+                }
+            }
+
+            // determinar cómo termina este patrón
+            prevEndsWithSilence = (p.length % 2) == 1;
+        }
+
+        // convertir a int[]
+        int[] result = new int[out.size()];
+        for (int i = 0; i < out.size(); i++)
+        {
+            result[i] = out.get(i);
+        }
+        return result;
     }
     
     public String join(String[][] morse)

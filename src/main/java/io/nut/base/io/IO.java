@@ -1,7 +1,7 @@
 /*
  *  IO.java
  *
- *  Copyright (C) 2025 francitoshi@gmail.com
+ *  Copyright (C) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -167,10 +167,12 @@ public class IO
             }
         }
     }
+    
     public static String readInputStreamAsString(InputStream inputStream) throws IOException
     {
-        return readInputStreamAsString(inputStream, UTF8);
-    }    
+        return inputStream!=null ? readInputStreamAsString(inputStream, UTF8) : null;
+    }
+    
     public static byte[] bytesFromFile(InputStream in, int readlimit) throws IOException
     {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

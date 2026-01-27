@@ -23,6 +23,7 @@ package io.nut.base.audio;
 import io.nut.base.morse.Morse;
 import io.nut.base.stats.MovingAverage;
 import io.nut.base.util.concurrent.Generator;
+import java.io.IOException;
 import java.util.Arrays;
 import javax.sound.sampled.AudioInputStream;
 
@@ -30,7 +31,7 @@ public class AudioMorse extends Generator<String>
 {
     private final AudioInputStream ais;
     private final int blockMillis;
-    private final int flushMillis;
+    private final int flushChunks;
     private final Morse morse;
 
     private volatile double threshold;
@@ -39,16 +40,16 @@ public class AudioMorse extends Generator<String>
     private final MovingAverage pulseEMA;
     static final double BETA = 0.2; // Factor para cálculo conservador del umbral (0.1-0.3)
 
-    public AudioMorse(AudioInputStream ais, int hz, boolean hannWindow, boolean overlap, int blockMillis, int capacity)
+    public AudioMorse(AudioInputStream ais, int hz, boolean hannWindow, boolean overlap, boolean detectDCDrift, int blockMillis, int capacity)
     {
         super(capacity);
         this.ais = ais;
         this.blockMillis = blockMillis;
         this.morse = new Morse();
-        this.flushMillis = Math.max(blockMillis*this.morse.maxUnits*7, 400);
+        this.flushChunks = this.morse.maxTerms*2+2;
 
         this.threshold = blockMillis*blockMillis;
-        this.audioGoertzel = new AudioGoertzel(ais, hz, hannWindow, overlap, blockMillis, capacity);
+        this.audioGoertzel = new AudioGoertzel(ais, hz, hannWindow, overlap, detectDCDrift, blockMillis, capacity);
         this.quietEMA = MovingAverage.createEMA(10);
         this.pulseEMA = MovingAverage.createEMA(10);
     }
@@ -77,7 +78,7 @@ public class AudioMorse extends Generator<String>
         @Override
         public void run()
         {
-            final MovingAverage splitMillisEMA = MovingAverage.createEMA(7);
+            final MovingAverage msEMA = MovingAverage.createEMA(morse.maxTerms*2);
             int status = 0;
             int splitMillis = 1234;
             int ms = 0;
@@ -119,9 +120,13 @@ public class AudioMorse extends Generator<String>
                     status = -1;
                     updateThreshold(false, e[0]);
                 }
-                splitMillis = (int) splitMillisEMA.next(ms*7+1); 
+                splitMillis = ms>0 ? (int) (Math.min(ms, msEMA.next(ms))*morse.maxTerms*2) : splitMillis;
                 this.yield(ms);
                 ms = blockMillis;
+            }
+            if(status<0)
+            {
+                ms = (int) Math.max(ms,msEMA.average());
             }
             this.yield(ms);
         }
@@ -133,8 +138,7 @@ public class AudioMorse extends Generator<String>
         public void run()
         {
             int count = 0;
-            int acum = 0;
-            int[] chunk = new int[flushMillis];
+            int[] chunk = new int[flushChunks];
             for(int ms : audio2pattern)
             {
                 if(isTerminated()) 
@@ -142,13 +146,11 @@ public class AudioMorse extends Generator<String>
                     return;
                 }
                 chunk[count++] = ms;
-                acum += ms;
-                if(acum>flushMillis || count>=chunk.length)
+                if(count>=chunk.length)
                 {
                     int[] pattern = Arrays.copyOf(chunk, count);
                     this.yield(pattern);
                     count = 0;
-                    acum = 0;
                 }
             }
             if(count>0)
@@ -189,7 +191,10 @@ public class AudioMorse extends Generator<String>
         pattern2chunks.shutdown();
         super.shutdown();
     }
-    
-    
+
+    public long skipAvailable() throws IOException
+    {
+        return audioGoertzel.skipAvailable();
+    }    
     
 }

@@ -52,7 +52,7 @@ public class AudioModemTest
     @Disabled("this test is only to test manually beacuse it will produce noise")
     public void testPlay_3args_2() throws Exception
     {
-        Morse morse = new Morse(20,20,0);
+        Morse morse = new Morse(20,20, 0, 0);
         
         int[] pattern = morse.encodePattern("hello world");
         try(AudioModem modem = new AudioModem(Audio.getLineOut(Audio.PCM_CD_MONO)))

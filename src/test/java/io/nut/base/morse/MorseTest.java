@@ -49,7 +49,7 @@ public class MorseTest
     static final String[][] H_E_L_L_O_W_O_R_L_D = {{H,E,L,L,O},{W,O,R,L,D}};
     static final String HELLO_WORLD_MORSE = ".... . .-.. .-.. --- / .-- --- .-. .-.. -..";
     static final byte[][][] HELLO_WORLD_UNITS = {{{DIT,DIT,DIT,DIT}, {DIT}, {DIT,DAH,DIT,DIT}, {DIT,DAH,DIT,DIT}, {DAH,DAH,DAH}}, {{DIT,DAH,DAH}, {DAH,DAH,DAH}, {DIT,DAH,DIT}, {DIT,DAH,DIT,DIT}, {DAH,DIT,DIT}}};
-    static final int[] HELLO_WORLD_PATTERN = {0,60,60,60,60,60,60,60,180,60,180,60,60,180,60,60,60,60,180,60,60,180,60,60,60,60,180,180,60,180,60,180,420,60,60,180,60,180,180,180,60,180,60,180,180,60,60,180,60,60,180,60,60,180,60,60,60,60,180,180,60,60,60,60,420};
+    static final int[] HELLO_WORLD_PATTERN = {0,60,60,60,60,60,60,60,180,60,180,60,60,180,60,60,60,60,180,60,60,180,60,60,60,60,180,180,60,180,60,180,420,60,60,180,60,180,180,180,60,180,60,180,180,60,60,180,60,60,180,60,60,180,60,60,60,60,180,180,60,60,60,60};
     
     static final String ABC = "abcdefghijklmnopqrstuvwxyz.,0123456789";
     static final String ABC_MORSE = ".- -... -.-. -.. . ..-. --. .... .. .--- -.- .-.. -- -. --- .--. --.- .-. ... - ..- ...- .-- -..- -.-- --.. .-.-.- --..-- ----- .---- ..--- ...-- ....- ..... -.... --... ---.. ----.";
@@ -63,7 +63,7 @@ public class MorseTest
     static final String SOS_PROSIGN = "<SOS>";
     static final String SOS_PROSIGN_MORSE = "...---...";
     static final byte[][][] SOS_PROSIGN_UNITS = {{{DIT,DIT,DIT,DAH,DAH,DAH,DIT,DIT,DIT}}};
-    static final int[] SOS_PROSIGN_PATTERN = {0,60,60,60,60,60,60,180,60,180,60,180,60,60,60,60,60,60,420};
+    static final int[] SOS_PROSIGN_PATTERN = {0,60,60,60,60,60,60,180,60,180,60,180,60,60,60,60,60,60};
     
     /**
      * Test of encode method, of class Morse.
@@ -71,7 +71,7 @@ public class MorseTest
     @Test
     public void testEncodeJoin()
     {
-        Morse morse = new Morse(20, 20, 0);
+        Morse morse = new Morse(20, 20, 0, 0);
         
         assertTrue(Arrays.deepEquals(H_E_L_L_O_W_O_R_L_D, morse.encode(HELLO_WORLD)));
         assertEquals(HELLO_WORLD_MORSE, morse.join(morse.encode(HELLO_WORLD)));
@@ -140,7 +140,7 @@ public class MorseTest
     @Test
     public void testEncodePattern()
     {
-        Morse instance = new Morse(20,20, Morse.FLAG_LAST_WGAP);
+        Morse instance = new Morse(20,20, 0, 0);
         assertArrayEquals(HELLO_WORLD_PATTERN, instance.encodePattern(HELLO_WORLD));
         assertArrayEquals(SOS_PROSIGN_PATTERN, instance.encodePattern(SOS_PROSIGN));
     }
@@ -161,7 +161,7 @@ public class MorseTest
     @Test
     public void testDecodePattern()
     {
-        Morse morse = new Morse(20, 20, 0);
+        Morse morse = new Morse(20, 20, 0, 0);
         
         for(String item : TEXTS)
         {
@@ -174,7 +174,7 @@ public class MorseTest
     @Test
     public void testEncodePattern2()
     {
-        Morse morse = new Morse(12, 12, 0);
+        Morse morse = new Morse(12, 12, 0, 0);
         
         int[] e = new int[]{0, 100};
         int[] ee = new int[]{0, 100, 300, 100};
@@ -198,24 +198,21 @@ public class MorseTest
         assertArrayEquals(txt, morse.encodePattern("aeiou abcdefghijklmnopqrstuvwxyz 0123456789 1 22 333 4444 55555 666666 7777777 88888888 999999999"));
     }
     
-    /**
-     * Test of decodeRobust method, of class MorseDecoder.
-     */
     @Test
     public void testParis()
     {
-        Morse morse = new Morse(20, 20, Morse.FLAG_LAST_WGAP);
+        Morse morse = new Morse(20, 20, 0, 0);
         
         String paris20 = Strings.repeat("paris ", 20);
         int[] paris = morse.encodePattern(paris20);
-        System.out.println("paris="+Arrays.toString(paris));
         int total = 0;
         for(int i : paris)
         {
             total += i;
         }
-        assertEquals(60000, total);
+        assertEquals(59580, total);
     }
+
     
     static class Item implements Comparable<Item>
     {
@@ -250,7 +247,7 @@ public class MorseTest
     @Disabled("this test is still incomplete")
     public void testShortest()
     {
-        Morse morse = new Morse(20, 20, Morse.FLAG_LAST_WGAP);
+        Morse morse = new Morse(20, 20, 0, 0);
         String[] items = morse.allowed(true, true);
         TreeSet<Item> set = new TreeSet<>();
         int[] data = new int[4];
@@ -259,7 +256,7 @@ public class MorseTest
         set.forEach((x) -> System.out.println(x));
     }
     
-    static final Morse MORSE = new Morse(20, 20, 0);
+    static final Morse MORSE = new Morse(20, 20, 0, 0);
     
     static void rotate(int index, int[] data, String[] items, Set<Item> set)
     {

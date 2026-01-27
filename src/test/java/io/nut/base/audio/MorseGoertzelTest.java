@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 
 public class MorseGoertzelTest
 {
-    static final String MORSE1 = "morse-quixote-8000-mono-u8.wav.gz";
+    static final String MORSE1 = "morse1-quixote-8000-mono-u8.wav.gz";
     
     static final int HZ = 550;
     static final int BR = 8000;
@@ -47,7 +47,7 @@ public class MorseGoertzelTest
     public void testRun() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, false, false, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, false, false, false, 5, 5);
         int num = 0;
         
         if(SHOW) System.out.println("testRun");
@@ -65,7 +65,7 @@ public class MorseGoertzelTest
     public void testRunHann() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, true, false, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, true, false, false, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunHann");
@@ -83,7 +83,7 @@ public class MorseGoertzelTest
     public void testRunOverlap() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, false, true, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, false, true, false, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunOverlap");
@@ -101,7 +101,7 @@ public class MorseGoertzelTest
     public void testRunHannOverlap() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, true, true, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, true, true, false, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunHannOverlap");
