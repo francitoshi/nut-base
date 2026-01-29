@@ -27,6 +27,7 @@ import io.nut.base.util.Strings;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Disabled;
@@ -277,5 +278,26 @@ public class MorseTest
             rotate(index+1, data, items, set);
         }
     }
+
+    /**
+     * Test of setStartGapMultiplier method, of class Morse.
+     */
+    @Test
+    public void testUpdateStartGap()
+    {
+        
+        Morse instance = new Morse(12, 12, 0, 0);
+
+        int[] pattern = instance.encodePattern("A");
+        assertEquals(0, pattern[0]);
+        assertEquals(0, instance.startGapMillis);
+
+        instance.updateStartGap(2);
+
+        pattern = instance.encodePattern("A");
+        assertEquals(instance.wordGapMillis * 2, pattern[0]);
+        assertEquals(instance.wordGapMillis * 2, instance.startGapMillis);
+    }
+
     
 }

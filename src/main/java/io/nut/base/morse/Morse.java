@@ -164,7 +164,7 @@ public class Morse
     public final int gapMillis;
     public final int charGapMillis;
     public final int wordGapMillis;
-    public volatile int startGapMillis;
+    volatile int startGapMillis;
     
     public final int maxUnits;
     public final int maxTerms;
@@ -266,6 +266,11 @@ public class Morse
         this.allowedLetters = letterList.toArray(new String[0]);
         this.allowedProsigns = prosignList.toArray(new String[0]);
         this.allowedItems = itemList.toArray(new String[0]);
+    }
+    
+    public void updateStartGap(int multiplier)
+    {
+        this.startGapMillis = multiplier * this.wordGapMillis;
     }
     
     private final static Pattern PROSIGN_PATTERN = Pattern.compile("<([A-Za-z]+)>");

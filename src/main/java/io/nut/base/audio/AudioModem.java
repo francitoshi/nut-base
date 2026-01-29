@@ -22,14 +22,12 @@ package io.nut.base.audio;
 
 import io.nut.base.cache.Cache;
 import io.nut.base.cache.TinyLFUCache;
-import io.nut.base.util.tuple.Pair;
 import io.nut.base.util.tuple.Trio;
 import java.io.Closeable;
 import java.io.IOException;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.SourceDataLine;
-import javax.sound.sampled.TargetDataLine;
 
 /**
  *
