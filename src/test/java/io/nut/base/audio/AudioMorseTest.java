@@ -20,10 +20,12 @@
  */
 package io.nut.base.audio;
 
+import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
 import io.nut.base.morse.Morse;
 import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -132,6 +134,29 @@ public class AudioMorseTest
     
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
+    public void testBuildWavWithPangramFFMPEG() throws UnsupportedAudioFileException, IOException, LineUnavailableException
+    {
+        //ffmpeg -f alsa -i default morse-pangram-800hz-20wpm-sine.wav
+        //ffmpeg -f alsa -i default morse-pangram-800hz-20wpm-square.wav
+        int hz = 800;
+        int wpm = 30;
+        String plaintext = PANGRAM.toUpperCase();
+        try (AudioSynthesizer audioSynthesizer = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO), 16, Wave.SQUARE))
+        {
+            Morse morse = new Morse(wpm, wpm, 0, 2);
+            
+            final int[] pattern = morse.encodePattern(plaintext);
+            String decodedText = morse.decodePattern(pattern).trim().toUpperCase();
+            
+            assertEquals(plaintext, decodedText);
+            
+            audioSynthesizer.play(0, 1000, 1);
+            audioSynthesizer.play(hz, pattern, 1);
+            audioSynthesizer.play(0, 1000, 1);
+            audioSynthesizer.drain();
+        }
+    }
+    @Test
     public void testBuildWavWithPangram() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
         //ffmpeg -f alsa -i default morse-pangram-800hz-20wpm-sine.wav
@@ -139,33 +164,36 @@ public class AudioMorseTest
         int hz = 800;
         int wpm = 30;
         String plaintext = PANGRAM.toUpperCase();
-        final AudioModem am = new AudioModem(Audio.getLineOut(Audio.PCM_CD_MONO), 16, Wave.SQUARE);
-        Morse morse = new Morse(wpm, wpm, 0, 2);
-        
-        final int[] pattern = morse.encodePattern(plaintext);
-        String decodedText = morse.decodePattern(pattern).trim().toUpperCase();
-        
-        assertEquals(plaintext, decodedText);
-        
-        am.play(0, 1000, 1);
-        am.play(hz, pattern, 1);
-        am.play(0, 1000, 1);
-        am.drain();
-        am.close();
-        
+        File wav = new File("test.wav");
+        try (AudioSynthesizer audioSynthesizer = new AudioSynthesizer(wav, Audio.PCM_8BIT_MONO ,16, Wave.SQUARE))
+        {
+            Morse morse = new Morse(wpm, wpm, 0, 2);
+            
+            final int[] pattern = morse.encodePattern(plaintext);
+            String decodedText = morse.decodePattern(pattern).trim().toUpperCase();
+            
+            assertEquals(plaintext, decodedText);
+            
+            audioSynthesizer.play(hz, pattern, 1);
+            audioSynthesizer.drain();
+        }
+        finally
+        {
+//            wav.delete();
+        }
     }
 
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
     public void testFindMaxSpeed() throws UnsupportedAudioFileException, IOException, LineUnavailableException, InterruptedException, BrokenBarrierException
     {
-        Wave[] cleanWaves = { SQUARE};//, SINE};//, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025};
+        Wave[] cleanWaves = { SQUARE, SINE};//, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
         int hz = 800;
         String plaintext = PANGRAM;
 //        String plaintext = QUIJOTE;
         ArrayList<Wave> waves = new ArrayList<>(Arrays.asList(cleanWaves));
         
-        final AudioModem audioModem = new AudioModem(Audio.getLineOut(Audio.PCM_CD_MONO), 16);
+        final AudioSynthesizer audioModem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO));
         AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO, 441000));
         
         for(int wpm=40;!waves.isEmpty();wpm++)
@@ -191,9 +219,9 @@ public class AudioMorseTest
                     {
                         openBarrier.await();
                         instance.skipAvailable();
-                        audioModem.play(0, 2000, 1);
+                        audioModem.play(0, 1950, 1);
                         audioModem.play(hz, pattern, 1, wave);
-                        audioModem.play(0, 2000, 1);
+                        audioModem.play(0, 1950, 1);
                         audioModem.drain();
                     }
                     catch (IOException | InterruptedException | BrokenBarrierException ex)

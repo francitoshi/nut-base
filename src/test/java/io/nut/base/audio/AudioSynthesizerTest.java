@@ -21,6 +21,8 @@
 package io.nut.base.audio;
 
 import io.nut.base.morse.Morse;
+import io.nut.base.util.Java;
+import java.io.File;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -28,20 +30,34 @@ import org.junit.jupiter.api.Test;
  *
  * @author franci
  */
-public class AudioModemTest
+public class AudioSynthesizerTest
 {
 
-    /**
-     * Test of play method, of class AudioModem.
-     */
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
     public void testPlay_3args_1() throws Exception
     {
-        try(AudioModem modem = new AudioModem(Audio.getLineOut(Audio.PCM_CD_MONO)))
+        try(AudioSynthesizer modem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO)))
         {
             modem.play(440, 100, 0.80);
             modem.drain();
+        }
+    }
+
+    @Test
+    public void testPlay_3args_2() throws Exception
+    {
+        File wav = File.createTempFile("tmp", ".wav");
+        System.out.println(wav);
+        
+        try(AudioSynthesizer modem = new AudioSynthesizer(wav,Audio.PCM_CD_MONO))
+        {
+            modem.play(440, 100, 0.80);
+            modem.drain();
+        }
+        finally
+        {
+            wav.delete();
         }
     }
 
@@ -50,12 +66,12 @@ public class AudioModemTest
      */
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
-    public void testPlay_3args_2() throws Exception
+    public void testPlay_3args_3() throws Exception
     {
         Morse morse = new Morse(20,20, 0, 0);
         
         int[] pattern = morse.encodePattern("hello world");
-        try(AudioModem modem = new AudioModem(Audio.getLineOut(Audio.PCM_CD_MONO)))
+        try(AudioSynthesizer modem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO)))
         {
             modem.play(750, pattern, 0.80);
             modem.drain();
