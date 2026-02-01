@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.StringJoiner;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -490,7 +491,9 @@ public class Morse
 
         StringBuilder currentLetter = new StringBuilder();
         
+        final AtomicBoolean spaceEnabled = new AtomicBoolean();
         final AtomicInteger count = new AtomicInteger(0);
+
         for(int[] item : pattern)
         {
             CircularQueueInt cqi = new CircularQueueInt(item);
@@ -499,7 +502,6 @@ public class Morse
             long pulseThreshold = unitT * 2;
             long gapInterCharacterThreshold = unitT * 2;
             long gapInterWordThreshold = unitT * 5;
-
             cqi.foreach((ms) ->
             {
                 boolean isPulse = (count.getAndIncrement() % 2 == 1);
@@ -515,17 +517,23 @@ public class Morse
                 else if(currentLetter.length()>maxTerms)
                 {
                     //too long discard
-                    action.accept("<?> ");
+                    action.accept("<?>");
+                    spaceEnabled.set(true);
                 }
                 else if(ms >= gapInterWordThreshold)
                 {   
                     //It is a silence, deciding whether to finish a letter or a word.
-                    decodeLetter(currentLetter, action);
-                    action.accept(" ");
+                    boolean done = decodeLetter(currentLetter, action);
+                    if(done || spaceEnabled.get())
+                    {
+                        action.accept(" ");
+                        spaceEnabled.set(false);                    
+                    }
                 }
                 else if (ms >= gapInterCharacterThreshold)
                 {
                     decodeLetter(currentLetter, action);
+                    spaceEnabled.set(true);
                 }
                 //If the silence is very short, it is only the internal separation of the letter (it is ignored)
             });
@@ -535,8 +543,9 @@ public class Morse
         decodeLetter(currentLetter, action);
     }
     
-    protected void decodeLetter(StringBuilder currentLetter, Consumer<String> action)
+    protected boolean decodeLetter(StringBuilder currentLetter, Consumer<String> action)
     {
+        boolean actionExecuted = false;
         if (currentLetter.length() > 0)
         {
             String symbol = currentLetter.toString();
@@ -544,17 +553,21 @@ public class Morse
             if(letter==null)
             {
                 action.accept("?");
+                actionExecuted = true;
             }
             else if(letter.prosign)
             {
                 action.accept('<'+letter.letter+'>');
+                actionExecuted = true;
             }
             else
             {
                 action.accept(letter.letter);
+                actionExecuted = true;
             }
             currentLetter.setLength(0); // Limpiar para la siguiente letra
         }
+        return actionExecuted;
     }
     
     public String decodePattern(int[] pattern)

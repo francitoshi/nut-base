@@ -20,8 +20,16 @@
  */
 package io.nut.base.audio;
 
+import static io.nut.base.audio.Wave.ADITIVE;
+import static io.nut.base.audio.Wave.DUTY_CYCLE_025;
+import static io.nut.base.audio.Wave.DUTY_CYCLE_033;
+import static io.nut.base.audio.Wave.FM;
+import static io.nut.base.audio.Wave.PARABOLIC;
+import static io.nut.base.audio.Wave.PWM;
+import static io.nut.base.audio.Wave.SAWTOOTH;
 import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
+import static io.nut.base.audio.Wave.TRIANGLE;
 import io.nut.base.morse.Morse;
 import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
@@ -73,6 +81,8 @@ public class AudioMorseTest
             sb.append(s);
         }
         assertEquals(QUIJOTE.toUpperCase(), sb.toString().trim());
+        assertFalse(sb.toString().endsWith("  "));
+
     }
     
     @Test
@@ -86,6 +96,7 @@ public class AudioMorseTest
             sb.append(s);
         }
         assertEquals(PANGRAM.toUpperCase(), sb.toString().trim());
+        assertFalse(sb.toString().endsWith("  "));
     }
     
     @Test
@@ -99,6 +110,7 @@ public class AudioMorseTest
             sb.append(s);
         }
         assertEquals(PANGRAM.toUpperCase(), sb.toString().trim());
+        assertFalse(sb.toString().endsWith("  "));
     }
 
     @Test
@@ -112,6 +124,7 @@ public class AudioMorseTest
             sb.append(s);
         }
         assertEquals(PANGRAM.toUpperCase(), sb.toString().trim());
+        assertFalse(sb.toString().endsWith("  "));
     }
 
     @Test
@@ -125,6 +138,7 @@ public class AudioMorseTest
             sb.append(s);
         }
         assertEquals(PANGRAM.toUpperCase(), sb.toString().trim());
+        assertFalse(sb.toString().endsWith("  "));
     }
 
     static final String PANGRAM = "Quick nymph bugs vex fjord waltz.";
@@ -179,7 +193,7 @@ public class AudioMorseTest
         }
         finally
         {
-//            wav.delete();
+            wav.delete();
         }
     }
 
@@ -188,7 +202,7 @@ public class AudioMorseTest
     public void testFindMaxSpeed() throws UnsupportedAudioFileException, IOException, LineUnavailableException, InterruptedException, BrokenBarrierException
     {
         Wave[] cleanWaves = { SQUARE, SINE};//, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
-        int hz = 800;
+        int hz = 882;
         String plaintext = PANGRAM;
 //        String plaintext = QUIJOTE;
         ArrayList<Wave> waves = new ArrayList<>(Arrays.asList(cleanWaves));
@@ -199,72 +213,105 @@ public class AudioMorseTest
         for(int wpm=40;!waves.isEmpty();wpm++)
         {
             int count = 0;
-            for(Wave wave : waves.toArray(new Wave[0]))
-            {
-                System.out.println("---------- "+wave.name+" "+hz+"Hz "+wpm+"wpm ----------");
-                final AudioMorse instance = new AudioMorse(ais, hz, true, true, true, 5, 0);
-                
-                Morse morse = new Morse(wpm, wpm, 0, 4);
-                final int[] pattern = morse.encodePattern(plaintext);
-                //System.out.println(Arrays.toString(pattern));
-                String decodedText = morse.decodePattern(pattern).trim();
-                if(decodedText.compareToIgnoreCase(plaintext)!=0)
-                {
-                    System.out.println("ERROR");
-                }
-                final CyclicBarrier openBarrier = new CyclicBarrier(2);
-                Utils.execute(()-> 
-                {
-                    try
-                    {
-                        openBarrier.await();
-                        instance.skipAvailable();
-                        audioModem.play(0, 1950, 1);
-                        audioModem.play(hz, pattern, 1, wave);
-                        audioModem.play(0, 1950, 1);
-                        audioModem.drain();
-                    }
-                    catch (IOException | InterruptedException | BrokenBarrierException ex)
-                    {
-                        Logger.getLogger(AudioMorseTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
-                    instance.shutdown();
-                });
-
-                StringBuilder word = new StringBuilder();
-                StringBuilder phrase = new StringBuilder();
-                openBarrier.await();
-                for(String s : instance)
-                {
-                    word.append(s);
-                    phrase.append(s);
-                    if(s.equals(" ") || s.equals(".") || s.equals(","))
-                    {
-                        System.out.println(word);
-                        word = new StringBuilder();
-                        if(word.toString().endsWith(".")) 
-                        {
-                            break;
-                        }
-                    }
-                }
-                System.out.println(word);
-
-                if(plaintext.equalsIgnoreCase(phrase.toString().trim()))
-                {
-                    count++;
-                    System.out.println("-----"+phrase.toString()+"-----");
-                }
-                else
-                {
-                    waves.remove(wave);
-                    System.out.println("!!!!!!!!!! "+wave.name+" !!!!!!!!!!");
-                }
-            }
-            System.out.println("---------- "+wpm+" => "+count+" ----------");
+            sendAndReceive(waves, hz, wpm, ais, plaintext, audioModem, count);
+        }        
+    }
+    @Test
+    @Disabled("this test is only to test manually beacuse it will produce noise")
+    public void testFindMaxHz() throws UnsupportedAudioFileException, IOException, LineUnavailableException, InterruptedException, BrokenBarrierException
+    {
+        Wave[] cleanWaves = { SQUARE, SINE};//, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
+        String plaintext = PANGRAM;
+//        String plaintext = QUIJOTE;
+        ArrayList<Wave> waves = new ArrayList<>(Arrays.asList(cleanWaves));
+        
+        final AudioSynthesizer audioModem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO));
+        AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO, 441000));
+        
+        int wpm = 50;
+        int hz=800;
+        for(int i=1;!waves.isEmpty();i++)
+        {
+            hz = i*441;
+            int count = 0;
+            sendAndReceive(waves, hz, wpm, ais, plaintext, audioModem, count);
 
         }        
     }
+
+    public static void sendAndReceive(ArrayList<Wave> waves, int hz, int wpm, AudioInputStream ais, String plaintext, final AudioSynthesizer audioModem, int count) throws BrokenBarrierException, InterruptedException
+    {
+        for(Wave wave : waves.toArray(new Wave[0]))
+        {
+            System.out.println("---------- "+wave.name+" "+hz+"Hz "+wpm+"wpm ----------");
+            final AudioMorse instance = new AudioMorse(ais, hz, true, true, true, 5, 0);
+            
+            Morse morse = new Morse(wpm, wpm, 0, 4);
+            final int[] pattern = morse.encodePattern(plaintext);
+            //System.out.println(Arrays.toString(pattern));
+            String decodedText = morse.decodePattern(pattern).trim();
+            if(decodedText.compareToIgnoreCase(plaintext)!=0)
+            {
+                System.out.println("ERROR");
+            }
+            final CyclicBarrier openBarrier = new CyclicBarrier(2);
+            Utils.execute(()->
+            {
+                try
+                {
+                    openBarrier.await();
+                    instance.skipAvailable();
+                    audioModem.play(0, 1950, 1);
+                    audioModem.play(hz, pattern, 1, wave);
+                    audioModem.play(0, 1900, 1);
+                    audioModem.drain();
+                }
+                catch (IOException | InterruptedException | BrokenBarrierException ex) 
+                {
+                    Logger.getLogger(AudioMorseTest.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                instance.shutdown();
+            });
+            
+            StringBuilder word = new StringBuilder();
+            StringBuilder phrase = new StringBuilder();
+            openBarrier.await();
+            for(String s : instance)
+            {
+                word.append(s);
+                phrase.append(s);
+                if(s.equals(" ") || s.equals(".") || s.equals(","))
+                {
+                    System.out.println(word);
+                    word = new StringBuilder();
+                    if(word.toString().endsWith("."))
+                    {
+                        break;
+                    }
+                }
+            }
+            if(!word.toString().trim().isEmpty())
+            {
+                System.out.println("==="+word+"===");        
+            }
+            
+            assertFalse(phrase.toString().startsWith("  "));
+            assertFalse(phrase.toString().endsWith("  "));
+            
+            if(plaintext.equalsIgnoreCase(phrase.toString().trim()))
+            {
+                count++;
+                System.out.println("-----"+phrase.toString()+"-----");
+            }
+            else
+            {
+                waves.remove(wave);
+                System.out.println("!!!!!!!!!! "+wave.name+" !!!!!!!!!!");
+            }
+        }
+        System.out.println("---------- "+wpm+" => "+count+" ----------");
+    }
+    
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
     public void testListenCW() throws UnsupportedAudioFileException, IOException, LineUnavailableException

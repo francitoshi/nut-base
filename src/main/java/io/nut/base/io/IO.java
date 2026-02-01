@@ -30,10 +30,12 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.charset.Charset;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.security.SecureRandom;
@@ -237,6 +239,25 @@ public class IO
     {
         return bytesFromFileGZ(new FileInputStream(file), Integer.MAX_VALUE, detect);
     }
+    
+    public static void writeToFile(File file, byte[] bytes) throws IOException
+    {
+        try(FileOutputStream fos = new FileOutputStream(file))
+        {
+            fos.write(bytes);
+        }
+    }
+
+    public static void writeToFile(File file, String s) throws IOException
+    {
+        writeToFile(file, s.getBytes());
+    }
+    
+    public static void writeToFile(File file, String s, Charset charset) throws IOException
+    {
+        writeToFile(file, s.getBytes(charset));
+    }
+    
 
     public static boolean mkdirs(File dir)
     {
