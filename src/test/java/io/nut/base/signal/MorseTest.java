@@ -18,16 +18,15 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.morse;
+package io.nut.base.signal;
 
 import io.nut.base.math.Nums;
-import static io.nut.base.morse.Morse.DAH;
-import static io.nut.base.morse.Morse.DIT;
+import static io.nut.base.signal.Morse.DAH;
+import static io.nut.base.signal.Morse.DIT;
 import io.nut.base.util.Strings;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Disabled;

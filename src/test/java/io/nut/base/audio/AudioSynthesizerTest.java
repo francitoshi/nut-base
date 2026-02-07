@@ -20,8 +20,7 @@
  */
 package io.nut.base.audio;
 
-import io.nut.base.morse.Morse;
-import io.nut.base.util.Java;
+import io.nut.base.signal.Morse;
 import java.io.File;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;

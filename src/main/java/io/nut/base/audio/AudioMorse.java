@@ -20,7 +20,7 @@
  */
 package io.nut.base.audio;
 
-import io.nut.base.morse.Morse;
+import io.nut.base.signal.Morse;
 import io.nut.base.stats.MovingAverage;
 import io.nut.base.util.concurrent.Generator;
 import java.io.IOException;

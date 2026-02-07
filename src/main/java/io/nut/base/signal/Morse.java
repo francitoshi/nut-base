@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.morse;
+package io.nut.base.signal;
 
 import io.nut.base.math.Nums;
 import io.nut.base.queue.CircularQueueInt;
@@ -483,14 +483,40 @@ public class Morse
         }
         return text.toString();
     }
-
+    
+    protected boolean decodeLetter(StringBuilder currentLetter, Consumer<String> action)
+    {
+        boolean actionExecuted = false;
+        if (currentLetter.length() > 0)
+        {
+            String symbol = currentLetter.toString();
+            Letter letter = decodeMap.getOrDefault(symbol, null);
+            if(letter==null)
+            {
+                action.accept("?");
+                actionExecuted = true;
+            }
+            else if(letter.prosign)
+            {
+                action.accept('<'+letter.letter+'>');
+                actionExecuted = true;
+            }
+            else
+            {
+                action.accept(letter.letter);
+                actionExecuted = true;
+            }
+            currentLetter.setLength(0); // Limpiar para la siguiente letra
+        }
+        return actionExecuted;
+    }
+    
     public void decodePattern(Iterable<int[]> pattern, Consumer<String> action)
     {
         Objects.requireNonNull(pattern, "pattern must not be null");
         Objects.requireNonNull(action, "action must not be null");
 
         StringBuilder currentLetter = new StringBuilder();
-        
         final AtomicBoolean spaceEnabled = new AtomicBoolean();
         final AtomicInteger count = new AtomicInteger(0);
 
@@ -511,7 +537,7 @@ public class Morse
                 }
                 else if(isPulse)
                 {
-                    // Decidir si es punto o raya
+                    // decode dit or dah
                     currentLetter.append(ms < pulseThreshold ? "." : "-");
                 }
                 else if(currentLetter.length()>maxTerms)
@@ -542,34 +568,7 @@ public class Morse
         // Procesar la última letra si quedó algo pendiente
         decodeLetter(currentLetter, action);
     }
-    
-    protected boolean decodeLetter(StringBuilder currentLetter, Consumer<String> action)
-    {
-        boolean actionExecuted = false;
-        if (currentLetter.length() > 0)
-        {
-            String symbol = currentLetter.toString();
-            Letter letter = decodeMap.getOrDefault(symbol, null);
-            if(letter==null)
-            {
-                action.accept("?");
-                actionExecuted = true;
-            }
-            else if(letter.prosign)
-            {
-                action.accept('<'+letter.letter+'>');
-                actionExecuted = true;
-            }
-            else
-            {
-                action.accept(letter.letter);
-                actionExecuted = true;
-            }
-            currentLetter.setLength(0); // Limpiar para la siguiente letra
-        }
-        return actionExecuted;
-    }
-    
+
     public String decodePattern(int[] pattern)
     {
         StringBuilder decodedMessage = new StringBuilder();

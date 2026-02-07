@@ -20,17 +20,9 @@
  */
 package io.nut.base.audio;
 
-import static io.nut.base.audio.Wave.ADITIVE;
-import static io.nut.base.audio.Wave.DUTY_CYCLE_025;
-import static io.nut.base.audio.Wave.DUTY_CYCLE_033;
-import static io.nut.base.audio.Wave.FM;
-import static io.nut.base.audio.Wave.PARABOLIC;
-import static io.nut.base.audio.Wave.PWM;
-import static io.nut.base.audio.Wave.SAWTOOTH;
 import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
-import static io.nut.base.audio.Wave.TRIANGLE;
-import io.nut.base.morse.Morse;
+import io.nut.base.signal.Morse;
 import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
 import java.io.File;
