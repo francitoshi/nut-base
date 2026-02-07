@@ -20,6 +20,9 @@
  */
 package io.nut.base.audio;
 
+import static io.nut.base.audio.Audio.DCOFFSET;
+import static io.nut.base.audio.Audio.HANNWINDOW;
+import static io.nut.base.audio.Audio.OVERLAP;
 import io.nut.base.util.concurrent.Generator;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,14 +43,14 @@ public class AudioGoertzel extends Generator<double[]>
     private final boolean detectDCOffset;
     private final int blockMillis;
 
-    public AudioGoertzel(AudioInputStream ais, int hz, boolean hannWindow, boolean overlap, boolean detectDCOffset, int blockMillis, int capacity)
+    public AudioGoertzel(AudioInputStream ais, int hz, int flags, int blockMillis, int capacity)
     {
         super(capacity);
         this.ais = ais;
         this.hz = hz;
-        this.hannWindow = hannWindow;
-        this.overlap = overlap;
-        this.detectDCOffset = detectDCOffset;
+        this.hannWindow     = (flags & HANNWINDOW) == HANNWINDOW;
+        this.overlap        = (flags & OVERLAP)    == OVERLAP;
+        this.detectDCOffset = (flags & DCOFFSET)   == DCOFFSET;
         this.blockMillis = blockMillis;
     }
     
@@ -57,7 +60,7 @@ public class AudioGoertzel extends Generator<double[]>
         try
         {
             AudioFormat fmt = Audio.getFloatMono(ais.getFormat(), false);
-            
+
             int blockBytes = Audio.requiredBytes(fmt, blockMillis);
             int blockSamples = Audio.requiredSamples(fmt, blockMillis);
             int workSamples = overlap ? blockSamples*2 : blockSamples;
@@ -65,7 +68,7 @@ public class AudioGoertzel extends Generator<double[]>
             float sampleRate = fmt.getFrameRate();
             boolean be = fmt.isBigEndian();
             
-            AudioInputStream input = Audio.getAudioInputStream(ais, fmt);          
+            AudioInputStream input = Audio.getAudioInputStream(ais, fmt);
             
             float[] hann = hannWindow ? Wave.hannWindow(new float[workSamples]) : null;
             float[] work = new float[workSamples];
@@ -107,8 +110,6 @@ public class AudioGoertzel extends Generator<double[]>
                         }
                     }
 
-                    float freq = this.hz!=0 ? this.hz : Audio.detectHz(work, sampleRate, 0.01f);
-
                     if(pendingStableBlocks>0)
                     {
                         if(Audio.detectDCOff(work, sampleRate, 0.1f))
@@ -126,6 +127,8 @@ public class AudioGoertzel extends Generator<double[]>
                             Audio.applyFadeIn(work);
                         }
                     }                   
+
+                    float freq = this.hz!=0 ? this.hz : Audio.detectHz(work, sampleRate, 0.01f);
                     
                     if(hann!=null)
                     {
@@ -138,9 +141,6 @@ public class AudioGoertzel extends Generator<double[]>
                     if(freq!=0)
                     {
                         energies[0] = Audio.goertzelPower(work, sampleRate, freq);
-                        energies[1] = Audio.goertzelPower(work, 0, work.length/2, sampleRate, freq);
-                        energies[2] = Audio.goertzelPower(work, work.length/2, work.length, sampleRate, freq);
-//                        System.out.printf("e = %.2f %.2f %.2f \n", energies[0], energies[1], energies[2]);
                     }
                     else
                     {
@@ -172,5 +172,5 @@ public class AudioGoertzel extends Generator<double[]>
             return n>0 ? ais.skip(n) : 0;
         }
     }
-    
+
 }

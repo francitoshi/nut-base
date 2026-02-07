@@ -93,6 +93,10 @@ public class Audio
      */
     public static final AudioFormat PCM_8BIT_MONO = new AudioFormat(8000, 8, 1, false, false);
 
+    public static final int HANNWINDOW = 1;
+    public static final int OVERLAP = 2;
+    public static final int DCOFFSET = 4;
+    
     /**
      * Obtains, opens, and starts a {@link TargetDataLine} (Microphone/Input) 
      * for the specified format.

@@ -20,6 +20,9 @@
  */
 package io.nut.base.audio;
 
+import static io.nut.base.audio.Audio.DCOFFSET;
+import static io.nut.base.audio.Audio.HANNWINDOW;
+import static io.nut.base.audio.Audio.OVERLAP;
 import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
 import io.nut.base.signal.Morse;
@@ -66,7 +69,7 @@ public class AudioMorseTest
     public void testWav1() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE1));
-        AudioMorse instance = new AudioMorse(ais, 550, true, true, false, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 550, HANNWINDOW|OVERLAP, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -81,7 +84,7 @@ public class AudioMorseTest
     public void testWav2() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE2));
-        AudioMorse instance = new AudioMorse(ais, 800, true, true, false, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -95,7 +98,7 @@ public class AudioMorseTest
     public void testWav3() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE3));
-        AudioMorse instance = new AudioMorse(ais, 800, true, true, true, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP|DCOFFSET, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -109,7 +112,7 @@ public class AudioMorseTest
     public void testWav4() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE4));
-        AudioMorse instance = new AudioMorse(ais, 1600, true, true, true, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 1600, HANNWINDOW|OVERLAP|DCOFFSET, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -123,7 +126,7 @@ public class AudioMorseTest
     public void testWav5() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE5));
-        AudioMorse instance = new AudioMorse(ais, 1600, true, true, true, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 1600, HANNWINDOW|OVERLAP|DCOFFSET, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -236,7 +239,7 @@ public class AudioMorseTest
         for(Wave wave : waves.toArray(new Wave[0]))
         {
             System.out.println("---------- "+wave.name+" "+hz+"Hz "+wpm+"wpm ----------");
-            final AudioMorse instance = new AudioMorse(ais, hz, true, true, true, 5, 0);
+            final AudioMorse instance = new AudioMorse(ais, hz, HANNWINDOW|OVERLAP|DCOFFSET, 5, 0);
             
             Morse morse = new Morse(wpm, wpm, 0, 4);
             final int[] pattern = morse.encodePattern(plaintext);
@@ -309,7 +312,7 @@ public class AudioMorseTest
     public void testListenCW() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
         AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO));
-        AudioMorse instance = new AudioMorse(ais, 800, true, true, true, 5, 100);
+        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP|DCOFFSET, 5, 100);
 
         StringBuilder word = new StringBuilder();
         for(String s : instance)

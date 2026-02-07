@@ -20,6 +20,8 @@
  */
 package io.nut.base.audio;
 
+import static io.nut.base.audio.Audio.HANNWINDOW;
+import static io.nut.base.audio.Audio.OVERLAP;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,13 +49,13 @@ public class MorseGoertzelTest
     public void testRun() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, false, false, false, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, 0, 5, 5);
         int num = 0;
         
         if(SHOW) System.out.println("testRun");
-        for(double[] item : mg)
+        for(double[] energy : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n", item[0]);
+            if(SHOW) System.out.printf("%.2f\n", energy[0]);
             if(num++>BR)break;
         }
     }
@@ -65,13 +67,13 @@ public class MorseGoertzelTest
     public void testRunHann() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, true, false, false, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, HANNWINDOW, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunHann");
-        for(double[] item : mg)
+        for(double[] energy : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n",item[0]);
+            if(SHOW) System.out.printf("%.2f\n",energy[0]);
             if(num++>BR)break;
         }
     }
@@ -83,13 +85,13 @@ public class MorseGoertzelTest
     public void testRunOverlap() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, false, true, false, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, OVERLAP, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunOverlap");
-        for(double[] item : mg)
+        for(double[] energy : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n",item[0]);
+            if(SHOW) System.out.printf("%.2f\n",energy[0]);
             if(num++>BR)break;
         }
     }
@@ -101,13 +103,13 @@ public class MorseGoertzelTest
     public void testRunHannOverlap() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, true, true, false, 5, 5);
+        AudioGoertzel mg = new AudioGoertzel(ais, HZ, HANNWINDOW|OVERLAP, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunHannOverlap");
-        for(double[] item : mg)
+        for(double[] energy : mg)
         {
-            if(SHOW) System.out.printf("%.2f\n",item[0]);
+            if(SHOW) System.out.printf("%.2f\n", energy[0]);
             if(num++>BR)break;
         }
     }   

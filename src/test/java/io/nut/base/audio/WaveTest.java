@@ -34,7 +34,7 @@ public class WaveTest
     static final boolean ALLOW_SOUND = false;
     static final boolean FADING = true;
     @Test
-    public void main() throws LineUnavailableException
+    public void testAll() throws LineUnavailableException
     {
        
         AudioFormat[] formats = {Audio.PCM_CD_MONO, Audio.PCM_CD_STEREO, Audio.PCM_STUDIO_STEREO, Audio.PCM_RADIO_MONO, Audio.PCM_VOICE_WIDEBAND, Audio.PCM_8BIT_MONO, Audio.ALAW_TELEPHONY};
