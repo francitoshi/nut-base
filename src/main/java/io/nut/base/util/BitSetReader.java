@@ -1,7 +1,7 @@
 /*
  * BitSetReader.java
  *
- * Copyright (c) 2012-2023 francitoshi@gmail.com
+ * Copyright (c) 2012-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@ public abstract class BitSetReader
     public abstract boolean get();
     public abstract byte get(int bits);
     public abstract int count();
+    public abstract void reset();
     
     final SecureRandom secureRandom;
 
@@ -78,6 +79,12 @@ public abstract class BitSetReader
             {
                 return count;
             }
+
+            @Override
+            public void reset()
+            {
+                count = 0;
+            }
         };
     }
     static public BitSetReader syncronized(final BitSetReader src)
@@ -108,6 +115,14 @@ public abstract class BitSetReader
                 synchronized(lock)
                 {
                     return bq.count();
+                }
+            }
+            @Override
+            public void reset()
+            {
+                synchronized(lock)
+                {
+                    bq.reset();
                 }
             }
         };

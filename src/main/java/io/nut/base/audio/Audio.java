@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.nio.ShortBuffer;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioFormat.Encoding;
@@ -216,21 +217,23 @@ public class Audio
     }
 
 
+    public static int requiredSamples(float sampleRate, float millis)
+    {
+        return (int)((sampleRate * millis) / 1000.0);
+    }
+    
     /**
-     * Calculates the number of bytes required to hold a specific duration of audio.
+     * Calculates the number of samples required to hold a specific duration of audio.
      *
      * @param format The audio format to use for calculation.
      * @param millis The duration in milliseconds.
-     * @return The number of bytes corresponding to the duration.
+     * @return The number of samples corresponding to the duration.
      */
-    public static int requiredBytes(AudioFormat format, float millis)
+    public static int requiredSamples(AudioFormat format, float millis)
     {
-        float sampleRate = format.getFrameRate();
-        int channels = format.getChannels();
-        int sampleBits = format.getSampleSizeInBits();
-        return requiredBytes(sampleRate, sampleBits, channels, millis);
+        return requiredSamples(format.getFrameRate(), millis);
     }
-
+    
     /**
      * Calculates the number of bytes required based on raw audio parameters.
      *
@@ -244,116 +247,21 @@ public class Audio
     {
         int sampleBytes = sampleBits / 8;
         int frameBytes = sampleBytes * channels;
-        int bytes = (int) ((sampleRate * frameBytes * millis) / 1000);
-        return roundUpToFrameSize(bytes, frameBytes);
+        return requiredSamples(sampleRate, millis)*frameBytes;
     }
-    
+
     /**
-     * Calculates the number of samples required to hold a specific duration of audio.
+     * Calculates the number of bytes required to hold a specific duration of audio.
      *
      * @param format The audio format to use for calculation.
      * @param millis The duration in milliseconds.
-     * @return The number of samples corresponding to the duration.
+     * @return The number of bytes corresponding to the duration.
      */
-    public static int requiredSamples(AudioFormat format, float millis)
+    public static int requiredBytes(AudioFormat format, float millis)
     {
-        float sampleRate = format.getFrameRate();
-        return (int)((sampleRate * millis) / 1000);
+        return requiredBytes(format.getFrameRate(), format.getSampleSizeInBits(), format.getChannels(), millis);
     }
-    
-    public static int roundUpToFrameSize(int bytes, int bytesPerFrame) 
-    {
-        return ((bytes + bytesPerFrame - 1) / bytesPerFrame) * bytesPerFrame;
-    }
-  
-    public static double goertzelPower(float[] data, float sampleRate, double hz)
-    {
-        return goertzelPower(data, 0, data.length, sampleRate, hz);
-    }
-    public static double goertzelPower(float[] data, int start, int stop, float sampleRate, double hz)
-    {
-        double sPrev = 0, sPrev2 = 0;
-        double normalizedFreq = 2.0 * Math.PI * hz / sampleRate;
-        double coeff = 2.0 * Math.cos(normalizedFreq);
-        
-        for(int i=start;i<stop;i++)
-        {
-            double s = data[i] + coeff * sPrev - sPrev2;
-            sPrev2 = sPrev;
-            sPrev = s;
-        }
-        return sPrev2 * sPrev2 + sPrev * sPrev - coeff * sPrev * sPrev2;
-    }
-    public static double[] slidingGoertzelPower(float[] data, float sampleRate, double hz, double[] energy)
-    {
-        int windowSize = data.length / 2;
-        int step = windowSize / energy.length;
-        int start = 0;
-        int end = start +  windowSize;
-
-        for(int i=0;i<energy.length;i++, start+=step, end+=step)
-        {
-            energy[i] = goertzelPower(data, start, end, sampleRate, hz);
-        }
-        return energy;
-    }
-    
-    public static double[] slidingGoertzelPower(double[] data, float sampleRate, double hz)
-    {
-        int total = data.length;
-        int windowSize = total / 2;
-
-        int step = Math.max(1, Math.round(sampleRate / 1000f)); // 1 ms
-        int windows = (windowSize + step - 1) / step;
-
-        double[] result = new double[windows];
-
-        double omega = 2.0 * Math.PI * hz / sampleRate;
-        double coeff = 2.0 * Math.cos(omega);
-
-        double s0 = 0.0, s1 = 0.0, s2 = 0.0;
-
-        /* --- inicialización O(N) --- */
-        for (int i = 0; i < windowSize; i++)
-        {
-            s0 = data[i] + coeff * s1 - s2;
-            s2 = s1;
-            s1 = s0;
-        }
-
-        int out = 0;
-        int start = 0;
-        int end = windowSize;
-
-        while (end <= total)
-        {
-            // potencia Goertzel
-            result[out++] = s1 * s1 + s2 * s2 - coeff * s1 * s2;
-
-            // avanzar 1 ms
-            for (int k = 0; k < step && end < total; k++)
-            {
-                double xNew = data[end];
-                double xOld = data[start];
-
-                s0 = xNew - xOld + coeff * s1 - s2;
-                s2 = s1;
-                s1 = s0;
-
-                start++;
-                end++;
-            }
-        }
-
-        if (out != result.length)
-        {
-            double[] trimmed = new double[out];
-            System.arraycopy(result, 0, trimmed, 0, out);
-            return trimmed;
-        }
-
-        return result;
-    }
+       
     public static float detectHz(float[] data, float sampleRate, float threshold)
     {
         int crossings = -1;
@@ -502,6 +410,17 @@ public class Audio
         for(int i=0;i<dst.length;i++)
         {
             dst[i] = src[i]/(float)Byte.MAX_VALUE;
+        }
+        return dst;
+    }
+    
+    public static float[] bytesToFloats(float[] dst, byte[] src, int readBytes, boolean bigEndian)
+    {
+        FloatBuffer buffer = ByteBuffer.wrap(src).order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+        
+        for(int i=0;i<readBytes && i<dst.length;i++)
+        {
+            dst[i] = buffer.get(i);
         }
         return dst;
     }

@@ -42,6 +42,7 @@ public class AudioGoertzel extends Generator<double[]>
     private final boolean overlap;
     private final boolean detectDCOffset;
     private final int blockMillis;
+    private final EnergyDetector energyDetector = EnergyDetector.GOERTZEL_POWER;
 
     public AudioGoertzel(AudioInputStream ais, int hz, int flags, int blockMillis, int capacity)
     {
@@ -140,7 +141,7 @@ public class AudioGoertzel extends Generator<double[]>
                     
                     if(freq!=0)
                     {
-                        energies[0] = Audio.goertzelPower(work, sampleRate, freq);
+                        energies[0] = energyDetector.getEnergy(work, sampleRate, freq);
                     }
                     else
                     {

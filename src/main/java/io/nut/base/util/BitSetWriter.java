@@ -1,7 +1,7 @@
 /*
  * BitSetWriter.java
  *
- * Copyright (c) 2012-2023 francitoshi@gmail.com
+ * Copyright (c) 2012-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -32,6 +32,7 @@ public abstract class BitSetWriter
     public abstract void put(boolean val);
     public abstract void put(byte val,int bits);
     public abstract int count();
+    public abstract void reset();
 
     static public BitSetWriter build(final BitSet src)
     {
@@ -58,6 +59,13 @@ public abstract class BitSetWriter
             {
                 return count;
             }
+
+            @Override
+            public void reset()
+            {
+                count = 0;
+            }
+            
         };
     }
     static public BitSetWriter syncronized(final BitSetWriter src)
@@ -89,6 +97,14 @@ public abstract class BitSetWriter
                 synchronized(lock)
                 {
                     return bq.count();
+                }
+            }
+            @Override
+            public void reset()
+            {
+                synchronized(lock)
+                {
+                    bq.reset();
                 }
             }
         };
