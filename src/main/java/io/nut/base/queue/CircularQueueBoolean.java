@@ -107,6 +107,29 @@ public class CircularQueueBoolean
     }
 
     /**
+     * Pushes multiple booleans from a byte array where each bit represents a
+     * boolean. Bits are read from LSB to MSB of each byte.
+     *
+     * @param bytes the byte array containing packed boolean values.
+     */
+    public void push(byte[] bytes)
+    {
+        if (bytes == null)
+        {
+            return;
+        }
+
+        for (byte b : bytes)
+        {
+            for (int i = 0; i < 8; i++)
+            {
+                boolean value = (b & (1 << i)) != 0;
+                push(value);
+            }
+        }
+    }
+    
+    /**
      * Removes and returns the element at the head of the queue.
      *
      * @return the oldest element in the queue, or false if the queue is empty.
@@ -122,7 +145,123 @@ public class CircularQueueBoolean
         size--;
         return value;
     }
+    /**
+     * Pops multiple booleans and packs them into a byte array. Each byte
+     * contains 8 booleans packed from LSB to MSB. The array size determines how
+     * many booleans to pop (bytes.length * 8). If there aren't enough elements,
+     * remaining bits are set to 0.
+     *
+     * @param bytes the byte array to fill with packed boolean values.
+     * @return the same byte array filled with values.
+     */
+    public byte[] pop(byte[] bytes)
+    {
+        if (bytes == null)
+        {
+            return null;
+        }
 
+        for (int i = 0; i < bytes.length; i++)
+        {
+            byte b = 0;
+            for (int j = 0; j < 8; j++)
+            {
+                boolean value = pop();
+                if (value)
+                {
+                    b |= (1 << j);
+                }
+            }
+            bytes[i] = b;
+        }
+        return bytes;
+    }
+
+    /**
+     * Retrieves the element at the head of the queue without removing it.
+     *
+     * @return the oldest element in the queue, or false if the queue is empty.
+     */
+    public boolean peek()
+    {
+        if (size == 0)
+        {
+            return false;
+        }
+        return buffer[head];
+    }
+
+    /**
+     * Retrieves multiple elements from the head of the queue without removing
+     * them. Fills the provided array with elements starting from the head
+     * (oldest). If the queue has fewer elements than the array size, remaining
+     * positions are filled with false.
+     *
+     * @param buf the array to fill with queue elements.
+     * @return the same array filled with values.
+     */
+    public boolean[] peek(boolean[] buf)
+    {
+        if (buf == null)
+        {
+            return null;
+        }
+
+        int elementsToRead = Math.min(buf.length, size);
+
+        for (int i = 0; i < elementsToRead; i++)
+        {
+            buf[i] = buffer[(head + i) % capacity];
+        }
+
+        // Fill remaining positions with false if queue has fewer elements
+        for (int i = elementsToRead; i < buf.length; i++)
+        {
+            buf[i] = false;
+        }
+
+        return buf;
+    }
+    
+    /**
+     * Peeks at multiple booleans and packs them into a byte array without
+     * removing them. Each byte contains 8 booleans packed from LSB to MSB. The
+     * array size determines how many booleans to peek (bytes.length * 8). If
+     * there aren't enough elements, remaining bits are set to 0.
+     *
+     * @param bytes the byte array to fill with packed boolean values.
+     * @return the same byte array filled with values.
+     */
+    public byte[] peek(byte[] bytes)
+    {
+        if (bytes == null)
+        {
+            return null;
+        }
+
+        int bitsToRead = bytes.length * 8;
+        int bitsAvailable = Math.min(bitsToRead, size);
+
+        for (int i = 0; i < bytes.length; i++)
+        {
+            byte b = 0;
+            for (int j = 0; j < 8; j++)
+            {
+                int bitPosition = i * 8 + j;
+                if (bitPosition < bitsAvailable)
+                {
+                    boolean value = get(bitPosition);
+                    if (value)
+                    {
+                        b |= (1 << j);
+                    }
+                }
+            }
+            bytes[i] = b;
+        }
+        return bytes;
+    }    
+    
     /**
      * Retrieves the element at a specific index relative to the head of the queue.
      * <p>
