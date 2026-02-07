@@ -37,7 +37,7 @@ public class AudioGoertzel extends Generator<double[]>
 {
     private final Object lock = new Object();
     private final AudioInputStream ais;
-    private final int hz;
+    private final int[] hz;
     private final boolean hannWindow;
     private final boolean overlap;
     private final boolean detectDCOffset;
@@ -45,6 +45,10 @@ public class AudioGoertzel extends Generator<double[]>
     private final EnergyDetector energyDetector = EnergyDetector.GOERTZEL_POWER;
 
     public AudioGoertzel(AudioInputStream ais, int hz, int flags, int blockMillis, int capacity)
+    {
+        this(ais, new int[]{hz}, flags, blockMillis, capacity);
+    }
+    public AudioGoertzel(AudioInputStream ais, int[] hz, int flags, int blockMillis, int capacity)
     {
         super(capacity);
         this.ais = ais;
@@ -75,7 +79,7 @@ public class AudioGoertzel extends Generator<double[]>
             float[] work = new float[workSamples];
             float[][] half = overlap ? new float[2][blockSamples] : new float[1][workSamples];
             byte[] read = new byte[Float.BYTES*half[0].length];
-            double[] energies = new double[3];
+            double[] energies = new double[hz.length];
             FloatBuffer buffer = ByteBuffer.wrap(read).order(be ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
             int w = overlap ? 1 : 0;
             int time = 0;
@@ -129,7 +133,7 @@ public class AudioGoertzel extends Generator<double[]>
                         }
                     }                   
 
-                    float freq = this.hz!=0 ? this.hz : Audio.detectHz(work, sampleRate, 0.01f);
+                    int[] freq = (hz.length==1 && hz[0]==0) ? new int[]{ (int)Audio.detectHz(work, sampleRate, 0.01f) } : hz;
                     
                     if(hann!=null)
                     {
@@ -138,16 +142,10 @@ public class AudioGoertzel extends Generator<double[]>
                             work[i] *= hann[i]; 
                         }
                     }
-                    
-                    if(freq!=0)
+
+                    for(int i=0;i<freq.length;i++)
                     {
-                        energies[0] = energyDetector.getEnergy(work, sampleRate, freq);
-                    }
-                    else
-                    {
-                        energies[0] = 0;
-                        energies[1] = 0;
-                        energies[2] = 0;
+                        energies[i] = freq[i]!=0 ? energyDetector.getEnergy(work, sampleRate, freq[i]) : 0;
                     }
                     this.yield(energies.clone());
                 }
