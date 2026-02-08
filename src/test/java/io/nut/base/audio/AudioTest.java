@@ -39,7 +39,7 @@ public class AudioTest
 
     static InputStream getIS() throws UnsupportedAudioFileException, IOException
     {
-        return new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream(MORSE1)));
+        return new BufferedInputStream(new GZIPInputStream(AudioEnergyTest.class.getResourceAsStream(MORSE1)));
     }
     
     @Test

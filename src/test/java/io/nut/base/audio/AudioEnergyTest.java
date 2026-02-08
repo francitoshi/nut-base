@@ -1,5 +1,5 @@
 /*
- * MorseGoertzelTest.java
+ * AudioEnergyTest.java
  *
  * Copyright (c) 2026 francitoshi@gmail.com
  *
@@ -31,7 +31,7 @@ import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.UnsupportedAudioFileException;
 import org.junit.jupiter.api.Test;
 
-public class MorseGoertzelTest
+public class AudioEnergyTest
 {
     static final String MORSE1 = "morse1-quixote-8000-mono-u8.wav.gz";
     
@@ -41,7 +41,7 @@ public class MorseGoertzelTest
     
     static AudioInputStream getAIS() throws UnsupportedAudioFileException, IOException
     {
-        InputStream in = new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream(MORSE1)));
+        InputStream in = new BufferedInputStream(new GZIPInputStream(AudioEnergyTest.class.getResourceAsStream(MORSE1)));
         return AudioSystem.getAudioInputStream(in);
     }
 
@@ -49,7 +49,7 @@ public class MorseGoertzelTest
     public void testRun() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, 0, 5, 5);
+        AudioEnergy mg = new AudioEnergy(ais, HZ, 0, 5, 5);
         int num = 0;
         
         if(SHOW) System.out.println("testRun");
@@ -67,7 +67,7 @@ public class MorseGoertzelTest
     public void testRunHann() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, HANNWINDOW, 5, 5);
+        AudioEnergy mg = new AudioEnergy(ais, HZ, HANNWINDOW, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunHann");
@@ -85,7 +85,7 @@ public class MorseGoertzelTest
     public void testRunOverlap() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, OVERLAP, 5, 5);
+        AudioEnergy mg = new AudioEnergy(ais, HZ, OVERLAP, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunOverlap");
@@ -103,7 +103,7 @@ public class MorseGoertzelTest
     public void testRunHannOverlap() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = getAIS();
-        AudioGoertzel mg = new AudioGoertzel(ais, HZ, HANNWINDOW|OVERLAP, 5, 5);
+        AudioEnergy mg = new AudioEnergy(ais, HZ, HANNWINDOW|OVERLAP, 5, 5);
 
         int num = 0;
         if(SHOW) System.out.println("testRunHannOverlap");

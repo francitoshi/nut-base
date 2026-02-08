@@ -35,7 +35,7 @@ public class AudioMorse extends Generator<String>
     private final Morse morse;
 
     private volatile double threshold;
-    private final AudioGoertzel audioGoertzel;
+    private final AudioEnergy audioGoertzel;
     private final MovingAverage quietEMA;
     private final MovingAverage pulseEMA;
     static final double BETA = 0.2; // Factor para cálculo conservador del umbral (0.1-0.3)
@@ -49,7 +49,7 @@ public class AudioMorse extends Generator<String>
         this.flushChunks = this.morse.maxTerms*2+2;
 
         this.threshold = blockMillis*blockMillis;
-        this.audioGoertzel = new AudioGoertzel(ais, hz, flags, blockMillis, capacity);
+        this.audioGoertzel = new AudioEnergy(ais, hz, flags, blockMillis, capacity);
         this.quietEMA = MovingAverage.createEMA(10);
         this.pulseEMA = MovingAverage.createEMA(10);
     }

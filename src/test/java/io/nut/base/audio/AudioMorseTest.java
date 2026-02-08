@@ -60,7 +60,7 @@ public class AudioMorseTest
     
     InputStream getIS(String fileName) throws UnsupportedAudioFileException, IOException
     {
-        return new BufferedInputStream(new GZIPInputStream(MorseGoertzelTest.class.getResourceAsStream(fileName)));
+        return new BufferedInputStream(new GZIPInputStream(AudioEnergyTest.class.getResourceAsStream(fileName)));
     }
     
     static final String QUIJOTE = "EN UN LUGAR DE LA MANCHA, DE CUYO NOMBRE NO QUIERO ACORDARME, NO HA MUCHO TIEMPO QUE VIVIA UN HIDALGO DE LOS DE LANZA EN ASTILLERO, ADARGA ANTIGUA, ROCIN FLACO Y GALGO CORREDOR.";

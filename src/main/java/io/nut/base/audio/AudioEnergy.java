@@ -1,5 +1,5 @@
 /*
- * AudioGoertzel.java
+ * AudioEnergy.java
  *
  * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
@@ -33,7 +33,7 @@ import java.util.logging.Logger;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
 
-public class AudioGoertzel extends Generator<double[]>
+public class AudioEnergy extends Generator<double[]>
 {
     private final Object lock = new Object();
     private final AudioInputStream ais;
@@ -42,13 +42,21 @@ public class AudioGoertzel extends Generator<double[]>
     private final boolean overlap;
     private final boolean detectDCOffset;
     private final int blockMillis;
-    private final EnergyDetector energyDetector = EnergyDetector.GOERTZEL_POWER;
+    private final EnergyDetector energyDetector;
 
-    public AudioGoertzel(AudioInputStream ais, int hz, int flags, int blockMillis, int capacity)
+    public AudioEnergy(AudioInputStream ais, int hz, int flags, int blockMillis, int capacity)
     {
-        this(ais, new int[]{hz}, flags, blockMillis, capacity);
+        this(ais, new int[]{hz}, flags, blockMillis, capacity, null);
     }
-    public AudioGoertzel(AudioInputStream ais, int[] hz, int flags, int blockMillis, int capacity)
+    public AudioEnergy(AudioInputStream ais, int hz, int flags, int blockMillis, int capacity, EnergyDetector energyDetector)
+    {
+        this(ais, new int[]{hz}, flags, blockMillis, capacity, energyDetector);
+    }
+    public AudioEnergy(AudioInputStream ais, int[] hz, int flags, int blockMillis, int capacity)
+    {
+        this(ais, hz, flags, blockMillis, capacity, null);
+    }
+    public AudioEnergy(AudioInputStream ais, int[] hz, int flags, int blockMillis, int capacity, EnergyDetector energyDetector)
     {
         super(capacity);
         this.ais = ais;
@@ -57,6 +65,7 @@ public class AudioGoertzel extends Generator<double[]>
         this.overlap        = (flags & OVERLAP)    == OVERLAP;
         this.detectDCOffset = (flags & DCOFFSET)   == DCOFFSET;
         this.blockMillis = blockMillis;
+        this.energyDetector = energyDetector!=null ? energyDetector : EnergyDetector.GOERTZEL_POWER;
     }
     
     @Override
@@ -159,7 +168,7 @@ public class AudioGoertzel extends Generator<double[]>
         }
         catch (IOException ex)
         {
-            Logger.getLogger(AudioGoertzel.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(AudioEnergy.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
     
