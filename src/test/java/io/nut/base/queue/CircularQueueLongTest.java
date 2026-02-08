@@ -1,7 +1,7 @@
 /*
  *  CircularQueueLongTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -184,4 +184,16 @@ class CircularQueueLongTest
             30L, 40L, 50L, 60L, 70L
         }, queue.array());
     }
+    
+   @Test
+    void testPeek()
+    {
+        CircularQueueLong queue = new CircularQueueLong(3);
+        queue.push(10);
+        queue.push(20);
+        assertEquals(10, queue.peek());
+        assertEquals(10, queue.peek());
+        assertEquals(2, queue.size());
+    }
+    
 }

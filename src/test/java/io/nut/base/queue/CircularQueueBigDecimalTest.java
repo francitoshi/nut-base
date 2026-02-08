@@ -1,7 +1,7 @@
 /*
  *  CircularQueueBigDecimalTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -84,4 +84,16 @@ class CircularQueueBigDecimalTest
         assertEquals(new BigDecimal("200"), queue.get(1));
         assertNull(queue.get(5));
     }
+    
+   @Test
+    void testPeek()
+    {
+        CircularQueueBigDecimal queue = new CircularQueueBigDecimal(3);
+        queue.push(BigDecimal.ONE);
+        queue.push(BigDecimal.TEN);
+        assertEquals(BigDecimal.ONE, queue.peek());
+        assertEquals(BigDecimal.ONE, queue.peek());
+        assertEquals(2, queue.size());
+    }
+    
 }

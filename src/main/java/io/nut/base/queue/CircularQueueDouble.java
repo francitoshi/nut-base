@@ -124,6 +124,20 @@ public class CircularQueueDouble
     }
 
     /**
+     * Retrieves the element at the head of the queue without removing it.
+     *
+     * @return the oldest element in the queue, or 0 if the queue is empty.
+     */
+    public double peek()
+    {
+        if (size == 0)
+        {
+            return 0;
+        }
+        return buffer[head];
+    }
+    
+    /**
      * Retrieves the element at a specific index relative to the head of the queue.
      * <p>
      * Index 0 corresponds to the head (oldest element).

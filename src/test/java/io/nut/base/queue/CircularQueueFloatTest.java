@@ -1,7 +1,7 @@
 /*
  *  CircularQueueFloatTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -77,4 +77,16 @@ class CircularQueueFloatTest
         assertEquals(4, arr.length);
         assertEquals(2.0f, arr[0], 0.001);
     }
+    
+   @Test
+    void testPeek()
+    {
+        CircularQueueFloat queue = new CircularQueueFloat(3);
+        queue.push(10);
+        queue.push(20);
+        assertEquals(10, queue.peek());
+        assertEquals(10, queue.peek());
+        assertEquals(2, queue.size());
+    }
+    
 }

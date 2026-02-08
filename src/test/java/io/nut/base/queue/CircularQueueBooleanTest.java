@@ -1,7 +1,7 @@
 /*
  *  CircularQueueBooleanTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -76,6 +76,17 @@ class CircularQueueBooleanTest
         assertEquals(0.00, queue.average(), 0.001);
     }
     
+    @Test
+    void testPeek()
+    {
+        CircularQueueBoolean queue = new CircularQueueBoolean(3);
+        queue.push(true);
+        queue.push(false);
+        assertTrue(queue.peek());
+        assertTrue(queue.peek());
+        assertEquals(2, queue.size());
+    }
+
     @Test
     public void testAll()
     {

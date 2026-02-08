@@ -126,6 +126,20 @@ public class CircularQueueBigInteger
     }
 
     /**
+     * Retrieves the element at the head of the queue without removing it.
+     *
+     * @return the oldest element in the queue, or null if the queue is empty.
+     */
+    public BigInteger peek()
+    {
+        if (size == 0)
+        {
+            return null;
+        }
+        return buffer[head];
+    }
+    
+    /**
      * Retrieves the element at a specific index relative to the head of the queue.
      * <p>
      * Index 0 corresponds to the head (oldest element).

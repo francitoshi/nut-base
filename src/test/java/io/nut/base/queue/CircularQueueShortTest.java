@@ -1,7 +1,7 @@
 /*
  *  CircularQueueShortTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 package io.nut.base.queue;
 
 import static org.junit.jupiter.api.Assertions.*;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 
@@ -63,4 +62,16 @@ class CircularQueueShortTest
         assertEquals((short) 50, queue.min());
         assertEquals((short) 150, queue.max());
     }
+
+   @Test
+    void testPeek()
+    {
+        CircularQueueShort queue = new CircularQueueShort(3);
+        queue.push((short)10);
+        queue.push((short)20);
+        assertEquals((short)10, queue.peek());
+        assertEquals((short)10, queue.peek());
+        assertEquals(2, queue.size());
+    }
+        
 }

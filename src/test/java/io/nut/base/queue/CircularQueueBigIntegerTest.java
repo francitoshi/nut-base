@@ -1,7 +1,7 @@
 /*
  *  CircularQueueBigIntegerTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -85,4 +85,16 @@ class CircularQueueBigIntegerTest
         BigInteger removed = queue.push(new BigInteger("40"));
         assertEquals(new BigInteger("10"), removed);
     }
+    
+   @Test
+    void testPeek()
+    {
+        CircularQueueBigInteger queue = new CircularQueueBigInteger(3);
+        queue.push(BigInteger.ONE);
+        queue.push(BigInteger.TEN);
+        assertEquals(BigInteger.ONE, queue.peek());
+        assertEquals(BigInteger.ONE, queue.peek());
+        assertEquals(2, queue.size());
+    }
+        
 }

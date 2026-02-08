@@ -1,7 +1,7 @@
 /*
  *  CircularQueueDoubleTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -73,4 +73,16 @@ class CircularQueueDoubleTest
         assertEquals(2.3, queue.min(), 0.001);
         assertEquals(8.1, queue.max(), 0.001);
     }
+    
+   @Test
+    void testPeek()
+    {
+        CircularQueueDouble queue = new CircularQueueDouble(3);
+        queue.push(10);
+        queue.push(20);
+        assertEquals(10, queue.peek());
+        assertEquals(10, queue.peek());
+        assertEquals(2, queue.size());
+    }
+    
 }

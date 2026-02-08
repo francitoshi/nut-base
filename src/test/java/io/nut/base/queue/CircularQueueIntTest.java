@@ -98,4 +98,16 @@ class CircularQueueIntTest
         assertEquals(10, queue.min());
         assertEquals(40, queue.max());
     }
+    
+    @Test
+    void testPeek()
+    {
+        CircularQueueInt queue = new CircularQueueInt(3);
+        queue.push(10);
+        queue.push(20);
+        assertEquals(10, queue.peek());
+        assertEquals(10, queue.peek());
+        assertEquals(2, queue.size());
+    }
+    
 }

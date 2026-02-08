@@ -1,7 +1,7 @@
 /*
  *  CircularQueueByteTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -63,4 +63,16 @@ class CircularQueueByteTest
         queue.push((byte) 30);
         assertEquals(20.0, queue.average(), 0.001);
     }
+
+    @Test
+    void testPeek()
+    {
+        CircularQueueByte queue = new CircularQueueByte(3);
+        queue.push((byte) 10);
+        queue.push((byte) 20);
+        assertEquals((byte) 10, queue.peek());
+        assertEquals((byte) 10, queue.peek());
+        assertEquals(2, queue.size());
+    }
+
 }
