@@ -311,6 +311,15 @@ public class CircularQueueDouble
             }
 
             @Override
+            public double peek()
+            {
+                synchronized(lock)
+                {
+                    return super.peek();
+                }
+            }
+
+            @Override
             public double get(int n)
             {
                 synchronized(lock)

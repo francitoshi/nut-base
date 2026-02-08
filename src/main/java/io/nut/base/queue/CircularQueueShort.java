@@ -311,6 +311,15 @@ public class CircularQueueShort
             }
 
             @Override
+            public short peek()
+            {
+                synchronized(lock)
+                {
+                    return super.peek();
+                }
+            }
+            
+            @Override
             public short get(int n)
             {
                 synchronized(lock)

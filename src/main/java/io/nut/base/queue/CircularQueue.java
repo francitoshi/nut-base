@@ -360,6 +360,15 @@ public class CircularQueue<E>
             }
 
             @Override
+            public List<E> list()
+            {
+                synchronized(lock)
+                {
+                    return super.list();
+                }
+            }
+
+            @Override
             public E get(int n)
             {
                 synchronized(lock)
@@ -414,11 +423,29 @@ public class CircularQueue<E>
             }
 
             @Override
+            public E max(Comparator<E> comparator)
+            {
+                synchronized(lock)
+                {
+                    return super.max(comparator);
+                }
+            }
+
+            @Override
             public E min()
             {
                 synchronized(lock)
                 {
                     return super.min();
+                }
+            }
+
+            @Override
+            public E min(Comparator<E> comparator)
+            {
+                synchronized(lock)
+                {
+                    return super.min(comparator);
                 }
             }
         };

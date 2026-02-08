@@ -309,6 +309,15 @@ public class CircularQueueByte
             }
 
             @Override
+            public byte peek()
+            {
+                synchronized(lock)
+                {
+                    return super.peek();
+                }
+            }
+
+            @Override
             public byte get(int n)
             {
                 synchronized(lock)

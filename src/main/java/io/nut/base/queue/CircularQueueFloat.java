@@ -311,6 +311,15 @@ public class CircularQueueFloat
             }
 
             @Override
+            public float peek()
+            {
+                synchronized(lock)
+                {
+                    return super.peek();
+                }
+            }
+
+            @Override
             public float get(int n)
             {
                 synchronized(lock)

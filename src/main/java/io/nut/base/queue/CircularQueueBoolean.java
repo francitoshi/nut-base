@@ -426,6 +426,51 @@ public class CircularQueueBoolean
             }
 
             @Override
+            public byte[] peek(byte[] bytes)
+            {
+                synchronized(lock)
+                {
+                    return super.peek(bytes);
+                }
+            }
+
+            @Override
+            public boolean[] peek(boolean[] buf)
+            {
+                synchronized(lock)
+                {
+                    return super.peek(buf);
+                }
+            }
+
+            @Override
+            public boolean peek()
+            {
+                synchronized(lock)
+                {
+                    return super.peek();
+                }
+            }
+
+            @Override
+            public byte[] pop(byte[] bytes)
+            {
+                synchronized(lock)
+                {
+                    return super.pop(bytes);
+                }
+            }
+
+            @Override
+            public void push(byte[] bytes)
+            {
+                synchronized(lock)
+                {
+                    super.push(bytes);
+                }                
+            }
+
+            @Override
             public boolean get(int n)
             {
                 synchronized(lock)

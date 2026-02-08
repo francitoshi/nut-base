@@ -315,6 +315,15 @@ public class CircularQueueBigDecimal
             }
 
             @Override
+            public BigDecimal peek()
+            {
+                synchronized(lock)
+                {
+                    return super.peek();
+                }
+            }
+
+            @Override
             public BigDecimal get(int n)
             {
                 synchronized(lock)

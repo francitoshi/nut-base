@@ -311,6 +311,15 @@ public class CircularQueueInt
             }
 
             @Override
+            public int peek()
+            {
+                synchronized(lock)
+                {
+                    return super.peek();
+                }
+            }
+
+            @Override
             public int get(int n)
             {
                 synchronized(lock)
