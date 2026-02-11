@@ -52,6 +52,7 @@ class LineOutWriter implements AudioWriter, Closeable
         return line.write(bytes, off, len);
     }
 
+    @Override
     public void drain()
     {
         line.drain();

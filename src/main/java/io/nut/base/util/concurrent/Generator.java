@@ -1,7 +1,7 @@
 /*
  *  Generator.java
  *
- *  Copyright (C) 2024-2025 francitoshi@gmail.com
+ *  Copyright (C) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -90,6 +91,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     private volatile E nextElement = null;
     private volatile boolean shutdownRequested;
     private volatile boolean terminated;
+    private final AtomicInteger running = new AtomicInteger();
     
     /**
      * Creates a generator with a specific buffer capacity.
@@ -198,7 +200,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     
     /**
      * Starts the background generator thread and returns this instance as an
-     * Iterator.
+     * Iterator
      *
      * @return An iterator over the generated elements.
      */
@@ -221,25 +223,36 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
             @Override
             public void run()
             {
+                int value = running.getAndIncrement();
                 try
                 {
-                    Generator.this.run();
-                }
-                catch(IllegalStateException ex)
-                {
-                    Logger.getLogger(Generator.class.getName()).log(Level.INFO, "Generator explicitly stopped", ex);
+                    if(value==0)
+                    {
+                        try
+                        {
+                            Generator.this.run();
+                        }
+                        catch(IllegalStateException ex)
+                        {
+                            Logger.getLogger(Generator.class.getName()).log(Level.INFO, "Generator explicitly stopped", ex);
+                        }
+                        finally
+                        {
+                            try
+                            {
+                                queue.put(POISON);
+                            }
+                            catch (InterruptedException ex)
+                            {
+                                shutdownRequested = terminated = true;
+                                Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
+                            }
+                        }
+                    }
                 }
                 finally
                 {
-                    try
-                    {
-                        queue.put(POISON);
-                    }
-                    catch (InterruptedException ex)
-                    {
-                        shutdownRequested = terminated = true;
-                        Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    running.getAndDecrement();
                 }
             }
         }, tag).start();

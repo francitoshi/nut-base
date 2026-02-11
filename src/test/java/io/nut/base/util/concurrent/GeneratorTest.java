@@ -1,7 +1,7 @@
 /*
  *  GeneratorTest.java
  *
- *  Copyright (C) 2024-2025 francitoshi@gmail.com
+ *  Copyright (C) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -21,13 +21,8 @@
 package io.nut.base.util.concurrent;
 
 import io.nut.base.util.Utils;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -141,5 +136,45 @@ public class GeneratorTest
             instance.shutdownNow();
         }
         assertTrue(count>0);
+    }
+    /**
+     * Test of nesting loops
+     */
+    @Test
+    public void testNestedLoop()
+    {
+        Generator<Character> instance0 = letters(26, 0);
+        int count = 0;
+        char[] c = new char[26];
+        for (Character ch : instance0)
+        {
+            c[count++] = ch;
+            for (Character ch2 : instance0)
+            {
+                c[count++] = ch2;
+                if(count%5==4) break;
+            }
+        }
+        for(int i=0;i<c.length;i++)
+        {
+            assertEquals('A' + i, c[i]);
+        }
+        
+        Generator<Character> instance1 = letters(26, 11);
+        count = 0;
+        c = new char[26];
+        for (Character ch : instance1)
+        {
+            c[count++] = ch;
+            for (Character ch2 : instance1)
+            {
+                c[count++] = ch2;
+                if(count%5==4) break;
+            }
+        }
+        for(int i=0;i<c.length;i++)
+        {
+            assertEquals('A' + i, c[i]);
+        }
     }
 }

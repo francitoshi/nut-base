@@ -71,6 +71,13 @@ public class WavWriter implements AudioWriter, Closeable
 
     /**
      * Constructor with specific format parameters.
+     * @param file
+     * @param sampleRate
+     * @param sampleSizeInBits
+     * @param channels
+     * @param signed
+     * @param bigEndian
+     * @throws java.io.IOException
      */
     public WavWriter(File file, float sampleRate, int sampleSizeInBits, int channels, boolean signed, boolean bigEndian) throws IOException
     {
@@ -157,6 +164,7 @@ public class WavWriter implements AudioWriter, Closeable
         return buffer.array();
     }
 
+    @Override
     public int write(byte[] bytes, int off, int len) throws IOException
     {
         if (closed)
@@ -187,6 +195,7 @@ public class WavWriter implements AudioWriter, Closeable
      *
      * @return AudioFormat
      */
+    @Override
     public AudioFormat getFormat()
     {
         return format;

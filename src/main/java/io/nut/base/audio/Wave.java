@@ -36,7 +36,7 @@ public abstract class Wave
         this.name = name;
     }
     
-    public static Wave SINE = new Wave("Sine")
+    public static final Wave SINE = new Wave("Sine")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -46,7 +46,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave SQUARE = new Wave("Square")
+    public static final Wave SQUARE = new Wave("Square")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -56,7 +56,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave SAWTOOTH = new Wave("Sawtooth")
+    public static final Wave SAWTOOTH = new Wave("Sawtooth")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -66,7 +66,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave TRIANGLE = new Wave("Triangle")
+    public static final Wave TRIANGLE = new Wave("Triangle")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -76,7 +76,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave WHITE_NOISE = new Wave("WhiteNoise")
+    public static final Wave WHITE_NOISE = new Wave("WhiteNoise")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -85,7 +85,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave DUTY_CYCLE_025 = new Wave("DutyCycle0.25")
+    public static final Wave DUTY_CYCLE_025 = new Wave("DutyCycle0.25")
     {
         final double dutyCycle = 0.25;
         @Override
@@ -95,7 +95,7 @@ public abstract class Wave
             return (phase < dutyCycle) ? volume : -volume;
         }
     };
-    public static Wave DUTY_CYCLE_033 = new Wave("DutyCycle0.33")
+    public static final Wave DUTY_CYCLE_033 = new Wave("DutyCycle0.33")
     {
         final double dutyCycle = 0.33;
         @Override
@@ -106,7 +106,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave PWM = new Wave("PWM")
+    public static final Wave PWM = new Wave("PWM")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -118,7 +118,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave BROWNIAN_NOISE = new Wave("BrownianNoise")
+    public static final Wave BROWNIAN_NOISE = new Wave("BrownianNoise")
     {
         volatile double lastValue;
         @Override
@@ -140,7 +140,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave FM = new Wave("FM")
+    public static final Wave FM = new Wave("FM")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -152,7 +152,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave PARABOLIC = new Wave("Parabolic")
+    public static final Wave PARABOLIC = new Wave("Parabolic")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
@@ -162,7 +162,7 @@ public abstract class Wave
         }
     };
     
-    public static Wave ADITIVE = new Wave("Aditive")
+    public static final Wave ADITIVE = new Wave("Aditive")
     {
         @Override
         public double getValue(float sampleRate, int i, int hz, double volume)
