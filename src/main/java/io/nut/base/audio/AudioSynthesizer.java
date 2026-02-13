@@ -76,7 +76,7 @@ public class AudioSynthesizer implements Closeable
     public void play(int hz, int ms, double vol, Wave wave) throws IOException
     {
         wave = wave!=null ? wave : defaultWave;
-        int playBytes = Audio.requiredBytes(this.format, ms);
+        int playBytes = Audio.msToBytes(ms, this.format);
         Trio<Integer, Double, String> key = new Trio<>(hz, vol, wave.name);
         byte[] bytes = this.playCache.get(key);
         if (bytes == null || bytes.length < playBytes)

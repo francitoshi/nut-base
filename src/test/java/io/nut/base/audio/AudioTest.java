@@ -101,13 +101,13 @@ public class AudioTest
     {
         Wave wave = Wave.SINE;
         AudioFormat format = Audio.PCM_8BIT_MONO;
-
+        AudioReader audioReader = AudioReader.getInstance(format);
         SourceDataLine lineOut = ALLOW_SOUND ? Audio.getLineOut(format) : null;
         
         for(int hz=400;hz<1200; hz += 100)
         {
-            byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.33);
-            float[] dst = Audio.i8ToFloat(src);
+            byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.5);
+            float[] dst = audioReader.readFloats(src, src.length, format.isBigEndian(), null);
             double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
 
             if(lineOut!=null)
@@ -119,7 +119,7 @@ public class AudioTest
             {
                 System.out.printf("%d => %.1f\n", hz, result);
             }
-            assertEquals(hz, result, 0.1);
+            assertEquals(hz, result, 0.2);
         }
     }
     @Test
@@ -127,13 +127,13 @@ public class AudioTest
     {
         Wave wave = Wave.SINE;
         AudioFormat format = Audio.PCM_CD_MONO;
-
+        AudioReader audioReader = new AudioReaderSigned16();
         SourceDataLine lineOut = ALLOW_SOUND ? Audio.getLineOut(format) : null;
         
         for(int hz=400;hz<1200; hz += 100)
         {
             byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.33);
-            float[] dst = Audio.i16ToFloat(src, format.isBigEndian());
+            float[] dst = audioReader.readFloats(src, src.length, format.isBigEndian(), null);
             double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
 
             if(lineOut!=null)

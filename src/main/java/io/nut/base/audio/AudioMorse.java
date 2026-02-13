@@ -29,48 +29,23 @@ import javax.sound.sampled.AudioInputStream;
 
 public class AudioMorse extends Generator<String>
 {
-    private final AudioInputStream ais;
+    static final double BETA = 0.2; // Factor para cálculo conservador del umbral (0.1-0.3)
+    
     private final int blockMillis;
     private final int flushChunks;
     private final Morse morse;
 
-    private volatile double threshold;
     private final AudioEnergy audioGoertzel;
-    private final MovingAverage quietEMA;
-    private final MovingAverage pulseEMA;
-    static final double BETA = 0.2; // Factor para cálculo conservador del umbral (0.1-0.3)
+    private final AdaptiveThreshold adaptiveThreshold;
 
     public AudioMorse(AudioInputStream ais, int hz, int flags, int blockMillis, int capacity)
     {
         super(capacity);
-        this.ais = ais;
         this.blockMillis = blockMillis;
         this.morse = new Morse();
         this.flushChunks = this.morse.maxTerms*2+2;
-
-        this.threshold = blockMillis*blockMillis;
         this.audioGoertzel = new AudioEnergy(ais, hz, flags, blockMillis, capacity);
-        this.quietEMA = MovingAverage.createEMA(10);
-        this.pulseEMA = MovingAverage.createEMA(10);
-    }
-    
-    private void updateThreshold(boolean pulse, double e)
-    {
-        double p;
-        double q;
-
-        if(pulse)
-        {
-            p = pulseEMA.next(e);
-            q = quietEMA.average();
-        }
-        else
-        {
-            p = pulseEMA.average();
-            q = quietEMA.next(e);
-        }
-
-        threshold = p>q ? q + BETA * (p - q) : Math.max(threshold, q*10);
+        this.adaptiveThreshold = new AdaptiveThreshold(BETA, blockMillis*blockMillis);
     }
     
     private final Generator<Integer> audio2pattern = new Generator<Integer>(capacity)
@@ -89,18 +64,18 @@ public class AudioMorse extends Generator<String>
                     return;
                 }
                 
-                if(status>0 && e[0]>threshold)
+                boolean pulse = adaptiveThreshold.update(e[0]);
+
+                if(status>0 && pulse)
                 {
                     status = 1;
                     ms += blockMillis;
-                    updateThreshold(true, e[0]);
                     continue;
                 }
-                else if(status<=0 && e[0]<=threshold)
+                else if(status<=0 && !pulse)
                 {
                     status = -1;
                     ms += blockMillis;
-                    updateThreshold(false, e[0]);
                     if(ms>splitMillis)
                     {
                         this.yield(ms);
@@ -110,16 +85,8 @@ public class AudioMorse extends Generator<String>
                     continue;
                 }
                 
-                if(e[0]>threshold)
-                {
-                    status = 1;
-                    updateThreshold(true, e[0]);
-                }
-                else if(e[0]<=threshold)
-                {
-                    status = -1;
-                    updateThreshold(false, e[0]);
-                }
+                status = pulse ? +1 : -1;
+
                 splitMillis = ms>0 ? (int) (Math.min(ms, msEMA.next(ms))*morse.maxTerms*2) : splitMillis;
                 this.yield(ms);
                 ms = blockMillis;

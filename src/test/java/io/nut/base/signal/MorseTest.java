@@ -27,6 +27,7 @@ import io.nut.base.util.Strings;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;
+import org.bouncycastle.util.encoders.Base32;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Disabled;
@@ -298,5 +299,27 @@ public class MorseTest
         assertEquals(instance.wordGapMillis * 2, instance.startGapMillis);
     }
 
+    @Test
+    public void testBase32Morse()
+    {
+        Morse morse = new Morse(12, 12, 0, 0);
+        
+        byte[] src = new byte[256];
+        
+        for(int i=0;i<src.length;i++)
+        {
+            src[i] = (byte) i;
+        }
+
+        String mid = Base32.toBase32String(src);
+        
+        String dst = morse.join(morse.encode(mid));
+        
+        String mid2 = morse.decode(dst);
+        
+        byte[] src2 = Base32.decode(mid2);
+        
+        assertArrayEquals(src, src2);
+    }
     
 }

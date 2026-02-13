@@ -20,6 +20,7 @@
  */
 package io.nut.base.audio;
 
+import static io.nut.base.audio.Audio.ADJUST_START;
 import static io.nut.base.audio.Audio.DCOFFSET;
 import static io.nut.base.audio.Audio.HANNWINDOW;
 import static io.nut.base.audio.Audio.OVERLAP;
@@ -41,6 +42,7 @@ public class AudioEnergy extends Generator<double[]>
     private final boolean hannWindow;
     private final boolean overlap;
     private final boolean detectDCOffset;
+    private final boolean adjustStart;
     private final int blockMillis;
     private final EnergyDetector energyDetector;
 
@@ -64,6 +66,7 @@ public class AudioEnergy extends Generator<double[]>
         this.hannWindow     = (flags & HANNWINDOW) == HANNWINDOW;
         this.overlap        = (flags & OVERLAP)    == OVERLAP;
         this.detectDCOffset = (flags & DCOFFSET)   == DCOFFSET;
+        this.adjustStart    = (flags & ADJUST_START)== ADJUST_START;
         this.blockMillis = blockMillis;
         this.energyDetector = energyDetector!=null ? energyDetector : EnergyDetector.GOERTZEL_POWER;
     }
@@ -75,8 +78,7 @@ public class AudioEnergy extends Generator<double[]>
         {
             AudioFormat fmt = Audio.getFloatMono(ais.getFormat(), false);
 
-            int blockBytes = Audio.requiredBytes(fmt, blockMillis);
-            int blockSamples = Audio.requiredSamples(fmt, blockMillis);
+            int blockSamples = Audio.msToSamples(blockMillis, fmt);
             int workSamples = overlap ? blockSamples*2 : blockSamples;
             
             float sampleRate = fmt.getFrameRate();
@@ -91,9 +93,17 @@ public class AudioEnergy extends Generator<double[]>
             double[] energies = new double[hz.length];
             FloatBuffer buffer = ByteBuffer.wrap(read).order(be ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
             int w = overlap ? 1 : 0;
-            int time = 0;
-            int pendingStableBlocks = detectDCOffset ? 2 : 0;
-            for(int round=0; !isShutdown() ;round++, time+= blockMillis)
+
+            if(detectDCOffset)
+            {
+                Audio.skipDCOff(ais, 0.1f, blockMillis, 2);
+            }
+            if(adjustStart)
+            {
+                Audio.skipSilence(ais, 0.1f, blockMillis);
+            }
+            
+            for(int round=0; !isShutdown() ;round++)
             {
                 int r;
                 synchronized (lock)
@@ -123,24 +133,6 @@ public class AudioEnergy extends Generator<double[]>
                             work[p] = half[i][j]; 
                         }
                     }
-
-                    if(pendingStableBlocks>0)
-                    {
-                        if(Audio.detectDCOff(work, sampleRate, 0.1f))
-                        {
-                            pendingStableBlocks = detectDCOffset ? 2 : 0;
-                            continue;
-                        }                        
-                        pendingStableBlocks--;
-                        if(pendingStableBlocks>0)
-                        {
-                            continue;
-                        }
-                        if(pendingStableBlocks==0)
-                        {
-                            Audio.applyFadeIn(work);
-                        }
-                    }                   
 
                     int[] freq = (hz.length==1 && hz[0]==0) ? new int[]{ (int)Audio.detectHz(work, sampleRate, 0.01f) } : hz;
                     

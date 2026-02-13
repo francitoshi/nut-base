@@ -35,16 +35,15 @@ public class WaveTest
     static final boolean FADING = true;
     @Test
     public void testAll() throws LineUnavailableException
-    {
-       
+    {    
         AudioFormat[] formats = {Audio.PCM_CD_MONO, Audio.PCM_CD_STEREO, Audio.PCM_STUDIO_STEREO, Audio.PCM_RADIO_MONO, Audio.PCM_VOICE_WIDEBAND, Audio.PCM_8BIT_MONO, Audio.ALAW_TELEPHONY};
         
         for(int millis=0;millis<100;millis += formats.length)
         {
             for(AudioFormat format : formats)
             {
-                int size = Audio.requiredBytes(format, millis);
-                int fading = FADING ? Audio.requiredBytes(format, 5) : 0;
+                int size = Audio.msToBytes(millis, format);
+                int fading = FADING ? Audio.msToBytes(5, format) : 0;
                 byte[] buffer = new byte[size];
 
                 Wave wave = Wave.WAVES[millis%Wave.WAVES.length];

@@ -26,22 +26,63 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 /**
- * AudioInputStream que soporta mark() y reset() incluso cuando el stream
- * subyacente no lo soporta, almacenando los datos marcados en un buffer.
+ * An {@link AudioInputStream} that supports {@link #mark(int)} and {@link #reset()} even when
+ * the underlying stream does not natively support these operations.
+ *
+ * <p>This is achieved by buffering all bytes read after a {@code mark()} call into an internal
+ * {@link ByteArrayOutputStream}. When {@code reset()} is called, subsequent reads are served from
+ * that buffer before resuming from the original source stream.
+ *
+ * <p>Example usage:
+ * <pre>{@code
+ * AudioInputStream original = AudioSystem.getAudioInputStream(file);
+ * MarkableAudioInputStream markable = new MarkableAudioInputStream(original);
+ *
+ * markable.mark(4096);
+ * byte[] header = markable.readNBytes(44);
+ * markable.reset();                   // replay those 44 bytes on the next read
+ * }</pre>
  */
 public class MarkableAudioInputStream extends AudioInputStream
 {
-
+    /** The wrapped source stream from which audio data is ultimately read. */
     private final AudioInputStream source;
-    private ByteArrayOutputStream markBuffer;
-    private ByteArrayInputStream replayBuffer;
-    private int markReadLimit;
-    private boolean isReplaying;
 
     /**
-     * Crea un MarkableAudioInputStream a partir de otro AudioInputStream.
+     * Buffer that accumulates bytes read after the most recent {@link #mark(int)} call.
+     * Set to {@code null} when no mark is active or when the read-limit has been exceeded.
+     */
+    private ByteArrayOutputStream markBuffer;
+
+    /**
+     * Read-only view of {@link #markBuffer} used to replay bytes after {@link #reset()}.
+     * Set to {@code null} when not in replay mode.
+     */
+    private ByteArrayInputStream replayBuffer;
+
+    /**
+     * Maximum number of bytes that may be read before the current mark becomes invalid,
+     * as specified in the most recent call to {@link #mark(int)}.
+     */
+    private int markReadLimit;
+
+    /**
+     * {@code true} while replaying buffered bytes following a {@link #reset()} call;
+     * {@code false} otherwise.
+     */
+    private boolean isReplaying;
+
+    // -------------------------------------------------------------------------
+    // Constructor
+    // -------------------------------------------------------------------------
+
+    /**
+     * Wraps an existing {@link AudioInputStream} to add mark/reset support.
      *
-     * @param source el AudioInputStream original
+     * <p>The audio format and frame length of this stream are taken directly from
+     * {@code source}; no audio data is read or buffered at construction time.
+     *
+     * @param source the {@link AudioInputStream} to wrap; must not be {@code null}
      */
     public MarkableAudioInputStream(AudioInputStream source)
     {
@@ -53,29 +94,32 @@ public class MarkableAudioInputStream extends AudioInputStream
         this.isReplaying = false;
     }
 
-    /**
-     * Obtiene un AudioInputStream que soporta mark/reset. Si el stream ya lo
-     * soporta, lo devuelve tal cual. Si no, lo envuelve en un
-     * MarkableAudioInputStream.
-     *
-     * @param src el AudioInputStream original
-     * @return un AudioInputStream que soporta mark/reset
-     */
-    public static AudioInputStream getMarkable(AudioInputStream src)
-    {
-        if (src.markSupported())
-        {
-            return src;
-        }
-        return new MarkableAudioInputStream(src);
-    }
+    // -------------------------------------------------------------------------
+    // Mark / Reset
+    // -------------------------------------------------------------------------
 
+    /**
+     * Reports that this stream supports the {@link #mark(int)} and {@link #reset()} operations.
+     *
+     * @return {@code true}, unconditionally
+     */
     @Override
     public boolean markSupported()
     {
         return true;
     }
 
+    /**
+     * Marks the current position in the stream so that a subsequent call to {@link #reset()}
+     * will reposition the stream to this point.
+     *
+     * <p>Any previously set mark is discarded. Up to {@code readlimit} bytes may be read
+     * before the mark becomes invalid. If more than {@code readlimit} bytes are read before
+     * {@code reset()} is called, the mark is silently invalidated and a later {@code reset()}
+     * will throw an {@link IOException}.
+     *
+     * @param readlimit the maximum number of bytes that may be read before the mark is invalidated
+     */
     @Override
     public void mark(int readlimit)
     {
@@ -85,44 +129,71 @@ public class MarkableAudioInputStream extends AudioInputStream
         isReplaying = false;
     }
 
+    /**
+     * Repositions the stream to the position recorded by the most recent {@link #mark(int)} call.
+     *
+     * <p>After this method returns, the next read will re-deliver the bytes that were read
+     * between the {@code mark()} call and this {@code reset()} call, followed by the remaining
+     * data from the original source stream.
+     *
+     * @throws IOException if {@link #mark(int)} has not been called, or if the mark has been
+     *                     invalidated because more than {@code readlimit} bytes were read since
+     *                     the mark was set
+     */
     @Override
     public void reset() throws IOException
     {
         if (markBuffer == null)
         {
-            throw new IOException("No se ha llamado a mark() o el mark ha sido invalidado");
+            throw new IOException("mark() has not been called or the mark has been invalidated");
         }
 
-        // Preparar el buffer de replay con los datos guardados
+        // Prepare the replay buffer with the data saved since mark()
         replayBuffer = new ByteArrayInputStream(markBuffer.toByteArray());
         isReplaying = true;
     }
 
+    // -------------------------------------------------------------------------
+    // Read operations
+    // -------------------------------------------------------------------------
+
+    /**
+     * Reads a single byte of audio data.
+     *
+     * <p>If a {@link #reset()} has been performed and replay bytes remain, this method reads
+     * from the internal replay buffer. When the replay buffer is exhausted, subsequent reads
+     * resume from the original source stream. If a mark is active, each byte read from the
+     * source is copied into the mark buffer.
+     *
+     * @return the next byte of data as an unsigned value in the range {@code 0–255},
+     *         or {@code -1} if the end of the stream has been reached
+     * @throws IOException if an I/O error occurs while reading from the source stream
+     */
     @Override
     public int read() throws IOException
     {
-        // Si estamos en modo replay, leer del buffer de replay
+        // If replaying, serve from the replay buffer first
         if (isReplaying && replayBuffer != null)
         {
             int b = replayBuffer.read();
             if (b == -1)
             {
-                // Terminó el replay, volver al stream normal
+                // Replay exhausted; switch back to the live source stream
                 isReplaying = false;
                 replayBuffer = null;
             }
             return b;
         }
 
-        // Leer del stream original
+        // Read from the original source stream
         int b = source.read();
 
-        // Si hay un mark activo, guardar en el buffer
+        // If a mark is active, copy the byte into the mark buffer
         if (markBuffer != null && b != -1)
         {
             markBuffer.write(b);
 
-            // Verificar si excedimos el límite de mark
+            // Invalidate the mark if the read-limit has been exceeded
             if (markBuffer.size() > markReadLimit)
             {
                 markBuffer = null;
@@ -132,6 +203,23 @@ public class MarkableAudioInputStream extends AudioInputStream
         return b;
     }
 
+    /**
+     * Reads up to {@code len} bytes of audio data into the specified portion of {@code b}.
+     *
+     * <p>Bytes are drawn first from the replay buffer (if active), and then from the original
+     * source stream. Bytes read from the source while a mark is active are transparently copied
+     * into the mark buffer. If more than {@code readlimit} bytes accumulate in the mark buffer
+     * the mark is invalidated.
+     *
+     * @param b   the buffer into which data is read
+     * @param off the start offset within {@code b} at which data is written
+     * @param len the maximum number of bytes to read
+     * @return the total number of bytes read, or {@code -1} if the end of the stream has been
+     *         reached before any byte could be read
+     * @throws NullPointerException      if {@code b} is {@code null}
+     * @throws IndexOutOfBoundsException if {@code off} or {@code len} are out of bounds for {@code b}
+     * @throws IOException               if an I/O error occurs while reading from the source stream
+     */
     @Override
     public int read(byte[] b, int off, int len) throws IOException
     {
@@ -148,14 +236,14 @@ public class MarkableAudioInputStream extends AudioInputStream
             return 0;
         }
 
-        // Si estamos en modo replay, leer del buffer de replay
+        // --- Replay mode: serve bytes from the replay buffer ---
         if (isReplaying && replayBuffer != null)
         {
             int bytesRead = replayBuffer.read(b, off, len);
 
             if (bytesRead < len)
             {
-                // Se acabó el buffer de replay
+                // Replay buffer exhausted; read the remainder from the source stream
                 isReplaying = false;
                 int remaining = len - Math.max(0, bytesRead);
                 int additionalBytes = source.read(b, off + Math.max(0, bytesRead), remaining);
@@ -165,7 +253,7 @@ public class MarkableAudioInputStream extends AudioInputStream
                     return -1;
                 }
 
-                // Guardar los nuevos bytes en el mark buffer si está activo
+                // Copy newly read source bytes into the mark buffer if a mark is active
                 if (markBuffer != null && additionalBytes > 0)
                 {
                     markBuffer.write(b, off + Math.max(0, bytesRead), additionalBytes);
@@ -183,15 +271,15 @@ public class MarkableAudioInputStream extends AudioInputStream
             return bytesRead;
         }
 
-        // Leer del stream original
+        // --- Normal mode: read directly from the source stream ---
         int bytesRead = source.read(b, off, len);
 
-        // Si hay un mark activo, guardar en el buffer
+        // Copy read bytes into the mark buffer if a mark is active
         if (markBuffer != null && bytesRead > 0)
         {
             markBuffer.write(b, off, bytesRead);
 
-            // Verificar si excedimos el límite de mark
+            // Invalidate the mark if the read-limit has been exceeded
             if (markBuffer.size() > markReadLimit)
             {
                 markBuffer = null;
@@ -201,10 +289,27 @@ public class MarkableAudioInputStream extends AudioInputStream
         return bytesRead;
     }
 
+    // -------------------------------------------------------------------------
+    // Skip / Available / Close
+    // -------------------------------------------------------------------------
+
+    /**
+     * Skips over and discards up to {@code n} bytes of audio data from this stream.
+     *
+     * <p>Rather than delegating to the source stream's native {@code skip()}, this implementation
+     * reads and discards bytes in chunks so that the mark/reset mechanism remains consistent.
+     * All skipped bytes are therefore still processed by {@link #read(byte[], int, int)}, meaning
+     * they are buffered when a mark is active.
+     *
+     * @param n the number of bytes to skip
+     * @return the actual number of bytes skipped, which may be less than {@code n} if the end
+     *         of the stream is reached
+     * @throws IOException if an I/O error occurs while reading
+     */
     @Override
     public long skip(long n) throws IOException
     {
-        // Implementar skip leyendo y descartando bytes para mantener consistencia con mark/reset
+        // Use read-and-discard so that mark/reset state stays consistent
         byte[] skipBuffer = new byte[Math.min(8192, (int) n)];
         long totalSkipped = 0;
 
@@ -224,6 +329,15 @@ public class MarkableAudioInputStream extends AudioInputStream
         return totalSkipped;
     }
 
+    /**
+     * Returns an estimate of the number of bytes that can be read (or skipped) without blocking.
+     *
+     * <p>When in replay mode, this reflects the number of bytes remaining in the replay buffer.
+     * Otherwise, it delegates to the source stream's {@link AudioInputStream#available()} method.
+     *
+     * @return an estimate of the number of available bytes
+     * @throws IOException if an I/O error occurs
+     */
     @Override
     public int available() throws IOException
     {
@@ -234,6 +348,14 @@ public class MarkableAudioInputStream extends AudioInputStream
         return source.available();
     }
 
+    /**
+     * Closes this stream and releases all associated resources, including the underlying
+     * source {@link AudioInputStream} and any internal mark/replay buffers.
+     *
+     * <p>Once closed, any further read or skip operations will throw an {@link IOException}.
+     *
+     * @throws IOException if an I/O error occurs while closing the source stream
+     */
     @Override
     public void close() throws IOException
     {

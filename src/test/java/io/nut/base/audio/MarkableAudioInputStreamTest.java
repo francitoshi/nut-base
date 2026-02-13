@@ -46,7 +46,7 @@ public class MarkableAudioInputStreamTest
         AudioInputStream testStream = createTestAudioStream();
 
         // Obtener versión markable
-        AudioInputStream markable = MarkableAudioInputStream.getMarkable(testStream);
+        AudioInputStream markable = Audio.getMarkable(testStream);
 
         assertEquals(testStream.getFormat(), markable.getFormat());
         assertTrue(markable.markSupported());

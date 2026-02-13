@@ -55,21 +55,6 @@ public abstract class EnergyDetector
         }
     };
 
-    public static EnergyDetector ABS_AVG = new EnergyDetector("AbsAvg")
-    {
-        @Override
-        public double getEnergy(float[] data, int start, int stop, float sampleRate, double hz)
-        {
-            double sum = 0;
-            for(int i=start;i<stop;i++)
-            {
-                float value = data[i];
-                sum += (value<0) ? -value : value;
-            }
-            return (sum / (stop-start));
-        }
-    };
-
     public static EnergyDetector RMS = new EnergyDetector("RootMeanSquare")
     {
         @Override
@@ -81,26 +66,22 @@ public abstract class EnergyDetector
                 float value = data[i];
                 sum += value*value;
             }
-            return (sum / (stop-start));
-//            int rms = (int) Math.sqrt(sum / muestras.length);
-//            return rms > UMBRAL;            
+            return Math.sqrt(sum / (stop-start));
         }
     };
-    public static EnergyDetector PWM = new EnergyDetector("PulseWidthModulation")
+
+    public static EnergyDetector MS = new EnergyDetector("MeanSquare")
     {
         @Override
         public double getEnergy(float[] data, int start, int stop, float sampleRate, double hz)
         {
-            double count = 0;
+            double sum = 0;
             for(int i=start;i<stop;i++)
             {
-                float value = Math.abs(data[i]);
-                if(value>0.05)
-                {
-                    count++;
-                } 
+                float value = data[i];
+                sum += value*value;
             }
-            return count/data.length;
+            return (sum / (stop-start));
         }
     };
 

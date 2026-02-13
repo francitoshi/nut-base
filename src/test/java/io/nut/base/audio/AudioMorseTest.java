@@ -20,6 +20,7 @@
  */
 package io.nut.base.audio;
 
+import static io.nut.base.audio.Audio.ADJUST_START;
 import static io.nut.base.audio.Audio.DCOFFSET;
 import static io.nut.base.audio.Audio.HANNWINDOW;
 import static io.nut.base.audio.Audio.OVERLAP;
@@ -53,10 +54,11 @@ import org.junit.jupiter.api.Disabled;
 public class AudioMorseTest
 {
     static final String MORSE1 = "morse1-quixote-8000-mono-u8.wav.gz";
-    static final String MORSE2 = "morse2-pangram-800hz-20wpm-sine-44100-2ch-s16le.wav.gz";
-    static final String MORSE3 = "morse3-pangram-800hz-20wpm-square-44100-2ch-s16le.wav.gz";
-    static final String MORSE4 = "morse4-pangram-1600hz-30wpm-sine-44100-1ch-s16le.wav.gz";
-    static final String MORSE5 = "morse5-pangram-1600hz-30wpm-square-44100-1ch-s16le.wav.gz";    
+    static final String MORSE2 = "morse2-quixote-44100-mono-i16.wav.gz";
+    static final String MORSE3 = "morse3-pangram-800hz-20wpm-sine-44100-2ch-s16le.wav.gz";
+    static final String MORSE4 = "morse4-pangram-800hz-20wpm-square-44100-2ch-s16le.wav.gz";
+    static final String MORSE5 = "morse5-pangram-1600hz-30wpm-sine-44100-1ch-s16le.wav.gz";
+    static final String MORSE6 = "morse6-pangram-1600hz-30wpm-square-44100-1ch-s16le.wav.gz";    
     
     InputStream getIS(String fileName) throws UnsupportedAudioFileException, IOException
     {
@@ -77,28 +79,28 @@ public class AudioMorseTest
         }
         assertEquals(QUIJOTE.toUpperCase(), sb.toString().trim());
         assertFalse(sb.toString().endsWith("  "));
-
     }
     
     @Test
     public void testWav2() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE2));
-        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 550, HANNWINDOW|OVERLAP, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
             sb.append(s);
         }
-        assertEquals(PANGRAM.toUpperCase(), sb.toString().trim());
+        assertEquals(QUIJOTE.toUpperCase(), sb.toString().trim());
         assertFalse(sb.toString().endsWith("  "));
+
     }
     
     @Test
     public void testWav3() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE3));
-        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP|DCOFFSET, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -112,7 +114,7 @@ public class AudioMorseTest
     public void testWav4() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE4));
-        AudioMorse instance = new AudioMorse(ais, 1600, HANNWINDOW|OVERLAP|DCOFFSET, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP|DCOFFSET, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -126,7 +128,21 @@ public class AudioMorseTest
     public void testWav5() throws UnsupportedAudioFileException, IOException
     {
         AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE5));
-        AudioMorse instance = new AudioMorse(ais, 1600, HANNWINDOW|OVERLAP|DCOFFSET, 5, 99);
+        AudioMorse instance = new AudioMorse(ais, 1600, HANNWINDOW|OVERLAP|DCOFFSET|ADJUST_START, 5, 99);
+        StringBuilder sb = new StringBuilder();
+        for(String s : instance)
+        {
+            sb.append(s);
+        }
+        assertEquals(PANGRAM.toUpperCase(), sb.toString().trim());
+        assertFalse(sb.toString().endsWith("  "));
+    }
+
+    @Test
+    public void testWav6() throws UnsupportedAudioFileException, IOException
+    {
+        AudioInputStream ais = AudioSystem.getAudioInputStream(getIS(MORSE6));
+        AudioMorse instance = new AudioMorse(ais, 1600, HANNWINDOW|OVERLAP|DCOFFSET|ADJUST_START, 5, 99);
         StringBuilder sb = new StringBuilder();
         for(String s : instance)
         {
@@ -204,12 +220,29 @@ public class AudioMorseTest
         
         final AudioSynthesizer audioModem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO));
         AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO, 441000));
-        
-        for(int wpm=40;!waves.isEmpty();wpm++)
+        ais = Audio.getMarkable(ais);
+
+        int highSpeed = 0;
+        int min = 5;
+        int max = 75;
+        for(int wpm=68;min<max;wpm=(min+max)/2)
         {
             int count = 0;
             sendAndReceive(waves, hz, wpm, ais, plaintext, audioModem, count);
-        }        
+            if(waves.isEmpty())
+            {
+                waves.addAll(Arrays.asList(cleanWaves));
+                max = wpm-1;
+            }
+            else
+            {
+                min = wpm+1;
+                highSpeed = Math.max(highSpeed,wpm);
+            }
+        }
+        System.out.println("==============================");
+        System.out.println("highSpeed = "+highSpeed);
+        System.out.println("==============================");
     }
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
@@ -239,7 +272,7 @@ public class AudioMorseTest
         for(Wave wave : waves.toArray(new Wave[0]))
         {
             System.out.println("---------- "+wave.name+" "+hz+"Hz "+wpm+"wpm ----------");
-            final AudioMorse instance = new AudioMorse(ais, hz, HANNWINDOW|OVERLAP|DCOFFSET, 5, 0);
+            final AudioMorse instance = new AudioMorse(ais, hz, HANNWINDOW|OVERLAP|DCOFFSET|ADJUST_START, 5, 0);
             
             Morse morse = new Morse(wpm, wpm, 0, 4);
             final int[] pattern = morse.encodePattern(plaintext);
@@ -277,7 +310,10 @@ public class AudioMorseTest
                 phrase.append(s);
                 if(s.equals(" ") || s.equals(".") || s.equals(","))
                 {
-                    System.out.println(word);
+                    if(!word.toString().trim().isEmpty())
+                    {
+                        System.out.println(word);
+                    }
                     word = new StringBuilder();
                     if(word.toString().endsWith("."))
                     {
@@ -311,8 +347,8 @@ public class AudioMorseTest
     @Disabled("this test is only to test manually beacuse it will produce noise")
     public void testListenCW() throws UnsupportedAudioFileException, IOException, LineUnavailableException
     {
-        AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO));
-        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP|DCOFFSET, 5, 100);
+        AudioInputStream ais = Audio.getMarkable(Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO)));
+        AudioMorse instance = new AudioMorse(ais, 800, HANNWINDOW|OVERLAP|DCOFFSET|ADJUST_START, 5, 100);
 
         StringBuilder word = new StringBuilder();
         for(String s : instance)
