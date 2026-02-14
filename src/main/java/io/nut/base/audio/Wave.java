@@ -25,17 +25,64 @@ import java.nio.ByteOrder;
 import java.util.Objects;
 import javax.sound.sampled.AudioFormat;
 
+/**
+ * Abstract base class for audio waveform generators.
+ *
+ * <p>A {@code Wave} defines a mathematical function that maps a sample index
+ * to an amplitude value in the range {@code [-1.0, 1.0]}. Concrete waveforms
+ * are provided as public static constants (e.g. {@link #SINE}, {@link #SQUARE}).
+ * The class also provides methods to render a waveform into a raw PCM byte buffer
+ * and utility methods for computing analysis window functions.
+ *
+ * <p>Typical usage:
+ * <pre>{@code
+ * AudioFormat format = new AudioFormat(44100, 16, 1, true, false);
+ * byte[] buffer = new byte[44100 * 2]; // 1 second, 16-bit mono
+ * Wave.SINE.build(format, 440, buffer, 0.8);
+ * }</pre>
+ *
+ * <p>All built-in waveform instances are stateless except {@link #BROWNIAN_NOISE},
+ * which maintains a running value between successive calls to
+ * {@link #getValue(float, int, int, double)} and is therefore not thread-safe.
+ */
 public abstract class Wave
 {
+    /** Human-readable name of this waveform (e.g. {@code "Sine"}, {@code "Square"}). */
     public final String name;
     
+    /**
+     * Computes the amplitude of this waveform at a given sample index.
+     *
+     * <p>The returned value is in the range {@code [-volume, +volume]}, which
+     * itself should be within {@code [-1.0, 1.0]} to avoid clipping when the
+     * result is written to a PCM buffer.
+     *
+     * @param sampleRate the audio sample rate in Hz (e.g. {@code 44100.0f}).
+     * @param i          the zero-based sample index.
+     * @param hz         the desired tone frequency in Hz.
+     * @param volume     the peak amplitude scale factor; {@code 1.0} produces
+     *                   full-scale output.
+     * @return the waveform amplitude at sample {@code i}.
+     */
     public abstract double getValue(float sampleRate, int i, int hz, double volume);
 
+    /**
+     * Constructs a new {@code Wave} with the given display name.
+     *
+     * @param name a human-readable identifier for this waveform.
+     */
     public Wave(String name)
     {
         this.name = name;
     }
     
+    /**
+     * Standard sine wave: {@code sin(2π·i·hz / sampleRate) × volume}.
+     *
+     * <p>Produces a pure, band-limited tone with no harmonic content above the
+     * fundamental frequency. Suitable for clear Morse code tones and general-purpose
+     * audio generation.
+     */
     public static final Wave SINE = new Wave("Sine")
     {
         @Override
@@ -46,6 +93,13 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Square wave with a 50 % duty cycle.
+     *
+     * <p>Alternates between {@code +volume} and {@code -volume} at the given
+     * frequency. Contains all odd harmonics (1st, 3rd, 5th, …) with amplitudes
+     * that decrease as {@code 1/n}, giving a bright, hollow timbre.
+     */
     public static final Wave SQUARE = new Wave("Square")
     {
         @Override
@@ -56,6 +110,14 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Sawtooth wave that ramps linearly from {@code -volume} to {@code +volume}
+     * over each period.
+     *
+     * <p>Contains all harmonics (odd and even) with amplitudes decreasing as
+     * {@code 1/n}, producing a bright, buzzy timbre characteristic of many
+     * synthesizer lead sounds.
+     */
     public static final Wave SAWTOOTH = new Wave("Sawtooth")
     {
         @Override
@@ -66,6 +128,13 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Triangle wave that rises and falls linearly between {@code -volume} and
+     * {@code +volume}.
+     *
+     * <p>Contains only odd harmonics with amplitudes decreasing as {@code 1/n²},
+     * producing a softer, more flute-like timbre than the square or sawtooth waves.
+     */
     public static final Wave TRIANGLE = new Wave("Triangle")
     {
         @Override
@@ -76,6 +145,12 @@ public abstract class Wave
         }
     };
     
+    /**
+     * White noise: uniformly distributed random samples in {@code [-volume, +volume]}.
+     *
+     * <p>Each sample is independent with a flat power spectral density across all
+     * frequencies. The {@code hz} parameter is ignored. Not repeatable between runs.
+     */
     public static final Wave WHITE_NOISE = new Wave("WhiteNoise")
     {
         @Override
@@ -85,6 +160,13 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Pulse wave with a fixed 25 % duty cycle.
+     *
+     * <p>The signal is at {@code +volume} for the first quarter of each period
+     * and at {@code -volume} for the remaining three-quarters. Produces a thinner,
+     * more nasal timbre than the 50 % square wave.
+     */
     public static final Wave DUTY_CYCLE_025 = new Wave("DutyCycle0.25")
     {
         final double dutyCycle = 0.25;
@@ -95,6 +177,14 @@ public abstract class Wave
             return (phase < dutyCycle) ? volume : -volume;
         }
     };
+
+    /**
+     * Pulse wave with a fixed 33 % duty cycle.
+     *
+     * <p>The signal is at {@code +volume} for the first third of each period
+     * and at {@code -volume} for the remaining two-thirds. Timbre sits between
+     * {@link #DUTY_CYCLE_025} and the 50 % {@link #SQUARE} wave.
+     */
     public static final Wave DUTY_CYCLE_033 = new Wave("DutyCycle0.33")
     {
         final double dutyCycle = 0.33;
@@ -106,6 +196,14 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Pulse-width modulation (PWM) wave with a slowly varying duty cycle.
+     *
+     * <p>A 0.5 Hz low-frequency oscillator (LFO) modulates the duty cycle
+     * continuously between roughly 10 % and 90 %, creating a characteristic
+     * chorus-like movement. The {@code hz} parameter controls the fundamental
+     * frequency of the pulse carrier.
+     */
     public static final Wave PWM = new Wave("PWM")
     {
         @Override
@@ -118,6 +216,17 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Brownian (red) noise generated by a random walk.
+     *
+     * <p>Each sample is the previous value plus a small random step
+     * ({@code ±0.05}), clamped to {@code [-1.0, 1.0]}. This produces a
+     * low-frequency-heavy noise spectrum, useful for simulating rumble,
+     * wind, or ocean sounds. The {@code hz} parameter is ignored.
+     *
+     * <p><strong>Note:</strong> this instance is <em>not</em> thread-safe because
+     * it stores state ({@code lastValue}) between calls.
+     */
     public static final Wave BROWNIAN_NOISE = new Wave("BrownianNoise")
     {
         volatile double lastValue;
@@ -140,6 +249,14 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Frequency-modulation (FM) synthesis wave.
+     *
+     * <p>A modulator sine wave at twice the carrier frequency ({@code hz × 2})
+     * with a modulation index of {@code 5.0} is applied to the phase of the
+     * carrier, producing rich sidebands and a bell-like or metallic timbre
+     * depending on the carrier frequency.
+     */
     public static final Wave FM = new Wave("FM")
     {
         @Override
@@ -152,6 +269,13 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Parabolic wave approximating a sine wave with a simpler polynomial shape.
+     *
+     * <p>Defined as {@code (8·p·(1−p) − 1) × volume} where {@code p} is the
+     * fractional phase in {@code [0, 1)}. Produces a smoother sound than a
+     * triangle wave with slightly less computational cost than a true sine.
+     */
     public static final Wave PARABOLIC = new Wave("Parabolic")
     {
         @Override
@@ -162,6 +286,16 @@ public abstract class Wave
         }
     };
     
+    /**
+     * Additive synthesis wave combining the fundamental with its 2nd and 3rd harmonics.
+     *
+     * <p>The output is:
+     * <pre>
+     *   (sin(f) + 0.5·sin(2f) + 0.3·sin(3f)) / 1.8 × volume
+     * </pre>
+     * where {@code f = 2π·i·hz / sampleRate}. The result is normalised by
+     * {@code 1.8} to prevent clipping. Produces a warmer, organ-like timbre.
+     */
     public static final Wave ADITIVE = new Wave("Aditive")
     {
         @Override
@@ -173,14 +307,57 @@ public abstract class Wave
         }
     };
     
+    /**
+     * All available waveforms including noise sources.
+     * Order: SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033,
+     * PWM, FM, PARABOLIC, ADITIVE, WHITE_NOISE, BROWNIAN_NOISE.
+     */
     public static final Wave[] WAVES = { SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE, WHITE_NOISE, BROWNIAN_NOISE};
+
+    /**
+     * Subset of {@link #WAVES} excluding stochastic noise sources.
+     * Contains only deterministic, pitch-stable waveforms suitable for tonal use.
+     * Order: SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033,
+     * PWM, FM, PARABOLIC, ADITIVE.
+     */
     public static final Wave[] CLEAN_WAVES = { SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
 
+    /**
+     * Renders this waveform into an existing byte buffer using the given
+     * {@link AudioFormat}, without any fade-in or fade-out.
+     *
+     * <p>This is a convenience overload of
+     * {@link #build(AudioFormat, int, byte[], double, int)} with {@code fading = 0}.
+     *
+     * @param format the target audio format (encoding, sample rate, channels, bit depth, byte order).
+     * @param hz     the tone frequency in Hz; pass {@code 0} to produce silence.
+     * @param bytes  the pre-allocated output buffer; its length determines the
+     *               number of samples rendered. Must not be {@code null}.
+     * @param volume peak amplitude in the range {@code [0.0, 1.0]};
+     *               pass {@code 0} to produce silence.
+     * @return the same {@code bytes} array, now filled with rendered audio data.
+     */
     public byte[] build(AudioFormat format, int hz, byte[] bytes, double volume)
     {
         return build(format, hz, bytes, volume, 0);
     }
     
+    /**
+     * Renders this waveform into an existing byte buffer using the given
+     * {@link AudioFormat}, with optional fade-in and fade-out.
+     *
+     * <p>Audio format parameters are extracted from {@code format} and forwarded
+     * to {@link #build(AudioFormat.Encoding, float, int, int, boolean, int, byte[], double, int)}.
+     *
+     * @param format the target audio format.
+     * @param hz     the tone frequency in Hz; pass {@code 0} to produce silence.
+     * @param bytes  the pre-allocated output buffer. Must not be {@code null}.
+     * @param volume peak amplitude in the range {@code [0.0, 1.0]}.
+     * @param fading number of samples over which to apply a linear fade-in at the
+     *               start and a matching fade-out at the end; clamped to at most
+     *               one-third of the total sample count. Pass {@code 0} to disable.
+     * @return the same {@code bytes} array, now filled with rendered audio data.
+     */
     public byte[] build(AudioFormat format, int hz, byte[] bytes, double volume, int fading)
     {
         AudioFormat.Encoding encoding = format.getEncoding();
@@ -191,10 +368,65 @@ public abstract class Wave
         return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, bytes, volume, fading);
     }
 
+    /**
+     * Renders this waveform into an existing byte buffer using explicit audio
+     * parameters, without any fade-in or fade-out.
+     *
+     * <p>This is a convenience overload of
+     * {@link #build(AudioFormat.Encoding, float, int, int, boolean, int, byte[], double, int)}
+     * with {@code fading = 0}.
+     *
+     * @param encoding   the PCM encoding ({@code PCM_SIGNED}, {@code PCM_UNSIGNED},
+     *                   {@code PCM_FLOAT}, {@code ALAW}, or {@code ULAW}).
+     * @param sampleRate audio sample rate in Hz.
+     * @param sampleBits bits per sample (8, 16, 24, or 32 for PCM; 8 for A-law/μ-law).
+     * @param channels   number of audio channels (1 = mono, 2 = stereo, …).
+     * @param bigEndian  {@code true} for big-endian byte order; {@code false} for little-endian.
+     * @param hz         tone frequency in Hz; {@code 0} produces silence.
+     * @param bytes      pre-allocated output buffer. Must not be {@code null}.
+     * @param volume     peak amplitude in the range {@code [0.0, 1.0]}.
+     * @return the same {@code bytes} array filled with rendered audio data.
+     */
     public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, byte[] bytes, double volume)
     {
         return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, bytes, volume, 0);
     }
+
+    /**
+     * Renders this waveform into an existing byte buffer using explicit audio
+     * parameters, with optional linear fade-in and fade-out.
+     *
+     * <p>The number of samples is inferred from {@code bytes.length},
+     * {@code sampleBits}, and {@code channels}. If either {@code hz} or
+     * {@code volume} is zero, the buffer is returned unmodified (filled with
+     * whatever data it already contains, typically zeros).
+     *
+     * <p>When {@code fading > 0}, a linear amplitude ramp is applied over the
+     * first and last {@code fading} samples (clamped to at most one-third of
+     * the total sample count) to avoid click artefacts at buffer boundaries.
+     *
+     * <p>Each sample is written to every channel in sequence, using the helper
+     * methods appropriate to the encoding:
+     * <ul>
+     *   <li>{@code PCM_SIGNED}   → {@link #putSignedPCM}</li>
+     *   <li>{@code PCM_UNSIGNED} → {@link #putUnsignedPCM}</li>
+     *   <li>{@code PCM_FLOAT}    → {@link #putFloatPCM}</li>
+     *   <li>{@code ALAW}         → {@link #putALaw}</li>
+     *   <li>{@code ULAW}         → {@link #putULaw}</li>
+     * </ul>
+     *
+     * @param encoding   the PCM encoding.
+     * @param sampleRate audio sample rate in Hz.
+     * @param sampleBits bits per sample.
+     * @param channels   number of audio channels.
+     * @param bigEndian  {@code true} for big-endian byte order.
+     * @param hz         tone frequency in Hz; {@code 0} produces silence.
+     * @param bytes      pre-allocated output buffer; must not be {@code null}.
+     * @param volume     peak amplitude in the range {@code [0.0, 1.0]}.
+     * @param fading     fade length in samples; {@code 0} disables fading.
+     * @return the same {@code bytes} array filled with rendered audio data.
+     * @throws NullPointerException if {@code bytes} is {@code null}.
+     */
     public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, byte[] bytes, double volume, int fading)
     {
         Objects.requireNonNull(bytes, "bytes must not be null");
@@ -244,6 +476,21 @@ public abstract class Wave
         return buffer.array();
     }
 
+    /**
+     * Writes a normalised amplitude value to {@code buffer} as a signed PCM sample.
+     *
+     * <p>The value is scaled to the full range of the target bit depth:
+     * <ul>
+     *   <li>8-bit:  {@code value × 127} → {@code byte}</li>
+     *   <li>16-bit: {@code value × 32767} → {@code short}</li>
+     *   <li>24-bit: {@code value × 8388607} → 3 bytes in the buffer's byte order</li>
+     *   <li>32-bit: {@code value × 2147483647} → {@code int}</li>
+     * </ul>
+     *
+     * @param buffer the target {@link ByteBuffer}, positioned at the write location.
+     * @param value  normalised amplitude in {@code [-1.0, 1.0]}.
+     * @param bits   bits per sample: 8, 16, 24, or 32.
+     */
     private static void putSignedPCM(ByteBuffer buffer, double value, int bits)
     {
         switch (bits)
@@ -275,6 +522,21 @@ public abstract class Wave
         }
     }
 
+    /**
+     * Writes a normalised amplitude value to {@code buffer} as an unsigned PCM sample.
+     *
+     * <p>The signed value is shifted to the unsigned range by adding a mid-point offset:
+     * <ul>
+     *   <li>8-bit:  {@code (value × 127) + 128}</li>
+     *   <li>16-bit: {@code (value × 32767) + 32768}</li>
+     *   <li>24-bit: {@code (value × 8388607) + 8388608}, written as 3 bytes</li>
+     *   <li>32-bit: {@code (value × 2147483647) + 2147483648}</li>
+     * </ul>
+     *
+     * @param buffer the target {@link ByteBuffer}, positioned at the write location.
+     * @param value  normalised amplitude in {@code [-1.0, 1.0]}.
+     * @param bits   bits per sample: 8, 16, 24, or 32.
+     */
     private static void putUnsignedPCM(ByteBuffer buffer, double value, int bits)
     {
         switch (bits)
@@ -306,6 +568,16 @@ public abstract class Wave
         }
     }
 
+    /**
+     * Writes a normalised amplitude value to {@code buffer} as a floating-point PCM sample.
+     *
+     * <p>Supports 32-bit ({@code float}) and 64-bit ({@code double}) formats only.
+     * The value is written as-is without rescaling.
+     *
+     * @param buffer the target {@link ByteBuffer}, positioned at the write location.
+     * @param value  normalised amplitude in {@code [-1.0, 1.0]}.
+     * @param bits   bits per sample: 32 or 64.
+     */
     private static void putFloatPCM(ByteBuffer buffer, double value, int bits)
     {
         if (bits == 32)
@@ -318,6 +590,16 @@ public abstract class Wave
         }
     }
 
+    /**
+     * Converts a normalised amplitude value to an A-law encoded byte and writes
+     * it to {@code buffer}.
+     *
+     * <p>The value is first scaled to a 16-bit signed PCM sample, then converted
+     * to A-law via {@link #linearToALaw(short)}.
+     *
+     * @param buffer the target {@link ByteBuffer}, positioned at the write location.
+     * @param value  normalised amplitude in {@code [-1.0, 1.0]}.
+     */
     private static void putALaw(ByteBuffer buffer, double value)
     {
         // Convertir a PCM lineal de 16 bits y luego a A-law
@@ -325,6 +607,16 @@ public abstract class Wave
         buffer.put(linearToALaw(pcm));
     }
 
+    /**
+     * Converts a normalised amplitude value to a μ-law (u-law) encoded byte and
+     * writes it to {@code buffer}.
+     *
+     * <p>The value is first scaled to a 16-bit signed PCM sample, then converted
+     * to μ-law via {@link #linearToULaw(short)}.
+     *
+     * @param buffer the target {@link ByteBuffer}, positioned at the write location.
+     * @param value  normalised amplitude in {@code [-1.0, 1.0]}.
+     */
     private static void putULaw(ByteBuffer buffer, double value)
     {
         // Convertir a PCM lineal de 16 bits y luego a μ-law
@@ -332,6 +624,18 @@ public abstract class Wave
         buffer.put(linearToULaw(pcm));
     }
 
+    /**
+     * Converts a 16-bit linear PCM sample to an 8-bit A-law encoded byte.
+     *
+     * <p>Implements the ITU-T G.711 A-law companding algorithm. The input is
+     * right-shifted by 3 bits before segment detection, reducing the effective
+     * range to 13 bits. The sign bit is encoded via XOR masking ({@code 0xD5} for
+     * positive values, {@code 0x55} for negative), and the magnitude is encoded
+     * in one of 8 logarithmic segments.
+     *
+     * @param pcm a 16-bit signed linear PCM sample.
+     * @return the A-law compressed byte.
+     */
     private static byte linearToALaw(short pcm)
     {
         int mask;
@@ -390,6 +694,18 @@ public abstract class Wave
         return aval;
     }
 
+    /**
+     * Converts a 16-bit linear PCM sample to an 8-bit μ-law (u-law) encoded byte.
+     *
+     * <p>Implements the ITU-T G.711 μ-law companding algorithm with μ = 255.
+     * A bias of {@code 0x84} (132) is added before segment detection to linearise
+     * the lower quantisation steps. The sign bit is encoded via XOR masking
+     * ({@code 0xFF} for positive, {@code 0x7F} for negative), and the magnitude
+     * is encoded in one of 8 logarithmic segments.
+     *
+     * @param pcm a 16-bit signed linear PCM sample.
+     * @return the μ-law compressed byte.
+     */
     private static byte linearToULaw(short pcm)
     {
         int mask;
@@ -428,6 +744,21 @@ public abstract class Wave
         return uval;
     }
     
+    /**
+     * Fills a {@code float[]} array in-place with Hann window coefficients.
+     *
+     * <p>The Hann (von Hann) window is defined as:
+     * <pre>
+     *   w[i] = 0.5 × (1 − cos(2π·i / (N−1)))
+     * </pre>
+     * where {@code N = window.length}. It tapers smoothly to zero at both ends,
+     * reducing spectral leakage in FFT-based analysis.
+     *
+     * @param window a pre-allocated array to fill; its length determines the
+     *               window size {@code N}.
+     * @return the same {@code window} array, now containing Hann coefficients
+     *         in the range {@code [0.0, 1.0]}.
+     */
     public static float[] hannWindow(float[] window)
     {
         for (int i = 0; i < window.length; i++)
@@ -437,6 +768,15 @@ public abstract class Wave
         return window;
     }
     
+    /**
+     * Fills a {@code double[]} array in-place with Hann window coefficients.
+     *
+     * <p>See {@link #hannWindow(float[])} for the formula and usage notes.
+     *
+     * @param window a pre-allocated array to fill.
+     * @return the same {@code window} array, now containing Hann coefficients
+     *         in the range {@code [0.0, 1.0]}.
+     */
     public static double[] hannWindow(double[] window)
     {
         for (int i = 0; i < window.length; i++)
@@ -446,6 +786,22 @@ public abstract class Wave
         return window;
     }
     
+    /**
+     * Fills a {@code float[]} array in-place with Hamming window coefficients.
+     *
+     * <p>The Hamming window is defined as:
+     * <pre>
+     *   w[i] = 0.54 − 0.46 × cos(2π·i / (N−1))
+     * </pre>
+     * where {@code N = window.length}. Unlike the Hann window it does not taper
+     * fully to zero at the edges, which reduces the height of the highest sidelobe
+     * in exchange for a slightly elevated floor.
+     *
+     * @param window a pre-allocated array to fill; its length determines the
+     *               window size {@code N}.
+     * @return the same {@code window} array, now containing Hamming coefficients
+     *         in the range {@code [0.08, 1.0]}.
+     */
     public static float[] hammingWindow(float[] window)
     {
         for (int i = 0; i < window.length; i++)
@@ -455,6 +811,15 @@ public abstract class Wave
         return window;
     }
     
+    /**
+     * Fills a {@code double[]} array in-place with Hamming window coefficients.
+     *
+     * <p>See {@link #hammingWindow(float[])} for the formula and usage notes.
+     *
+     * @param window a pre-allocated array to fill.
+     * @return the same {@code window} array, now containing Hamming coefficients
+     *         in the range {@code [0.08, 1.0]}.
+     */
     public static double[] hammingWindow(double[] window)
     {
         for (int i = 0; i < window.length; i++)
@@ -463,6 +828,4 @@ public abstract class Wave
         }
         return window;
     }
-    
-    
 }
