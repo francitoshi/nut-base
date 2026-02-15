@@ -106,13 +106,18 @@ public class AudioTest
         
         for(int hz=400;hz<1200; hz += 100)
         {
-            byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.5);
-            float[] dst = audioReader.readFloats(src, src.length, format.isBigEndian(), null);
+            byte[] cycle1 = wave.build(format, hz, 0.5);
+            byte[] cycle100 = new byte[cycle1.length*1000+1];
+            for(int i=0;i<cycle100.length;i++)
+            {
+                cycle100[i] = cycle1[i%cycle1.length];
+            }
+            float[] dst = audioReader.readFloats(cycle100, cycle100.length, format.isBigEndian(), null);
             double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
 
             if(lineOut!=null)
             {
-                lineOut.write(src, 0, src.length);
+                lineOut.write(cycle100, 0, cycle100.length);
                 lineOut.drain();
             }            
             if(SHOW)
@@ -132,13 +137,18 @@ public class AudioTest
         
         for(int hz=400;hz<1200; hz += 100)
         {
-            byte[] src = wave.build(format, hz, new byte[(int)format.getSampleRate()], 0.33);
-            float[] dst = audioReader.readFloats(src, src.length, format.isBigEndian(), null);
+            byte[] cycle1 = wave.build(format, hz, 0.33);
+            byte[] cycle100 = new byte[cycle1.length*1000+1];
+            for(int i=0;i<cycle100.length;i++)
+            {
+                cycle100[i] = cycle1[i%cycle1.length];
+            }
+            float[] dst = audioReader.readFloats(cycle100, cycle100.length, format.isBigEndian(), null);
             double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
 
             if(lineOut!=null)
             {
-                lineOut.write(src, 0, src.length);
+                lineOut.write(cycle1, 0, cycle1.length);
                 lineOut.drain();
             }
             if(SHOW)
@@ -148,5 +158,17 @@ public class AudioTest
             assertEquals(hz, result, 0.1);
         }
     }
+
+    @Test
+    public void testWavetableSize()
+    {
+        assertEquals(441, Audio.wavetableSize(44100, 800));
+        assertEquals(441, Audio.wavetableSize(44100, 400));
+        assertEquals(441, Audio.wavetableSize(44100, 200));
+        assertEquals(441, Audio.wavetableSize(44100, 500));
+        assertEquals(2205, Audio.wavetableSize(44100, 440));
+        assertEquals(4900, Audio.wavetableSize(44100, 801));
+    }
+
     
 }

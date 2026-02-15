@@ -31,7 +31,7 @@ import java.nio.ByteOrder;
  * writes the WAV header first and then appends audio data transparently,
  * behaving similarly to a SourceDataLine.
  */
-public class WavWriter implements AudioWriter, Closeable
+public class WavWriter extends AbstractAudioWriter implements AudioWriter, Closeable
 {
 
     private final AudioFormat format;

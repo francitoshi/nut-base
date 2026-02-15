@@ -32,7 +32,6 @@ import javax.sound.sampled.SourceDataLine;
 public class WaveTest
 {
     static final boolean ALLOW_SOUND = false;
-    static final boolean FADING = true;
     @Test
     public void testAll() throws LineUnavailableException
     {    
@@ -43,15 +42,13 @@ public class WaveTest
             for(AudioFormat format : formats)
             {
                 int size = Audio.msToBytes(millis, format);
-                int fading = FADING ? Audio.msToBytes(5, format) : 0;
-                byte[] buffer = new byte[size];
 
                 Wave wave = Wave.WAVES[millis%Wave.WAVES.length];
-                wave.build(format, 440, buffer, 0.50, fading);
+                byte[] buffer = wave.build(format, 440, 0.50);
                 
                 if(ALLOW_SOUND)
                 {
-                    System.out.printf("MILLIS = %d | fading = %d\n", millis, fading);
+                    System.out.printf("MILLIS = %d\n", millis);
                     try (SourceDataLine lineOut = Audio.getLineOut(format))
                     {
                         lineOut.start();

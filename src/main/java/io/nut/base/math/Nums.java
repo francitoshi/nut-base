@@ -1397,10 +1397,6 @@ public class Nums
         return Pow2Holder.POW2[pow];
     }
     
-    public static int gcd(int a, int b)
-    {
-       return (b==0)? a : gcd(b, a % b);
-    }
     public static int gcd(int a, int ... b)
     {
         return gcd(a,gcd(b,0,b.length));
@@ -1643,10 +1639,6 @@ public class Nums
         }
     }
         
-    public static long gcd(long a, long b)
-    {
-       return (b==0)? a : gcd(b, a % b);
-    }
     public static long gcd(long a, long ... b)
     {
         return gcd(a,gcd(b,0,b.length));
@@ -1901,4 +1893,27 @@ public class Nums
             }
         }
     }    
+    
+    public static int gcd(int a, int b)
+    {
+        while (b != 0)
+        {
+            int temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+    
+    public static long gcd(long a, long b)
+    {
+        while (b != 0)
+        {
+            long temp = b;
+            b = a % b;
+            a = temp;
+        }
+        return a;
+    }
+    
 }

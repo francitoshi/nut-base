@@ -29,7 +29,7 @@ import javax.sound.sampled.SourceDataLine;
  *
  * @author franci
  */
-class LineOutWriter implements AudioWriter, Closeable
+class LineOutWriter extends AbstractAudioWriter implements AudioWriter, Closeable
 {
     
     final SourceDataLine line;

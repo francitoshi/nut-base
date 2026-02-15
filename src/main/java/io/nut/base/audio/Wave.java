@@ -321,26 +321,6 @@ public abstract class Wave
      * PWM, FM, PARABOLIC, ADITIVE.
      */
     public static final Wave[] CLEAN_WAVES = { SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
-
-    /**
-     * Renders this waveform into an existing byte buffer using the given
-     * {@link AudioFormat}, without any fade-in or fade-out.
-     *
-     * <p>This is a convenience overload of
-     * {@link #build(AudioFormat, int, byte[], double, int)} with {@code fading = 0}.
-     *
-     * @param format the target audio format (encoding, sample rate, channels, bit depth, byte order).
-     * @param hz     the tone frequency in Hz; pass {@code 0} to produce silence.
-     * @param bytes  the pre-allocated output buffer; its length determines the
-     *               number of samples rendered. Must not be {@code null}.
-     * @param volume peak amplitude in the range {@code [0.0, 1.0]};
-     *               pass {@code 0} to produce silence.
-     * @return the same {@code bytes} array, now filled with rendered audio data.
-     */
-    public byte[] build(AudioFormat format, int hz, byte[] bytes, double volume)
-    {
-        return build(format, hz, bytes, volume, 0);
-    }
     
     /**
      * Renders this waveform into an existing byte buffer using the given
@@ -351,45 +331,17 @@ public abstract class Wave
      *
      * @param format the target audio format.
      * @param hz     the tone frequency in Hz; pass {@code 0} to produce silence.
-     * @param bytes  the pre-allocated output buffer. Must not be {@code null}.
      * @param volume peak amplitude in the range {@code [0.0, 1.0]}.
-     * @param fading number of samples over which to apply a linear fade-in at the
-     *               start and a matching fade-out at the end; clamped to at most
-     *               one-third of the total sample count. Pass {@code 0} to disable.
      * @return the same {@code bytes} array, now filled with rendered audio data.
      */
-    public byte[] build(AudioFormat format, int hz, byte[] bytes, double volume, int fading)
+    public byte[] build(AudioFormat format, int hz, double volume)
     {
         AudioFormat.Encoding encoding = format.getEncoding();
         int sampleRate = (int) format.getFrameRate();
         int channels = format.getChannels();
         boolean bigEndian = format.isBigEndian();
         int sampleBits = format.getSampleSizeInBits();
-        return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, bytes, volume, fading);
-    }
-
-    /**
-     * Renders this waveform into an existing byte buffer using explicit audio
-     * parameters, without any fade-in or fade-out.
-     *
-     * <p>This is a convenience overload of
-     * {@link #build(AudioFormat.Encoding, float, int, int, boolean, int, byte[], double, int)}
-     * with {@code fading = 0}.
-     *
-     * @param encoding   the PCM encoding ({@code PCM_SIGNED}, {@code PCM_UNSIGNED},
-     *                   {@code PCM_FLOAT}, {@code ALAW}, or {@code ULAW}).
-     * @param sampleRate audio sample rate in Hz.
-     * @param sampleBits bits per sample (8, 16, 24, or 32 for PCM; 8 for A-law/μ-law).
-     * @param channels   number of audio channels (1 = mono, 2 = stereo, …).
-     * @param bigEndian  {@code true} for big-endian byte order; {@code false} for little-endian.
-     * @param hz         tone frequency in Hz; {@code 0} produces silence.
-     * @param bytes      pre-allocated output buffer. Must not be {@code null}.
-     * @param volume     peak amplitude in the range {@code [0.0, 1.0]}.
-     * @return the same {@code bytes} array filled with rendered audio data.
-     */
-    public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, byte[] bytes, double volume)
-    {
-        return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, bytes, volume, 0);
+        return build(encoding, sampleRate, sampleBits, channels, bigEndian, hz, volume);
     }
 
     /**
@@ -421,16 +373,12 @@ public abstract class Wave
      * @param channels   number of audio channels.
      * @param bigEndian  {@code true} for big-endian byte order.
      * @param hz         tone frequency in Hz; {@code 0} produces silence.
-     * @param bytes      pre-allocated output buffer; must not be {@code null}.
      * @param volume     peak amplitude in the range {@code [0.0, 1.0]}.
-     * @param fading     fade length in samples; {@code 0} disables fading.
      * @return the same {@code bytes} array filled with rendered audio data.
      * @throws NullPointerException if {@code bytes} is {@code null}.
      */
-    public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, byte[] bytes, double volume, int fading)
+    public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, double volume)
     {
-        Objects.requireNonNull(bytes, "bytes must not be null");
-
         boolean signed = encoding.equals(AudioFormat.Encoding.PCM_SIGNED);
         boolean unsigned = encoding.equals(AudioFormat.Encoding.PCM_UNSIGNED);
         boolean pcmFloat = encoding.equals(AudioFormat.Encoding.PCM_FLOAT);
@@ -438,16 +386,16 @@ public abstract class Wave
         boolean ulaw = encoding.equals(AudioFormat.Encoding.ULAW);
 
         int sampleBytes = sampleBits / 8;
-        int samples = bytes.length / (sampleBytes * channels);
+        int wavetableSize = hz!=0 ? Audio.wavetableSize((int) sampleRate, hz) : 1;
+        byte[] bytes = new byte[wavetableSize * channels * sampleBytes];
+        
         ByteBuffer buffer = ByteBuffer.wrap(bytes).order(bigEndian ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
         if (hz != 0 && volume != 0)
         {
-            fading = Math.min(fading, samples/3);
-            for (int i = 0; i < samples; i++)
+            for (int i = 0; i < wavetableSize; i++)
             {
-                double vol = (fading <= 0) ? volume : volume * Math.max(0, Math.min(1.0, Math.min((double) i / fading, (double) (samples - 1 - i) / fading)));
-                double value = this.getValue(sampleRate, i, hz, vol);
-                
+                double value = this.getValue(sampleRate, i, hz, volume);
+
                 for (int ch = 0; ch < channels; ch++)
                 {
                     if (signed)

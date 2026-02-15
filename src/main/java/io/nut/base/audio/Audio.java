@@ -20,6 +20,7 @@
  */
 package io.nut.base.audio;
 
+import io.nut.base.math.Nums;
 import io.nut.base.util.Java;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -280,6 +281,47 @@ public class Audio
         return msToBytes(millis, format.getFrameRate(), format.getSampleSizeInBits(), format.getChannels());
     }
 
+    /**
+     * Returns the minimum number of integer samples that form an exact, lossless
+     * wavetable for a sine wave of the given frequency.
+     *
+     * <p>The ideal period of one cycle is {@code sampleRate / hz} samples, which is
+     * generally not an integer. This method finds the smallest integer {@code p} such
+     * that {@code p} samples span a whole number of complete cycles with zero rounding
+     * error, making it safe to loop the wavetable indefinitely without phase drift.
+     *
+     * <p>Internally, {@code p} is the numerator of the irreducible fraction
+     * {@code sampleRate / hz}, obtained via:
+     * <pre>
+     *     p = sampleRate / GCD(sampleRate, hz)
+     * </pre>
+     *
+     * <p>Example:
+     * <pre>
+     *     wavetableSize(44100, 440)  →  2205  (spans exactly 22 cycles)
+     *     wavetableSize(44100, 1000) →   441  (spans exactly 10 cycles)
+     *     wavetableSize(44100,  100) →   441  (spans exactly  1 cycle)
+     * </pre>
+     *
+     * @param sampleRate number of samples per second (e.g. 44100, 48000)
+     * @param hz         frequency of the sine wave in Hertz
+     * @return           minimum wavetable size in samples for a phase-accurate loop
+     * @throws IllegalArgumentException if {@code sampleRate} or {@code hz} are not positive
+     * @see Nums#gcd(int, int)
+     */
+    public static int wavetableSize(int sampleRate, int hz)
+    {
+        if (sampleRate <= 0)
+        {
+            throw new IllegalArgumentException("sampleRate must be positive, got: " + sampleRate);
+        }
+        if (hz <= 0)
+        {
+            throw new IllegalArgumentException("hz must be positive, got: " + hz);
+        }
+        return sampleRate / Nums.gcd(sampleRate, hz);
+    }
+    
     public static float detectHz(float[] data, float sampleRate, float threshold)
     {
         int crossings = -1;

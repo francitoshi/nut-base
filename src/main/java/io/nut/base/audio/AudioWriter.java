@@ -35,7 +35,19 @@ public interface AudioWriter extends Closeable
      *
      * @param bytes  Byte array containing the audio data
      * @param off    The starting offset in the array
-     * @param len    The number of bytes to write
+     * @param len    The size of the buffer
+     * @param count  The number of bytes to write
+     * @return       The number of bytes actually written
+     * @throws IOException If an I/O error occurs
+     */
+    int write(byte[] bytes, int off, int len, int count) throws IOException;
+
+    /**
+     * Writes audio data.
+     *
+     * @param bytes  Byte array containing the audio data
+     * @param off    The starting offset in the array
+     * @param len    The size of the buffer and bytes to write
      * @return       The number of bytes actually written
      * @throws IOException If an I/O error occurs
      */
