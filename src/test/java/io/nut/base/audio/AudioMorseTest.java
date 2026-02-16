@@ -26,7 +26,9 @@ import static io.nut.base.audio.Audio.HANNWINDOW;
 import static io.nut.base.audio.Audio.OVERLAP;
 import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
+import io.nut.base.math.Nums;
 import io.nut.base.signal.Morse;
+import io.nut.base.util.Sorts;
 import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -34,6 +36,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.logging.Level;
@@ -213,37 +216,37 @@ public class AudioMorseTest
     public void testFindMaxSpeed() throws UnsupportedAudioFileException, IOException, LineUnavailableException, InterruptedException, BrokenBarrierException
     {
         Wave[] cleanWaves = { SQUARE, SINE};//, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
-        int hz = 882;
-        String plaintext = PANGRAM;
-//        String plaintext = QUIJOTE;
-        ArrayList<Wave> waves = new ArrayList<>(Arrays.asList(cleanWaves));
+        int hz = 4000;
+//        String plaintext = PANGRAM;
+        String plaintext = "01234 56789 "+QUIJOTE;
         
         final AudioSynthesizer audioModem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO));
         AudioInputStream ais = Audio.getAudioInputStream(Audio.getLineIn(Audio.PCM_CD_MONO, 441000));
         ais = Audio.getMarkable(ais);
 
+        int[] WPM = getGoodWPM();
+        
         int highSpeed = 0;
-        int min = 5;
-        int max = 75;
-        for(int wpm=68;min<max;wpm=(min+max)/2)
+        int min = 0;
+        int max = WPM.length;
+        for(int i=0;i<WPM.length;i++)
         {
+            int wpm = WPM[i];
             int count = 0;
-            sendAndReceive(waves, hz, wpm, ais, plaintext, audioModem, count);
-            if(waves.isEmpty())
+            int ms = bestMillis(wpm);
+            ArrayList<Wave> waves = new ArrayList<>(Arrays.asList(cleanWaves));
+            sendAndReceive(waves, hz, wpm, ms, ais, plaintext, audioModem, count);
+            if(!waves.isEmpty())
             {
-                waves.addAll(Arrays.asList(cleanWaves));
-                max = wpm-1;
-            }
-            else
-            {
-                min = wpm+1;
                 highSpeed = Math.max(highSpeed,wpm);
+                break;
             }
         }
         System.out.println("==============================");
         System.out.println("highSpeed = "+highSpeed);
         System.out.println("==============================");
     }
+
     @Test
     @Disabled("this test is only to test manually beacuse it will produce noise")
     public void testFindMaxHz() throws UnsupportedAudioFileException, IOException, LineUnavailableException, InterruptedException, BrokenBarrierException
@@ -262,19 +265,19 @@ public class AudioMorseTest
         {
             hz = i*441;
             int count = 0;
-            sendAndReceive(waves, hz, wpm, ais, plaintext, audioModem, count);
+            sendAndReceive(waves, hz, wpm, 5, ais, plaintext, audioModem, count);
 
         }        
     }
 
-    public static void sendAndReceive(ArrayList<Wave> waves, int hz, int wpm, AudioInputStream ais, String plaintext, final AudioSynthesizer audioModem, int count) throws BrokenBarrierException, InterruptedException
+    public static void sendAndReceive(ArrayList<Wave> waves, int hz, int wpm, int blockMillis, AudioInputStream ais, String plaintext, final AudioSynthesizer audioModem, int count) throws BrokenBarrierException, InterruptedException
     {
         for(Wave wave : waves.toArray(new Wave[0]))
         {
-            System.out.println("---------- "+wave.name+" "+hz+"Hz "+wpm+"wpm ----------");
-            final AudioMorse instance = new AudioMorse(ais, hz, HANNWINDOW|OVERLAP|DCOFFSET|ADJUST_START, 5, 0);
-            
             Morse morse = new Morse(wpm, wpm, 0, 4);
+            System.out.println("---------- "+wave.name+" "+hz+"Hz "+wpm+"wpm "+morse.ditMillis+"ms ----------");
+            final AudioMorse instance = new AudioMorse(ais, hz, HANNWINDOW|OVERLAP|DCOFFSET|ADJUST_START, blockMillis, 0);
+            
             final int[] pattern = morse.encodePattern(plaintext);
             //System.out.println(Arrays.toString(pattern));
             String decodedText = morse.decodePattern(pattern).trim();
@@ -362,4 +365,24 @@ public class AudioMorseTest
         }
     }
 
+    private int[] getGoodWPM()
+    {
+        int[] wpm = new int[100];
+        for(int i=1;i<100;i++)
+        {
+            wpm[i] = 1200/i;
+        }
+        wpm = Utils.unique(wpm);
+        Arrays.sort(wpm);
+        Sorts.reverse(wpm);
+        return wpm;
+    }
+    
+    private int bestMillis(int wpm)
+    {
+        int unitMillis = Math.max(1, 1200/wpm);
+        return Nums.gcd(5, unitMillis);
+    }
+
 }
+
