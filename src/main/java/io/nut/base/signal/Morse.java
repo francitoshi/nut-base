@@ -797,17 +797,16 @@ public class Morse
         for (String morseWord : morse.split("\\s*/\\s*"))
         {
             StringBuilder word = new StringBuilder();
-            String[] plainChars = morseWord.split("\\s+");
-            for(int j=0;j<plainChars.length;j++)
+            for (String plainChar : morseWord.split("\\s+"))
             {
-                Letter letter =  decodeMap.getOrDefault(plainChars[j], null);
-                if(letter!=null)
+                Letter letter = decodeMap.getOrDefault(plainChar, null);
+                if (letter!=null)
                 {
                     word.append(letter.letter);
                 }
                 else
                 {
-                    System.err.println("uknown code "+plainChars[j]);
+                    System.err.println("uknown code " + plainChar);
                 }
             }
             text.add(word);
