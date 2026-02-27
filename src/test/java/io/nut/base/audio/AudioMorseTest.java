@@ -29,7 +29,7 @@ import static io.nut.base.audio.Wave.SQUARE;
 import io.nut.base.encoding.Encoding;
 import static io.nut.base.encoding.Encoding.Type.Base32;
 import io.nut.base.math.Nums;
-import io.nut.base.signal.frame.Frame;
+import io.nut.base.signal.Frame;
 import io.nut.base.signal.Morse;
 import io.nut.base.util.Sorts;
 import io.nut.base.util.Utils;
@@ -223,7 +223,7 @@ public class AudioMorseTest
 //        String plaintext = PANGRAM;
         String plaintext = "01234 56789 "+QUIJOTE;
 
-        byte[] frame = Frame.create((short)1, plaintext.getBytes(StandardCharsets.UTF_8));
+        byte[] frame = Frame.createData((short)1, plaintext.getBytes(StandardCharsets.UTF_8));
         plaintext = "<CT> "+Encoding.BASE32.encode(frame)+" <SK>";
         
         final AudioSynthesizer audioModem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO));
