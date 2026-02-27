@@ -3204,9 +3204,39 @@ public abstract class Utils
             remaining = deadlineNano - now;
         }
     }
-    
+   
+    /**
+     * Suspends the current thread for the specified number of nanoseconds.
+     * <p>
+     * The thread may wake up earlier than requested due to a call to
+     * {@link LockSupport#unpark(Thread)}, a thread interruption, or a spurious
+     * wakeup. In all these cases the method returns silently without throwing
+     * an exception, so the caller should re-check the wait condition if
+     * precision matters.
+     *
+     * @param nanos maximum time to suspend the thread, in nanoseconds; values
+     * &le; 0 cause the method to return immediately.
+     */    
     public static void parkNanos(long nanos)
     {
         LockSupport.parkNanos(nanos);
     }
+
+    /**
+     * Suspends the current thread for the specified number of milliseconds.
+     * <p>
+     * Convenience wrapper around {@link #parkNanos(long)} that converts the
+     * given millisecond duration to nanoseconds. The same early-wakeup caveats
+     * apply: the thread may resume before the timeout elapses due to an
+     * {@link LockSupport#unpark(Thread)} call, a thread interruption, or a
+     * spurious wakeup.
+     *
+     * @param millis maximum time to suspend the thread, in milliseconds; values
+     * &le; 0 cause the method to return immediately.
+     */
+    public static void parkMillis(long millis)
+    {
+        parkNanos(TimeUnit.MILLISECONDS.toNanos(millis));
+    }
+    
 }
