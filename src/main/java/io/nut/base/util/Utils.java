@@ -56,9 +56,15 @@ import java.util.Objects;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -3239,4 +3245,122 @@ public abstract class Utils
         parkNanos(TimeUnit.MILLISECONDS.toNanos(millis));
     }
     
+    /**
+     * Executes the given {@link Runnable} asynchronously using the {@link ForkJoinPool#commonPool()}.
+     * The task starts immediately upon calling this method.
+     *
+     * <p>This is the static utility variant of
+     * {@link YourClass#async(Runnable) async(Runnable)}: it behaves identically
+     * but uses the JVM-wide common pool instead of a dedicated {@link java.util.concurrent.ThreadPoolExecutor}.
+     * Prefer this when no custom pool configuration is needed.</p>
+     *
+     * <pre>{@code
+     * Future<Void> task = Utils.async(() -> { sort(a); sort(b); });
+     * task.get(); // blocks until done
+     * }</pre>
+     *
+     * @param runnable the task to execute asynchronously
+     * @return a {@link Future} that completes with {@code null} when the task finishes
+     * @see ForkJoinPool#commonPool()
+     */    
+    public static Future<Void> async(Runnable runnable)
+    {
+        return CompletableFuture.runAsync(runnable, ForkJoinPool.commonPool());
+    }
+
+    /**
+     * Executes the given {@link Supplier} asynchronously using the {@link ForkJoinPool#commonPool()},
+     * returning its result through a {@link Future}.
+     * The task starts immediately upon calling this method.
+     *
+     * <p>This is the static utility variant of
+     * {@link Utils#async(Supplier) async(Supplier)}: it behaves identically
+     * but uses the JVM-wide common pool instead of a dedicated {@link java.util.concurrent.ThreadPoolExecutor}.
+     * Prefer this when no custom pool configuration is needed.</p>
+     *
+     * <pre>{@code
+     * Future<List<Integer>> task = Utils.async(() -> join(sort(a), sort(b)));
+     * List<Integer> result = task.get(); // blocks until done
+     * }</pre>
+     *
+     * @param <U>      the type of the result produced by the supplier
+     * @param supplier the task to execute asynchronously
+     * @return a {@link Future} that will hold the supplier's return value upon completion
+     * @see ForkJoinPool#commonPool()
+     */
+    public static <U> Future<U> async(Supplier<U> supplier)
+    {
+        return CompletableFuture.supplyAsync(supplier, ForkJoinPool.commonPool());
+    }
+
+    /**
+     * Wraps the given {@link Runnable} in a lazy {@link Future} that only executes
+     * when {@link Future#get()} is called. The task runs on the calling thread at that point,
+     * not on the internal thread pool.
+     *
+     * <pre>{@code
+     * Future<Void> task = Utils.lazy(() -> { sort(a); sort(b); });
+     * // nothing runs yet...
+     * task.get(); // executes and blocks here
+     * }</pre>
+     *
+     * @param runnable the task to execute lazily
+     * @return a {@link Future} that executes the task on demand and completes with {@code null}
+     */
+    public static Future<Void> lazy(Runnable runnable)
+    {
+        return new FutureTask<Void>(runnable, null)
+        {
+            @Override
+            public Void get() throws InterruptedException, ExecutionException
+            {
+                run();
+                return super.get();
+            }
+            @Override
+            public Void get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
+            {
+                run(); // Run the process only when the result is requested
+                return super.get(timeout, unit);
+            }
+        };
+    }
+
+    /**
+     * Wraps the given {@link Supplier} in a lazy {@link Future} that only executes
+     * when {@link Future#get()} or {@link Future#get(long, TimeUnit)} is called.
+     * The task runs on the calling thread at that point, not on the internal thread pool.
+     *
+     * <pre>{@code
+     * Future<List<Integer>> task = Utils.lazy(() -> join(sort(a), sort(b)));
+     * // nothing runs yet...
+     * List<Integer> result = task.get();                  // executes and returns here
+     * List<Integer> result = task.get(5, TimeUnit.SECONDS); // with timeout
+     * }</pre>
+     *
+     * @param <U>      the type of the result produced by the supplier
+     * @param supplier the task to execute lazily
+     * @return a {@link Future} that executes the supplier on demand and returns its value
+     */
+    public static <U> Future<U> lazy(Supplier<U> supplier)
+    {
+        // We created a FutureTask that involves the supplier.
+        // We use supplier::get to adapt it to the Callable interface that FutureTask requires.
+        return new FutureTask<U>(supplier::get)
+        {
+            @Override
+            public U get() throws InterruptedException, ExecutionException
+            {
+                run(); //Run the process only when the result is requested
+                return super.get();
+            }
+
+            @Override
+            public U get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
+            {
+                run(); // Run the process only when the result is requested
+                return super.get(timeout, unit);
+            }
+        };
+    }
 }

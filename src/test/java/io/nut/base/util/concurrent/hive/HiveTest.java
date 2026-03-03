@@ -1,7 +1,7 @@
 /*
  *  HiveTest.java
  *
- *  Copyright (C) 2024-2025 francitoshi@gmail.com
+ *  Copyright (C) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,8 +22,20 @@ package io.nut.base.util.concurrent.hive;
 
 import io.nut.base.profile.Profiler;
 import io.nut.base.util.Utils;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.AfterEach;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -155,5 +167,135 @@ public class HiveTest
         
         assertTrue(profilerRun.nanos()>profilerWait.nanos());
     }
-        
+
+    /**
+     * Test of lazy method, of class Hive.
+     */
+    @Test
+    public void testLazy_Runnable() throws InterruptedException, ExecutionException
+    {
+        final AtomicInteger value = new AtomicInteger();
+        Hive instance = new Hive();
+        Future result = instance.lazy(()->value.set(7));
+        result.get();
+        assertEquals(7, value.get());
+    }
+
+    /**
+     * Test of lazy method, of class Hive.
+     */
+    @Test
+    public void testLazy_Supplier() throws InterruptedException, ExecutionException
+    {
+        Hive instance = new Hive();
+        Future<Integer> result = instance.lazy(()->1+2);
+        assertEquals(3, result.get());
+    }
+
+    private Hive taskManager;
+    private ThreadPoolExecutor executor;
+
+    @BeforeEach
+    void setUp()
+    {
+        // Inicializamos un pool para las pruebas
+        executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
+        taskManager = new Hive(executor);
+    }
+
+    @AfterEach
+    void tearDown()
+    {
+        executor.shutdownNow();
+    }
+
+    @Test
+    @DisplayName("Async Runnable debe ejecutarse asíncronamente")
+    void testAsyncRunnable() throws Exception
+    {
+        AtomicBoolean executed = new AtomicBoolean(false);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        Future<Void> future = taskManager.async(() ->
+        {
+            executed.set(true);
+            latch.countDown();
+        });
+
+        // Esperamos a que termine (máximo 1 segundo para no bloquear el test si falla)
+        latch.await(1, TimeUnit.SECONDS);
+
+        assertTrue(executed.get(), "El runnable debería haberse ejecutado");
+        assertTrue(future.isDone());
+    }
+
+    @Test
+    @DisplayName("Async Supplier debe retornar el valor correctamente")
+    void testAsyncSupplier() throws Exception
+    {
+        Future<String> future = taskManager.async(() ->
+        {
+            return "Hola Mundo";
+        });
+
+        assertEquals("Hola Mundo", future.get(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    @DisplayName("Lazy Runnable NO debe ejecutarse hasta llamar a get()")
+    void testLazyRunnable() throws Exception
+    {
+        AtomicBoolean executed = new AtomicBoolean(false);
+
+        Future<Void> future = taskManager.lazy(() ->
+        {
+            executed.set(true);
+        });
+
+        // Verificamos que tras un pequeño tiempo NO se ha ejecutado
+        Thread.sleep(100);
+        assertFalse(executed.get(), "No debería haberse ejecutado todavía (es lazy)");
+
+        // Al llamar a get(), se debe ejecutar
+        future.get();
+        assertTrue(executed.get(), "Debería haberse ejecutado tras llamar a get()");
+    }
+
+    @Test
+    @DisplayName("Lazy Supplier NO debe ejecutarse hasta llamar a get() y debe devolver valor")
+    void testLazySupplier() throws Exception
+    {
+        AtomicInteger counter = new AtomicInteger(0);
+
+        Future<Integer> future = taskManager.lazy(() ->
+        {
+            return counter.incrementAndGet();
+        });
+
+        // Verificamos que el contador sigue en 0
+        Thread.sleep(100);
+        assertEquals(0, counter.get(), "El supplier no debería haber incrementado el contador aún");
+
+        // Al llamar a get(), se ejecuta
+        Integer result = future.get();
+
+        assertEquals(1, result);
+        assertEquals(1, counter.get(), "El contador debería ser 1 tras el primer get()");
+
+        // Verificamos que si llamamos a get() otra vez, no se vuelve a ejecutar (comportamiento de FutureTask)
+        future.get();
+        assertEquals(1, counter.get(), "No debería ejecutarse dos veces");
+    }
+
+    @Test
+    @DisplayName("Lazy Supplier debe funcionar con timeout")
+    void testLazySupplierWithTimeout() throws Exception
+    {
+        Future<String> future = taskManager.lazy(() -> "Resultado");
+
+        String result = future.get(500, TimeUnit.MILLISECONDS);
+
+        assertEquals("Resultado", result);
+    }
+
 }

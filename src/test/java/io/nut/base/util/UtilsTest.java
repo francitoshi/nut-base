@@ -36,8 +36,14 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
 
 /**
  *
@@ -2815,5 +2821,83 @@ public class UtilsTest
             assertTrue( System.nanoTime() > t[i]);
         }
         
+    }
+    @Test
+    @DisplayName("Async Runnable must run asynchronously")
+    void testAsyncRunnable() throws Exception
+    {
+        AtomicBoolean executed = new AtomicBoolean(false);
+        CountDownLatch latch = new CountDownLatch(1);
+
+        Future<Void> future = Utils.async(() ->
+        {
+            executed.set(true);
+            latch.countDown();
+        });
+
+        // We wait for it to finish (maximum 1 second so as not to block the test if it fails)
+        latch.await(1, TimeUnit.SECONDS);
+
+        assertTrue(executed.get(), "The runnable should have been executed");
+        assertTrue(future.isDone());
+    }
+
+    @Test
+    @DisplayName("Async Supplier must return the correct value")
+    void testAsyncSupplier() throws Exception
+    {
+        Future<String> future = Utils.async(() -> "Hello World");
+        assertEquals("Hello World", future.get(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    @DisplayName("Lazy Runnable should NOT execute until get() is called")
+    void testLazyRunnable() throws Exception
+    {
+        AtomicBoolean executed = new AtomicBoolean(false);
+
+        Future<Void> future = Utils.lazy(() ->{ executed.set(true); });
+
+        // We verified that after a short time it has NOT been executed
+        Thread.sleep(100);
+        assertFalse(executed.get(), "It shouldn't have run yet (it's lazy)");
+
+        // When calling get(), it must be executed
+        future.get();
+        assertTrue(executed.get(), "It should have been executed after calling get()");
+    }
+
+    @Test
+    @DisplayName("Lazy Supplier should NOT execute until get() is called and should return a value")
+    void testLazySupplier() throws Exception
+    {
+        AtomicInteger counter = new AtomicInteger(0);
+
+        Future<Integer> future = Utils.lazy(() ->{ return counter.incrementAndGet(); });
+
+        // We verified that the counter is still at 0
+        Thread.sleep(100);
+        assertEquals(0, counter.get(), "The supplier shouldn't have increased the counter yet.");
+
+        // When you call get(), it executes
+        Integer result = future.get();
+
+        assertEquals(1, result);
+        assertEquals(1, counter.get(), "The counter should be 1 after the first get()");
+
+        // We verified that if we call get() again, it does not execute again (FutureTask behavior)
+        future.get();
+        assertEquals(1, counter.get(), "It should not run twice");
+    }
+
+    @Test
+    @DisplayName("Lazy Supplier must operate with a timeout")
+    void testLazySupplierWithTimeout() throws Exception
+    {
+        Future<String> future = Utils.lazy(() -> "Result");
+
+        String result = future.get(500, TimeUnit.MILLISECONDS);
+
+        assertEquals("Result", result);
     }
 }
