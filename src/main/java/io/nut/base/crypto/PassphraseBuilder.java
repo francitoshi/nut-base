@@ -1,7 +1,7 @@
 /*
  *  PassphraseBuilder.java
  *
- *  Copyright (C) 2025 francitoshi@gmail.com
+ *  Copyright (C) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -167,10 +167,7 @@ public class PassphraseBuilder
         }
         if (charsets == null || charsets.length == 0)
         {
-            charsets = new String[]
-            {
-                ALL
-            };
+            charsets = new String[]{ ALL };
         }
         this.uppercase = uppercase;
         this.lowercase = lowercase;
@@ -183,6 +180,11 @@ public class PassphraseBuilder
             all.append(item);
         }
         this.allChars = all.toString().toCharArray();
+        
+        if(this.allChars.length==0)
+        {
+            throw new IllegalArgumentException("charset of allowed characters cannot be empty");
+        }
 
         StringBuilder up = new StringBuilder();
         StringBuilder low = new StringBuilder();
