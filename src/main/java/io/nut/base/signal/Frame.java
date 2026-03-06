@@ -20,7 +20,7 @@
  */
 package io.nut.base.signal;
 
-import java.util.zip.CRC32;
+import io.nut.base.util.Utils;
 
 /**
  * Frame — builds and parses binary frames over a byte stream.
@@ -29,38 +29,39 @@ import java.util.zip.CRC32;
  *
  *  Offset  Size  Field
  *  ──────  ────  ──────────────────────────────────────────────────────
- *    0      1    Frame Type         0x01 data 0x02 ACK 0x03 NACK   
- *    1      2    ID                 big-endian (id_high, id_low)
- *    3      2    Payload length     big-endian (len_high, len_low)
- *    5      N    Payload            N = length declared above
- *   5+N     4    CRC32              of ID + LEN + payload, little-endian
+ *    0      1    version           1
+ *    1      1    flags             bits 1=HELLO 2=BCAST 3=ACK 4=NACK
+ *    2      2    src               Source ID
+ *    4      2    dst               Destiny ID
+ *    6      2    id                big-endian (id_high, id_low)
+ *    8      2    payload-length    big-endian (len_high, len_low)
+ *   10      N    payload           N = length declared above
+ *  10+N     2    CRC16             of ID + LEN + payload, big-endian
  *
- * CRC32 input:  [type][id_high][id_low][len_high][len_low][payload…]
+ * CRC32 input:  [version][flags][src][dst][id][payload-length][payload…]
  */
 public class Frame
 {
-    // ── Protocol constants ────────────────────────────────────────────────────
-    private static final int ID_OFFSET   = 1;
-    private static final int LEN_OFFSET  = 3;
+    // ── PROTOCOL CONSTANTS ───────────────────────────────────────────────────
+    private static final int VERSION_OFFSET = 0;
+    private static final int FLAGS_OFFSET   = 1;
+    private static final int SRC_OFFSET     = 2;
+    private static final int DST_OFFSET     = 4;
+    private static final int ID_OFFSET      = 6;
+    private static final int LEN_OFFSET     = 8;
+    private static final int PAYLOAD_OFFSET = 10;
 
-    /** Byte offset where payload begins: 1(type) + 2(id) + 2(len) */
-    private static final int PAYLOAD_OFFSET = 5;
     private static final int HEADER_SIZE    = PAYLOAD_OFFSET;
-    /** 4 bytes CRC32 + 1 byte closing delimiter */
-    private static final int TRAILER_SIZE   = 4;
-    /** Minimum valid frame length (empty payload) */
+    private static final int TRAILER_SIZE   = 2;
     private static final int MIN_FRAME_SIZE = HEADER_SIZE + TRAILER_SIZE;
 
-    // ── Reserved frame IDs ────────────────────────────────────────────────────
-
-    /** Data frame */
-    public static final byte ID_DATA  = (short) 0x0000;
-
-    /** Positive acknowledgement — frame received and CRC verified. */
-    public static final byte ID_ACK  = (short) 0x0001;
-
-    /** Negative acknowledgement — frame received but CRC failed. */
-    public static final byte ID_NACK = (short) 0x0002;
+    // ── FLAGS CONSTANTS ──────────────────────────────────────────────────────
+    
+    public static final byte DATA_FLAG  = 0x00;
+    public static final byte HELLO_FLAG = 0x01;
+    public static final byte BCAST_FLAG = 0x02;
+    public static final byte ACK_FLAG   = 0x04;
+    public static final byte NACK_FLAG  = 0x08;
 
     // ── Status codes carried inside ACK / NACK payloads ──────────────────────
 
@@ -69,75 +70,65 @@ public class Frame
     public static final byte STATUS_UNKNOWN_ID  = 0x02;
     public static final byte STATUS_BUFFER_FULL = 0x03;
 
-    // ── Private API ────────────────────────────────────────────────────────────
+    // ── USEFULL CONSTANTS ────────────────────────────────────────────────────
+
+    private static final byte[] EMPTY_BYTES = new byte[0];
     
-    public static short readShort(byte[] frame, int offset)
+    // ── Private API ──────────────────────────────────────────────────────────
+    
+    public final byte version = 1;
+    
+    public char readChar(byte[] frame, int offset)
     {
         // big-endian: high byte at offset 3, low byte at offset 4
-        return (short) (((frame[offset] & 0xFF) << 8) | (frame[offset+1] & 0xFF));
+        return (char) (((frame[offset] & 0xFF) << 8) | (frame[offset+1] & 0xFF));
     }
     
-    public static void writeShort(byte[] frame, int offset, short value)
+    public void writeChar(byte[] frame, int offset, char value)
     {
-        byte idHigh = (byte) ((value >> 8) & 0xFF);
-        byte idLow  = (byte)  (value & 0xFF);
-        frame[offset+0] = idHigh;
-        frame[offset+1] = idLow;
+        frame[offset+0] = (byte) ((value >> 8) & 0xFF);
+        frame[offset+1] = (byte)  (value       & 0xFF);
     }
     
-    private static byte[] create(byte type, short id, byte[] payload)
+    private byte[] create(byte flags, char src, char dst, char id, byte[] payload)
     {
         if (payload == null) 
         {
-            payload = new byte[0];
+            payload = EMPTY_BYTES;
         }
 
         int    len   = payload.length;
         byte[] frame = new byte[HEADER_SIZE + len + TRAILER_SIZE];
         int    pos   = 0;
+        
+        frame[pos++] = this.version;
+        frame[pos++] = flags;
+        
+        frame[pos++] = (byte) ((src >>  8) & 0xFF);  // src1 - MSB
+        frame[pos++] = (byte)  (src        & 0xFF);  // src0 - LSB
 
-        // frame type
-        frame[pos++] = type;
+        frame[pos++] = (byte) ((dst >>  8) & 0xFF);  // dst1 - MSB
+        frame[pos++] = (byte)  (dst        & 0xFF);  // dst0 - LSB
 
-        // ID — big-endian
-        byte idHigh = (byte) ((id >> 8) & 0xFF);
-        byte idLow  = (byte)  (id & 0xFF);
-        frame[pos++] = idHigh;
-        frame[pos++] = idLow;
+        frame[pos++] = (byte) ((id >>  8)  & 0xFF);  // id1 - MSB
+        frame[pos++] = (byte)  (id         & 0xFF);  // id0 - LSB
 
-        // Payload length — big-endian
-        byte lenHigh = (byte) ((len >> 8) & 0xFF);
-        byte lenLow  = (byte)  (len & 0xFF);
-        frame[pos++] = lenHigh;
-        frame[pos++] = lenLow;
+        frame[pos++] = (byte) ((len >>  8) & 0xFF);  // len1
+        frame[pos++] = (byte)  (len        & 0xFF);  // len0 — LSB
 
         // Payload
         System.arraycopy(payload, 0, frame, pos, len);
         pos += len;
 
         // CRC32 over: id_high + id_low + len_high + len_low + payload
-        long crc = computeCRC32(frame, 0, HEADER_SIZE + len);
-        frame[pos++] = (byte)  (crc        & 0xFF);  // crc0 — LSB
-        frame[pos++] = (byte) ((crc >>  8) & 0xFF);  // crc1
-        frame[pos++] = (byte) ((crc >> 16) & 0xFF);  // crc2
-        frame[pos++] = (byte) ((crc >> 24) & 0xFF);  // crc3 — MSB
+        int crc16 = Utils.crc16(frame, 0, HEADER_SIZE + len);
+        frame[pos++] = (byte) ((crc16 >>  8) & 0xFF);  // crc1
+        frame[pos++] = (byte)  (crc16        & 0xFF);  // crc0 — LSB
 
         return frame;
     }
 
     // ── Public API ────────────────────────────────────────────────────────────
-
-    /**
-     * Builds a complete frame.
-     *
-     * @param id      16-bit identifier
-     * @param payload data bytes (null is treated as empty)
-     * @return fully serialized frame ready for transmission
-     */
-    public static byte[] createData(short id, byte[] payload)
-    {
-        return create(ID_DATA, id, payload);
-    }
 
     /**
      * Verifies the structural and checksum integrity of a frame.
@@ -149,29 +140,40 @@ public class Frame
      *         -3   declared length does not match actual frame size
      *         -4   CRC mismatch
      */
-    public static int check(byte[] frame)
+    public int check(byte[] frame)
     {
         if (frame == null || frame.length < MIN_FRAME_SIZE)
         {
             return -1;
         }
-        if (frame[0] != ID_DATA && frame[0] != ID_ACK && frame[0] != ID_NACK)
-        {
-            return -2;
-        }
+        //VERIFY FLAGS
+        //???
+        
         int payloadLen = getPayloadLength(frame);
         if (payloadLen < 0 || HEADER_SIZE + payloadLen + TRAILER_SIZE != frame.length)
         {
             return -3;
         }
-        long expected = computeCRC32(frame, 0, HEADER_SIZE + payloadLen);
-        long actual = readCRC32(frame, payloadLen);
+        int expected = Utils.crc16(frame, 0, HEADER_SIZE + payloadLen);
+        int actual = readChar(frame, payloadLen);
         return (expected == actual) ? 0 : -4;
     }
 
-    public static byte getType(byte[] frame)
+    public byte getVersion(byte[] frame)
     {
-        return frame[0];
+        return frame[VERSION_OFFSET];
+    }
+    public byte getFlags(byte[] frame)
+    {
+        return frame[FLAGS_OFFSET];
+    }
+    public char getSrc(byte[] frame)
+    {
+        return readChar(frame, SRC_OFFSET);
+    }
+    public char getDst(byte[] frame)
+    {
+        return readChar(frame, DST_OFFSET);
     }
 
     /**
@@ -181,19 +183,18 @@ public class Frame
      * @param frame validated frame bytes
      * @return 16-bit identifier
      */
-    public static short getId(byte[] frame)
+    public char getId(byte[] frame)
     {
         if (frame == null || frame.length < MIN_FRAME_SIZE)
         {
             return 0;
         }
-        // big-endian: high byte at offset 3, low byte at offset 4
-        return (short) (((frame[ID_OFFSET] & 0xFF) << 8) | (frame[ID_OFFSET + 1] & 0xFF));
+        return (char) (((frame[ID_OFFSET] & 0xFF) << 8) | (frame[ID_OFFSET + 1] & 0xFF));
     }
     
-    private static int getPayloadLength(byte[] frame) 
+    private char getPayloadLength(byte[] frame) 
     {
-        return readShort(frame, LEN_OFFSET);
+        return readChar(frame, LEN_OFFSET);
     }
 
     /**
@@ -203,105 +204,79 @@ public class Frame
      * @param frame validated frame bytes
      * @return copy of the payload, or an empty array if the payload is empty
      */
-    public static byte[] getPayload(byte[] frame)
+    public byte[] getPayload(byte[] frame)
     {
         if (frame == null || frame.length < MIN_FRAME_SIZE)
         {
-            return new byte[0];
+            return EMPTY_BYTES;
         }
         int len = getPayloadLength(frame);
         if (len <= 0)
         {
-            return new byte[0];
+            return EMPTY_BYTES;
         }
         byte[] result = new byte[len];
         System.arraycopy(frame, PAYLOAD_OFFSET, result, 0, len);
         return result;
     }
 
+    public byte[] createData(char src, char dst, char id, byte[] payload)
+    {
+        return create(DATA_FLAG, src, dst, id, payload);
+    }
     
-    // ── ACK / NACK helpers ────────────────────────────────────────────────────
-
-    /**
-     * Creates an ACK frame confirming successful receipt of {@code originalId}.
-     *
-     * Payload layout (3 bytes):
-     *   [0] id_high of the confirmed frame
-     *   [1] id_low  of the confirmed frame
-     *   [2] status  = STATUS_OK (0x00)
-     */
-    public static byte[] createAck(short id)
+    public byte[] createAck(char src, char dst, char id)
     {
-        return create(ID_ACK, id, new byte[0]);
+        return create(ACK_FLAG, src, dst, id, EMPTY_BYTES);
+    }
+    public byte[] createAck(byte[] frame, char src)
+    {
+        char ackDst = getSrc(frame);
+        char id = getId(frame);
+        return createAck(src, ackDst, id);
     }
 
-    /**
-     * Creates a NACK frame reporting a failed receipt of {@code originalId}.
-     *
-     * @param id  ID of the frame that failed
-     * @param statusCode  reason code (use STATUS_* constants)
-     *
-     * Payload layout (3 bytes):
-     *   [0] id_high of the failed frame
-     *   [1] id_low  of the failed frame
-     *   [2] status  (e.g. STATUS_CRC_ERROR)
-     * @return the NACK frame
-     */
-    public static byte[] createNack(short id, byte statusCode)
+    public byte[] createNack(char src, char dst, char id, byte statusCode)
     {
-        byte[] frame = create(ID_NACK, id, new byte[0]);
-        
-        byte lenHigh = (byte) ((statusCode >> 8) & 0xFF);
-        byte lenLow  = (byte)  (statusCode & 0xFF);
-        frame[LEN_OFFSET] = lenHigh;
-        frame[LEN_OFFSET] = lenLow;
-        
-        return frame;
+        return create(NACK_FLAG, src, dst, id, new byte[]{statusCode});
+    }
+    public byte[] createNack(byte[] frame, char src, byte statusCode)
+    {
+        char ackDst = getSrc(frame);
+        char id = getId(frame);
+        return createNack(src, ackDst, id, statusCode);
     }
 
-    /** Returns true if the frame carries an ACK. */
-    public static boolean isData(byte[] frame)
+    public boolean isData(byte flags)
     {
-        return getType(frame) == ID_DATA;
+        return (flags & (ACK_FLAG|NACK_FLAG)) == 0;
+    }
+    public boolean isData(byte[] frame)
+    {
+        return isData(getFlags(frame));
     }
 
-    /** Returns true if the frame carries an ACK. */
-    public static boolean isAck(byte[] frame)
+    public boolean isAck(byte flags)
     {
-        return getType(frame) == ID_ACK;
+        return (flags & ACK_FLAG) == ACK_FLAG;
+    }
+    public boolean isAck(byte[] frame)
+    {
+        return isAck(getFlags(frame));
     }
 
-    /** Returns true if the frame carries a NACK. */
-    public static boolean isNack(byte[] frame)
+    public boolean isNack(byte flags)
     {
-        return getType(frame) == ID_NACK;
+        return (flags & NACK_FLAG) == NACK_FLAG;
+    }
+    public boolean isNack(byte[] frame)
+    {
+        return isNack(getFlags(frame));
     }
 
-    /**
-     * Extracts the status code from an ACK or NACK frame.
-     *
-     * @param frame a validated ACK or NACK frame
-     * @return status byte, or -1 if the payload is malformed
-     */
-    public static short getStatus(byte[] frame)
+    public char getStatus(byte[] frame)
     {
-        return readShort(frame, LEN_OFFSET);
-    }
-
-    private static long computeCRC32(byte[] frame, int start, int stop)
-    {
-        CRC32 crc32 = new CRC32();
-        crc32.update(frame, start, stop);
-        return crc32.getValue();
-    }
-
-    private static long readCRC32(byte[] frame, int payloadLen) 
-    {
-        int i = PAYLOAD_OFFSET + payloadLen;
-        return  (frame[i]   & 0xFFL)
-              | ((frame[i+1] & 0xFFL) <<  8)
-              | ((frame[i+2] & 0xFFL) << 16)
-              | ((frame[i+3] & 0xFFL) << 24);
+        return readChar(frame, LEN_OFFSET);
     }
 
 }

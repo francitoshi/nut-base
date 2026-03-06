@@ -1,6 +1,30 @@
+/*
+ *  DuplexLayerTest.java
+ *
+ *  Copyright (c) 2026 francitoshi@gmail.com
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Report bugs or new features to: francitoshi@gmail.com
+ */
 package io.nut.base.signal;
 
+import io.nut.base.audio.AudioMorseTransceiver;
+import io.nut.base.audio.Wave;
+import io.nut.base.util.Strings;
 import io.nut.base.util.Utils;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.*;
 
 import java.util.ArrayList;
@@ -9,12 +33,15 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.sound.sampled.LineUnavailableException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 
 class FakeTransceiver implements Transceiver
 {
+    final Frame framer = new Frame();
+    
     final AtomicInteger dataWriteCounter = new AtomicInteger();
     final AtomicInteger ackWriteCounter = new AtomicInteger();
     final BlockingQueue<byte[]> queue = new ArrayBlockingQueue<>(10);
@@ -28,16 +55,16 @@ class FakeTransceiver implements Transceiver
     @Override
     public void write(byte[] frame)
     {
-        boolean isData = Frame.isData(frame);
-        boolean isAck = Frame.isAck(frame);
+        boolean isData = framer.isData(frame);
+        boolean isAck = framer.isAck(frame);
         if(isData) dataWriteCounter.incrementAndGet();
         if(isAck) ackWriteCounter.incrementAndGet();
-        if(Frame.isData(frame) && ack)
+        if(framer.isData(frame) && ack)
         {
             try
             {
-                short id = Frame.getId(frame);
-                byte[] ack = Frame.createAck(id);
+                char id = framer.getId(frame);
+                byte[] ack = framer.createAck('\0', '\0', id);
                 queue.put(ack);
             }
             catch (InterruptedException ex)
@@ -72,6 +99,17 @@ class FakeTransceiver implements Transceiver
             Logger.getLogger(FakeTransceiver.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+
+    @Override
+    public FakeTransceiver open()
+    {
+        return this;
+    }
+
+    @Override
+    public void close()
+    {
+    }
 }
 class FakeListener implements DuplexLayer.FrameListener
 {
@@ -79,19 +117,19 @@ class FakeListener implements DuplexLayer.FrameListener
     final AtomicInteger onFailedCounter = new AtomicInteger();
     final AtomicInteger onReceivedCounter = new AtomicInteger();
     @Override
-    public void onDelivered(short id)
+    public void onDelivered(char id)
     {
         onDeliveredCounter.incrementAndGet();
     }
 
     @Override
-    public void onFailed(short id, int statusCode)
+    public void onFailed(char id, int statusCode)
     {
         onFailedCounter.incrementAndGet();
     }
 
     @Override
-    public void onReceived(short id, byte[] payload)
+    public void onReceived(char id, byte[] payload)
     {
         onReceivedCounter.incrementAndGet();
     }
@@ -105,6 +143,7 @@ class FakeListener implements DuplexLayer.FrameListener
  */
 class DuplexLayerTest
 {
+    final Frame framer = new Frame();
 
     // =========================================================================
     // Stubs manuales
@@ -156,6 +195,17 @@ class DuplexLayerTest
         {
             outbound.offer(frame);
         }
+
+        @Override
+        public StubTransceiver open()
+        {
+            return this;
+        }
+
+        @Override
+        public void close()
+        {
+        }
     }
 
     /**
@@ -167,10 +217,9 @@ class DuplexLayerTest
 
         static class DeliveredEvent
         {
-
-            final short id;
-
-            DeliveredEvent(short id)
+            final char id;
+            
+            DeliveredEvent(char id)
             {
                 this.id = id;
             }
@@ -179,10 +228,10 @@ class DuplexLayerTest
         static class FailedEvent
         {
 
-            final short id;
+            final char id;
             final int statusCode;
 
-            FailedEvent(short id, int statusCode)
+            FailedEvent(char id, int statusCode)
             {
                 this.id = id;
                 this.statusCode = statusCode;
@@ -192,10 +241,10 @@ class DuplexLayerTest
         static class ReceivedEvent
         {
 
-            final short id;
+            final char id;
             final byte[] payload;
 
-            ReceivedEvent(short id, byte[] payload)
+            ReceivedEvent(char id, byte[] payload)
             {
                 this.id = id;
                 this.payload = payload;
@@ -211,21 +260,21 @@ class DuplexLayerTest
         volatile CountDownLatch receivedLatch = new CountDownLatch(1);
 
         @Override
-        public void onDelivered(short id)
+        public void onDelivered(char id)
         {
             delivered.add(new DeliveredEvent(id));
             deliveredLatch.countDown();
         }
 
         @Override
-        public void onFailed(short id, int statusCode)
+        public void onFailed(char id, int statusCode)
         {
             failed.add(new FailedEvent(id, statusCode));
             failedLatch.countDown();
         }
 
         @Override
-        public void onReceived(short id, byte[] payload)
+        public void onReceived(char id, byte[] payload)
         {
             received.add(new ReceivedEvent(id, payload));
             receivedLatch.countDown();
@@ -346,8 +395,8 @@ class DuplexLayerTest
     @DisplayName("Al recibir DATA se invoca onReceived con el id correcto")
     void testReceiveData_idIsCorrect() throws InterruptedException
     {
-        short id = 42;
-        transceiver.feed(Frame.createData(id, new byte[]{ 0x01 }));
+        char id = 42;
+        transceiver.feed(framer.createData('\0', '\0', id, new byte[]{ 0x01 }));
 
         assertTrue(listener.awaitReceived(1, 1_000));
         assertEquals(id, listener.received.get(0).id);
@@ -357,8 +406,9 @@ class DuplexLayerTest
     @DisplayName("Al recibir DATA el payload llega íntegro")
     void testReceiveData_payloadIsCorrect() throws InterruptedException
     {
+        char id = 1;
         byte[] payload = { 0x01, 0x02, 0x03, 0x04 };
-        transceiver.feed(Frame.createData((short) 1, payload));
+        transceiver.feed(framer.createData('\0', '\0', id, payload));
 
         assertTrue(listener.awaitReceived(1, 1_000));
         assertArrayEquals(payload, listener.received.get(0).payload);
@@ -368,28 +418,22 @@ class DuplexLayerTest
     @DisplayName("Al recibir DATA se envía automáticamente un ACK con el mismo id")
     void testReceiveData_sendsAck() throws InterruptedException
     {
-        short id = 7;
-        transceiver.feed(Frame.createData(id, new byte[]
-        {
-            0x10
-        }));
+        char id = 7;
+        transceiver.feed(framer.createData('\0', '\0', id, new byte[]{ 0x10 }));
 
         byte[] sent = transceiver.pollSent(1_000);
         assertNotNull(sent, "Se esperaba un ACK en el canal de salida");
-        assertEquals(Frame.ID_ACK, Frame.getType(sent));
-        assertEquals(id, Frame.getId(sent));
+        assertTrue(framer.isAck(sent));
+        assertEquals(id, framer.getId(sent));
     }
 
     @Test
     @DisplayName("Cinco DATA frames consecutivos generan cinco llamadas a onReceived")
     void testReceiveMultipleDataFrames() throws InterruptedException
     {
-        for (short i = 0; i < 5; i++)
+        for (char i = 0; i < 5; i++)
         {
-            transceiver.feed(Frame.createData(i, new byte[]
-            {
-                (byte) i
-            }));
+            transceiver.feed(framer.createData('\0', '\0', i, new byte[]{(byte) i}));
         }
         assertTrue(listener.awaitReceived(5, 2_000));
         assertEquals(5, listener.received.size());
@@ -399,7 +443,7 @@ class DuplexLayerTest
     @DisplayName("Recibir DATA con payload vacío no lanza excepción")
     void testReceiveData_emptyPayload() throws InterruptedException
     {
-        transceiver.feed(Frame.createData((short) 99, new byte[0]));
+        transceiver.feed(framer.createData('\0', '\0', (char) 99, new byte[0]));
         assertTrue(listener.awaitReceived(1, 1_000));
         assertArrayEquals(new byte[0], listener.received.get(0).payload);
     }
@@ -411,11 +455,11 @@ class DuplexLayerTest
     @DisplayName("Al recibir ACK para un frame pendiente se invoca onDelivered")
     void testReceiveAck_callsOnDelivered() throws InterruptedException
     {
-        short id = 1;
-        layer.write(Frame.createData(id, new byte[]{ 0x55 }));
+        char id = 1;
+        layer.write(framer.createData('\0', '\0', id, new byte[]{ 0x55 }));
         transceiver.pollSent(1_000); // consumir el frame enviado
 
-        transceiver.feed(Frame.createAck(id));
+        transceiver.feed(framer.createAck('\0', '\0', id));
 
         assertTrue(listener.awaitDelivered(1, 1_000));
         assertEquals(id, listener.delivered.get(0).id);
@@ -425,7 +469,7 @@ class DuplexLayerTest
     @DisplayName("ACK para id desconocido es ignorado — no invoca ningún callback")
     void testReceiveAck_unknownId_isIgnored() throws InterruptedException
     {
-        transceiver.feed(Frame.createAck((short) 999));
+        transceiver.feed(framer.createAck('\0', '\0', (char) 999));
         Thread.sleep(300);
         assertTrue(listener.delivered.isEmpty());
         assertTrue(listener.failed.isEmpty());
@@ -435,11 +479,11 @@ class DuplexLayerTest
     @DisplayName("Tras recibir ACK no se invoca onFailed")
     void testReceiveAck_doesNotCallOnFailed() throws InterruptedException
     {
-        short id = 3;
-        layer.write(Frame.createData(id, new byte[]{0x01}));
+        char id = 3;
+        layer.write(framer.createData('\0', '\0', id, new byte[]{0x01}));
         transceiver.pollSent(1_000);
 
-        transceiver.feed(Frame.createAck(id));
+        transceiver.feed(framer.createAck('\0', '\0', id));
         assertTrue(listener.awaitDelivered(1, 1_000));
         assertTrue(listener.failed.isEmpty());
     }
@@ -451,15 +495,15 @@ class DuplexLayerTest
     @DisplayName("Al recibir NACK se invoca onFailed con el status correcto")
     void testReceiveNack_callsOnFailed() throws InterruptedException
     {
-        short id = 4;
+        char id = 4;
         byte status = 0x0A;
 
         FakeTransceiver ft = new FakeTransceiver(false);
         FakeListener fl = new FakeListener();
         DuplexLayer dl = new DuplexLayer().setTransceiver(ft).setListener(fl).open();
 
-        dl.write(Frame.createData(id, new byte[]{0x77}));
-        ft.feed(Frame.createNack(id, status));
+        dl.write(framer.createData('\0', '\0', id, new byte[]{0x77}));
+        ft.feed(framer.createNack('\0', '\0', id, status));
         Utils.parkMillis(10);
         assertEquals(1, fl.onFailedCounter.get());
     }
@@ -468,12 +512,12 @@ class DuplexLayerTest
     @DisplayName("NACK duplicado no invoca onFailed más de una vez")
     void testReceiveNack_duplicate_notCalledTwice() throws InterruptedException
     {
-        short id = 5;
-        layer.write(Frame.createData(id, new byte[]{ 0x77 }));
+        char id = 5;
+        layer.write(framer.createData('\0', '\0', id, new byte[]{ 0x77 }));
         transceiver.pollSent(1_000);
 
-        transceiver.feed(Frame.createNack(id, (byte) 1));
-        transceiver.feed(Frame.createNack(id, (byte) 1));
+        transceiver.feed(framer.createNack('\0', '\0', id, (byte) 1));
+        transceiver.feed(framer.createNack('\0', '\0', id, (byte) 1));
 
         assertTrue(listener.awaitFailed(1, 1_000));
         Thread.sleep(300);
@@ -484,7 +528,7 @@ class DuplexLayerTest
     @DisplayName("NACK para id desconocido es ignorado — no invoca ningún callback")
     void testReceiveNack_unknownId_isIgnored() throws InterruptedException
     {
-        transceiver.feed(Frame.createNack((short) 888, (byte) 0xFF));
+        transceiver.feed(framer.createNack('\0', '\0', (char) 888, (byte) 0xFF));
         Thread.sleep(300);
         assertTrue(listener.failed.isEmpty());
     }
@@ -493,11 +537,11 @@ class DuplexLayerTest
     @DisplayName("Tras recibir NACK no se invoca onDelivered")
     void testReceiveNack_doesNotCallOnDelivered() throws InterruptedException
     {
-        short id = 6;
-        layer.write(Frame.createData(id, new byte[]{ 0x01 }));
+        char id = 6;
+        layer.write(framer.createData('\0', '\0', id, new byte[]{ 0x01 }));
         transceiver.pollSent(1_000);
 
-        transceiver.feed(Frame.createNack(id, (byte) 2));
+        transceiver.feed(framer.createNack('\0', '\0', id, (byte) 2));
         assertTrue(listener.awaitFailed(1, 1_000));
         assertTrue(listener.delivered.isEmpty());
     }
@@ -509,7 +553,7 @@ class DuplexLayerTest
     @DisplayName("write() provoca al menos un envío a través del transceiver")
     void testWrite_sendsFrame() throws InterruptedException
     {
-        byte[] frame = Frame.createData((short) 10, new byte[]{ 0x01 });
+        byte[] frame = framer.createData('\0', '\0', (char) 10, new byte[]{ 0x01 });
         layer.write(frame);
 
         byte[] sent = transceiver.pollSent(2_000);
@@ -523,7 +567,7 @@ class DuplexLayerTest
     {
         FakeTransceiver ft = new FakeTransceiver(false);
         DuplexLayer dl = new DuplexLayer().setTransceiver(ft).open();
-        byte[] frame = Frame.createData((short) 20, new byte[]{0x02});
+        byte[] frame = framer.createData('\0', '\0', (char) 20, new byte[]{0x02});
         dl.write(frame);
         Utils.parkMillis(DuplexLayer.ACK_TIMEOUT_MILLIS*2);
         assertTrue(ft.dataWriteCounter.get()>1);
@@ -533,10 +577,10 @@ class DuplexLayerTest
     @DisplayName("Tras recibir ACK el frame ya no es retransmitido")
     void testNoRetransmission_afterAck() throws InterruptedException
     {
-        short id = 21;
+        char id = 21;
         FakeTransceiver ft = new FakeTransceiver(true);
         
-        byte[] frame = Frame.createData(id, new byte[]{0x03});
+        byte[] frame = framer.createData('\0', '\0', id, new byte[]{0x03});
         DuplexLayer dl = new DuplexLayer().setTransceiver(ft).open();
 
         dl.write(frame);
@@ -549,12 +593,9 @@ class DuplexLayerTest
     void testMultipleWrites_allSent() throws InterruptedException
     {
         int count = 5;
-        for (short i = 0; i < count; i++)
+        for (char i = 0; i < count; i++)
         {
-            layer.write(Frame.createData(i, new byte[]
-            {
-                (byte) i
-            }));
+            layer.write(framer.createData('\0', '\0', i, new byte[]{ (byte) i }));
         }
         for (int i = 0; i < count; i++)
         {
@@ -576,25 +617,96 @@ class DuplexLayerTest
     @DisplayName("[BUG#2] Tras ACK el frame debe eliminarse del outgoingMap")
     void testBug2_outgoingMapNotCleaned() throws InterruptedException
     {
-        short id = 5;
-        byte[] frame = Frame.createData(id, new byte[]
-        {
-            0x01
-        });
+        char id = 5;
+        byte[] frame = framer.createData('\0', '\0', id, new byte[]{ 0x01 });
         layer.write(frame);
         transceiver.pollSent(1_000);
 
-        transceiver.feed(Frame.createAck(id));
+        transceiver.feed(framer.createAck('\0', '\0', id));
         assertTrue(listener.awaitDelivered(1, 1_000));
 
         // Segundo ACK: si el mapa está limpio este ACK no encuentra la entrada.
         // Si no lo está, el flag 'acked' evita la doble llamada pero hay memory leak.
-        transceiver.feed(Frame.createAck(id));
+        transceiver.feed(framer.createAck('\0', '\0', id));
         Thread.sleep(300);
-        assertEquals(1, listener.delivered.size(),
-                "BUG#2: onDelivered llamado más veces de lo esperado (entry no eliminada)");
+        assertEquals(1, listener.delivered.size(), "BUG#2: onDelivered llamado más veces de lo esperado (entry no eliminada)");
     }
 
+    @Test
+    @Disabled("this test is only to test manually beacuse it will produce noise")
+    public void testAudioLoop() throws LineUnavailableException
+    {
+        Utils.async(()->
+        {
+            try
+            {
+                launchDuplex("alice", 12);
+            }
+            catch (LineUnavailableException ex)
+            {
+                Logger.getLogger(DuplexLayerTest.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        });        
+        
+        Utils.async(()-> 
+        {
+            try
+            {
+                launchDuplex("bob", 12);
+            }
+            catch (LineUnavailableException ex)
+            {
+                Logger.getLogger(DuplexLayerTest.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        });
+
+        
+    }
+
+    public void launchDuplex(String name, int wpm) throws LineUnavailableException
+    {
+        DuplexLayer duplexLayer = new DuplexLayer();
+        AudioMorseTransceiver userTransceiver = new AudioMorseTransceiver(800, wpm, Wave.SQUARE);
+        duplexLayer.setTransceiver(userTransceiver);
+        DuplexLayer.FrameListener userListener = new DuplexLayer.FrameListener()
+        {
+            @Override
+            public void onDelivered(char id)
+            {
+                System.out.println("onDelivered:"+name+":"+id);
+            }
+            
+            @Override
+            public void onFailed(char id, int statusCode)
+            {
+                System.out.println("onFailed:"+name+":"+id+" "+statusCode);
+            }
+            
+            @Override
+            public void onReceived(char id, byte[] payload)
+            {
+                System.out.println("onReceived:"+name+":"+id+" "+new String(payload, StandardCharsets.UTF_8));
+            }
+        };
+        
+        duplexLayer.setListener(userListener);
+        duplexLayer.open();
+        
+        for(int i=1;i<10;i++)
+        {
+            char c = (char) ('0'+i);
+            String s = Strings.repeat(c, i);
+            duplexLayer.send('\0', s.getBytes(StandardCharsets.UTF_8));
+        }   
+        for(int i = 0;i<10;i++)
+        {
+            byte[] frame = transceiver.read();
+            byte[] payload =framer.getPayload(frame);
+            String plaintext = new String(payload, StandardCharsets.UTF_8);
+            System.out.println(plaintext);
+        }
+        Utils.parkMillis(2000);
+        duplexLayer.close();
+        
+    }    
 }
-
-

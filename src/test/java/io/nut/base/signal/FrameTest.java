@@ -1,3 +1,23 @@
+/*
+ *  FrameTest.java
+ *
+ *  Copyright (c) 2026 francitoshi@gmail.com
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Report bugs or new features to: francitoshi@gmail.com
+ */
 package io.nut.base.signal;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -10,41 +30,41 @@ import org.junit.jupiter.api.Test;
  */
 public class FrameTest
 {
-    
+    Frame framer = new Frame();
     /**
      * Test of readShort method, of class Framer.
      */
     @Test
     public void testDemo()
     {
-        short  id    = (short) 0x0042;
+        char  id    = (char) 0x0042;
         byte[] data  = "Hello, Framer!".getBytes();
-        byte[] frame = Frame.createData(id, data);
+        byte[] frame = framer.createData('\0', '\0', id, data);
 
         System.out.printf("Frame   (%2d bytes): %s%n", frame.length, toHex(frame));
-        System.out.println("check()            : " + Frame.check(frame));
-        System.out.printf("id()               : 0x%04X%n", Frame.getId(frame) & 0xFFFF);
-        System.out.println("payload()          : " + new String(Frame.getPayload(frame)));
+        System.out.println("check()            : " + framer.check(frame));
+        System.out.printf("id()               : 0x%04X%n", framer.getId(frame) & 0xFFFF);
+        System.out.println("payload()          : " + new String(framer.getPayload(frame)));
 
         // ACK
-        byte[] ack = Frame.createAck(id);
+        byte[] ack = framer.createAck('\0','\0', id);
         System.out.printf("%nACK     (%2d bytes): %s%n", ack.length, toHex(ack));
-        System.out.println("check(ack)         : " + Frame.check(ack));
-        System.out.println("isAck()            : " + Frame.isAck(ack));
-        System.out.printf("referencedId()     : 0x%04X%n", Frame.getId(ack) & 0xFFFF);
+        System.out.println("check(ack)         : " + framer.check(ack));
+        System.out.println("isAck()            : " + framer.isAck(ack));
+        System.out.printf("referencedId()     : 0x%04X%n", framer.getId(ack) & 0xFFFF);
 
         // NACK
-        byte[] nack = Frame.createNack(id, Frame.STATUS_CRC_ERROR);
+        byte[] nack = framer.createNack('\0','\0', id, framer.STATUS_CRC_ERROR);
         System.out.printf("%nNACK    (%2d bytes): %s%n", nack.length, toHex(nack));
-        System.out.println("check(nack)        : " + Frame.check(nack));
-        System.out.println("isNack()           : " + Frame.isNack(nack));
-        System.out.printf("referencedId()     : 0x%04X%n", Frame.getId(nack) & 0xFFFF);
-        System.out.printf("referencedStatus() : 0x%02X%n", Frame.getStatus(nack) & 0xFF);
+        System.out.println("check(nack)        : " + framer.check(nack));
+        System.out.println("isNack()           : " + framer.isNack(nack));
+        System.out.printf("referencedId()     : 0x%04X%n", framer.getId(nack) & 0xFFFF);
+        System.out.printf("referencedStatus() : 0x%02X%n", framer.getStatus(nack) & 0xFF);
 
         // Corrupted frame
         byte[] bad = frame.clone();
         bad[9] ^= 0xFF;
-        System.out.println("\ncheck(corrupted)   : " + Frame.check(bad) + "  (expected -5)");
+        System.out.println("\ncheck(corrupted)   : " + framer.check(bad) + "  (expected -5)");
     }
 
     private static String toHex(byte[] data) 
@@ -60,11 +80,11 @@ public class FrameTest
     @Test
     public void testCreateAck()
     {
-        short id = 0;
-        byte[] ack = Frame.createAck(id);
-        assertFalse(Frame.isData(ack));
-        assertTrue(Frame.isAck(ack));
-        assertFalse(Frame.isNack(ack));
+        char id = 0;
+        byte[] ack = framer.createAck('\0', '\0', id);
+        assertFalse(framer.isData(ack));
+        assertTrue(framer.isAck(ack));
+        assertFalse(framer.isNack(ack));
     }
 
     /**
@@ -73,10 +93,10 @@ public class FrameTest
     @Test
     public void testCreateNack()
     {
-        short id = 0;
-        byte[] ack = Frame.createNack(id, Frame.STATUS_CRC_ERROR);
-        assertFalse(Frame.isData(ack));
-        assertFalse(Frame.isAck(ack));
-        assertTrue(Frame.isNack(ack));
+        char id = 0;
+        byte[] ack = framer.createNack('\0', '\0', id, framer.STATUS_CRC_ERROR);
+        assertFalse(framer.isData(ack));
+        assertFalse(framer.isAck(ack));
+        assertTrue(framer.isNack(ack));
     }
 }

@@ -20,9 +20,11 @@
  */
 package io.nut.base.signal;
 
+import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
@@ -67,13 +69,9 @@ import java.util.logging.Logger;
  * layer.close();
  * }</pre>
  */
-public class DuplexLayer
+public class DuplexLayer implements AutoCloseable
 {
-
-    // ── Frame type constants ─────────────────────────────────────────────────
-    private static final byte TYPE_DATA = Frame.ID_DATA;
-    private static final byte TYPE_ACK  = Frame.ID_ACK;
-    private static final byte TYPE_NACK = Frame.ID_NACK;
+    private final Frame framer = new Frame();
 
     // ── Protocol parameters (tunable) ───────────────────────────────────────
     /**
@@ -97,6 +95,11 @@ public class DuplexLayer
      */
     public static final long ACK_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(ACK_TIMEOUT_MILLIS);
 
+    private char getRandomSrc()
+    {
+        return (char)(ThreadLocalRandom.current().nextInt(0xFFFE) + 1); // [1, 0xFFFF]
+    }
+
     /**
      * Internal wrapper that associates a raw frame with its retransmission
      * state and makes it schedulable via {@link DelayQueue}.
@@ -108,7 +111,7 @@ public class DuplexLayer
          * Frame identifier, extracted from the frame header at construction
          * time.
          */
-        final short id;
+        final char id;
         /**
          * Raw frame bytes, including header and payload.
          */
@@ -129,7 +132,7 @@ public class DuplexLayer
          */
         volatile boolean acked;
 
-        public ExtendedFrame(short id, byte[] frame)
+        public ExtendedFrame(char id, byte[] frame)
         {
             this.id = id;
             this.frame = frame;
@@ -186,7 +189,7 @@ public class DuplexLayer
          * @param id identifier of the delivered frame, as returned by
          * {@link DuplexLayer#send(byte[])}
          */
-        void onDelivered(short id);
+        void onDelivered(char id);
 
         /**
          * Called when frame delivery has permanently failed, either because a
@@ -197,7 +200,7 @@ public class DuplexLayer
          * @param statusCode NACK status code provided by the remote side, or
          * {@code -1} if the failure was caused by a timeout
          */
-        void onFailed(short id, int statusCode);
+        void onFailed(char id, int statusCode);
 
         /**
          * Called when a DATA frame has been received from the remote side. An
@@ -206,14 +209,12 @@ public class DuplexLayer
          * @param id identifier of the received frame
          * @param payload frame payload bytes (not including the frame header)
          */
-        void onReceived(short id, byte[] payload);
+        void onReceived(char id, byte[] payload);
     }
 
     // ── Fields ───────────────────────────────────────────────────────────────
-    /**
-     * Monotonically increasing source for outgoing frame identifiers.
-     */
-    private final AtomicInteger idCounter = new AtomicInteger(0);
+    private volatile char src;
+    private final AtomicInteger idCounter;
 
     /**
      * Set to {@code true} by {@link #close()} to signal both worker threads to
@@ -232,8 +233,11 @@ public class DuplexLayer
     private volatile FrameListener listener;
 
     // ── Constructor ──────────────────────────────────────────────────────────
+
     public DuplexLayer()
     {
+        this.src = getRandomSrc();
+        this.idCounter = new AtomicInteger(0);
     }
 
     // ── Configuration ────────────────────────────────────────────────────────
@@ -265,7 +269,7 @@ public class DuplexLayer
     
     // ── Internal state ───────────────────────────────────────────────────────
     private final DelayQueue<ExtendedFrame> outgoingQueue = new DelayQueue<>();
-    private final ConcurrentHashMap<Short, ExtendedFrame> outgoingMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Character, ExtendedFrame> outgoingMap = new ConcurrentHashMap<>();
 
     /**
      * Outgoing worker: dequeues frames whose retransmission deadline has
@@ -310,20 +314,23 @@ public class DuplexLayer
         {
             for(byte[] frame = transceiver.read(); !terminated; frame = transceiver.read())
             {
-                byte type = Frame.getType(frame);
-                switch (type)
+                byte version = framer.getVersion(frame);
+                if(version!=framer.version)
                 {
-                    case TYPE_DATA:
-                        handleData(frame);
-                        break;
-                    case TYPE_ACK:
-                        handleAck(frame);
-                        break;
-                    case TYPE_NACK:
-                        handleNack(frame);
-                        break;
-                    default:
-                        throw new AssertionError("Unknown frame type: " + type);
+                   continue;
+                }
+                byte flags = framer.getFlags(frame);
+                if(framer.isAck(flags))
+                {
+                    handleAck(frame);
+                }
+                else if(framer.isNack(flags))
+                {
+                    handleNack(frame);
+                }
+                else
+                {
+                    handleData(frame);
                 }
             }
         }
@@ -365,10 +372,11 @@ public class DuplexLayer
      * @return the frame identifier assigned to this transmission, which can be
      * used to correlate subsequent listener callbacks
      */
-    public short send(byte[] payload)
+    public char send(char dst, byte[] payload)
     {
-        short id = (short) this.idCounter.getAndIncrement();
-        write(Frame.createData(id, payload));
+        char id = (char) this.idCounter.getAndIncrement();
+        byte[] frame = framer.createData(this.src, dst, id, payload);
+        write(frame);
         return id;
     }
 
@@ -383,7 +391,7 @@ public class DuplexLayer
      */
     public void write(byte[] frameData)
     {
-        ExtendedFrame ef = new ExtendedFrame(Frame.getId(frameData), frameData);
+        ExtendedFrame ef = new ExtendedFrame(framer.getId(frameData), frameData);
         outgoingMap.put(ef.id, ef);
         outgoingQueue.put(ef);
     }
@@ -396,10 +404,10 @@ public class DuplexLayer
      */
     private void handleData(byte[] frame)
     {
-        short id = Frame.getId(frame);
-        byte[] payload = Frame.getPayload(frame);
+        char id = framer.getId(frame);
+        byte[] payload = framer.getPayload(frame);
         listener.onReceived(id, payload);
-        write(Frame.createAck(id));
+        write(framer.createAck(frame, id));
     }
     
     /**
@@ -412,7 +420,7 @@ public class DuplexLayer
      */
     private void handleAck(byte[] frame)
     {
-        short id = Frame.getId(frame);
+        char id = framer.getId(frame);
         ExtendedFrame ef = outgoingMap.getOrDefault(id, null);
         if(ef!=null)
         {
@@ -439,8 +447,8 @@ public class DuplexLayer
      */
     private void handleNack(byte[] frame)
     {
-        short id = Frame.getId(frame);
-        short status = Frame.getStatus(frame);
+        char id = framer.getId(frame);
+        char status = framer.getStatus(frame);
         ExtendedFrame ef = outgoingMap.getOrDefault(id, null);
         if(ef!=null)
         {

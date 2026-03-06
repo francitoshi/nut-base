@@ -27,7 +27,6 @@ import static io.nut.base.audio.Audio.OVERLAP;
 import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
 import io.nut.base.encoding.Encoding;
-import static io.nut.base.encoding.Encoding.Type.Base32;
 import io.nut.base.math.Nums;
 import io.nut.base.signal.Frame;
 import io.nut.base.signal.Morse;
@@ -213,17 +212,17 @@ public class AudioMorseTest
             wav.delete();
         }
     }
-
+    static final Frame framer = new Frame();
     @Test
-    //@Disabled("this test is only to test manually beacuse it will produce noise")
+    @Disabled("this test is only to test manually beacuse it will produce noise")
     public void testFindMaxSpeed() throws UnsupportedAudioFileException, IOException, LineUnavailableException, InterruptedException, BrokenBarrierException
     {
         Wave[] cleanWaves = { SQUARE, SINE};//, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
-        int hz = 4000;
+        int hz = 3333;
 //        String plaintext = PANGRAM;
-        String plaintext = "01234 56789 "+QUIJOTE;
+        String plaintext = PANGRAM+" 01234 56789 "+QUIJOTE;
 
-        byte[] frame = Frame.createData((short)1, plaintext.getBytes(StandardCharsets.UTF_8));
+        byte[] frame = framer.createData('\0', '\0', (char)1, plaintext.getBytes(StandardCharsets.UTF_8));
         plaintext = "<CT> "+Encoding.BASE32.encode(frame)+" <SK>";
         
         final AudioSynthesizer audioModem = new AudioSynthesizer(Audio.getLineOut(Audio.PCM_CD_MONO));

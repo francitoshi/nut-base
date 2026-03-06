@@ -154,10 +154,12 @@ public class Digest
      */
     public byte[] digestTwice(byte[] bytes, int offset, int length) 
     {
-        MessageDigest digest = get();
-        digest.update(bytes, offset, length);
-        digest.update(digest.digest()); // Hash the first hash
-        return digest.digest();
+        MessageDigest first = get();
+        first.update(bytes, offset, length);
+        byte[] firstHash = first.digest();
+        //use a clean instance to prevent bad implementations that do not reset
+        MessageDigest second = get();
+        return second.digest(firstHash);
     }
     
     /**

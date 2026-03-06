@@ -36,6 +36,10 @@ package io.nut.base.signal;
  */
 public interface Transceiver
 {
+    Transceiver open();
+
+    void close();
+    
     /**
      * Transmits a frame over the channel.
      *
@@ -43,10 +47,10 @@ public interface Transceiver
      * underlying transport. It does not need to wait for acknowledgement from
      * the remote side; that responsibility belongs to {@link DuplexLayer}.
      *
-     * @param frameData complete frame bytes to transmit, including any header;
+     * @param frame complete frame bytes to transmit, including any header;
      *                  must not be {@code null} or empty
      */
-    void write(byte[] frameData);
+    void write(byte[] frame);
 
     /**
      * Receives the next frame from the channel.
