@@ -1,7 +1,7 @@
 /*
  *  ExponentialMovingAverage.java
  *
- *  Copyright (c) 2024-2025 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@ package io.nut.base.stats;
 
 public class ExponentialMovingAverage extends MovingAverage 
 {
-    private int count;
+    private long count;
     private final double alpha;  // The smoothing factor
     private final double oneMinusAlpha;
     private double ema;          // Stores the current EMA value

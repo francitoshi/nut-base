@@ -1066,6 +1066,32 @@ public abstract class Utils
         return queue;
     }
     
+    public static int crc16(byte[] bytes, int off, int len)
+    {
+        int crc = 0xFFFF;
+        for (int i = off; i < off + len; i++)
+        {
+            crc ^= (bytes[i] & 0xFF) << 8;
+            for (int j = 0; j < 8; j++)
+            {
+                if ((crc & 0x8000) != 0)
+                {
+                    crc = (crc << 1) ^ 0x1021;
+                }
+                else
+                {
+                    crc <<= 1;
+                }
+            }
+            crc &= 0xFFFF;
+        }
+        return crc;
+    }
+    public static int crc16(byte[] bytes)
+    {
+        return crc16(bytes, 0, bytes.length);
+    }
+    
     public static long adler32(byte[] bytes, int off, int len)
     {
         Adler32 adler32 = new Adler32();

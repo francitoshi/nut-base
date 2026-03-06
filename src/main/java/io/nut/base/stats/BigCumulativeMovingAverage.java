@@ -1,7 +1,7 @@
 /*
- *  CumulativeMovingAverage.java
+ *  BigCumulativeMovingAverage.java
  *
- *  Copyright (c) 2024-2025 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,7 +25,7 @@ import java.math.RoundingMode;
 
 public class BigCumulativeMovingAverage extends BigMovingAverage
 {
-    private int count;
+    private long count;
     private final int scale;
     private final RoundingMode roundingMode;
     private BigDecimal sum;

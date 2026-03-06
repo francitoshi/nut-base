@@ -22,7 +22,7 @@ package io.nut.base.stats;
 
 public class CumulativeMovingAverage extends MovingAverage
 {
-    private int count;
+    private long count;
     private double cma;
     
     public CumulativeMovingAverage()

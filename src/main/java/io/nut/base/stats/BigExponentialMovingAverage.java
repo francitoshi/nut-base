@@ -1,7 +1,7 @@
 /*
- *  ExponentialMovingAverage.java
+ *  BigExponentialMovingAverage.java
  *
- *  Copyright (c) 2024-2025 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ import java.math.RoundingMode;
 public class BigExponentialMovingAverage extends BigMovingAverage 
 {
     private static final BigDecimal TWO = BigDecimal.valueOf(2);
-    private int count;
+    private long count;
     private final BigDecimal alpha;  // The smoothing factor
     private final BigDecimal oneMinusAlpha;
     private BigDecimal ema;          // Stores the current EMA value

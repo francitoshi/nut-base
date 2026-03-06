@@ -1,7 +1,7 @@
 /*
  * UtilsTest.java
  *
- * Copyright (c) 2023-2025 francitoshi@gmail.com
+ * Copyright (c) 2023-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -2900,4 +2900,37 @@ public class UtilsTest
 
         assertEquals("Result", result);
     }
+
+    /**
+     * Test of crc16 method, of class Utils.
+     */
+    @Test
+    public void testCrc16_3args()
+    {
+        byte[] bytes123456789 = "123456789".getBytes();
+        assertEquals(0x29B1, Utils.crc16(bytes123456789, 0, bytes123456789.length));
+        
+        byte[] bytes0x00 = {0x00};
+        assertEquals(0xE1F0, Utils.crc16(bytes0x00, 0, bytes0x00.length));
+        
+        byte[] bytes0 = {};
+        assertEquals(0xFFFF, Utils.crc16(bytes0, 0, bytes0.length));
+    }
+
+    /**
+     * Test of crc16 method, of class Utils.
+     */
+    @Test
+    public void testCrc16_byteArr()
+    {
+        byte[] bytes123456789 = "123456789".getBytes();
+        assertEquals(0x29B1, Utils.crc16(bytes123456789));
+        
+        byte[] bytes0x00 = {0x00};
+        assertEquals(0xE1F0, Utils.crc16(bytes0x00));
+        
+        byte[] bytes0 = {};
+        assertEquals(0xFFFF, Utils.crc16(bytes0));
+    }
+
 }
