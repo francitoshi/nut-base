@@ -285,6 +285,9 @@ public class AtomicDouble extends Number
     
     public int compareTo(AtomicDouble other)
     {
-        return Double.compare(this.value, other.value);
+        synchronized(lock)
+        {
+            return Double.compare(this.value, other.value);
+        }
     }
 }
