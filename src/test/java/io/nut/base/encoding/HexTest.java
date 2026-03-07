@@ -1,7 +1,7 @@
 /*
  *  HexTest.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,11 +20,9 @@
  */
 package io.nut.base.encoding;
 
+import io.nut.base.profile.Profiler;
+import io.nut.base.time.JavaTime;
 import java.security.NoSuchAlgorithmException;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,30 +33,6 @@ import static org.junit.jupiter.api.Assertions.*;
 public class HexTest
 {
     
-    public HexTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
     static final byte[] DATA1 = {0x00,0x01,0x12,0x23,0x34,0x45,0x56,0x67,0x78,0x0a,0x0b,0x1c,0x2d,0x3e,0x4f};
     static final byte[] DATA2 = {0,1,1,2,3,5,8,0xD,0x15,0x22,0x37,0x59,0x1a,0x2b,0x3c,0x4d,0x5e,0x6f};
     /**
@@ -95,5 +69,4 @@ public class HexTest
         assertArrayEquals(DATA2, Hex.decode("000101020305080d152237591a2b3c4d5e6f"));
         assertArrayEquals(DATA2, Hex.decode("000101020305080D152237591A2B3C4D5E6F"));
     }
-    
 }

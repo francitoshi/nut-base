@@ -20,17 +20,31 @@
  */
 package io.nut.base.encoding;
 
-/**
- *
- * @author franci
- */
+import java.util.Arrays;
+
 public class Hex
 {
-    //the fast and simple, borrowed from
-    //http://stackoverflow.com/questions/9655181/how-to-convert-a-byte-array-to-a-hex-string-in-java/9855338#9855338
     private static final String HEX = "0123456789ABCDEF";
     private static final char[] hexLower = HEX.toLowerCase().toCharArray();
     private static final char[] hexUpper = HEX.toUpperCase().toCharArray();
+
+    // lookup table: 
+    //      index = ASCII code of the hex character
+    //      value = its digit (0-15)
+    //      -1 if invalid
+    private static final int[] DECODE = new int[256];
+    static
+    {
+        Arrays.fill(DECODE, -1);
+        for (int i = 0; i < 10; i++)
+        {
+            DECODE['0' + i] = i;
+        }
+        for (int i = 0; i < 6; i++)
+        {
+            DECODE['a' + i] = DECODE['A' + i] = 10 + i;
+        }
+    }
 
     public static String encode(byte[] bytes, boolean upperCase)
     {
@@ -50,17 +64,22 @@ public class Hex
         return encode(bytes, false);
     }
 
-    //the fast and simple, borrowed from
-    //https://stackoverflow.com/questions/140131/convert-a-string-representation-of-a-hex-dump-to-a-byte-array-using-java/140861#140861
     public static byte[] decode(String s)
     {
         int len = s.length();
         byte[] data = new byte[len / 2];
         for (int i = 0; i < len; i += 2)
         {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4) + Character.digit(s.charAt(i + 1), 16));
+            char s_i = s.charAt(i);
+            char s_i_1 = s.charAt(i + 1);
+            int hi = s_i   < 256 ? DECODE[s_i]   : -1;
+            int lo = s_i_1 < 256 ? DECODE[s_i_1] : -1;
+            if (hi < 0 || lo < 0)
+            {
+                throw new IllegalArgumentException("Invalid hex character at index " + i);
+            }
+            data[i / 2] = (byte) ((hi << 4) | lo);
         }
         return data;
     }
-    
 }
