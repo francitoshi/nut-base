@@ -41,36 +41,26 @@ class QueueLooperTest
     @Test
     void constructor_throwsWhenThreadsIsZero()
     {
-        assertThrows(IllegalArgumentException.class, ()
-                -> new QueueLooper<>(new LinkedBlockingQueue<>(), () ->
-                {
-                }, 0));
+        assertThrows(IllegalArgumentException.class, ()-> new QueueLooper<>(new LinkedBlockingQueue<>(), ()->{}, 0));
     }
 
     @Test
     void constructor_throwsWhenThreadsIsNegative()
     {
-        assertThrows(IllegalArgumentException.class, ()
-                -> new QueueLooper<>(new LinkedBlockingQueue<>(), () ->
-                {
-                }, -1));
+        assertThrows(IllegalArgumentException.class, ()-> new QueueLooper<>(new LinkedBlockingQueue<>(), ()->{}, -1));
     }
 
     @Test
     void constructor_acceptsOneThread()
     {
-        assertDoesNotThrow(() -> new QueueLooper<>(new LinkedBlockingQueue<>(), () ->
-        {
-        }, 1));
+        assertDoesNotThrow(() -> new QueueLooper<>(new LinkedBlockingQueue<>(), () ->{}, 1));
     }
 
     @Test
     void constructor_defaultIsOneThread()
     {
         // Should not throw and behave as single-thread mode
-        assertDoesNotThrow(() -> new QueueLooper<>(new LinkedBlockingQueue<>(), () ->
-        {
-        }));
+        assertDoesNotThrow(() -> new QueueLooper<>(new LinkedBlockingQueue<>(), () ->{}));
     }
 
     // -----------------------------------------------------------------------

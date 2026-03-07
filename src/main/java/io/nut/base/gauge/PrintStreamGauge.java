@@ -1,7 +1,7 @@
 /*
- *  ConsoleGaugeView.java
+ *  PrintStreamGauge.java
  *
- *  Copyright (C) 2012-2025 francitoshi@gmail.com
+ *  Copyright (C) 2012-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,10 +24,6 @@ package io.nut.base.gauge;
 import io.nut.base.io.ansi.Ansi;
 import java.io.PrintStream;
 
-/**
- *
- * @author franci
- */
 public class PrintStreamGauge extends AbstractGauge
 {
     private boolean debug = false;
@@ -64,6 +60,7 @@ public class PrintStreamGauge extends AbstractGauge
         "%1$s + %2$s",      //420   6
         "%1$s + %2$s = %3$s"//421   7
     };
+    @Override
     public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
     {
         StringBuilder txt = new StringBuilder("\r");

@@ -1,7 +1,7 @@
 /*
  *  Wiper.java
  *
- *  Copyright (C) 2025 francitoshi@gmail.com
+ *  Copyright (C) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -102,6 +102,10 @@ public abstract class Wiper
      */
     public static boolean wipeSecretKey(SecretKey key)
     {
+        if(key==null)
+        {
+            throw new NullPointerException("key must not be null");
+        }
         // Handle SecretKeySpec specifically for a more reliable wipe
         if (key instanceof SecretKeySpec)
         {

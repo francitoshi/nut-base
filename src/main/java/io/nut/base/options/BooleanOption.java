@@ -1,7 +1,7 @@
 /*
  *  BooleanOption.java
  *
- *  Copyright (C) 2009-2024 francitoshi@gmail.com
+ *  Copyright (C) 2009-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,10 +22,6 @@ package io.nut.base.options;
 
 import java.text.MessageFormat;
 
-/**
- *
- * @author franci
- */
 public class BooleanOption implements Option
 {
     private final boolean command;
@@ -111,6 +107,7 @@ public class BooleanOption implements Option
         return lastUsed;
     }
 
+    @Override
     public int parseLong(int index, String[] args)
     {
         String option = args[index];

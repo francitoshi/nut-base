@@ -1,7 +1,7 @@
 /*
  * DebugGauge.java
  *
- * Copyright (c) 2012-2025  francitoshi@gmail.com
+ * Copyright (c) 2012-2026 francitoshi@gmail.com
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -87,6 +87,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         return new DebugGauge(gauge);
     }
 
+    @Override
     public void start()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -96,6 +97,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.start();
     }
 
+    @Override
     public void start(int max)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -104,6 +106,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         }
         gp.start(max);
     }
+    @Override
     public void start(int max, String prefix)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -113,6 +116,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.start(max, prefix);
     }
 
+    @Override
     public void close()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -122,6 +126,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.close();
     }
 
+    @Override
     public void setPrefix(String prefix)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -131,6 +136,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.setPrefix(prefix);
     }
 
+    @Override
     public String getPrefix()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -140,6 +146,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         return gp.getPrefix();
     }
 
+    @Override
     public double getDone()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -149,6 +156,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         return gp.getDone();
     }
 
+    @Override
     public int getVal()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -158,6 +166,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         return gp.getVal();
     }
 
+    @Override
     public int getMax()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -167,6 +176,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         return gp.getMax();
     }
 
+    @Override
     public void setVal(int n)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -176,6 +186,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.setVal(n);
     }
 
+    @Override
     public void setMax(int n)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -185,6 +196,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.setMax(n);
     }
 
+    @Override
     public void step()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -193,6 +205,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         }
         gp.step();
     }
+    @Override
     public void step(int n)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -202,6 +215,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.step(n);
     }
 
+    @Override
     public void setShow(boolean showPrev, boolean showNext, boolean showFull)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -211,6 +225,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gp.setShow(showPrev, showNext, showFull);
     }
 
+    @Override
     public boolean isStarted()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -219,6 +234,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         }
         return gp.isStarted();
     }
+    @Override
     public boolean isPaused()
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -227,6 +243,7 @@ public class DebugGauge implements GaugeProgress, GaugeView
         }
         return gp.isPaused();
     }
+    @Override
     public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
     {
         if(logger.isLoggable(Level.CONFIG))
@@ -236,11 +253,13 @@ public class DebugGauge implements GaugeProgress, GaugeView
         gv.paint(started, max, val, done, prefix, prev, next, full);
     }
 
+    @Override
     public void pause()
     {
         gp.pause();
     }
 
+    @Override
     public void resume()
     {
         gp.resume();

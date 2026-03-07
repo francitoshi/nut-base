@@ -1,7 +1,7 @@
 /*
  * AbstractGaugeTest.java
  *
- * Copyright (c) 2015-2025 francitoshi@gmail.com
+ * Copyright (c) 2015-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,10 +28,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- *
- * @author franci
- */
 public class AbstractGaugeTest
 {
     
@@ -128,6 +124,7 @@ public class AbstractGaugeTest
         String prefix="";
         double done=0;
         String msg="";
+        @Override
         public void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full)
         {
             this.started = started;

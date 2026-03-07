@@ -1,7 +1,7 @@
 /*
  *  DoubleExponentialMovingAverageTest.java
  *
- *  Copyright (c) 2024-2025 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -86,14 +86,8 @@ class DoubleExponentialMovingAverageTest
     void testInvalidConstruction()
     {
         // Verifica que la validación del periodo se propaga correctamente
-        assertThrows(IllegalArgumentException.class, () ->
-        {
-            new DoubleExponentialMovingAverage(0);
-        });
+        assertThrows(IllegalArgumentException.class, () -> { new DoubleExponentialMovingAverage(0); });
 
-        assertThrows(IllegalArgumentException.class, () ->
-        {
-            new DoubleExponentialMovingAverage(-5);
-        });
+        assertThrows(IllegalArgumentException.class, () -> { new DoubleExponentialMovingAverage(-5); });
     }
 }

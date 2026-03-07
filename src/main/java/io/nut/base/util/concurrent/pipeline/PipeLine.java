@@ -1,7 +1,7 @@
 /*
  *  PipeLine.java
  *
- *  Copyright (C) 2009-2023 francitoshi@gmail.com
+ *  Copyright (C) 2009-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,10 +26,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- *
- * @author franci
- */
 public class PipeLine<M,R> implements Pipe<M,R>, Filter<M,R>, Runnable
 {
     final private boolean needFlush;
@@ -244,6 +240,7 @@ public class PipeLine<M,R> implements Pipe<M,R>, Filter<M,R>, Runnable
         return keep;
     }
 
+    @Override
     public int size()
     {
         return last.size();

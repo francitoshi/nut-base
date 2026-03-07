@@ -1,7 +1,7 @@
 /*
  *  CounterSet.java
  *
- *  Copyright (c) 2012-2025 francitoshi@gmail.com
+ *  Copyright (c) 2012-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -217,6 +217,7 @@ public class CounterSet<E> implements Set<E>
         return true;
     }
 
+    @Override
     public boolean retainAll(Collection<?> c)
     {
         boolean ret=false;
@@ -244,6 +245,7 @@ public class CounterSet<E> implements Set<E>
         return ret;
     }
 
+    @Override
     public void clear()
     {
         count=0;

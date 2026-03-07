@@ -20,8 +20,6 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.profile.Profiler;
-import io.nut.base.time.JavaTime;
 import java.security.NoSuchAlgorithmException;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

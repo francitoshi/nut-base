@@ -355,6 +355,7 @@ public class DuplexLayer implements AutoCloseable
      * Already-queued frames will not be retransmitted after this call. This
      * method returns immediately without waiting for threads to terminate.
      */
+    @Override
     public void close()
     {
         this.terminated = true;

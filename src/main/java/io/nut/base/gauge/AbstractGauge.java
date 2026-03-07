@@ -1,7 +1,7 @@
 /*
  *  AbstractGauge.java
  *
- *  Copyright (c) 2012-2025 francitoshi@gmail.com
+ *  Copyright (c) 2012-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -96,6 +96,7 @@ public abstract class AbstractGauge implements Gauge
     {
         return started;
     }
+    @Override
     public boolean isPaused()
     {
         return paused;

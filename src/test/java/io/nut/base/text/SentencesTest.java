@@ -1,7 +1,7 @@
 /*
  * SentencesTest.java
  *
- * Copyright (c) 2013-2025 francitoshi@gmail.com
+ * Copyright (c) 2013-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,10 +28,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- *
- * @author franci
- */
 public class SentencesTest
 {
     static final String[][][] samples =
@@ -206,10 +202,12 @@ public class SentencesTest
 
     static class SpanishBeforeCristFilter implements StringFilter
     {
+        @Override
         public String filter(String s)
         {
             return filter(s, new Locale(""));
         }
+        @Override
         public String filter(String s, Locale locale)
         {
             return s.replace("a. C.","antes de Cristo");
