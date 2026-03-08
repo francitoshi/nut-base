@@ -70,7 +70,7 @@ public class Schnorr extends Sign
         byte[] t = Utils.xor(asBytes(secKey), taggedHash("BIP0340/aux", asBytes(auxRand)));
         //t = xor_bytes(bytes_from_int(d), tagged_hash("BIP0340/aux", aux_rand))
         //k0 = int_from_bytes(tagged_hash("BIP0340/nonce", t + bytes_from_point(P) + msg)) % n
-        BigInteger k0 = Utils.asBigInteger(taggedHash("BIP0340/nonce", Joins.join(t, pxBytes, msgBytes)));
+        BigInteger k0 = Utils.asBigInteger(taggedHash("BIP0340/nonce", Joins.join(t, pxBytes, msgBytes))).mod(curve.n);
         if(k0.compareTo(BigInteger.ZERO) == 0)    
         {
             throw new ArithmeticException("Failure. This happens only with negligible probability.");
