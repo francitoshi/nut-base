@@ -20,8 +20,8 @@
  */
 package io.nut.base.stats;
 
+import java.util.ArrayDeque;
 import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
 
 public class SimpleMovingAverage extends MovingAverage 
 {
@@ -39,7 +39,7 @@ public class SimpleMovingAverage extends MovingAverage
             throw new IllegalArgumentException("period must be positive, but was: " + period);
         }
         this.period = period;
-        this.queue = new ArrayBlockingQueue<>(period);
+        this.queue = new ArrayDeque<>(period);
     }
 
     @Override
