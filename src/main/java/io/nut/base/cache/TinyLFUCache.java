@@ -334,7 +334,8 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
             int hash = key.hashCode();
             for (int i = 0; i < depth; i++)
             {
-                int index = Math.abs((hash + i) % width);
+                //the following line was sugested by Claude Sonnect 4.6
+                int index = Math.abs((hash ^ (hash >>> 16) * (i + 1)) & (width - 1));
                 counters[i][index] = Math.min(15, counters[i][index] + 1);
             }
         }
