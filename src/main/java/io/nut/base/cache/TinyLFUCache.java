@@ -1,7 +1,7 @@
 /*
  *  TinyLFUCache.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -161,7 +161,14 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         LRUCache(int capacity)
         {
             this.capacity = capacity;
-            this.map = new LinkedHashMap<>(capacity, 0.75f, true);
+            this.map = new LinkedHashMap<K,V>(capacity, 0.75f, true)
+            {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<K, V> eldest)
+                {
+                    return size() > capacity;
+                }
+            };
         }
 
         V get(K key)
