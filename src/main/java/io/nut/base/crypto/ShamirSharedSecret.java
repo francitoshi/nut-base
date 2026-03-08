@@ -1,7 +1,7 @@
 /*
  *  ShamirSharedSecret.java
  *
- *  Copyright (C) 2018-2024 francitoshi@gmail.com
+ *  Copyright (C) 2018-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -49,23 +49,18 @@ public class ShamirSharedSecret
         return scheme.split(secret);
     }
     
-    private static final Comparator<byte[]> compareByteArrays = new Comparator<byte[]>()
+    private static final Comparator<byte[]> COMPARE_BYTE_ARRAYS = (a,b) ->
     {
-        @Override
-        public int compare(byte[] a, byte[] b)
+        int len = Math.min(a.length, b.length);
+        for (int i = 0; i < len; i++)
         {
-            int min = Math.min(a.length,b.length);
-            int cmp = 0;
-            for(int i=0;i<min && cmp==0;i++)
+            int c = Byte.compare(a[i], b[i]);
+            if (c != 0)
             {
-                cmp = Byte.compare(a[i], b[i]);
+                return c;
             }
-            if(cmp==0)
-            {
-                cmp = Integer.compare(a.length, b.length);
-            }
-            return cmp;
         }
+        return Integer.compare(a.length, b.length);
     };
 
     public byte[] join(byte[][] parts)
@@ -78,11 +73,11 @@ public class ShamirSharedSecret
     {
         parts = parts.clone();
         ArrayList<byte[]> sorted = new ArrayList<>();
-        Arrays.sort(parts, compareByteArrays);
+        Arrays.sort(parts, COMPARE_BYTE_ARRAYS);
         sorted.add(parts[0]);
         for(int i=1;i<parts.length;i++)
         {
-            if(compareByteArrays.compare(parts[i-1], parts[i])<0)
+            if(COMPARE_BYTE_ARRAYS.compare(parts[i-1], parts[i])<0)
             {
                 sorted.add(parts[i]);
             }
