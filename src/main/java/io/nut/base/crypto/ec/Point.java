@@ -1,7 +1,7 @@
 /*
  *  Point.java
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ *  Copyright (C) 2023-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@ import java.util.Objects;
 
 public class Point
 {
-    public static Point INFINITY_POINT = new Point(null, (BigInteger) null, (BigInteger) null);
+    public static final Point INFINITY_POINT = new Point(null, (BigInteger) null, (BigInteger) null);
 
     public final Curve curve;
     public final BigInteger x;
@@ -52,7 +52,6 @@ public class Point
     public boolean hasEvenY()
     {
         return Nums.isEven(this.y);
-        //666 return this.y.mod(BigInteger.TWO).compareTo(BigInteger.ZERO) == 0;
     }
 
 
