@@ -219,14 +219,6 @@ public abstract class Curve
             buffer.get(xbytes.length,ybytes);
             return new Point(this, xbytes, ybytes);
         }
-        if(pubKey.length==this.bytes*2)
-        {
-            byte[] xbytes = new byte[pubKey.length/2];
-            byte[] ybytes = new byte[pubKey.length/2];
-            buffer.get(0, xbytes);
-            buffer.get(xbytes.length,ybytes);
-            return new Point(this, xbytes, ybytes);
-        }
         if(pubKey.length==this.bytes)
         {
             return this.liftX(pubKey);

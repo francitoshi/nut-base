@@ -1,7 +1,7 @@
 /*
  *  Schnorr.java
  *
- *  Copyright (C) 2023-2025 francitoshi@gmail.com
+ *  Copyright (C) 2023-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -116,10 +116,14 @@ public class Schnorr extends Sign
         BigInteger secKeyNum = Utils.asBigInteger(secKey);
 
         BigInteger[] rs=null;
-        for(int i=0;rs==null;i++)
+        for(int i=0;i < Integer.MAX_VALUE && rs==null;i++)
         {
             BigInteger k = Utils.asBigInteger( i==0 ? auxRand : (auxRand=SHA256.digest(auxRand)));
             rs = sign(msgNum, secKeyNum, k);
+        }
+        if(rs == null)
+        {
+            throw new IllegalStateException("sign failed after retries");
         }
         byte[] r = asBytes(rs[0]);
         byte[] s = asBytes(rs[1]);
