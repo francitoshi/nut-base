@@ -1,7 +1,7 @@
 /*
  *  ActorPool.java
  *
- *  Copyright (C) 2009-2023 francitoshi@gmail.com
+ *  Copyright (C) 2009-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 public class ActorPool implements Executor
 {
     public final static int CORES = Runtime.getRuntime().availableProcessors();
-    private static int keepAliveTime = 333;
+    private static volatile int keepAliveTime = 333;
     private static volatile int defaultPoolSize = CORES*2+CORES+CORES/2;
 
     private final BlockingQueue<Runnable> inbox;
