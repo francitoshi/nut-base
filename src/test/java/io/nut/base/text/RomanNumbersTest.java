@@ -44,6 +44,7 @@ public class RomanNumbersTest
         assertFalse(instance.isValid("VL"));
         assertFalse(instance.isValid("DCCCC"));
         assertFalse(instance.isValid("CCCCXXXXIIII"));
+        assertFalse(instance.isValid("XXXX"));
         
         assertTrue(instance.isValid("XLV"));
         assertTrue(instance.isValid("CCCXXXIII"));

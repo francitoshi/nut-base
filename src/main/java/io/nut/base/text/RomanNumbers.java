@@ -101,7 +101,7 @@ public class RomanNumbers
         new Rule("LL",-1),
         new Rule("L",50),
         new Rule("XL",40),
-        new Rule("XXXX",10),
+        new Rule("XXXX",-1),
         new Rule("X",10),
         new Rule("IX",9),
         new Rule("V",5),
