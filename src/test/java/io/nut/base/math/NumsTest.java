@@ -64,6 +64,7 @@ import static io.nut.base.math.Nums.BIG_INT_ZETTA;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.MathContext;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -71,6 +72,8 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
+import java.util.List;
+import java.util.Random;
 import javax.crypto.NoSuchPaddingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
@@ -1363,6 +1366,16 @@ public class NumsTest
 
         assertTrue(Nums.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.1), BigDecimal.valueOf(0.01)));
         assertFalse(Nums.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.2), BigDecimal.valueOf(0.01)));
+    }
+
+    /**
+     * Test of avg method, of class Nums.
+     */
+    @Test
+    public void testAvg_3args()
+    {
+        BigDecimal result = Nums.avg(BigDecimal.TEN, MathContext.DECIMAL128, BigDecimal.ONE, BigDecimal.TEN);
+        assertEquals(BigDecimal.valueOf(5.5), result);
     }
     
 }

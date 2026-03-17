@@ -244,12 +244,12 @@ public class Nums
         {
             if (v != null)
             {
-                ret.add(v);
+                ret = ret.add(v);
                 count++;
             }
             else if (defaultValue != null && defaultValue != BigDecimal.ZERO)
             {
-                ret.add(defaultValue);
+                ret = ret.add(defaultValue);
                 count++;
             }
         }
