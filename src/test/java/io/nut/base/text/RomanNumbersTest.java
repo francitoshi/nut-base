@@ -1,7 +1,7 @@
 /*
  *  RomanNumbersTest.java
  *
- *  Copyright (C) 2014-2024 francitoshi@gmail.com
+ *  Copyright (C) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,6 @@
  */
 package io.nut.base.text;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -33,30 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class RomanNumbersTest
 {
-    
-    public RomanNumbersTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
+    static final int ROMAN_LIMIT = 4000;
 
     /**
      * Test of isValid method, of class RomanNumbers.
@@ -76,7 +49,7 @@ public class RomanNumbersTest
         assertTrue(instance.isValid("CCCXXXIII"));
         assertTrue(instance.isValid("CDXLIV"));
                 
-        for(int i=1;i<4000;i++)
+        for(int i=1;i<ROMAN_LIMIT;i++)
         {
             String s = instance.format(i);
             assertTrue(instance.isValid(s), s);
@@ -87,6 +60,8 @@ public class RomanNumbersTest
         
         instance = new RomanNumbers(false, true);
         assertFalse(instance.isValid("iii"));
+        
+        assertTrue(instance.isValid("IIII"));
     }
 
     /**
@@ -139,7 +114,7 @@ public class RomanNumbersTest
         assertEquals("XL", instance.format(40));
         assertEquals("XLV", instance.format(45));
         assertEquals("CD", instance.format(400));
-        assertEquals("MDCCCLXX", instance.format(1970));
+        assertEquals("MCMLXX", instance.format(1970));
     }
 
     /**

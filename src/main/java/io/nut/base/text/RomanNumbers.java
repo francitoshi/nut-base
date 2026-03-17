@@ -1,7 +1,7 @@
 /*
  *  RomanNumbers.java
  *
- *  Copyright (C) 2014-2025 francitoshi@gmail.com
+ *  Copyright (C) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -68,7 +68,7 @@ public class RomanNumbers
         }
         s = ignoreCase  ? s.toUpperCase() : s;
         
-        if(!clock4 && s.equals("IIII"))
+        if(clock4 && s.equals("IIII"))
         {
             return true;
         }
