@@ -1,7 +1,7 @@
 /*
  *  Exec.java
  *
- *  Copyright (c) 2024 francitoshi@gmail.com
+ *  Copyright (c) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.os.OSName;
+import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,4 +57,33 @@ public class Exec
             return null;
         }
     }
+    
+    /**
+     * Check whether {@code name} is available as an executable on the system PATH.
+     *
+     * @param name binary name without extension (e.g. {@code "tor"})
+     * @return {@code true} if found and executable
+     */
+    public static boolean isBinaryOnPath(String name) 
+    {
+        if(name==null || name.isEmpty())
+        {
+            return false;
+        }
+        String pathEnv = System.getenv("PATH");
+        if (pathEnv == null)
+        {
+            return false;
+        }
+        String suffix = OSName.getInstance().isWindows() ? ".exe" : "";
+        for (String dir : pathEnv.split(File.pathSeparator))
+        {
+            if(new File(dir, name + suffix).canExecute())
+            {
+                return true;
+            }
+        }
+        return false;
+    }    
+    
 }

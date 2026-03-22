@@ -1,7 +1,7 @@
 /*
  *  Beep.java
  *
- *  Copyright (c) 2022-2024 francitoshi@gmail.com
+ *  Copyright (c) 2022-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 public class Beep
 {
     private static final String BEEP = "beep";
-    private static final Shell shellUtils = Shell.getInstance(OSName.os);
+    private static final Shell shellUtils = Shell.getInstance(OSName.getInstance());
 
     public static void beep()
     {

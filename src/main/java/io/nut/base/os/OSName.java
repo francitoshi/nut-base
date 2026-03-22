@@ -1,7 +1,7 @@
 /*
  *  OSName.java
  *
- *  Copyright (C) 2009-2024 francitoshi@gmail.com
+ *  Copyright (C) 2009-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
  *
  */
 package io.nut.base.os;
+
+import io.nut.base.util.Java;
 
 /**
  *
@@ -74,7 +76,11 @@ public class OSName
     
     private String name_version_arch=null;//use bening race condition for performance
 
-    public static final OSName os = new OSName(System.getProperty(OSName.OS_NAME),System.getProperty(OSName.OS_VERSION), System.getProperty(OSName.OS_ARCH));
+    private enum Holder
+    {
+        INSTANCE;
+        public final OSName os = new OSName(Java.OS_NAME,Java.OS_VERSION, Java.OS_ARCH);
+    }
 
     private static boolean android()
     {
@@ -218,7 +224,7 @@ public class OSName
 
     public static OSName getInstance()
     {
-        return os;
+        return Holder.INSTANCE.os;
     }
 
     public static OSName getInstance(String osName)

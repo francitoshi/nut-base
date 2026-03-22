@@ -127,7 +127,7 @@ public abstract class Shell
         return new PosixShell();
     }
 
-    public final static Shell sh = getInstance(OSName.os);
+    public final static Shell sh = getInstance(OSName.getInstance());
 
     public abstract boolean isRootPossible();
 
