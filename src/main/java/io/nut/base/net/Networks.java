@@ -1,7 +1,7 @@
 /*
  * Networks.java
  *
- * Copyright (c) 2011-2025 francitoshi@gmail.com
+ * Copyright (c) 2011-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.net.Proxy;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
@@ -171,6 +172,23 @@ public class Networks
         return ip!=null ? ipv6(ip.getAddress()) : null;
     }
     
+    /**
+     * Find a free local TCP port. Used by managed-mode factory methods.
+     *
+     * @return a free port number, or 19050 as an unlikely-to-conflict fallback
+     */
+    public static int findFreePort(int defaultPort)
+    {
+        try (ServerSocket s = new ServerSocket(0))
+        {
+            s.setReuseAddress(true);
+            return s.getLocalPort();
+        }
+        catch (IOException e)
+        {
+            return defaultPort;
+        }
+    }
     
     
 }

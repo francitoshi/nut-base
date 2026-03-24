@@ -5,7 +5,7 @@ plugins
 }
 
 group = 'com.github.francitoshi'
-version = '0.1.58'
+version = '0.1.59'
 //remember to execute 'git tag -a x.x.x -m "Version x.x.x"'
 
 repositories 
@@ -29,7 +29,11 @@ dependencies
 
     testImplementation 'org.apache.commons:commons-csv:1.14.0'
     testImplementation 'ch.obermuhlner:big-math:2.3.2'
-    testImplementation 'org.mapdb:mapdb:3.1.0'    
+    testImplementation 'org.mapdb:mapdb:3.1.0'
+//    testImplementation "org.briarproject:tor-linux:0.4.8.22"
+//    testImplementation "org.briarproject:tor-macos:0.4.8.22"
+//    testImplementation "org.briarproject:tor-windows:0.4.8.22"
+//    testImplementation "org.briarproject:tor-android:0.4.8.22"
 }
 
 java 
