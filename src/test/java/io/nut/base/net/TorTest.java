@@ -18,10 +18,10 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.net.tor;
+package io.nut.base.net;
 
-import io.nut.base.net.Networks;
 
+import io.nut.base.util.Java;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -58,10 +58,15 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 /**
  * JUnit 5 test suite for {@link Tor}.
  *
+ * <p>{@link Tor} extends {@link Socks5}; the tests here focus exclusively on
+ * Tor-specific behaviour. Generic SOCKS5 behaviour (construction, proxy object,
+ * {@code installGlobally} / {@code uninstallGlobally}, {@code toProxySelector},
+ * {@code isProxyReachable}) is covered by {@link Socks5Test}.
+ *
  * <p>The suite is divided into three categories:
  * <ul>
- *   <li><b>Unit tests</b> – no network required; cover construction, argument
- *       validation, system-property management, and the {@link Proxy} object.</li>
+ *   <li><b>Unit tests</b> – no network required; cover Tor-specific construction,
+ *       factory methods, managed-mode getters, and lifecycle guards.</li>
  *   <li><b>Integration tests</b> – skipped automatically when no Tor proxy is
  *       reachable on {@code 127.0.0.1:{@value Tor#DEFAULT_SOCKS_PORT}} (or the
  *       port overridden via {@code -DTOR_PROXY_PORT=…}).</li>
@@ -72,11 +77,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * </ul>
  *
  * No mocking framework required – only JUnit 5 and the JDK.
- *
- * <p>Gradle dependency:
- * <pre>
- *   testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
- * </pre>
  */
 public class TorTest
 {
@@ -125,7 +125,7 @@ public class TorTest
     {
         try
         {
-            Files.getPosixFilePermissions(new File(System.getProperty("java.io.tmpdir")).toPath());
+            Files.getPosixFilePermissions(new File(Java.JAVA_IO_TMPDIR).toPath());
             return true;
         }
         catch (Exception e)
@@ -137,9 +137,6 @@ public class TorTest
     /**
      * Extract the {@code "IP"} value from a {@code check.torproject.org} JSON response.
      * Expected format: {@code {"IsTor":true,"IP":"1.2.3.4"}}.
-     *
-     * @param json raw JSON string
-     * @return the IP string, or {@code null} if the field is not found
      */
     private static String extractIp(String json)
     {
@@ -154,10 +151,6 @@ public class TorTest
     /**
      * Fetch the body of {@code urlStr} using a direct connection (no proxy).
      * Used to obtain the machine's real public IP for comparison.
-     *
-     * @param urlStr URL to fetch
-     * @return response body as a string
-     * @throws IOException if the request fails
      */
     private static String fetchDirect(String urlStr) throws IOException
     {
@@ -167,7 +160,8 @@ public class TorTest
         try
         {
             StringBuilder sb = new StringBuilder();
-            try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream())))
+            try (BufferedReader r =
+                     new BufferedReader(new InputStreamReader(conn.getInputStream())))
             {
                 String line;
                 while ((line = r.readLine()) != null) sb.append(line);
@@ -180,14 +174,7 @@ public class TorTest
         }
     }
 
-    /**
-     * Fetch the body of {@code urlStr} through the given {@link Tor} proxy.
-     *
-     * @param tor    proxy instance to route through
-     * @param urlStr URL to fetch
-     * @return response body as a string
-     * @throws IOException if the request fails
-     */
+    /** Fetch the body of {@code urlStr} through the given {@link Tor} proxy. */
     private static String fetch(Tor tor, String urlStr) throws IOException
     {
         HttpURLConnection conn = tor.openConnection(new URL(urlStr));
@@ -196,7 +183,8 @@ public class TorTest
         try
         {
             StringBuilder sb = new StringBuilder();
-            try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream())))
+            try (BufferedReader r =
+                     new BufferedReader(new InputStreamReader(conn.getInputStream())))
             {
                 String line;
                 while ((line = r.readLine()) != null) sb.append(line);
@@ -216,15 +204,15 @@ public class TorTest
     }
 
     // =========================================================================
-    // 1. Constructor – argument validation
+    // 1. Tor-specific construction
     // =========================================================================
 
     @Nested
-    @DisplayName("Constructor – argument validation")
-    class ConstructorTests
+    @DisplayName("Tor-specific construction")
+    class TorConstructionTests
     {
         @Test
-        @DisplayName("Valid host and port are stored without modification")
+        @DisplayName("new Tor(host, port) stores host and port (inherited from Socks5)")
         void validArgs_stored()
         {
             Tor tor = new Tor("10.0.0.1", 9150);
@@ -233,26 +221,24 @@ public class TorTest
         }
 
         @Test
-        @DisplayName("Hostname strings (not just IPs) are accepted")
-        void hostname_accepted()
+        @DisplayName("new Tor(host, port) is not managed by default")
+        void directConstructor_isNotManaged()
         {
-            assertDoesNotThrow(() -> new Tor("proxy.example.com", 9050));
+            assertFalse(new Tor(LOCAL_HOST, 9050).isManaged());
         }
 
         @Test
-        @DisplayName("Null host throws IllegalArgumentException")
-        void nullHost_throws()
+        @DisplayName("new Tor(host, port) is not running by default")
+        void directConstructor_isNotRunning()
         {
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> new Tor(null, 9050));
-            assertTrue(ex.getMessage().contains("proxyHost"));
+            assertFalse(new Tor(LOCAL_HOST, 9050).isRunning());
         }
 
         @Test
-        @DisplayName("Empty host throws IllegalArgumentException")
-        void emptyHost_throws()
+        @DisplayName("DEFAULT_SOCKS_PORT is 9050")
+        void defaultSocksPort_is9050()
         {
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> new Tor("", 9050));
-            assertTrue(ex.getMessage().contains("proxyHost"));
+            assertEquals(9050, Tor.DEFAULT_SOCKS_PORT);
         }
 
         @ParameterizedTest(name = "port {0} is within [1, 65535] – must be accepted")
@@ -264,372 +250,22 @@ public class TorTest
         }
 
         @Test
+        @DisplayName("Null host throws IllegalArgumentException")
+        void nullHost_throws()
+        {
+            assertThrows(IllegalArgumentException.class, () -> new Tor(null, 9050));
+        }
+
+        @Test
         @DisplayName("Port 0 throws IllegalArgumentException")
         void portZero_throws()
         {
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> new Tor(LOCAL_HOST, 0));
-            assertTrue(ex.getMessage().contains("proxyPort"));
-        }
-
-        @Test
-        @DisplayName("Port 65536 throws IllegalArgumentException")
-        void portAboveMax_throws()
-        {
-            IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> new Tor(LOCAL_HOST, 65536));
-            assertTrue(ex.getMessage().contains("proxyPort"));
-        }
-
-        @Test
-        @DisplayName("Negative port throws IllegalArgumentException")
-        void negativePort_throws()
-        {
-            assertThrows(IllegalArgumentException.class, () -> new Tor(LOCAL_HOST, -1));
+            assertThrows(IllegalArgumentException.class, () -> new Tor(LOCAL_HOST, 0));
         }
     }
 
     // =========================================================================
-    // 2. Getters and constants
-    // =========================================================================
-
-    @Nested
-    @DisplayName("Getters and constants")
-    class GetterTests
-    {
-        @Test
-        @DisplayName("host returns the exact string passed to the constructor")
-        void host_returnsConstructorValue()
-        {
-            assertEquals("192.168.1.99", new Tor("192.168.1.99", 9050).host);
-        }
-
-        @Test
-        @DisplayName("port returns the exact int passed to the constructor")
-        void port_returnsConstructorValue()
-        {
-            assertEquals(1080, new Tor(LOCAL_HOST, 1080).port);
-        }
-
-        @Test
-        @DisplayName("DEFAULT_SOCKS_PORT is 9050")
-        void defaultSocksPort_is9050()
-        {
-            assertEquals(9050, Tor.DEFAULT_SOCKS_PORT);
-        }
-    }
-
-    // =========================================================================
-    // 3. Proxy object
-    // =========================================================================
-
-    @Nested
-    @DisplayName("proxy – Proxy object construction")
-    class ProxyObjectTests
-    {
-        @Test
-        @DisplayName("proxy is of SOCKS type")
-        void proxy_typeIsSocks()
-        {
-            assertEquals(Proxy.Type.SOCKS, new Tor(LOCAL_HOST, 9050).proxy.type());
-        }
-
-        @Test
-        @DisplayName("proxy address host-string matches the constructor argument")
-        void proxy_addressHostMatchesConstructor()
-        {
-            InetSocketAddress addr = (InetSocketAddress) new Tor("10.10.10.10", 9050).proxy.address();
-            assertEquals("10.10.10.10", addr.getHostString());
-        }
-
-        @Test
-        @DisplayName("proxy address port matches the constructor argument")
-        void proxy_addressPortMatchesConstructor()
-        {
-            InetSocketAddress addr = (InetSocketAddress) new Tor(LOCAL_HOST, 1234).proxy.address();
-            assertEquals(1234, addr.getPort());
-        }
-
-        @Test
-        @DisplayName("proxy address is unresolved (no local DNS lookup for the SOCKS host)")
-        void proxy_addressIsUnresolved()
-        {
-            // An unresolved address means the hostname is NOT looked up locally,
-            // which is required for Tor to resolve it inside the Tor network.
-            InetSocketAddress addr = (InetSocketAddress) new Tor("some.onion.host", 9050).proxy.address();
-            assertTrue(addr.isUnresolved(), "Proxy address must be unresolved to prevent local DNS leaks");
-        }
-    }
-
-    // =========================================================================
-    // 4. openConnection() – structural checks (no network)
-    // =========================================================================
-
-    @Nested
-    @DisplayName("openConnection() – structural checks (no network)")
-    class OpenConnectionStructuralTests
-    {
-        @Test
-        @DisplayName("http:// URL returns a non-null HttpURLConnection")
-        void httpUrl_returnsHttpURLConnection() throws IOException
-        {
-            // openConnection() is lazy – the proxy is recorded but no I/O occurs here
-            assertNotNull(new Tor(LOCAL_HOST, 9050).openConnection(
-                    new URL("http://example.com/")));
-        }
-
-        @Test
-        @DisplayName("https:// URL returns a non-null HttpURLConnection")
-        void httpsUrl_returnsHttpURLConnection() throws IOException
-        {
-            assertNotNull(new Tor(LOCAL_HOST, 9050).openConnection(
-                    new URL("https://example.com/")));
-        }
-    }
-
-    // =========================================================================
-    // 5. applyGlobally()
-    // =========================================================================
-
-    @Nested
-    @DisplayName("applyGlobally() – JVM-wide SOCKS5 system properties")
-    class ApplyGloballyTests
-    {
-        @AfterEach
-        void clearProperties()
-        {
-            System.clearProperty(Tor.SOCKS_PROXY_HOST);
-            System.clearProperty(Tor.SOCKS_PROXY_PORT);
-            System.clearProperty(Tor.SOCKS_PROXY_VERSION);
-        }
-
-        @Test
-        @DisplayName("sets socksProxyHost to the configured host")
-        void setsProxyHost()
-        {
-            new Tor("172.16.0.1", 9050).applyGlobally();
-            assertEquals("172.16.0.1", System.getProperty(Tor.SOCKS_PROXY_HOST));
-        }
-
-        @Test
-        @DisplayName("sets socksProxyPort to the configured port as a string")
-        void setsProxyPort()
-        {
-            new Tor(LOCAL_HOST, 7777).applyGlobally();
-            assertEquals("7777", System.getProperty(Tor.SOCKS_PROXY_PORT));
-        }
-
-        @Test
-        @DisplayName("sets socksProxyVersion to \"5\"")
-        void setsProxyVersion()
-        {
-            new Tor(LOCAL_HOST, 9050).applyGlobally();
-            assertEquals("5", System.getProperty(Tor.SOCKS_PROXY_VERSION));
-        }
-
-        @Test
-        @DisplayName("overwrites a pre-existing socksProxyHost value")
-        void overwritesExistingProxyHost()
-        {
-            System.setProperty(Tor.SOCKS_PROXY_HOST, "old-value");
-            new Tor("new-host", 9050).applyGlobally();
-            assertEquals("new-host", System.getProperty(Tor.SOCKS_PROXY_HOST));
-        }
-
-        @Test
-        @DisplayName("is idempotent – calling it twice produces the same result")
-        void isIdempotent()
-        {
-            Tor tor = new Tor(LOCAL_HOST, 9050);
-            tor.applyGlobally();
-            tor.applyGlobally();
-            assertEquals(LOCAL_HOST, System.getProperty(Tor.SOCKS_PROXY_HOST));
-            assertEquals("9050",     System.getProperty(Tor.SOCKS_PROXY_PORT));
-            assertEquals("5",        System.getProperty(Tor.SOCKS_PROXY_VERSION));
-        }
-    }
-
-    // =========================================================================
-    // 6. removeGlobal()
-    // =========================================================================
-
-    @Nested
-    @DisplayName("removeGlobal() – clearing JVM-wide SOCKS5 properties")
-    class RemoveGlobalTests
-    {
-        @AfterEach
-        void clearProperties()
-        {
-            System.clearProperty(Tor.SOCKS_PROXY_HOST);
-            System.clearProperty(Tor.SOCKS_PROXY_PORT);
-            System.clearProperty(Tor.SOCKS_PROXY_VERSION);
-        }
-
-        @Test
-        @DisplayName("clears socksProxyHost")
-        void clearsProxyHost()
-        {
-            Tor tor = new Tor(LOCAL_HOST, 9050);
-            tor.applyGlobally();
-            tor.removeGlobal();
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_HOST));
-        }
-
-        @Test
-        @DisplayName("clears socksProxyPort")
-        void clearsProxyPort()
-        {
-            Tor tor = new Tor(LOCAL_HOST, 9050);
-            tor.applyGlobally();
-            tor.removeGlobal();
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_PORT));
-        }
-
-        @Test
-        @DisplayName("clears socksProxyVersion")
-        void clearsProxyVersion()
-        {
-            Tor tor = new Tor(LOCAL_HOST, 9050);
-            tor.applyGlobally();
-            tor.removeGlobal();
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_VERSION));
-        }
-
-        @Test
-        @DisplayName("is safe to call when no global proxy has been set")
-        void safeWhenNothingSet()
-        {
-            assertDoesNotThrow(() -> new Tor(LOCAL_HOST, 9050).removeGlobal());
-        }
-
-        @Test
-        @DisplayName("is idempotent – calling it twice does not throw")
-        void isIdempotent()
-        {
-            Tor tor = new Tor(LOCAL_HOST, 9050);
-            tor.applyGlobally();
-            assertDoesNotThrow(() ->
-            {
-                tor.removeGlobal();
-                tor.removeGlobal();
-            });
-        }
-    }
-
-    // =========================================================================
-    // 7. applyGlobally() / removeGlobal() – round-trip
-    // =========================================================================
-
-    @Nested
-    @DisplayName("applyGlobally() / removeGlobal() – round-trip")
-    class GlobalRoundTripTests
-    {
-        @BeforeEach
-        void ensureClean()
-        {
-            System.clearProperty(Tor.SOCKS_PROXY_HOST);
-            System.clearProperty(Tor.SOCKS_PROXY_PORT);
-            System.clearProperty(Tor.SOCKS_PROXY_VERSION);
-        }
-
-        @AfterEach
-        void clearProperties()
-        {
-            System.clearProperty(Tor.SOCKS_PROXY_HOST);
-            System.clearProperty(Tor.SOCKS_PROXY_PORT);
-            System.clearProperty(Tor.SOCKS_PROXY_VERSION);
-        }
-
-        @Test
-        @DisplayName("Properties are null before apply, set after apply, null after remove")
-        void fullRoundTrip()
-        {
-            Tor tor = new Tor("1.2.3.4", 9150);
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_HOST));
-
-            tor.applyGlobally();
-            assertEquals("1.2.3.4", System.getProperty(Tor.SOCKS_PROXY_HOST));
-            assertEquals("9150",    System.getProperty(Tor.SOCKS_PROXY_PORT));
-
-            tor.removeGlobal();
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_HOST));
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_PORT));
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_VERSION));
-        }
-
-        @Test
-        @DisplayName("A second Tor's applyGlobally() overwrites the first one's settings")
-        void secondInstanceOverwritesFirst()
-        {
-            Tor first  = new Tor("1.1.1.1", 9050);
-            Tor second = new Tor("2.2.2.2", 9150);
-
-            first.applyGlobally();
-            assertEquals("1.1.1.1", System.getProperty(Tor.SOCKS_PROXY_HOST));
-
-            second.applyGlobally();
-            assertEquals("2.2.2.2", System.getProperty(Tor.SOCKS_PROXY_HOST));
-            assertEquals("9150",    System.getProperty(Tor.SOCKS_PROXY_PORT));
-
-            second.removeGlobal();
-            assertNull(System.getProperty(Tor.SOCKS_PROXY_HOST));
-        }
-    }
-
-    // =========================================================================
-    // 8. isProxyReachable()
-    // =========================================================================
-
-    @Nested
-    @DisplayName("isProxyReachable() – TCP port probe")
-    class IsProxyReachableTests
-    {
-        @Test
-        @DisplayName("Returns true when a server is actually listening on the proxy port")
-        void returnsTrueWhenPortIsOpen() throws IOException
-        {
-            try (ServerSocket server = openEphemeralServer())
-            {
-                assertTrue(new Tor(LOCAL_HOST, server.getLocalPort()).isProxyReachable());
-            }
-        }
-
-        @Test
-        @DisplayName("Returns false when nothing is listening on port 1")
-        void returnsFalseWhenPortIsClosed()
-        {
-            assertFalse(new Tor(LOCAL_HOST, 1).isProxyReachable());
-        }
-
-        @Test
-        @DisplayName("Returns false for an unreachable host (192.0.2.0 is TEST-NET, RFC 5737)")
-        void returnsFalseForUnreachableHost()
-        {
-            assertFalse(new Tor("192.0.2.0", 9050).isProxyReachable());
-        }
-
-        @Test
-        @DisplayName("Returns false after the server stops listening")
-        void returnsFalseAfterServerCloses() throws IOException
-        {
-            ServerSocket server = openEphemeralServer();
-            int port = server.getLocalPort();
-            Tor tor  = new Tor(LOCAL_HOST, port);
-
-            assertTrue(tor.isProxyReachable(), "Should be reachable before close");
-            server.close();
-            assertFalse(tor.isProxyReachable(), "Should be unreachable after close");
-        }
-
-        @Test
-        @DisplayName("Never throws, regardless of host/port combination")
-        void neverThrows()
-        {
-            assertDoesNotThrow(() -> new Tor("255.255.255.255", 65535).isProxyReachable());
-            assertDoesNotThrow(() -> new Tor(LOCAL_HOST, 1).isProxyReachable());
-        }
-    }
-
-    // =========================================================================
-    // 9. Factory methods and managed-mode getters
+    // 2. Factory methods and managed-mode getters
     // =========================================================================
 
     @Nested
@@ -650,7 +286,7 @@ public class TorTest
         void withLocalProxy_usesDefaultHostAndPort()
         {
             Tor tor = Tor.withLocalProxy();
-            assertEquals("127.0.0.1",           tor.host);
+            assertEquals(LOCAL_HOST,             tor.host);
             assertEquals(Tor.DEFAULT_SOCKS_PORT, tor.port);
         }
 
@@ -658,7 +294,7 @@ public class TorTest
         @DisplayName("withProxy() is not flagged as managed")
         void withProxy_isNotManaged()
         {
-            assertFalse(Tor.withProxy("127.0.0.1", 9050).isManaged());
+            assertFalse(Tor.withProxy(LOCAL_HOST, 9050).isManaged());
         }
 
         @Test
@@ -678,6 +314,45 @@ public class TorTest
         }
 
         @Test
+        @DisplayName("managed() defaults to SocksPolicy.LOCALHOST_ONLY")
+        void managed_defaultsSocksPolicy_localhostOnly()
+        {
+            assertEquals(Tor.SocksPolicy.LOCALHOST_ONLY, Tor.managed().socksPolicy);
+        }
+
+        @Test
+        @DisplayName("managed(port) defaults to SocksPolicy.LOCALHOST_ONLY")
+        void managed_withPort_defaultsSocksPolicy_localhostOnly()
+        {
+            assertEquals(Tor.SocksPolicy.LOCALHOST_ONLY, Tor.managed(19050).socksPolicy);
+        }
+
+        @Test
+        @DisplayName("managed(port, OPEN) stores SocksPolicy.OPEN")
+        void managed_withPortAndOpen_storesSocksPolicyOpen()
+        {
+            assertEquals(Tor.SocksPolicy.OPEN,
+                Tor.managed(19050, Tor.SocksPolicy.OPEN).socksPolicy);
+        }
+
+        @Test
+        @DisplayName("managed(port, LOCALHOST_ONLY) stores SocksPolicy.LOCALHOST_ONLY")
+        void managed_withPortAndLocalhostOnly_storesSocksPolicy()
+        {
+            assertEquals(Tor.SocksPolicy.LOCALHOST_ONLY,
+                Tor.managed(19050, Tor.SocksPolicy.LOCALHOST_ONLY).socksPolicy);
+        }
+    }
+
+    // =========================================================================
+    // 3. Lifecycle guards (no binary needed)
+    // =========================================================================
+
+    @Nested
+    @DisplayName("Lifecycle guards")
+    class LifecycleGuardTests
+    {
+        @Test
         @DisplayName("start() on a proxy-mode instance throws IllegalStateException")
         void start_onProxyMode_throwsIllegalState()
         {
@@ -692,40 +367,10 @@ public class TorTest
         {
             assertDoesNotThrow(() -> Tor.withLocalProxy().stop());
         }
-
-        @Test
-        @DisplayName("managed() defaults to SocksPolicy.LOCALHOST_ONLY")
-        void managed_defaultsSocksPolicy_localhostOnly()
-        {
-            assertEquals(Tor.SocksPolicy.LOCALHOST_ONLY, Tor.managed().socksPolicy);
-    }
-
-        @Test
-        @DisplayName("managed(port) defaults to SocksPolicy.LOCALHOST_ONLY")
-        void managed_withPort_defaultsSocksPolicy_localhostOnly()
-        {
-            assertEquals(Tor.SocksPolicy.LOCALHOST_ONLY, Tor.managed(19050).socksPolicy);
-        }
-
-        @Test
-        @DisplayName("managed(port, OPEN) stores SocksPolicy.OPEN")
-        void managed_withPortAndOpen_storesSocksPolicyOpen()
-        {
-            Tor tor = Tor.managed(19050, Tor.SocksPolicy.OPEN);
-            assertEquals(Tor.SocksPolicy.OPEN, tor.socksPolicy);
-        }
-
-        @Test
-        @DisplayName("managed(port, LOCALHOST_ONLY) stores SocksPolicy.LOCALHOST_ONLY")
-        void managed_withPortAndLocalhostOnly_storesSocksPolicy()
-        {
-            Tor tor = Tor.managed(19050, Tor.SocksPolicy.LOCALHOST_ONLY);
-            assertEquals(Tor.SocksPolicy.LOCALHOST_ONLY, tor.socksPolicy);
-        }
     }
 
     // =========================================================================
-    // 10. Integration tests – require a live Tor proxy (skipped otherwise)
+    // 4. Integration tests – require a live Tor proxy (skipped otherwise)
     // =========================================================================
 
     @Nested
@@ -738,7 +383,8 @@ public class TorTest
         @BeforeEach
         void setup()
         {
-            assumeTrue(isPortOpen(LOCAL_HOST, TOR_PORT), "Skipping integration tests: no Tor proxy on " + LOCAL_HOST + ":" + TOR_PORT);
+            assumeTrue(isPortOpen(LOCAL_HOST, TOR_PORT),
+                "Skipping integration tests: no Tor proxy on " + LOCAL_HOST + ":" + TOR_PORT);
             tor = new Tor(LOCAL_HOST, TOR_PORT);
         }
 
@@ -768,14 +414,13 @@ public class TorTest
         void openConnection_exitIpDiffersFromLocalIp() throws IOException
         {
             // NOTE: HttpsURLConnection.usingProxy() always returns false due to
-            // JDK bug JDK-8206310 (open since 2018). We verify indirectly: if
-            // the IP seen by check.torproject.org differs from the machine's real
-            // public IP, and IsTor=true, the connection went through Tor.
+            // JDK bug JDK-8206310 (open since 2018). We verify indirectly.
             String torIp    = extractIp(fetch(tor, TOR_CHECK_URL));
             String directIp = extractIp(fetchDirect(TOR_CHECK_URL));
             assertNotNull(torIp,    "Could not parse IP from Tor response");
             assertNotNull(directIp, "Could not parse IP from direct response");
-            assertNotEquals(torIp, directIp, "Exit IP via Tor (" + torIp + ") should differ from direct IP (" + directIp + ")");
+            assertNotEquals(torIp, directIp,
+                "Exit IP via Tor (" + torIp + ") should differ from direct IP (" + directIp + ")");
         }
 
         @Test
@@ -800,7 +445,8 @@ public class TorTest
             try (Socket s = tor.openSocket("torproject.org", 80))
             {
                 InetAddress local = s.getLocalAddress();
-                assertTrue(local.isLoopbackAddress() || local.isAnyLocalAddress(), "Local address should be loopback, was: " + local);
+                assertTrue(local.isLoopbackAddress() || local.isAnyLocalAddress(),
+                    "Local address should be loopback, was: " + local);
             }
         }
 
@@ -834,17 +480,19 @@ public class TorTest
         @Test
         @Order(8)
         @Timeout(30)
-        @DisplayName("applyGlobally() routes plain URL.openConnection() through Tor")
-        void applyGlobally_routesJvmTrafficThroughTor() throws IOException
+        @DisplayName("installGlobally() routes plain URL.openConnection() through Tor")
+        void installGlobally_routesJvmTrafficThroughTor() throws IOException
         {
-            tor.applyGlobally();
+            tor.installGlobally();
             try
             {
-                HttpURLConnection conn = (HttpURLConnection) new URL(TOR_CHECK_URL).openConnection();
+                HttpURLConnection conn =
+                    (HttpURLConnection) new URL(TOR_CHECK_URL).openConnection();
                 conn.setConnectTimeout(HTTP_TIMEOUT);
                 conn.setReadTimeout(HTTP_TIMEOUT);
                 StringBuilder sb = new StringBuilder();
-                try (BufferedReader r = new BufferedReader(new InputStreamReader(conn.getInputStream())))
+                try (BufferedReader r =
+                         new BufferedReader(new InputStreamReader(conn.getInputStream())))
                 {
                     String line;
                     while ((line = r.readLine()) != null) sb.append(line);
@@ -853,18 +501,19 @@ public class TorTest
                 {
                     conn.disconnect();
                 }
-                assertTrue(sb.toString().contains("\"IsTor\":true"), "Expected IsTor=true via global proxy, got: " + sb);
+                assertTrue(sb.toString().contains("\"IsTor\":true"),
+                    "Expected IsTor=true via global proxy, got: " + sb);
             }
             finally
             {
-                tor.removeGlobal();
+                tor.uninstallGlobally();
             }
         }
     }
 
     // =========================================================================
-    // 11. Managed-mode tests – require a Tor binary (skipped otherwise)
-    //     These tests are slow: Tor needs ~30-60 s to bootstrap.
+    // 5. Managed-mode tests – require a Tor binary (skipped otherwise)
+    //    These tests are slow: Tor needs ~30-60 s to bootstrap.
     // =========================================================================
 
     @Nested
@@ -877,17 +526,15 @@ public class TorTest
         @BeforeEach
         void setup()
         {
-            assumeTrue(torBinaryAvailable(), "Skipping managed-mode tests: no bundled or system Tor binary found");
+            assumeTrue(torBinaryAvailable(),
+                "Skipping managed-mode tests: no bundled or system Tor binary found");
             tor = Tor.managed();
         }
 
         @AfterEach
         void teardown()
         {
-            if (tor != null && tor.isRunning())
-            {
-                tor.stop();
-            }
+            if (tor != null && tor.isRunning()) tor.stop();
         }
 
         // ── Lifecycle ────────────────────────────────────────────────────────
@@ -934,7 +581,8 @@ public class TorTest
             int port = tor.port;
             tor.stop();
             Thread.sleep(500); // allow the OS to release the port
-            assertFalse(isPortOpen(LOCAL_HOST, port), "SOCKS port should be closed after stop()");
+            assertFalse(isPortOpen(LOCAL_HOST, port),
+                "SOCKS port should be closed after stop()");
         }
 
         @Test
@@ -958,7 +606,6 @@ public class TorTest
             assumeTrue(isPosix(), "Skipping: POSIX permissions not supported on this OS");
             tor.start();
 
-            // Access the DataDirectory via reflection (package-private field)
             Field field = Tor.class.getDeclaredField("torDataDir");
             field.setAccessible(true);
             File dataDir = (File) field.get(tor);
@@ -967,15 +614,15 @@ public class TorTest
             assertTrue(dataDir.exists(), "DataDirectory should exist");
 
             Set<PosixFilePermission> perms =
-                    Files.getPosixFilePermissions(dataDir.toPath());
+                Files.getPosixFilePermissions(dataDir.toPath());
 
-            assertTrue(perms.contains(PosixFilePermission.OWNER_READ),   "owner read");
-            assertTrue(perms.contains(PosixFilePermission.OWNER_WRITE),  "owner write");
-            assertTrue(perms.contains(PosixFilePermission.OWNER_EXECUTE),"owner execute");
-            assertFalse(perms.contains(PosixFilePermission.GROUP_READ),  "no group read");
-            assertFalse(perms.contains(PosixFilePermission.GROUP_WRITE), "no group write");
-            assertFalse(perms.contains(PosixFilePermission.OTHERS_READ), "no other read");
-            assertFalse(perms.contains(PosixFilePermission.OTHERS_WRITE),"no other write");
+            assertTrue(perms.contains(PosixFilePermission.OWNER_READ),    "owner read");
+            assertTrue(perms.contains(PosixFilePermission.OWNER_WRITE),   "owner write");
+            assertTrue(perms.contains(PosixFilePermission.OWNER_EXECUTE), "owner execute");
+            assertFalse(perms.contains(PosixFilePermission.GROUP_READ),   "no group read");
+            assertFalse(perms.contains(PosixFilePermission.GROUP_WRITE),  "no group write");
+            assertFalse(perms.contains(PosixFilePermission.OTHERS_READ),  "no other read");
+            assertFalse(perms.contains(PosixFilePermission.OTHERS_WRITE), "no other write");
         }
 
         // ── Security: cookie file is deleted from disk after bootstrap ────────
@@ -990,10 +637,11 @@ public class TorTest
 
             Field field = Tor.class.getDeclaredField("torDataDir");
             field.setAccessible(true);
-            File dataDir = (File) field.get(tor);
-
+            File dataDir   = (File) field.get(tor);
             File cookieFile = new File(dataDir, Tor.COOKIE_FILE_NAME);
-            assertFalse(cookieFile.exists(), "Cookie file must be deleted from disk after bootstrap");
+
+            assertFalse(cookieFile.exists(),
+                "Cookie file must be deleted from disk after bootstrap");
         }
 
         // ── HTTP through managed Tor ─────────────────────────────────────────
@@ -1048,7 +696,8 @@ public class TorTest
             {
                 customTor.start();
                 assertEquals(customPort, customTor.port);
-                assertTrue(isPortOpen(LOCAL_HOST, customPort), "Tor should be listening on the specified port");
+                assertTrue(isPortOpen(LOCAL_HOST, customPort),
+                    "Tor should be listening on the specified port");
             }
             finally
             {
@@ -1063,19 +712,13 @@ public class TorTest
 
     /**
      * Returns {@code true} if a Tor binary can be found either as a bundled
-     * classpath resource (from {@code org.briarproject:tor-*} JARs), via the
-     * {@code TOR_BINARY} environment variable, or on the system PATH / common
-     * installation paths.
-     *
-     * <p>Used by {@link ManagedModeTests} to skip the entire nested class when
-     * no binary is available, preventing failures in minimal CI environments.
-     *
-     * @return {@code true} if a Tor binary is available
+     * classpath resource, via the {@code TOR_BINARY} environment variable, or
+     * on the system PATH / common installation paths.
      */
     private static boolean torBinaryAvailable()
     {
         // 1 – bundled classpath resources
-        String[] bundledResources = 
+        String[] bundledResources =
         {
             "/tor/linux/x86_64/tor",
             "/tor/linux/aarch64/tor",
@@ -1085,18 +728,12 @@ public class TorTest
         };
         for (String res : bundledResources)
         {
-            if (TorTest.class.getResourceAsStream(res) != null)
-            {
-                return true;
-            }
+            if (TorTest.class.getResourceAsStream(res) != null) return true;
         }
 
         // 2 – TOR_BINARY environment variable
         String envBin = System.getenv("TOR_BINARY");
-        if (envBin != null && new File(envBin).canExecute())
-        {
-            return true;
-        }
+        if (envBin != null && new File(envBin).canExecute()) return true;
 
         // 3 – system PATH
         String pathEnv = System.getenv("PATH");
@@ -1110,7 +747,7 @@ public class TorTest
         }
 
         // 4 – well-known installation paths
-        String[] systemPaths = 
+        String[] systemPaths =
         {
             "/usr/bin/tor", "/usr/sbin/tor", "/usr/local/bin/tor",
             "/opt/homebrew/bin/tor", "/opt/local/bin/tor",

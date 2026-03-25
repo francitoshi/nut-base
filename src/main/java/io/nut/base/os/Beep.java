@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 public class Beep
 {
     private static final String BEEP = "beep";
-    private static final Shell shellUtils = Shell.getInstance(OSName.getInstance());
+    private static final Shell shellUtils = Shell.getInstance(OS.getInstance());
 
     public static void beep()
     {

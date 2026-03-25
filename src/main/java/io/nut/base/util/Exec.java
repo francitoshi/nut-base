@@ -20,7 +20,7 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.os.OSName;
+import io.nut.base.os.OS;
 import java.io.File;
 import java.io.IOException;
 import java.util.logging.Level;
@@ -75,7 +75,7 @@ public class Exec
         {
             return false;
         }
-        String suffix = OSName.getInstance().isWindows() ? ".exe" : "";
+        String suffix = OS.getInstance().isWindows() ? ".exe" : "";
         for (String dir : pathEnv.split(File.pathSeparator))
         {
             if(new File(dir, name + suffix).canExecute())

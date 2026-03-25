@@ -64,7 +64,7 @@ public class OSNameTest
     @Test
     public void testGetName()
     {
-        OSName os = new OSName("name","version","arch");
+        OS os = new OS("name","version","arch");
         assertEquals("name", os.getName());
     }
 
@@ -74,7 +74,7 @@ public class OSNameTest
     @Test
     public void testGetVersion()
     {
-        OSName os = new OSName("name","version","arch");
+        OS os = new OS("name","version","arch");
         assertEquals("version", os.getVersion());
     }
 
@@ -84,7 +84,7 @@ public class OSNameTest
     @Test
     public void testGetArch()
     {
-        OSName os = new OSName("name","version","arch");
+        OS os = new OS("name","version","arch");
         assertEquals("arch", os.getArch());
     }
 
@@ -95,13 +95,13 @@ public class OSNameTest
     public void testToString()
     {
      
-        OSName name = new OSName("name");
+        OS name = new OS("name");
         assertEquals("name", name.toString());
         
-        OSName name_version = new OSName("name","version");
+        OS name_version = new OS("name","version");
         assertEquals("name version", name_version.toString());
 
-        OSName name_version_arch = new OSName("name","version","arch");
+        OS name_version_arch = new OS("name","version","arch");
         assertEquals("name version arch", name_version_arch.toString());
     }
 }

@@ -118,7 +118,7 @@ public abstract class Shell
         void processComplete(int exitValue);
     }
 
-    public static Shell getInstance(OSName osName)
+    public static Shell getInstance(OS osName)
     {
         if (osName.isAndroid())
         {
@@ -127,7 +127,7 @@ public abstract class Shell
         return new PosixShell();
     }
 
-    public final static Shell sh = getInstance(OSName.getInstance());
+    public final static Shell sh = getInstance(OS.getInstance());
 
     public abstract boolean isRootPossible();
 
