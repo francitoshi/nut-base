@@ -23,7 +23,6 @@ package io.nut.base.net;
 import io.nut.base.encoding.Hex;
 import io.nut.base.os.OS;
 import io.nut.base.util.Exec;
-import io.nut.base.util.Java;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -49,7 +48,6 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -896,8 +894,7 @@ public class Tor extends Socks5
                 }
             }
         }
-        throw new IOException(
-            "Control Port not reachable after " + BOOTSTRAP_TIMEOUT_MILLIS + " ms", lastException);
+        throw new IOException("Control Port not reachable after " + BOOTSTRAP_TIMEOUT_MILLIS + " ms", lastException);
     }
 
     /**

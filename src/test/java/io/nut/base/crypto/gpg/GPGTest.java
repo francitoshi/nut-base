@@ -1,7 +1,7 @@
 /*
  *  GPGTest.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -34,12 +34,10 @@ import static io.nut.base.crypto.gpg.GPG.RSA1024;
 import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
-import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.MethodOrderer;

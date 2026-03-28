@@ -23,7 +23,6 @@ package io.nut.base.figletter;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
-import java.util.regex.Pattern;
 
 /**
  * Implementación de {@link FigIO} para el formato TOIlet (.tlf).
@@ -52,11 +51,6 @@ import java.util.regex.Pattern;
 public class Tlf2aIO extends FigIO
 {
 
-    /**
-     * Endmark de fallback cuando el carácter propio no puede usarse (espacio, o
-     * colisión con contenido visual).
-     */
-    private static final char FALLBACK_ENDMARK = '@';
 
     // ── load ─────────────────────────────────────────────────────────────────
     public Glyphs load(String name, List<String> lines) throws IOException
@@ -69,9 +63,11 @@ public class Tlf2aIO extends FigIO
 
         // tlf2a<hardblank> height baseline maxLen oldLayout numComments [printDir fullLayout codeTagCount]
         String[] parts = header.split("\\s+");
+        char hardblank;
         int height, baseline, numComments, codeTagCount;
         try
         {
+            hardblank = parts[0].charAt(5);
             height = Integer.parseInt(parts[1]);
             baseline = Integer.parseInt(parts[2]);
             numComments = Integer.parseInt(parts[5]);
@@ -150,7 +146,7 @@ public class Tlf2aIO extends FigIO
         }
         boolean caseSensitive = upper ^ lower;
         
-        return new Glyphs(name, (char)0x7F, height, baseline, "TLF loaded font", caseSensitive, glyphs);
+        return new Glyphs(name, hardblank, height, baseline, "TLF loaded font", caseSensitive, glyphs);
     }
 
     // ── export ────────────────────────────────────────────────────────────────
@@ -223,57 +219,6 @@ public class Tlf2aIO extends FigIO
         pw.flush();
     }
 
-    // ── helpers privados ──────────────────────────────────────────────────────
-    /**
-     * Detecta el endmark de un glifo leyendo el último carácter de su última
-     * fila (donde aparece duplicado).
-     *
-     * <p>
-     * Si la última fila está vacía o tiene menos de 2 caracteres, devuelve
-     * {@link #FALLBACK_ENDMARK}.
-     */
-    private char detectEndmark(List<String> lines, int from, int height, char glyphCode)
-    {
-        int lastLine = from + height - 1;
-        if (lastLine >= lines.size())
-        {
-            return FALLBACK_ENDMARK;
-        }
-        // Ignorar trailing whitespace: el endmark puede ir seguido de espacios
-        String last = lines.get(lastLine).replaceAll("\\s+$", "");
-        if (last.length() < 2)
-        {
-            return FALLBACK_ENDMARK;
-        }
-        char candidate = last.charAt(last.length() - 1);
-        char prev = last.charAt(last.length() - 2);
-        return (candidate == prev) ? candidate : FALLBACK_ENDMARK;
-    }
-
-    /**
-     * Lee {@code height} líneas desde {@code from} y elimina el endmark
-     * específico de este glifo del final de cada una.
-     */
-    private String[] readGlyph(List<String> lines, int from, int height, char endmark)
-    {
-        String escaped = Pattern.quote(String.valueOf(endmark));
-        // Algunos ficheros TLF tienen trailing spaces DESPUÉS del endmark.
-        // El patrón elimina primero el endmark (uno o más) y luego cualquier
-        // espacio sobrante al final, o a la inversa si el endmark va después.
-        // La forma más robusta: strip trailing whitespace, luego strip endmarks.
-        String[] glyph = new String[height];
-        for (int i = 0; i < height; i++)
-        {
-            String raw = (from + i < lines.size()) ? lines.get(from + i) : "";
-            // 1. Eliminar trailing whitespace
-            raw = raw.replaceAll("\\s+$", "");
-            // 2. Eliminar endmark(s) al final
-            raw = raw.replaceAll(escaped + "+$", "");
-            glyph[i] = raw;
-        }
-        return glyph;
-    }
-
     /**
      * Elige el endmark para la exportación de un glifo.
      *
@@ -299,34 +244,4 @@ public class Tlf2aIO extends FigIO
         }
         return code;
     }
-
-    private void writeGlyph(PrintWriter pw, String[] glyph, char endmark)
-    {
-        for (int i = 0; i < glyph.length; i++)
-        {
-            String row = glyph[i] != null ? glyph[i] : "";
-            pw.println(i == glyph.length - 1
-                    ? row + endmark + endmark
-                    : row + endmark);
-        }
-    }
-
-    private String[] emptyGlyph(int height)
-    {
-        String[] g = new String[height];
-        Arrays.fill(g, "");
-        return g;
-    }
-
-    private String[] buildCommentLines(String comment)
-    {
-        if (comment == null || comment.trim().isEmpty())
-        {
-            return new String[]
-            {
-                "Exported by Tlf2aIO"
-            };
-        }
-        return comment.split("\\r?\\n", -1);
-    }    
 }

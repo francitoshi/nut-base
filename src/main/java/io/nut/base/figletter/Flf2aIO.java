@@ -88,7 +88,8 @@ public class Flf2aIO extends FigIO
         // Bloque ASCII 32-126
         for (int code = FIRST_CODE; code <= LAST_CODE && idx < lines.size(); code++)
         {
-            glyphs.put((char) code, readGlyph(lines, idx, height));
+            char endmark = detectEndmark(lines, idx, height, (char) code); // detect instead of assuming '@'
+            glyphs.put((char) code, readGlyph(lines, idx, height, endmark));
             idx += height;
         }
 
@@ -99,7 +100,8 @@ public class Flf2aIO extends FigIO
             {
                 break;
             }
-            glyphs.put((char) code, readGlyph(lines, idx, height));
+            char endmark = detectEndmark(lines, idx, height, (char) code); // detect instead of assuming '@'
+            glyphs.put((char) code, readGlyph(lines, idx, height, endmark));
             idx += height;
         }
         
@@ -127,7 +129,8 @@ public class Flf2aIO extends FigIO
                 }
                 if (code >= 0 && code <= 0xFFFF)
                 {
-                    glyphs.put((char) code, readGlyph(lines, idx, height));
+                    char endmark = detectEndmark(lines, idx, height, (char) code); // detect instead of assuming '@'
+                    glyphs.put((char) code, readGlyph(lines, idx, height, endmark));
                     upper |= Character.isUpperCase(code);
                     lower |= Character.isLowerCase(code);
                 }
@@ -201,55 +204,4 @@ public class Flf2aIO extends FigIO
 
         pw.flush();
     }
-
-    // ── helpers privados ──────────────────────────────────────────────────────
-    /**
-     * Lee {@code height} líneas desde {@code from} y elimina el endmark '@' del
-     * final de cada una.
-     */
-    private String[] readGlyph(List<String> lines, int from, int height)
-    {
-        String[] glyph = new String[height];
-        for (int i = 0; i < height; i++)
-        {
-            String raw = (from + i < lines.size()) ? lines.get(from + i) : "";
-            glyph[i] = raw.replaceAll(ENDMARK_PATTERN, "");
-        }
-        return glyph;
-    }
-
-    /**
-     * Escribe un glifo: cada fila termina en {@code endmark}, la última en
-     * endmark doble.
-     */
-    private void writeGlyph(PrintWriter pw, String[] glyph, char endmark)
-    {
-        for (int i = 0; i < glyph.length; i++)
-        {
-            String row = glyph[i] != null ? glyph[i] : "";
-            pw.println(i == glyph.length - 1
-                    ? row + endmark + endmark
-                    : row + endmark);
-        }
-    }
-
-    private String[] emptyGlyph(int height)
-    {
-        String[] g = new String[height];
-        Arrays.fill(g, "");
-        return g;
-    }
-
-    private String[] buildCommentLines(String comment)
-    {
-        if (comment == null || comment.trim().isEmpty())
-        {
-            return new String[]
-            {
-                "Exported by Flf2aIO"
-            };
-        }
-        return comment.split("\\r?\\n", -1);
-    }
-
 }

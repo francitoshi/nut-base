@@ -29,11 +29,16 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Disabled;
 
 @DisplayName("FigLetter")
 class FigLetterTest
@@ -258,7 +263,7 @@ class FigLetterTest
             byte[] flfBytes = buildMinimalFlf(3).getBytes(StandardCharsets.UTF_8);
             // ZIP it
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
-            try (java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(bos))
+            try (ZipOutputStream zos = new ZipOutputStream(bos))
             {
                 zos.putNextEntry(new java.util.zip.ZipEntry("font.flf"));
                 zos.write(flfBytes);
@@ -341,4 +346,46 @@ class FigLetterTest
     {
         return new FigLetter(imported, scale).renderCustom(text);
     }
+    
+    @Test
+    public void testFlfTlf() throws IOException
+    {
+        String text = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ 012345689 ABCDEFGHIJKLMNÑOPQRSTUVWXYZ .,;:-";
+        String[] fonts = { "future.tlf",  "smblock.tlf", "maxiwi.flf", "miniwi.flf", "terminus.flf" };
+        for (String font : fonts)
+        {
+            
+            System.out.println(font);
+            FigLetter fl = FigLetter.getInstance(font, FigLetterTest.class.getResourceAsStream(font), 1);
+            String s = fl.render(text);
+            System.out.println(s);
+        }
+    }
+    
+    @Test
+    @Disabled
+    public void testUsrShareFiglet()
+    {
+        String text = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ 012345689 ABCDEFGHIJKLMNÑOPQRSTUVWXYZ .,;:-";
+        File figlet = new File("/usr/share/figlet/");
+        for (String font : figlet.list())
+        {
+            if(font.endsWith(".flf") || font.endsWith(".tlf"))
+            {
+                try 
+                {
+                    System.out.println(font);
+                    File file = new File(figlet,font);
+                    FigLetter fl = FigLetter.getInstance(file, 1);
+                    String s = fl.render(text);
+                    System.out.println(s);
+                }
+                catch (Exception ex) 
+                {
+                    System.err.print(font);
+                }
+            }
+        }
+    }
+    
 }

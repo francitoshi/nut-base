@@ -149,8 +149,11 @@ public class FigLetter
             // Si el glifo tiene distinta altura, se rellena
             for (int row = 0; row < height; row++)
             {
-                sb[row].append(row < glyph.length ? glyph[row] : blank(glyph[0].length()));
-                sb[row].append(' '); // separador entre caracteres
+                String rowStr = row < glyph.length ? glyph[row] : blank(glyph[0].length());
+                //Replace hardblank with realspace
+                rowStr = rowStr.replace(glyphs.hardblank, ' ');
+                sb[row].append(rowStr);
+                sb[row].append(' ');
             }
         }
 
