@@ -75,5 +75,84 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
 
         // Return the existing or newly created value.
         return value;
-    }    
+    }
+
+    private static class SynchronizedCache<K,V> implements Cache<K,V>
+    {
+        private final Object lock = new Object();
+        private final Cache<K,V> cache;
+
+        public SynchronizedCache(Cache<K, V> cache)
+        {
+            this.cache = cache;
+        }
+
+        @Override
+        public V get(K key)
+        {
+            synchronized(lock)
+            {
+                return cache.get(key);
+            }
+        }
+
+        @Override
+        public V get(K key, Function<? super K, ? extends V> create)
+        {
+            synchronized(lock)
+            {
+                return cache.get(key, create);
+            }
+        }
+
+        @Override
+        public void put(K key, V value)
+        {
+            synchronized(lock)
+            {
+                cache.put(key, value);
+            }
+        }
+
+        @Override
+        public int size()
+        {
+            synchronized(lock)
+            {
+                return cache.size();
+            }
+        }
+
+        @Override
+        public boolean isEmpty()
+        {
+            synchronized(lock)
+            {
+                return cache.isEmpty();
+            }
+        }
+
+        @Override
+        public void clear()
+        {
+            synchronized(lock)
+            {
+                cache.clear();
+            }
+        }
+
+        @Override
+        public Cache<K, V> synchronizedCache()
+        {
+            synchronized(lock)
+            {
+                return this;
+            }
+        }
+    }
+    @Override
+    public Cache<K, V> synchronizedCache()
+    {
+        return new SynchronizedCache<>(this);
+    }
 }

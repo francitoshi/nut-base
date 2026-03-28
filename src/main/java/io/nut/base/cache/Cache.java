@@ -104,4 +104,6 @@ public interface Cache<K, V>
      * after this call returns.
      */
     void clear();
+    
+    Cache<K, V> synchronizedCache();
 }
