@@ -317,6 +317,10 @@ public class BigRationalTest
         BigRational ten_nine = BigRational.valueOf(10).div(9).simplify();
         assertEquals(ten_nine.n, BigInteger.TEN);
         assertEquals(ten_nine.d, BigInteger.valueOf(9));
+        
+        assertSame(one, one.simplify());
+        assertSame(two, two.simplify());
+        assertSame(ten, ten.simplify());        
     }
 
     /**
@@ -402,5 +406,4 @@ public class BigRationalTest
         assertEquals("3/5", BigRational.build(0.6, 3).toString(true));
         assertEquals("4/5", BigRational.build(0.8, 3).toString(true));
     }
-
 }

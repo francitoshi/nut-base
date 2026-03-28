@@ -32,17 +32,20 @@ public class BigRational extends Number implements Comparable<BigRational>
     
     final BigInteger n;
     final BigInteger d;
+    final boolean simplified;
 
-    public BigRational(BigInteger n, BigInteger d, boolean simplified)
+    private BigRational(BigInteger n, BigInteger d, boolean simplified)
     {
         this.n = n;
         this.d = d;
+        this.simplified = simplified;
     }
     
     public BigRational(BigInteger n, BigInteger d)
     {
         this.n = n;
         this.d = d;
+        this.simplified = false;
     }
 
     public BigRational add(long value)
@@ -176,11 +179,17 @@ public class BigRational extends Number implements Comparable<BigRational>
 
     public BigRational simplify()
     {
+        if(this.simplified)
+        {
+            return this;
+        }
+
         BigInteger gcd = Nums.gcd(n, d);
         if(gcd.equals(BigInteger.ONE))
         {
             return this;
         }
+
         return new BigRational(n.divide(gcd), d.divide(gcd));
     }
 
