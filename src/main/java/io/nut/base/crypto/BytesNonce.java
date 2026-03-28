@@ -109,7 +109,7 @@ class RandomCounterBytesNonce extends BytesNonce
     public byte[] next()
     {
         long c = counter.getAndIncrement();
-        if(c==-1)
+        if(c<0)
         {
             throw new SecurityException("counter overflow");
         }
