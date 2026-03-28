@@ -1,7 +1,7 @@
 /*
  *  Digest.java
  *
- *  Copyright (c) 2014-2025 francitoshi@gmail.com
+ *  Copyright (c) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -188,12 +188,13 @@ public class Digest
     
     public byte[] digestChain(byte[] bytes, int n) 
     {
-        MessageDigest md = get();
         byte[] current = bytes;
         for (int i = 0; i < n; i++) 
         {
+            //use a clean instance to prevent bad implementations that do not reset
+            MessageDigest md = get();
             md.update(current);
-            current = md.digest();  // reutiliza buffer interno del provider
+            current = md.digest();
         }
         return current;    
     }
