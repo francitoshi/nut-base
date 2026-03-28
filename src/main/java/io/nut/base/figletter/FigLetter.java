@@ -29,6 +29,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Objects;
 
 /**
  *
@@ -64,6 +65,8 @@ public class FigLetter
     }
     public static FigLetter getInstance(String name, InputStream inputStream, int scale) throws IOException
     {
+        Objects.requireNonNull(name, "name must not be null");
+        Objects.requireNonNull(inputStream, "inputStream must not be null");
         return new FigLetter(figIO.load(name, inputStream), scale);
     }
     public static FigLetter getInstance(File fontFile, int scale) throws FileNotFoundException, IOException
