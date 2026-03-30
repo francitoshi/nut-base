@@ -1,7 +1,7 @@
 /*
  * Emails.java
  *
- * Copyright (c) 2014-2024 francitoshi@gmail.com
+ * Copyright (c) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -34,5 +34,52 @@ public class Emails
     public static boolean isValidEmail(String value)
     {
         return EMAIL_PATTERN.matcher(value).matches();
+    }
+    
+    public static String[] parseEmailAddress(String input)
+    {
+        if(input==null)
+        {
+            return null;
+        }
+        
+        input = input.trim();
+        
+        if (input.isEmpty())
+        {
+            return new String[]{"", ""};
+        }
+
+        String name = "";
+        String email = "";
+
+        // Search for email among < >
+        int angleStart = input.indexOf('<');
+        int angleEnd = input.indexOf('>');
+
+        if (angleStart >= 0 && angleEnd > angleStart)
+        {
+            // Format "Name <email>" or "<email>"
+            email = input.substring(angleStart + 1, angleEnd).trim();
+            name = input.substring(0, angleStart).trim();
+        }
+        else
+        {
+            // Format "email" plain with no angles
+            // Verify that an email look like a valid email (it has an @)
+            if (input.contains("@"))
+            {
+                email = input;
+                name = "";
+            }
+        }
+
+        // Validación mínima: el email debe contener '@'
+        if (!email.contains("@"))
+        {
+            email = "";
+        }
+
+        return new String[]{ name, email };
     }
 }

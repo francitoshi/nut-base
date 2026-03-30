@@ -1,7 +1,7 @@
 /*
  * EmailsTest.java
  *
- * Copyright (c) 2014-2024 francitoshi@gmail.com
+ * Copyright (c) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,6 +26,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  *
@@ -33,31 +38,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class EmailsTest
 {
-    
-    public EmailsTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
     static final String[] valid = 
     { 
         "example@yahoo.com",
@@ -89,6 +69,7 @@ public class EmailsTest
         "example@", 
         "@example.com"
     };
+
     /**
      * Test of isValidEmail method, of class Emails.
      */
@@ -106,4 +87,136 @@ public class EmailsTest
 
     }
     
+    // -------------------------------------------------------------------------
+    // Full format: "Name <email>"
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Format 'name <email>' extracts name and email correctly")
+    void testFullFormat() 
+    {
+        String[] result = Emails.parseEmailAddress("francitoshi <francitoshi@gmail.com>");
+        assertAll
+        (
+            () -> assertEquals("francitoshi", result[0], "Name should be 'francitoshi'"),
+            () -> assertEquals("francitoshi@gmail.com", result[1], "Email should be 'francitoshi@gmail.com'")
+        );
+    }
+
+    @Test
+    @DisplayName("Format 'name <email>' with extra surrounding spaces")
+    void testFullFormatWithExtraSpaces() 
+    {
+        String[] result = Emails.parseEmailAddress("  francitoshi   <francitoshi@gmail.com>  ");
+        assertAll
+        (
+            () -> assertEquals("francitoshi", result[0]),
+            () -> assertEquals("francitoshi@gmail.com", result[1])
+        );
+    }
+
+    @Test
+    @DisplayName("Format 'name <email>' with compound name")
+    void testFullFormatWithCompoundName() 
+    {
+        String[] result = Emails.parseEmailAddress("Francisco Toshi <francitoshi@gmail.com>");
+        assertAll
+        (
+            () -> assertEquals("Francisco Toshi", result[0]),
+            () -> assertEquals("francitoshi@gmail.com", result[1])
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Angle brackets only: "<email>"
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Format '<email>' returns empty name and correct email")
+    void testAngleBracketsOnly()
+    {
+        String[] result = Emails.parseEmailAddress("<francitoshi@gmail.com>");
+        assertAll
+        (
+            () -> assertEquals("", result[0], "Name should be empty"),
+            () -> assertEquals("francitoshi@gmail.com", result[1])
+        );
+    }
+
+    @Test
+    @DisplayName("Format '<email>' with inner spaces inside angle brackets")
+    void testAngleBracketsWithInnerSpaces() 
+    {
+        String[] result = Emails.parseEmailAddress("< francitoshi@gmail.com >");
+        assertAll
+        (
+            () -> assertEquals("", result[0]),
+            () -> assertEquals("francitoshi@gmail.com", result[1])
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Plain format: "email"
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Plain email format returns empty name and correct email")
+    void testPlainEmail()
+    {
+        String[] result = Emails.parseEmailAddress("francitoshi@gmail.com");
+        assertAll
+        (
+            () -> assertEquals("", result[0], "Name should be empty"),
+            () -> assertEquals("francitoshi@gmail.com", result[1])
+        );
+    }
+
+    @Test
+    @DisplayName("Plain email format with surrounding spaces")
+    void testPlainEmailWithSpaces() 
+    {
+        String[] result = Emails.parseEmailAddress("  francitoshi@gmail.com  ");
+        assertAll
+        (
+            () -> assertEquals("", result[0]),
+            () -> assertEquals("francitoshi@gmail.com", result[1])
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Edge cases: null, empty, invalid
+    // -------------------------------------------------------------------------
+
+    @Test
+    @DisplayName("Null input returns null")
+    void testNullInput()
+    {
+        String[] result = Emails.parseEmailAddress(null);
+        assertNull(result);
+    }
+
+    @Test
+    @DisplayName("Input without '@' returns empty email")
+    void testInputWithoutAtSign()
+    {
+        String[] result = Emails.parseEmailAddress("this-is-not-an-email");
+        assertAll
+        (
+            () -> assertEquals("", result[0]),
+            () -> assertEquals("", result[1])
+        );
+    }
+
+    @Test
+    @DisplayName("Angle brackets without '@' inside return empty email")
+    void testAngleBracketsWithoutAtSign()
+    {
+        String[] result = Emails.parseEmailAddress("name <noAtSign>");
+        assertAll
+        (
+            () -> assertEquals("name", result[0]),
+            () -> assertEquals("", result[1])
+        );
+    }
+
 }
