@@ -1,7 +1,7 @@
 /*
  *  Strings.java
  *
- *  Copyright (c) 2012-2025 francitoshi@gmail.com
+ *  Copyright (c) 2012-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1121,15 +1121,17 @@ public class Strings
         }
         return rows;
     }
+    
     public static String split(String s, int cols, String sep)
     {
         int n = s.length();
-        StringBuilder rows = new StringBuilder();
+        StringJoiner sj = new StringJoiner(sep);
         for(int i=0;i<n;i+=cols)
         {
-            rows.append(s.substring(i,Math.min(i+cols, n))).append(sep);
+            String item = s.substring(i,Math.min(i+cols, n));
+            sj.add(item);
         }
-        return rows.toString();
+        return sj.toString();
     }
     
     /**

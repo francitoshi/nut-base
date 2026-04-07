@@ -3389,4 +3389,34 @@ public abstract class Utils
             }
         };
     }
+    
+    public static void arraycopy(byte[] src, int srcPos, byte[] dst, int dstPos, int length)
+    {
+        System.arraycopy(src, srcPos, dst, dstPos, length); 
+    }
+    public static void arraycopy(int[] src, int srcPos, int[] dst, int dstPos, int length)
+    {
+        System.arraycopy(src, srcPos, dst, dstPos, length); 
+    }
+    public static void arraycopy(long[] src, int srcPos, long[] dst, int dstPos, int length)
+    {
+        System.arraycopy(src, srcPos, dst, dstPos, length); 
+    }
+    public static void arraycopy(short[] src, int srcPos, short[] dst, int dstPos, int length)
+    {
+        System.arraycopy(src, srcPos, dst, dstPos, length); 
+    }
+    public static void arraycopy(char[] src, int srcPos, char[] dst, int dstPos, int length)
+    {
+        System.arraycopy(src, srcPos, dst, dstPos, length); 
+    }
+    public static void arraycopy(float[] src, int srcPos, float[] dst, int dstPos, int length)
+    {
+        System.arraycopy(src, srcPos, dst, dstPos, length); 
+    }
+    public static void arraycopy(double[] src, int srcPos, double[] dst, int dstPos, int length)
+    {
+        System.arraycopy(src, srcPos, dst, dstPos, length); 
+    }
+
 }

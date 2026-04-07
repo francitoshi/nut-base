@@ -1,7 +1,7 @@
 /*
  *  KeyBytes.java
  *
- *  Copyright (c) 2023-2024 francitoshi@gmail.com
+ *  Copyright (c) 2023-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,14 +18,15 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.keyarray;
 
 import io.nut.base.encoding.Hex;
+import io.nut.base.util.Utils;
 import java.io.Serializable;
 import java.util.Arrays;
 
 /**
- * This class is intended for encapsulata a byte[] and use it as keys in a Map&lt;KeyBytes,byte[]&gt; because using byte[] as key
+ * This class is intended for encapsulate a byte[] and use it as keys in a Map&lt;KeyBytes,byte[]&gt; because using byte[] as key
  * compare array memory address and not the the content.
  * 
  * @author franci
@@ -33,7 +34,7 @@ import java.util.Arrays;
 public class KeyBytes implements Comparable<KeyBytes>, Serializable
 {
     
-    final byte[] bytes;
+    protected final byte[] bytes;
 
     public KeyBytes(byte[] bytes)
     {
@@ -76,6 +77,11 @@ public class KeyBytes implements Comparable<KeyBytes>, Serializable
     public String toString()
     {
         return Hex.encode(bytes);
+    }
+
+    public byte[] getBytes()
+    {
+        return bytes.clone();
     }
     
 }

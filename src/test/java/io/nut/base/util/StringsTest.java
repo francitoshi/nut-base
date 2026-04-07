@@ -840,11 +840,11 @@ public class StringsTest
     {
         assertArrayEquals(new String[]{}, Strings.split("",3));
 
-        assertEquals("000|111|222|", Strings.split("000111222",3,"|"));
-        assertEquals("000|111|222|3|", Strings.split("0001112223",3,"|"));
-        assertEquals("000|111|222|33|", Strings.split("00011122233",3,"|"));
-        assertEquals("000|111|222|333|", Strings.split("000111222333",3,"|"));
-        assertEquals("000|111|222|333|4|", Strings.split("0001112223334",3,"|"));
+        assertEquals("000|111|222", Strings.split("000111222",3,"|"));
+        assertEquals("000|111|222|3", Strings.split("0001112223",3,"|"));
+        assertEquals("000|111|222|33", Strings.split("00011122233",3,"|"));
+        assertEquals("000|111|222|333", Strings.split("000111222333",3,"|"));
+        assertEquals("000|111|222|333|4", Strings.split("0001112223334",3,"|"));
         
     }
 
