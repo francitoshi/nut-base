@@ -22,6 +22,7 @@ package io.nut.base.util;
 
 import io.nut.base.encoding.Base64DecoderException;
 import io.nut.base.encoding.Encoding;
+import io.nut.base.varint.CompactSize;
 //import io.nut.base.snappy.Snappy;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -217,7 +218,7 @@ public class Zip
         for(long item : plain)
         {
             bb.putLong(item);
-            varIntBytes += VarInt.sizeOf(item);
+            varIntBytes += CompactSize.sizeOf(item);
         }
         
         int gap=0;
@@ -258,8 +259,7 @@ public class Zip
             bytes[0]=(byte) width;
             for(int i=0,p=1;i<n;i++)
             {
-                VarInt vi = new VarInt(plain[i]);
-                p+= vi.encode(bytes,p);
+                p+= CompactSize.encode(plain[i], bytes, p);
             }
         }
         if(bytes.length>COMPRESS_MIN_SIZE)
@@ -298,9 +298,9 @@ public class Zip
             int i=0;
             for(int p=1;p<bytes.length;i++)
             {
-                VarInt vi = new VarInt(bytes,p);
-                tmp[i] = vi.longValue();
-                p+=vi.getOriginalSizeInBytes();
+                long value = CompactSize.decode(bytes, p);
+                tmp[i] = value;
+                p += CompactSize.sizeOf(value);
             }
             return Arrays.copyOf(tmp, i);
         }

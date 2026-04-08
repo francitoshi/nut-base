@@ -32,8 +32,8 @@ import io.nut.base.util.BitSetWriter;
 import io.nut.base.util.Bits;
 import io.nut.base.util.Strings;
 import io.nut.base.util.Utils;
-import io.nut.base.util.VarInt;
 import io.nut.base.util.Zip;
+import io.nut.base.varint.CompactSize;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
@@ -186,8 +186,7 @@ public class Steganography
             byte[] bytes2 = bytes.length>=6 ? Zip.deflate(bytes, 0, bytes.length, 9, true) : bytes;
             bytes = (deflate = bytes2.length<bytes.length) ? bytes2 : bytes;
         }
-        VarInt count = new VarInt(bytes.length);
-        byte[] countBytes = count.encode();
+        byte[] countBytes = CompactSize.encode(bytes.length);
         
         byte mask = Bits.bitSet((byte)Utils.adler32(bytes), 7, deflate);
         
@@ -202,9 +201,9 @@ public class Steganography
     static byte[] unpack(byte[] packet)
     {
         ByteBuffer buffer = ByteBuffer.wrap(packet);
-        VarInt count = new VarInt(packet,0);
-        int len = count.intValue();
-        byte mask = buffer.get(count.getOriginalSizeInBytes());
+        int len = (int) CompactSize.decode(packet);
+        int encodedSize = CompactSize.sizeOf(len);
+        byte mask = buffer.get(encodedSize);
         boolean deflate = Bits.bitGet(mask, 7);
         
         byte[] bytes = new byte[len];
@@ -212,7 +211,7 @@ public class Steganography
         {
             //the following line is emulated because that method does not exists in java 8
             //buffer.get(count.getOriginalSizeInBytes()+1, bytes, 0, len);
-            buffer.position(count.getOriginalSizeInBytes()+1);
+            buffer.position(encodedSize+1);
             buffer.get(bytes, 0, len);
         }
 
