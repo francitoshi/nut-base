@@ -233,11 +233,7 @@ public class HiveTest
     @DisplayName("Async Supplier debe retornar el valor correctamente")
     void testAsyncSupplier() throws Exception
     {
-        Future<String> future = taskManager.async(() ->
-        {
-            return "Hola Mundo";
-        });
-
+        Future<String> future = taskManager.async(() -> "Hola Mundo");
         assertEquals("Hola Mundo", future.get(1, TimeUnit.SECONDS));
     }
 
@@ -247,10 +243,7 @@ public class HiveTest
     {
         AtomicBoolean executed = new AtomicBoolean(false);
 
-        Future<Void> future = taskManager.lazy(() ->
-        {
-            executed.set(true);
-        });
+        Future<Void> future = taskManager.lazy(() -> executed.set(true));
 
         // Verificamos que tras un pequeño tiempo NO se ha ejecutado
         Thread.sleep(100);
@@ -267,10 +260,7 @@ public class HiveTest
     {
         AtomicInteger counter = new AtomicInteger(0);
 
-        Future<Integer> future = taskManager.lazy(() ->
-        {
-            return counter.incrementAndGet();
-        });
+        Future<Integer> future = taskManager.lazy(() -> counter.incrementAndGet());
 
         // Verificamos que el contador sigue en 0
         Thread.sleep(100);
