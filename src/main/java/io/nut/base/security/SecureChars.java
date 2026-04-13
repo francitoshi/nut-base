@@ -1,7 +1,7 @@
 /*
  *  SecureChars.java
  *
- *  Copyright (C) 2025 francitoshi@gmail.com
+ *  Copyright (C) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -53,7 +53,8 @@ public class SecureChars implements AutoCloseable, Destroyable
         this(src, StandardCharsets.UTF_8, null);
     }
 
-    public char[] getChars()
+    // keep private for outsiders
+    char[] getChars()
     {
         byte[] bytes = this.secureBytes.getBytes();
         char[] chars = Byter.chars(bytes, this.charset);

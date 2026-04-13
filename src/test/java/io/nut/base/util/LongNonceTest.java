@@ -1,7 +1,7 @@
 /*
  * LongNonceTest.java
  *
- * Copyright (c) 2021-2025 francitoshi@gmail.com
+ * Copyright (c) 2021-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,7 @@
  */
 package io.nut.base.util;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
+import io.nut.base.time.JavaTime;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -99,6 +96,49 @@ public class LongNonceTest
         
         long value2 = nonce.get();
         assertTrue(value2>=System.currentTimeMillis());
+        assertTrue(value2>value1);
+    }
+    
+    /**
+     * Test of getEpochSecondInstance method, of class LongNonce.
+     */
+    @Test
+    public void testGetEpochSecondInstance_long()
+    {
+        LongNonce nonce = LongNonce.getEpochSecondInstance(0L);
+        
+        assertEquals(0L, nonce.peek());
+        
+        long value1 = nonce.get();
+        assertTrue(value1>=JavaTime.epochSecond());
+        assertTrue(value1>0);
+        
+        long value2 = nonce.get();
+        assertTrue(value2>=JavaTime.epochSecond());
+        assertTrue(value2>value1);
+        
+    }
+
+    /**
+     * Test of getEpochSecondInstance method, of class LongNonce.
+     */
+    @Test
+    public void testGetEpochSecondInstance_0args()
+    {
+        LongNonce nonce = LongNonce.getEpochSecondInstance();
+        
+        long t0 = JavaTime.epochSecond();
+        long value0 = nonce.peek();
+        long t1 = JavaTime.epochSecond();
+        assertTrue(value0>=t0);
+        assertTrue(value0<=t1);
+        
+        long value1 = nonce.get();
+        assertTrue(value1>=JavaTime.epochSecond());
+        assertTrue(value1>value0);
+        
+        long value2 = nonce.get();
+        assertTrue(value2>=JavaTime.epochSecond());
         assertTrue(value2>value1);
     }
     
