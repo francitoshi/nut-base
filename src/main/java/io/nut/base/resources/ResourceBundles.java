@@ -149,4 +149,13 @@ public class ResourceBundles
         return getResourceAsString(clss, name, null);
     }
     
+    public static String getResourceAsStringIndirect(Class clss, String name, ResourceBundle bundle, String defaultValue)
+    {
+        String name2 = bundle.getString(name);
+        return getResourceAsString(clss, name2, defaultValue);
+    }
+    public static String getResourceAsStringIndirect(Class clss, String name, ResourceBundle bundle)
+    {
+        return getResourceAsStringIndirect(clss, name, bundle, null);
+    }
 }
