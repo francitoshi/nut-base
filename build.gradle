@@ -27,7 +27,7 @@ dependencies
     testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
     testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
 
-    testImplementation 'org.apache.commons:commons-csv:1.14.0'
+    testImplementation 'org.apache.commons:commons-csv:1.14.1'
     testImplementation 'ch.obermuhlner:big-math:2.3.2'
     testImplementation 'org.mapdb:mapdb:3.1.0'
 }
