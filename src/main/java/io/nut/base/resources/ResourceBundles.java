@@ -1,7 +1,7 @@
 /*
  * ResourceBundles.java
  *
- * Copyright (c) 2014-2026 francitoshi@gmail.com
+ *  Copyright (c) 2014-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -149,13 +149,13 @@ public class ResourceBundles
         return getResourceAsString(clss, name, null);
     }
     
-    public static String getResourceAsStringIndirect(Class clss, String name, ResourceBundle bundle, String defaultValue)
+    public static String getResourceAsString(Class clss, String name, ResourceBundle bundle, String defaultValue)
     {
         String name2 = bundle.getString(name);
         return getResourceAsString(clss, name2, defaultValue);
     }
     public static String getResourceAsStringIndirect(Class clss, String name, ResourceBundle bundle)
     {
-        return getResourceAsStringIndirect(clss, name, bundle, null);
+        return getResourceAsString(clss, name, bundle, null);
     }
 }

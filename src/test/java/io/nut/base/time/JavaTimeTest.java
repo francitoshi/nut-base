@@ -27,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.Locale;
 import org.junit.jupiter.api.AfterEach;
@@ -35,6 +36,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 /**
  *
@@ -42,30 +45,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class JavaTimeTest
 {
-    
-    public JavaTimeTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
     
     static final String[] DT_ES =
     {
@@ -868,4 +847,97 @@ public class JavaTimeTest
         assertFalse(JavaTime.isSameYear(date6a, date6b, JavaTime.UTC));
 
     }
+    
+// -----------------------------------------------------------------------
+    // YYYY_MM_DD_HH_MM_SSz  =>  "yyyy-MM-dd HH:mm:ssz"
+    // Expected example from source comment: "2019-10-04 02:03:00CEST"
+    // -----------------------------------------------------------------------
+
+    @ParameterizedTest(name = "[{index}] \"{0}\" should parse successfully")
+    @CsvSource
+    ({
+        "2019-10-04 02:03:00CEST",   // format without space, as in comment
+        "2019-10-04 02:03:00CET",
+        "2019-10-04 02:03:00UTC",
+        "2019-10-04 02:03:00GMT",
+    })
+    void shouldParseWithNoSpaceBeforeZoneName(String input)
+    {
+        // This test is EXPECTED TO FAIL until the bug is fixed:
+        // YYYY_MM_DD_HH_MM_SSz is not registered in ParserHolder,
+        // and "2019-10-04 02:03:00CEST" has no space before the zone name.
+        assertDoesNotThrow(() ->
+            JavaTime.parseZonedDateTime(input, JavaTime.UTC),
+            "Should parse '" + input + "' but no matching parser is registered"
+        );
+    }
+
+    @ParameterizedTest(name = "[{index}] \"{0}\" should parse successfully")
+    @CsvSource({
+        "2019-10-04 02:03:00 CEST",  // format with space (YYYY_MM_DD_HH_MM_SS_z)
+        "2019-10-04 02:03:00 CET",
+        "2019-10-04 02:03:00 UTC",
+        "2019-10-04 02:03:00 GMT",
+        "2019-10-04 02:03:00 Z",
+    })
+    void shouldParseWithSpaceBeforeZoneName(String input)
+    {
+        // This test is also EXPECTED TO FAIL until the bug is fixed:
+        // YYYY_MM_DD_HH_MM_SS_z is not registered in ParserHolder either.
+        assertDoesNotThrow(() ->
+            JavaTime.parseZonedDateTime(input, JavaTime.UTC),
+            "Should parse '" + input + "' but no matching parser is registered"
+        );
+    }
+
+    @Test
+    void parsedValueShouldHaveCorrectFields()
+    {
+        // Once the bug is fixed, verify the parsed instant is correct.
+        // "2019-01-04 02:03:00 CET" => CET is UTC+1, so UTC instant is 2019-01-04 01:03:00Z
+        ZonedDateTime result = JavaTime.parseZonedDateTime("2019-01-04 02:03:00 CET", JavaTime.UTC);
+
+        ZonedDateTime utc = result.withZoneSameInstant(JavaTime.UTC);
+        assertAll(
+            () -> assertEquals(2019,  utc.getYear()),
+            () -> assertEquals(1,    utc.getMonthValue()),
+            () -> assertEquals(4,     utc.getDayOfMonth()),
+            () -> assertEquals(1,     utc.getHour()),   // 02:03 CET = 01:03 UTC
+            () -> assertEquals(3,     utc.getMinute()),
+            () -> assertEquals(0,     utc.getSecond())
+        );
+    }
+
+    @Test
+    void noSpaceVariantShouldMatchCorrectFormatter()
+    {
+        // Verifies the no-space variant uses YYYY_MM_DD_HH_MM_SSz directly.
+        // CEST is UTC+2, so UTC instant is 2019-10-04 00:03:00Z
+        ZonedDateTime result = JavaTime.parseZonedDateTime("2019-10-04 02:03:00CEST", JavaTime.UTC);
+
+        ZonedDateTime utc = result.withZoneSameInstant(JavaTime.UTC);
+        assertAll(
+            () -> assertEquals(2019,  utc.getYear()),
+            () -> assertEquals(10,    utc.getMonthValue()),
+            () -> assertEquals(4,     utc.getDayOfMonth()),
+            () -> assertEquals(0,     utc.getHour()),   // 02:03 CEST = 00:03 UTC
+            () -> assertEquals(3,     utc.getMinute()),
+            () -> assertEquals(0,     utc.getSecond())
+        );
+    }
+
+    @Test
+    void unrelatedFormatsShouldStillWork()
+    {
+        // Regression guard: fixing this bug must not break other parsers.
+        assertDoesNotThrow(() -> JavaTime.parseZonedDateTime("2019-10-04", JavaTime.UTC));
+        assertDoesNotThrow(() -> JavaTime.parseZonedDateTime("2019-10-04 02:03:00", JavaTime.UTC));
+        assertDoesNotThrow(() -> JavaTime.parseZonedDateTime("2019-10-04T02:03:00+02:00", JavaTime.UTC));
+    }
+
+    @Test
+    void invalidInputShouldThrow()
+    {
+        assertThrows(DateTimeParseException.class, () -> JavaTime.parseZonedDateTime("not-a-date", JavaTime.UTC));
+    }    
 }
