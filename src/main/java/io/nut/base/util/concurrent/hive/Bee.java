@@ -1,7 +1,7 @@
 /*
  *  Bee.java
  *
- *  Copyright (C) 2024-2025 francitoshi@gmail.com
+ *  Copyright (C) 2024-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -76,6 +77,7 @@ public abstract class Bee<M>
     private volatile int status = RUNNING;
     
     private volatile boolean allowLogger = true;
+    private volatile boolean shutdownWhenEmpty = false;
     private volatile Executor hive;
     private final int threads;
     private final Semaphore semaphore;
@@ -249,6 +251,8 @@ public abstract class Bee<M>
     /**
      * Runnable task that processes queued messages. This task attempts to acquire
      * a permit from the semaphore and then processes all available messages in the queue.
+     * If {@code shutdownWhenEmpty} has been requested, triggers an orderly shutdown
+     * once the queue is empty and no worker threads are active.
      */
     private final Runnable receiveTask = new Runnable()
     {
@@ -281,6 +285,10 @@ public abstract class Bee<M>
                 semaphore.release();
                 synchronized(lock)
                 {
+		    if(shutdownWhenEmpty && semaphore.availablePermits() == threads && queue.isEmpty())
+		    {
+		        shutdown(false);
+		    }
                     lock.notifyAll();
                 }
             }
@@ -330,19 +338,61 @@ public abstract class Bee<M>
             }
         }
     };
-        
+
     /**
      * Initiates an orderly shutdown in which previously submitted messages are
      * processed, but no new messages will be accepted. This method does not wait
      * for previously submitted messages to complete execution. Use
      * {@link #awaitTermination(int)} to wait for processing to complete.
-     * 
+     *
+     * <p>Equivalent to calling {@code shutdown(false)}.
+     *
      * <p>This method is idempotent - calling it multiple times has no additional effect.
      */
     public void shutdown()
     {
+        shutdown(false);
+    }
+
+    /**
+     * Initiates an orderly shutdown of this Bee.
+     *
+     * <p>When {@code onlyWhenEmpty} is {@code false}, behaves identically to
+     * {@link #shutdown()}: no new messages are accepted and queued messages
+     * continue to be processed until the queue is drained.
+     *
+     * <p>When {@code onlyWhenEmpty} is {@code true}, the Bee continues operating
+     * normally (accepting and processing messages) until both of the following
+     * conditions are met simultaneously:
+     * <ul>
+     *   <li>The message queue is empty.</li>
+     *   <li>No worker threads are active (i.e., no ongoing {@code receive()} call
+     *       can produce further messages via {@code send()}).</li>
+     * </ul>
+     * Once those conditions are detected — either at the moment this method is
+     * called or at the end of any subsequent worker cycle — an orderly shutdown
+     * is triggered automatically.
+     *
+     * <p>This method is idempotent - calling it multiple times has no additional effect.
+     *
+     * @param onlyWhenEmpty if {@code true}, defer shutdown until the queue is
+     *                      empty and all worker threads are idle; if {@code false},
+     *                      initiate shutdown immediately
+     * @return return this object
+     */
+    public Bee<M> shutdown(boolean onlyWhenEmpty)
+    {
         synchronized(lock)
         {
+            if(onlyWhenEmpty)
+            {
+                 this.shutdownWhenEmpty = true;
+                 if (semaphore.availablePermits() == threads && queue.isEmpty())
+                 {
+		        shutdown(false);
+                 }
+		 return this;
+	    }
             if(this.status==RUNNING)
             {
                 this.status = SHUTDOWN;
@@ -357,8 +407,9 @@ public abstract class Bee<M>
                 }
             }
         }
+        return this;
     }
-    
+        
     /**
      * Returns true if this Bee has been shut down.
      *
@@ -391,13 +442,17 @@ public abstract class Bee<M>
     {
         try
         {
+            boolean rc = false;
+            long untilNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
             synchronized(lock)
             {
-                while(!isTerminated())
+                long now;
+                while(!(rc=isTerminated()) && (now=System.nanoTime())<untilNanos)
                 {
-                    lock.wait(millis);
+                    long remaining = untilNanos - now;
+                    lock.wait(remaining / 1_000_000L, (int) (remaining % 1_000_000L));
                 }
-                return true;
+                return rc;
             }
         }
         catch (InterruptedException ex)
@@ -418,10 +473,18 @@ public abstract class Bee<M>
      */
     public static void shutdownAndAwaitTermination(Bee<?> ...bees)
     {
+        shutdownAndAwaitTermination(false, bees);
+    }
+    
+    public static void shutdownAndAwaitTermination(boolean onlyWhenEmpty, Bee<?> ...bees)
+    {
         Objects.requireNonNull(bees, "bees must not be null");
         for(Bee<?> item : bees)
         {
-            item.shutdown();
+            item.shutdown(onlyWhenEmpty);
+        }
+        for(Bee<?> item : bees)
+        {
             item.awaitTermination(Integer.MAX_VALUE);
         }
     }
