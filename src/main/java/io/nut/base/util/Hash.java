@@ -1,7 +1,7 @@
 /*
  *  Hash.java
  *
- *  Copyright (C) 2010-2023 francitoshi@gmail.com
+ *  Copyright (C) 2010-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,6 +24,6 @@ package io.nut.base.util;
  *
  * @author franci
  */
-public interface Hash
+public interface Hash extends Comparable<Hash>
 {
 }

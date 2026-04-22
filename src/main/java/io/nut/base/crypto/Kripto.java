@@ -1,7 +1,7 @@
 /*
  *  Kripto.java
  *
- *  Copyright (C) 2018-2025 francitoshi@gmail.com
+ *  Copyright (C) 2018-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -1355,9 +1355,19 @@ public class Kripto
     public final PBKDF2 pbkdf2WithSha256 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA256);
     public final PBKDF2 pbkdf2WithSha512 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA512);
 
-    public final HKDF hkdfWithSha256 = getHKDF(Hkdf.HkdfWithSha256);
-    public final HKDF hkdfWithSha384 = getHKDF(Hkdf.HkdfWithSha384);
-    public final HKDF hkdfWithSha512 = getHKDF(Hkdf.HkdfWithSha512);
+    // This methods use Bouncy Castle
+    public HKDF getHkdfWithSha256()
+    {
+        return getHKDF(Hkdf.HkdfWithSha256);
+    }
+    public final HKDF getHkdfWithSha384()
+    {
+        return getHKDF(Hkdf.HkdfWithSha384);
+    }
+    public final HKDF getHkdfWithSha512()
+    {
+        return getHKDF(Hkdf.HkdfWithSha512);
+    }
 
     public final KeyGenerator keyGenAes256 = getKeyGenerator(SecretKeyAlgorithm.AES, 256);
     

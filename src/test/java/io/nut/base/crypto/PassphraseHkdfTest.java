@@ -1,7 +1,7 @@
 /*
  *  PassphraseHkdfTest.java
  *
- *  Copyright (C) 2025 francitoshi@gmail.com
+ *  Copyright (C) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -39,7 +39,7 @@ public class PassphraseHkdfTest
         byte[] salt = "salt".getBytes(StandardCharsets.UTF_8);
         Kripto kripto = Kripto.getInstance();
 
-        try (PassphraserHkdf passphraser = kripto.getPassphraserHkdf(kripto.hkdfWithSha256, key, salt))
+        try (PassphraserHkdf passphraser = kripto.getPassphraserHkdf(kripto.getHkdfWithSha256(), key, salt))
         {
             
             char[] pass1 = passphraser.chars("database-key");
@@ -48,7 +48,7 @@ public class PassphraseHkdfTest
             assertArrayEquals(pass1, pass2);
             assertFalse(Arrays.equals(pass1, apiKey));
         }
-        try (PassphraserHkdf passphraser = kripto.getPassphraserHkdf(kripto.hkdfWithSha512, key, salt))
+        try (PassphraserHkdf passphraser = kripto.getPassphraserHkdf(kripto.getHkdfWithSha512(), key, salt))
         {
             
             char[] pass1 = passphraser.chars("database-key");
