@@ -82,7 +82,7 @@ import java.util.function.Supplier;
  *
  * @param <T> the type of the lazily computed value
  */
-public final class Lazy<T>
+public final class Lazy<T> implements Supplier<T>
 {
 
     /**
@@ -175,8 +175,8 @@ public final class Lazy<T>
     public java.util.Optional<T> getIfInitialized()
     {
         Object current = ref.get();
-        return current == UNSET ? java.util.Optional.empty()
-                : java.util.Optional.ofNullable((T) current);
+        return current == UNSET ? java.util.Optional.empty() 
+                                : java.util.Optional.ofNullable((T) current);
     }
 
     // ------------------------------------------------------------------ //
@@ -212,7 +212,7 @@ public final class Lazy<T>
     public String toString()
     {
         Object current = ref.get();
-        return current == UNSET ? "Lazy[uninitialized]"
-                : "Lazy[" + current + "]";
+        return current == UNSET ? "Lazy[uninitialized]" 
+                                : "Lazy[" + current + "]";
     }
 }
