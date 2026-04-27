@@ -21,6 +21,7 @@
 package io.nut.base.cache;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Simplified W-TinyLFU implementation inspired by Caffeine cache. Uses a window
@@ -44,8 +45,13 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 
     // Frequency sketch - probabilistic counter
     private final CountMinSketch<K> sketch;
+    
+    private final boolean statistics;
+    private final AtomicInteger countWindowHits = new AtomicInteger();
+    private final AtomicInteger countMainHits = new AtomicInteger();
+    private final AtomicInteger countAttempts = new AtomicInteger();
 
-    public TinyLFUCache(int capacity)
+    public TinyLFUCache(int capacity, boolean statistics)
     {
         if (capacity <= 0)
         {
@@ -58,6 +64,11 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         this.windowCache = new LRUCache<>(windowSize);
         this.mainCache = new SegmentedLFUCache<>(mainSize);
         this.sketch = new CountMinSketch<>(capacity * 10);
+        this.statistics = statistics;
+    }
+    public TinyLFUCache(int capacity)
+    {
+        this(capacity, false);
     }
 
     @Override
@@ -65,16 +76,23 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     {
         // Record access
         sketch.increment(key);
+        if(statistics) countAttempts.incrementAndGet();
 
         // Try window cache first
         V value = windowCache.get(key);
         if (value != null)
         {
+            if(statistics) countWindowHits.incrementAndGet();
             return value;
         }
 
         // Try main cache
-        return mainCache.get(key);
+        value = mainCache.get(key);
+        if(statistics && value!=null)
+        {
+            countWindowHits.incrementAndGet();
+        }
+        return value;
     }
 
     @Override
