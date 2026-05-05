@@ -1,7 +1,7 @@
 /*
  *  GPG.java
  *
- *  Copyright (c) 2025 francitoshi@gmail.com
+ *  Copyright (c) 2025-2026 francitoshi@gmail.com
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -48,6 +48,29 @@ import java.util.regex.Pattern;
 
 //https://github.com/gpg/gnupg/blob/master/doc/DETAILS
 
+/**
+ * Facade for the GnuPG ({@code gpg}) command-line tool.
+ *
+ * <p>Each public method of this class spawns a {@code gpg} child process,
+ * communicates with it through its standard streams, and returns a
+ * Java-friendly result.  The class is <em>not</em> thread-safe by default;
+ * configuration setters ({@link #setDebug}, {@link #setArmor}, etc.) should
+ * be called before any operation methods are invoked from concurrent threads.</p>
+ *
+ * <h3>Typical usage</h3>
+ * <pre>{@code
+ * GPG gpg = new GPG().setArmor(true);
+ * byte[] cipher = gpg.encryptAndSign(plaintext, signerFingerprint, passphrase, recipientFingerprint);
+ * byte[] plain  = gpg.decryptAndVerify(cipher, passphrase, null);
+ * }</pre>
+ *
+ * <p>See the GnuPG
+ * <a href="https://github.com/gpg/gnupg/blob/master/doc/DETAILS">DETAILS</a>
+ * document for the colon-delimited output format used by key-listing
+ * operations.</p>
+ *
+ * @author franci
+ */
 public class GPG
 {   
 
@@ -169,22 +192,66 @@ public class GPG
     }
 
     
+    /**
+     * Enables or disables debug output.
+     *
+     * <p>When debug mode is active, every GPG command line is printed to
+     * {@code System.out} before execution, and lines that are not explicitly
+     * handled by parsing logic are echoed to {@code System.err}.</p>
+     *
+     * @param value {@code true} to enable debug output; {@code false} to disable
+     * @return this instance, for method chaining
+     */
     public GPG setDebug(boolean value)
     {
         this.debug = value;
         return this;
     }
+    /**
+     * Enables or disables ASCII-armor output for encryption and signing
+     * operations.
+     *
+     * <p>When enabled, the {@code --armor} flag is passed to GPG so that
+     * the output is Base64-encoded and suitable for inclusion in plain-text
+     * protocols (e-mail, etc.).</p>
+     *
+     * @param value {@code true} to produce ASCII-armored output; {@code false}
+     *              for binary output
+     * @return this instance, for method chaining
+     */
     public GPG setArmor(boolean value)
     {
         this.armor = value;
         return this;
     }
+
+    /**
+     * Enables or disables the emission of a {@code Version:} header in
+     * ASCII-armored output.
+     *
+     * <p>When enabled, the {@code --emit-version} flag is passed to GPG.
+     * Has no effect when {@link #setArmor(boolean) armor} is disabled.</p>
+     *
+     * @param value {@code true} to include the version header; {@code false}
+     *              to omit it
+     * @return this instance, for method chaining
+     */
     public GPG setEmitVersion(boolean value)
     {
         this.emitVersion = value;
         return this;
     }
 
+    /**
+     * Sets a comment string to be embedded in the ASCII-armor header of
+     * encrypted or signed output.
+     *
+     * <p>When non-{@code null}, the {@code --comment} flag is passed to GPG.
+     * Has no effect when {@link #setArmor(boolean) armor} is disabled.</p>
+     *
+     * @param comment the comment string, or {@code null} to omit the header
+     * @return this instance, for method chaining
+     */
     public GPG setComment(String comment)
     {
         this.comment = comment;
@@ -197,6 +264,26 @@ public class GPG
         return new GnuPG(debug, params);
     }
     
+    /**
+     * Parses the colon-delimited output of {@code gpg --with-colons} and
+     * populates the supplied lists with public and/or secret key entries.
+     *
+     * <p>Each top-level {@code pub} record starts a new {@link PubKey} that is
+     * appended to {@code pubKeys}; each {@code sec} record starts a new
+     * {@link SecKey} appended to {@code secKeys}.  Subsequent {@code sub},
+     * {@code ssb}, {@code uid}, {@code fpr}, and {@code grp} records are
+     * associated with the most recently opened key entry.</p>
+     *
+     * <p>Either list may be {@code null} if the caller is only interested in
+     * one key type.</p>
+     *
+     * @param in      input stream containing the {@code gpg --with-colons} output;
+     *                must not be {@code null}
+     * @param pubKeys list to which parsed {@link PubKey} instances are added,
+     *                or {@code null} to skip public keys
+     * @param secKeys list to which parsed {@link SecKey} instances are added,
+     *                or {@code null} to skip secret keys
+     */
     public void parseKeys(InputStream in, List<PubKey> pubKeys, List<SecKey> secKeys)
     {
         Scanner sc = new Scanner(in);
@@ -243,6 +330,23 @@ public class GPG
         }
     }
     
+    /**
+     * Returns public-key entries from the local GPG keyring, optionally
+     * filtered by one or more search terms.
+     *
+     * <p>Equivalent to running {@code gpg --list-public-keys --with-colons
+     * [lookfor...]}.  When no search terms are given, all public keys are
+     * returned.</p>
+     *
+     * @param lookfor zero or more key identifiers (fingerprint, key ID, e-mail,
+     *                or name) used to restrict the result set
+     * @return array of matching {@link PubKey} entries; never {@code null},
+     *         may be empty
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
     public PubKey[] getPubKeys(String... lookfor) throws IOException, InterruptedException
     {
         List<PubKey> pubs = new ArrayList<>();

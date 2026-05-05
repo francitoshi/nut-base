@@ -166,7 +166,7 @@ public class OptionParser
             {
                 return 0;
             }
-            throw new InvalidOptionException("Invalid option -"+args[index].charAt(i));
+            throw new InvalidOptionException("Invalid option "+args[index]);
         }
         return 1;
     }
