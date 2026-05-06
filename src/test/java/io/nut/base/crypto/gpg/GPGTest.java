@@ -47,7 +47,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class GPGTest
 {
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final String EMAIL = "gpg.test@crypto.base.nut.io";
     private static final String PASSPHRASE = "PASSPHRASE";
 

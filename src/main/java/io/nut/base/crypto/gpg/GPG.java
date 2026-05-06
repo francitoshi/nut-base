@@ -356,6 +356,23 @@ public class GPG
         return pubs.toArray(new PubKey[0]);
     }
     
+    /**
+     * Returns secret-key entries from the local GPG keyring, optionally
+     * filtered by one or more search terms.
+     *
+     * <p>Equivalent to running {@code gpg --list-secret-keys --with-colons
+     * [lookfor...]}.  When no search terms are given, all secret keys are
+     * returned.</p>
+     *
+     * @param lookfor zero or more key identifiers (fingerprint, key ID, e-mail,
+     *                or name) used to restrict the result set
+     * @return array of matching {@link SecKey} entries; never {@code null},
+     *         may be empty
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
     public SecKey[] getSecKeys(String... lookfor) throws IOException, InterruptedException
     {
         List<SecKey> secs = new ArrayList<>();
@@ -365,21 +382,76 @@ public class GPG
         return secs.toArray(new SecKey[0]);
     }
 
+    /**
+     * Deletes the public key identified by {@code name} from the local keyring.
+     *
+     * <p>Equivalent to running {@code gpg --batch --yes --delete-keys <name>}.
+     * The {@code name} may be a fingerprint, key ID, e-mail address, or any
+     * other identifier accepted by GPG.</p>
+     *
+     * @param name the key identifier to delete; must not be {@code null}
+     * @return the GPG process exit code: {@code 0} on success, non-zero on error
+     * @throws IOException          if the GPG process cannot be started
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
     public int deletePubKeys(String name) throws IOException, InterruptedException
     {
         return gpg(BATCH, YES,"--delete-keys",name).start().waitFor();
     }
     
+    /**
+     * Deletes the secret key identified by {@code fingerprint} from the local
+     * keyring.
+     *
+     * <p>Equivalent to running
+     * {@code gpg --batch --yes --delete-secret-keys <fingerprint>}.</p>
+     *
+     * @param fingerprint the full fingerprint of the secret key to delete;
+     *                    must not be {@code null}
+     * @return the GPG process exit code: {@code 0} on success, non-zero on error
+     * @throws IOException          if the GPG process cannot be started
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
     public int deleteSecKeys(String fingerprint) throws IOException, InterruptedException
     {
         return gpg(BATCH, YES,"--delete-secret-keys", fingerprint).start().waitFor();
     }
     
+    /**
+     * Deletes both the secret key and the corresponding public key identified
+     * by {@code fingerprint} from the local keyring in a single operation.
+     *
+     * <p>Equivalent to running
+     * {@code gpg --batch --yes --delete-secret-and-public-key <fingerprint>}.</p>
+     *
+     * @param fingerprint the full fingerprint of the key pair to delete;
+     *                    must not be {@code null}
+     * @return the GPG process exit code: {@code 0} on success, non-zero on error
+     * @throws IOException          if the GPG process cannot be started
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
     public int deleteSecAndPubKeys(String fingerprint) throws IOException, InterruptedException
     {
         return gpg(BATCH, YES,"--delete-secret-and-public-key", fingerprint).start().waitFor();
     }
     
+    /**
+     * Converts a compact capability string into the comma-separated usage
+     * string expected by the GPG batch key-generation script.
+     *
+     * <p>For example, {@code "SCA"} becomes {@code "sign,cert,auth"} and
+     * {@code "E"} becomes {@code "encrypt"}.</p>
+     *
+     * @param usages a string containing any combination of the characters
+     *               {@code 'c'}/{@code 'C'} (cert), {@code 'e'}/{@code 'E'}
+     *               (encrypt), {@code 's'}/{@code 'S'} (sign) and
+     *               {@code 'a'}/{@code 'A'} (auth); case-insensitive
+     * @return comma-separated GPG usage string (e.g. {@code "sign,encrypt"});
+     *         never {@code null}, may be empty if no recognised character is found
+     */
     public static String usage(String usages)
     {
         usages = usages.toLowerCase();
@@ -499,18 +571,128 @@ public class GPG
         return exitCode;
     }
     
+    /**
+     * Adds an RSA subkey to an existing key via interactive key editing.
+     *
+     * @param keyId      identifier of the primary key to edit (fingerprint,
+     *                   key ID, or e-mail)
+     * @param ssbBits    RSA key size in bits (e.g. {@code 2048}, {@code 4096})
+     * @param sign       {@code true} to grant signing capability
+     * @param encrypt    {@code true} to grant encryption capability
+     * @param auth       {@code true} to grant authentication capability
+     * @param expire     expiration spec: {@code "0"} for no expiry,
+     *                   or a value such as {@code "1y"}, {@code "6m"}, {@code "30d"}
+     * @param passphrase passphrase protecting the primary key, or {@code null}
+     *                   if no passphrase is set
+     * @return the GPG process exit code: {@code 0} on success, non-zero on error
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public int addKeyRSA(String keyId, int ssbBits, boolean sign, boolean encrypt, boolean auth, String expire, String passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, true, false, false, false, ssbBits, sign, encrypt, auth,  0, expire, passphrase);
     }
+    /**
+     * Adds a DSA subkey to an existing key via interactive key editing.
+     *
+     * <p>DSA only supports signing and authentication; encryption is not
+     * available for this algorithm.</p>
+     *
+     * @param keyId      identifier of the primary key to edit
+     * @param ssbBits    DSA key size in bits (768–3072)
+     * @param sign       {@code true} to grant signing capability
+     * @param auth       {@code true} to grant authentication capability
+     * @param expire     expiration spec (see {@link #addKeyRSA} for format)
+     * @param passphrase passphrase protecting the primary key, or {@code null}
+     * @return the GPG process exit code: {@code 0} on success, non-zero on error
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public int addKeyDSA(String keyId, int ssbBits, boolean sign, boolean auth, String expire, String passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, false, true, false, false, ssbBits, sign, false, auth,  0, expire, passphrase);
     }
+    /**
+     * Adds an Elgamal (encryption-only) subkey to an existing key via
+     * interactive key editing.
+     *
+     * @param keyId      identifier of the primary key to edit
+     * @param ssbBits    Elgamal key size in bits (1024–4096)
+     * @param expire     expiration spec (see {@link #addKeyRSA} for format)
+     * @param passphrase passphrase protecting the primary key, or {@code null}
+     * @return the GPG process exit code: {@code 0} on success, non-zero on error
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public int addKeyELG(String keyId, int ssbBits, String expire, String passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, false, false, true, false, ssbBits, false, true, false,  0, expire, passphrase);
     }
+
+    /**
+    * Adds an ECC (Elliptic Curve Cryptography) subkey to an existing key.
+    *
+    * <p>This method uses {@code gpg --expert --edit-key} in interactive mode,
+    * simulating user input to add a new ECC subkey. The {@code ssbCurve} parameter
+    * represents the numeric selection of the elliptic curve as presented by GnuPG
+    * in its interactive menu.</p>
+    *
+    * <h3>ECC capabilities</h3>
+    * <ul>
+    *   <li>{@code sign=true} → signing key (ECDSA or EdDSA)</li>
+    *   <li>{@code encrypt=true} → encryption key (ECDH)</li>
+    *   <li>{@code auth=true} → authentication key</li>
+    * </ul>
+    *
+    * <p>Not all combinations are valid. GnuPG restrictions apply:</p>
+    * <ul>
+    *   <li>Signing and encryption cannot be combined in ECC subkeys</li>
+    *   <li>Encryption-only → ECDH</li>
+    *   <li>Signing/auth → ECDSA or EdDSA depending on curve</li>
+    * </ul>
+    *
+    * <h3>Curve selection ({@code ssbCurve})</h3>
+    * <p>The value corresponds to the menu index shown by GnuPG when selecting
+    * an ECC curve. Typical values (GnuPG 2.2+/2.4+) are:</p>
+    *
+    * <table border="1">
+    *   <tr><th>Value</th><th>Curve</th><th>Usage</th></tr>
+    *   <tr><td>1</td><td>Curve25519</td><td>Encryption (ECDH), recommended</td></tr>
+    *   <tr><td>2</td><td>NIST P-256</td><td>Signing / Authentication</td></tr>
+    *   <tr><td>3</td><td>NIST P-384</td><td>Signing / Authentication</td></tr>
+    *   <tr><td>4</td><td>NIST P-521</td><td>Signing / Authentication</td></tr>
+    *   <tr><td>5</td><td>BrainpoolP256r1</td><td>Signing / Authentication</td></tr>
+    *   <tr><td>6</td><td>BrainpoolP384r1</td><td>Signing / Authentication</td></tr>
+    *   <tr><td>7</td><td>BrainpoolP512r1</td><td>Signing / Authentication</td></tr>
+    *   <tr><td>8</td><td>secp256k1</td><td>Signing (less commonly used in GPG)</td></tr>
+    * </table>
+    *
+    * <p><b>Note:</b> These numeric values are not part of a stable API and may vary
+    * depending on the installed GnuPG version and configuration.</p>
+    *
+    * <h3>Recommended usage</h3>
+    * <ul>
+    *   <li>Encryption: {@code ssbCurve = 1} (Curve25519)</li>
+    *   <li>Signing: Ed25519 (implicitly selected via Curve25519 in signing mode)</li>
+    * </ul>
+    *
+    * @param keyId       ID, fingerprint, or email of the key to modify
+    * @param sign        whether the subkey should be used for signing
+    * @param encrypt     whether the subkey should be used for encryption
+    * @param auth        whether the subkey should be used for authentication
+    * @param ssbCurve    numeric identifier of the elliptic curve (see table above)
+    * @param expire      expiration date (e.g. {@code "0"}, {@code "1y"}, {@code "6m"})
+    * @param passphrase  passphrase for the secret key (may be {@code null} or empty)
+    *
+    * @return 0 on success, or a GPG error code on failure
+    *
+    * @throws IOException if the GPG process fails or I/O errors occur
+    * @throws InterruptedException if the process is interrupted
+    * @throws InvalidParameterException if an invalid capability combination is used
+    */
     public int addKeyECC(String keyId, boolean sign, boolean encrypt, boolean auth, int ssbCurve, String expire, String passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, false, false, false, true, 0, sign, encrypt, auth, ssbCurve, expire, passphrase);
@@ -580,6 +762,19 @@ public class GPG
         return exitCode;
     }
 
+    /**
+     * Returns the comma-separated sequence of GPG interactive-menu answers
+     * needed to create an RSA subkey with the requested capabilities.
+     *
+     * <p>The returned string is intended to be split on {@code ','} and fed
+     * line by line to the {@code gpg --edit-key} command-fd interface.</p>
+     *
+     * @param sign    {@code true} if the subkey should have signing capability
+     * @param encrypt {@code true} if the subkey should have encryption capability
+     * @param auth    {@code true} if the subkey should have authentication capability
+     * @return the GPG menu-answer sequence (e.g. {@code "8,A,Q"})
+     * @throws java.security.InvalidParameterException if no capability is requested
+     */
     public String getRsaOps(boolean sign, boolean encrypt, boolean auth) throws InvalidParameterException
     {
         String ops;
@@ -618,6 +813,18 @@ public class GPG
         return ops;
     }
 
+    /**
+     * Returns the comma-separated sequence of GPG interactive-menu answers
+     * needed to create a DSA subkey with the requested capabilities.
+     *
+     * <p>DSA only supports signing and authentication; requesting encryption
+     * is not valid and the parameter is intentionally absent.</p>
+     *
+     * @param sign {@code true} if the subkey should have signing capability
+     * @param auth {@code true} if the subkey should have authentication capability
+     * @return the GPG menu-answer sequence (e.g. {@code "8,Q"})
+     * @throws java.security.InvalidParameterException if no capability is requested
+     */
     public String getDsaOps(boolean sign, boolean auth) throws InvalidParameterException
     {
         String ops;
@@ -640,6 +847,22 @@ public class GPG
         return ops;
     }
 
+    /**
+     * Returns the comma-separated sequence of GPG interactive-menu answers
+     * needed to create an ECC subkey with the requested capabilities.
+     *
+     * <p>ECC keys cannot combine signing and encryption in the same subkey.
+     * Attempting to request both will throw an
+     * {@link java.security.InvalidParameterException}.</p>
+     *
+     * @param sign    {@code true} if the subkey should have signing capability
+     * @param encrypt {@code true} if the subkey should have encryption capability
+     *                (mutually exclusive with {@code sign})
+     * @param auth    {@code true} if the subkey should have authentication capability
+     * @return the GPG menu-answer sequence (e.g. {@code "10"} for sign-only)
+     * @throws java.security.InvalidParameterException if an incompatible or
+     *         empty capability combination is requested
+     */
     public String getEccOps(boolean sign, boolean encrypt, boolean auth) throws InvalidParameterException
     {
         String ops;
@@ -678,6 +901,19 @@ public class GPG
         return ops;
     }
     
+    /**
+     * Prints a summary of all public and secret keys in the local keyring to
+     * {@code System.out}.
+     *
+     * <p>For each key entry, every subkey is printed on its own line in the
+     * format {@code "<type> <bits> <capabilities>"} (e.g.
+     * {@code "pub 4096 ESCA"}).</p>
+     *
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
     public void printKeys() throws IOException, InterruptedException
     {
         for(PubKey p : this.getPubKeys())
@@ -844,6 +1080,20 @@ public class GPG
         return output.toByteArray();
     }
 
+    /**
+     * Signs a byte array using the specified GPG key.
+     *
+     * @param plaindata  data to sign; must not be {@code null} or empty
+     * @param signer     key identifier of the signing key (fingerprint, key ID,
+     *                   or e-mail); must not be {@code null}
+     * @param passphrase passphrase protecting the signing key, or {@code null}
+     *                   if the key has no passphrase
+     * @return byte array containing the GPG signature (binary or ASCII-armored
+     *         depending on {@link #setArmor(boolean)})
+     * @throws IOException          if the GPG process cannot be started, an I/O
+     *                              error occurs, or GPG returns a non-zero exit code
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public byte[] sign(byte[] plaindata, String signer, char[] passphrase) throws IOException, InterruptedException
     {
         if (plaindata == null || plaindata.length == 0)
@@ -852,6 +1102,20 @@ public class GPG
         }
         return sign(new ByteArrayInputStream(plaindata), signer, passphrase);
     }
+    /**
+     * Signs the data read from an {@link InputStream} using the specified GPG key.
+     *
+     * @param plaindata  stream providing the data to sign; must not be {@code null}
+     * @param signer     key identifier of the signing key (fingerprint, key ID,
+     *                   or e-mail); must not be {@code null}
+     * @param passphrase passphrase protecting the signing key, or {@code null}
+     *                   if the key has no passphrase
+     * @return byte array containing the GPG signature (binary or ASCII-armored
+     *         depending on {@link #setArmor(boolean)})
+     * @throws IOException          if the GPG process cannot be started, an I/O
+     *                              error occurs, or GPG returns a non-zero exit code
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public byte[] sign(InputStream plaindata, String signer, char[] passphrase) throws IOException, InterruptedException
     {
         boolean pass = passphrase!=null && passphrase.length!=0;
@@ -905,6 +1169,16 @@ public class GPG
         return output.toByteArray();
     }
 
+    /**
+     * Carries the metadata produced by a
+     * {@link GPG#decryptAndVerify decryptAndVerify} operation.
+     *
+     * <p>An instance of this class can be passed to
+     * {@link GPG#decryptAndVerify(byte[], char[], DecryptStatus)} so that
+     * the caller can inspect signature validity, signer identity, and the
+     * list of key IDs for which the message was encrypted, in addition to
+     * receiving the decrypted payload.</p>
+     */
     public static class DecryptStatus
     {
         volatile String signer;
@@ -915,30 +1189,78 @@ public class GPG
         volatile String hash;
         volatile String version;
 
+        /**
+         * Returns the key ID of the signer, or {@code null} if the message
+         * was not signed or the signer could not be determined.
+         *
+         * @return signer key ID, or {@code null}
+         */
         public String getSigner()
         {
             return signer;
         }
+
+        /**
+         * Returns {@code true} if GPG reported a valid ({@code GOODSIG})
+         * signature for this message.
+         *
+         * @return {@code true} if the signature is valid
+         */
         public boolean isValidSignature()
         {
             return validSignature;
         }
+
+        /**
+         * Returns {@code true} if GPG reported successful decryption
+         * ({@code DECRYPTION_OKAY}) for this message.
+         *
+         * @return {@code true} if decryption succeeded
+         */
         public boolean isDecryptionOkay()
         {
             return decryptionOkay;
         }
+
+        /**
+         * Returns the key IDs of all recipients for whom the message was
+         * encrypted, as reported by GPG {@code ENC_TO} status lines.
+         *
+         * @return array of recipient key IDs; never {@code null}, may be empty
+         */
         public String[] getRecipients()
         {
             return recipients.toArray(new String[0]);
         }
+
+        /**
+         * Returns the {@code Comment} field from the ASCII-armor header, or
+         * {@code null} if the message was not armored or the header was absent.
+         *
+         * @return armor comment, or {@code null}
+         */
         public String getComment()
         {
             return comment;
         }
+
+        /**
+         * Returns the {@code Hash} field from the ASCII-armor header, or
+         * {@code null} if not present.
+         *
+         * @return armor hash algorithm name, or {@code null}
+         */
         public String getHash()
         {
             return hash;
         }
+
+        /**
+         * Returns the {@code Version} field from the ASCII-armor header, or
+         * {@code null} if not present.
+         *
+         * @return GPG version string embedded in the armor, or {@code null}
+         */
         public String getVersion()
         {
             return version;
@@ -961,6 +1283,26 @@ public class GPG
         Objects.requireNonNull(cipherdata, "cipherdata must not be null");
         return decryptAndVerify(new ByteArrayInputStream(cipherdata), passphrase, status);
     }
+    /**
+     * Decrypts and verifies the signature of data read from an
+     * {@link InputStream} encrypted with GPG.
+     *
+     * <p>GPG status lines are parsed to populate the supplied
+     * {@link DecryptStatus} object (if non-{@code null}).  If {@code status}
+     * is {@code null} an internal instance is used.</p>
+     *
+     * @param cipherdata stream providing the encrypted (and optionally signed)
+     *                   data; must not be {@code null}
+     * @param passphrase passphrase for the private key, or {@code null} if the
+     *                   key has no passphrase
+     * @param status     optional object to receive signature/decryption metadata;
+     *                   may be {@code null}
+     * @return decrypted byte array if decryption succeeded and the signature
+     *         (when present) is valid; {@code null} otherwise
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public byte[] decryptAndVerify(InputStream cipherdata, char[] passphrase, DecryptStatus status) throws IOException, InterruptedException
     {
         Objects.requireNonNull(cipherdata, "cipherdata must not be null");
@@ -1089,6 +1431,23 @@ public class GPG
         }
         return getEncryptionRecipients(new ByteArrayInputStream(cipherdata), passphrase);
     }
+    /**
+     * Extracts the recipient key IDs from an encrypted GPG message provided
+     * as an {@link InputStream}.
+     *
+     * <p>Uses {@code gpg --list-packets} to inspect the message without fully
+     * decrypting it.</p>
+     *
+     * @param cipherdata stream providing the encrypted data; must not be
+     *                   {@code null}
+     * @param passphrase passphrase to supply to GPG when needed (e.g. for
+     *                   symmetric encryption), or {@code null}
+     * @return array of recipient key IDs found in the message; never
+     *         {@code null}, may be empty
+     * @throws IOException          if the GPG process cannot be started, an I/O
+     *                              error occurs, or GPG returns a non-zero exit code
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public String[] getEncryptionRecipients(InputStream cipherdata, char[] passphrase) throws IOException, InterruptedException
     {
         boolean pass = passphrase != null && passphrase.length!=0;
@@ -1152,18 +1511,55 @@ public class GPG
     }
     
     
+    /**
+     * Represents the parsed metadata of a single OpenPGP packet as produced
+     * by {@code gpg --list-packets}.
+     *
+     * <p>The fields map directly to the values reported on the packet header
+     * line (offset, CTB, tag, header length, packet length) and on the packet
+     * body line (version, algorithm, key ID).</p>
+     */
     public static class PacketInfo
     {
+        /** Byte offset of the packet within the data stream. */
         public final int off;
+
+        /** Cipher Tag Byte (CTB) — encodes the packet tag and length format. */
         public final int ctb;
+
+        /** OpenPGP packet tag number (e.g. {@code 1} = public-key encrypted
+         *  session key, {@code 2} = signature, {@code 9} = symmetrically
+         *  encrypted data). */
         public final int tag;
+
+        /** Length of the packet header in bytes. */
         public final int hlen;
+
+        /** Length of the packet body (payload) in bytes. */
         public final int plen;
 
+        /** Packet format version (typically {@code 3} or {@code 4}). */
         public final int version;
+
+        /** Public-key algorithm identifier used in this packet. */
         public final int algorithm;
+
+        /** Short key ID of the key referenced by this packet, or {@code null}
+         *  when not applicable. */
         public final String keyId;
 
+        /**
+         * Constructs a {@code PacketInfo} with all fields explicitly supplied.
+         *
+         * @param off       byte offset of the packet
+         * @param ctb       cipher tag byte
+         * @param tag       OpenPGP packet tag
+         * @param hlen      header length in bytes
+         * @param plen      payload length in bytes
+         * @param version   packet version
+         * @param algorithm public-key algorithm identifier
+         * @param keyId     short key ID, or {@code null}
+         */
         public PacketInfo(int off, int ctb, int tag, int hlen, int plen, int version, int algorithm, String keyId)
         {
             this.off = off;
@@ -1176,6 +1572,11 @@ public class GPG
             this.keyId = keyId;
         }
 
+        /**
+         * Returns a human-readable summary of all fields in this packet record.
+         *
+         * @return string representation for debugging
+         */
         @Override
         public String toString()
         {
@@ -1183,24 +1584,81 @@ public class GPG
         }
     }
     
+    /**
+     * Inspects an encrypted byte array and returns high-level metadata about
+     * its OpenPGP packets without fully decrypting the payload.
+     *
+     * @param cipherdata  the encrypted data to inspect; must not be {@code null}
+     * @param passphrase  passphrase for symmetric decryption, or {@code null}
+     * @return a {@link PacketsInfo} object populated with the parsed metadata
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public PacketsInfo listPackets(byte[] cipherdata, char[] passphrase) throws IOException, InterruptedException
     {
         return listPackets(new ByteArrayInputStream(cipherdata), passphrase);
     }
 
+    /**
+     * Aggregates the high-level status information extracted from an encrypted
+     * GPG message by the {@link GPG#listPackets listPackets} operation.
+     *
+     * <p>The fields are populated from GPG {@code [GNUPG:]} status lines and,
+     * when the message is ASCII-armored, from the armor header fields.</p>
+     */
     public static class PacketsInfo
     {
+        /** Short key ID of the recipient key reported in the {@code ENC_TO}
+         *  status line, or {@code null} if not found. */
         public final String encTo;
+
+        /** Algorithm number (as a string) from the {@code ENC_TO} status line,
+         *  or {@code null} if not found. */
         public final String algo;
+
+        /** Fingerprint of the subkey used for decryption, from the
+         *  {@code DECRYPTION_KEY} status line, or {@code null}. */
         public final String subKey;
+
+        /** Fingerprint of the primary key that owns the decryption subkey,
+         *  from the {@code DECRYPTION_KEY} status line, or {@code null}. */
         public final String mainKey;
+
+        /** Trust level of the decryption key as reported by GPG, or
+         *  {@code null}. */
         public final String trust;
+
+        /** {@code true} if GPG reported {@code DECRYPTION_OKAY}. */
         public final boolean decryptionOkay;
+
+        /** {@code true} if GPG reported {@code GOODMDC} (Modification
+         *  Detection Code verified). */
         public final boolean goodmdc;
+
+        /** {@code Comment} field from the ASCII-armor header, or {@code null}. */
         public final String comment;
+
+        /** {@code Hash} field from the ASCII-armor header, or {@code null}. */
         public final String hash;
+
+        /** {@code Version} field from the ASCII-armor header, or {@code null}. */
         public final String version;
 
+        /**
+         * Constructs a {@code PacketsInfo} with all fields explicitly supplied.
+         *
+         * @param encTo          recipient key ID from {@code ENC_TO}, or {@code null}
+         * @param algo           algorithm string from {@code ENC_TO}, or {@code null}
+         * @param subKey         decryption subkey fingerprint, or {@code null}
+         * @param mainKey        primary key fingerprint, or {@code null}
+         * @param trust          key trust level, or {@code null}
+         * @param decryptionOkay {@code true} if decryption succeeded
+         * @param goodmdc        {@code true} if MDC check passed
+         * @param comment        armor comment header value, or {@code null}
+         * @param hash           armor hash header value, or {@code null}
+         * @param version        armor version header value, or {@code null}
+         */
         public PacketsInfo(String encTo, String algo, String subKey, String mainKey, String trust, boolean decryptionOkay, boolean goodmdc, String comment, String hash, String version)
         {
             this.encTo = encTo;
@@ -1215,12 +1673,36 @@ public class GPG
             this.version = version;
         }
 
+        /**
+         * Returns a human-readable summary of all fields in this
+         * {@code PacketsInfo} record.
+         *
+         * @return string representation for debugging
+         */
         @Override
         public String toString()
         {
             return "encTo=" + encTo + ", algo=" + algo + ", subKey=" + subKey + ", mainKey=" + mainKey + ", trust=" + trust + ", decryptionOkay=" + decryptionOkay + ", goodmdc=" + goodmdc + ", comment=" + comment+ ", hash=" + hash + ", version=" + version;
         }
     }
+    /**
+     * Inspects an encrypted GPG stream and returns high-level metadata about
+     * its OpenPGP packets without fully decrypting the payload.
+     *
+     * <p>Runs {@code gpg --batch --no-tty --verbose --list-packets
+     * --status-fd=1} and parses the resulting {@code [GNUPG:]} status lines
+     * along with any ASCII-armor headers.</p>
+     *
+     * @param cipherdata stream providing the encrypted data; must not be
+     *                   {@code null}
+     * @param passphrase passphrase for symmetric decryption, or {@code null}
+     * @return a {@link PacketsInfo} object populated with the parsed metadata;
+     *         fields for which no information was found will be {@code null}
+     * @throws IOException          if the GPG process cannot be started, an I/O
+     *                              error occurs, or GPG exits with an unexpected
+     *                              non-zero code (codes 0 and 2 are accepted)
+     * @throws InterruptedException if the calling thread is interrupted
+     */
     public PacketsInfo listPackets(InputStream cipherdata, char[] passphrase) throws IOException, InterruptedException
     {
         boolean pass = passphrase != null && passphrase.length!=0;
