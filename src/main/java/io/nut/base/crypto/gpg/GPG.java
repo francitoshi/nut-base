@@ -1899,4 +1899,78 @@ public class GPG
         }
         return exitCode;
     }    
+
+    /**
+     * Returns {@code true} if the given string is a valid GPG key ID.
+     *
+     * <p>
+     * A GPG key ID is either a <em>short</em> key ID (8 hexadecimal characters)
+     * or a <em>long</em> key ID (16 hexadecimal characters). An optional
+     * {@code "0x"} prefix is accepted. The check is case-insensitive.</p>
+     *
+     * <p>
+     * Examples of valid inputs:</p>
+     * <pre>
+     *   "DEADBEEF"          // short, 8 hex chars
+     *   "0xDEADBEEF"        // short with prefix
+     *   "DEADBEEF01234567"  // long, 16 hex chars
+     *   "0xDEADBEEF01234567"
+     * </pre>
+     *
+     * @param s the string to validate; may be {@code null}
+     * @return {@code true} if {@code s} is a valid GPG key ID, {@code false}
+     * otherwise
+     */
+    public static boolean isValidKeyId(String s)
+    {
+        if (s == null || s.isEmpty())
+        {
+            return false;
+        }
+        // strip optional "0x" prefix
+        String v = s.startsWith("0x") ? s.substring(2) : s;
+        // 8 hex chars (short key ID) or 16 hex chars (long key ID)
+        return v.matches("[0-9A-Fa-f]{8}([0-9A-Fa-f]{8})?");
+    }
+
+    /**
+     * Returns {@code true} if the given string is a valid GPG fingerprint.
+     *
+     * <p>
+     * A GPG fingerprint is either:</p>
+     * <ul>
+     * <li><em>v4</em> (OpenPGP RFC 4880, SHA-1): 40 hexadecimal characters</li>
+     * <li><em>v5</em> (OpenPGP RFC 9580, SHA-256): 64 hexadecimal
+     * characters</li>
+     * </ul>
+     * <p>
+     * An optional {@code "0x"} prefix and internal spaces (canonical display
+     * format, e.g. {@code "AABB CCDD …"}) are both accepted. The check is
+     * case-insensitive.</p>
+     *
+     * <p>
+     * Examples of valid inputs:</p>
+     * <pre>
+     *   "D4C5E60F0A4A4B3E2F3A1B7C9D8E5F6A7B8C9D0E"        // v4, no spaces
+     *   "D4C5 E60F 0A4A 4B3E 2F3A  1B7C 9D8E 5F6A 7B8C 9D0E" // v4, spaced
+     *   "0xD4C5E60F..."                                       // with prefix
+     * </pre>
+     *
+     * @param s the string to validate; may be {@code null}
+     * @return {@code true} if {@code s} is a valid GPG fingerprint,
+     * {@code false} otherwise
+     */
+    public static boolean isValidFingerprint(String s)
+    {
+        if (s == null || s.isEmpty())
+        {
+            return false;
+        }
+        // strip optional "0x" prefix
+        String v = s.startsWith("0x") ? s.substring(2) : s;
+        // strip spaces (canonical "XXXX XXXX …" display format)
+        v = v.replace(" ", "");
+        // 40 hex chars (v4 / SHA-1) or 64 hex chars (v5 / SHA-256)
+        return v.matches("[0-9A-Fa-f]{40}([0-9A-Fa-f]{24})?");
+    }    
 }
