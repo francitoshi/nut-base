@@ -33,6 +33,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1290,6 +1291,18 @@ public class JavaTime
     public static long epochSecond(LocalDate date)
     {
         return date.atStartOfDay().toEpochSecond(ZoneOffset.UTC);
+    }
+    
+    /**
+     * Returns the Unix epoch second for the given {@link Date},
+     * interpreted as UTC.
+     *
+     * @param date the date to convert, assumed to be in UTC; must not be {@code null}
+     * @return seconds elapsed since 1970-01-01T00:00:00Z
+     */
+    public static long epochSecond(Date date)
+    {
+        return date.toInstant().getEpochSecond();
     }
     
     /**
