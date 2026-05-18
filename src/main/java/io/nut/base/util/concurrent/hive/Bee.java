@@ -26,6 +26,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -482,9 +483,6 @@ public abstract class Bee<M>
         for(Bee<?> item : bees)
         {
             item.shutdown(onlyWhenEmpty);
-        }
-        for(Bee<?> item : bees)
-        {
             item.awaitTermination(Integer.MAX_VALUE);
         }
     }
@@ -498,5 +496,27 @@ public abstract class Bee<M>
     public void setHive(Hive hive)
     {
         this.hive = hive;
+    }
+
+    public static <T> Bee<T> bee(int threads, Hive hive, Consumer<T> consumer)
+    {
+        return new Bee<T>(threads, hive)
+        {
+            @Override
+            protected void receive(T t)
+            {
+                consumer.accept(t);
+            }
+        };
+    }
+
+    public static <T> Bee<T> bee(Consumer<T> consumer)
+    {
+        return bee(0, null, consumer);
+    }
+
+    public static <T> Bee<T> bee(Hive hive, Consumer<T> consumer)
+    {
+        return bee(0, hive, consumer);
     }
 }
