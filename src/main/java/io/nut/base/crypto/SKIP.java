@@ -54,7 +54,7 @@ public class SKIP
     private static final byte[] SALT = "SKIP-v1".getBytes(StandardCharsets.UTF_8);
     
     /** Default expiration window for messages (7 days). */
-    private static final long TTL_SECONDS = 7 * 24 * 3600;
+    private static final long TTL_SECONDS = 7L * 24 * 3600;
 
     private final Kripto kripto;
     private final char[] sharedSecret;
@@ -181,12 +181,12 @@ public class SKIP
     /**
      * Encrypts and packages a payload into a SKIP message.
      *
-     * @param epochSecond The creation timestamp (Unix epoch).
+     * @param epochSecond The creation timestamp (number of seconds from the Java epoch of 1970-01-01T00:00:00Z).
      * @param payload     The plaintext message string.
      * @return A Base64 encoded string containing [Timestamp | IV | Ciphertext | HMAC].
      * @throws Exception If encryption or key derivation fails.
      */
-    public String buildMessage(long epochSecond, String payload) throws Exception
+    public String buildChallenge(long epochSecond, String payload) throws Exception
     {
         byte[] epochSecondBytes = ByteBuffer.allocate(8).putLong(epochSecond).array();
 
@@ -224,18 +224,19 @@ public class SKIP
      * </ol>
      * </p>
      *
-     * @param base64Msg The Base64 SKIP message string.
+     * @param epochSecond The reply timestamp (number of seconds from the Java epoch of 1970-01-01T00:00:00Z).
+     * @param payload The Base64 SKIP message string.
      * @return The decrypted plaintext.
      * @throws SecurityException If the message is expired, in the future, or the HMAC is invalid.
      * @throws Exception         If decryption or data parsing fails.
      */
-    public String receiveMessage(long epochSecond, String base64Msg) throws Exception
+    public String replyChallenge(long epochSecond, String payload) throws Exception
     {
-        return receiveMessage(epochSecond, base64Msg, TTL_SECONDS);
+        return replyChallenge(epochSecond, payload, TTL_SECONDS);
     }
-    public String receiveMessage(long epochSecond, String base64Msg, long ttlSeconds) throws Exception
+    public String replyChallenge(long epochSecond, String payload, long ttlSeconds) throws Exception
     {
-        byte[] raw = Base64.getDecoder().decode(base64Msg);
+        byte[] raw = Base64.getDecoder().decode(payload);
         if (raw.length < 8 + 12 + 32)
         {
             throw new IllegalArgumentException("Message too short");

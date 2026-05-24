@@ -36,6 +36,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidParameterException;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -69,7 +70,12 @@ import java.util.regex.Pattern;
  * document for the colon-delimited output format used by key-listing
  * operations.</p>
  *
- * @author franci
+ * Recomended algorithms:
+ * MAIN:    Ed25519
+ * SIGN:    Ed25519
+ * CIPHER:  cv25519
+ * Auth SSH:Ed25519
+ *
  */
 public class GPG
 {   
@@ -1184,6 +1190,11 @@ public class GPG
         volatile String signer;
         volatile boolean validSignature;
         volatile boolean decryptionOkay;
+        
+        volatile String sigHash;
+        volatile LocalDate sigDate;
+        volatile long sigTime;
+        
         volatile List<String> recipients = new ArrayList<>();
         volatile String comment;
         volatile String hash;
@@ -1220,6 +1231,21 @@ public class GPG
         public boolean isDecryptionOkay()
         {
             return decryptionOkay;
+        }
+
+        public String getSigHash()
+        {
+            return sigHash;
+        }
+
+        public LocalDate getSigDate()
+        {
+            return sigDate;
+        }
+
+        public long getSigTime()
+        {
+            return sigTime;
         }
 
         /**
@@ -1346,8 +1372,15 @@ public class GPG
             while((line=stderr.readLine())!=null)
             {
                 String tuc = line.trim().toUpperCase();
-                
-                if (tuc.startsWith("[GNUPG:] GOODSIG"))
+               
+                if (tuc.startsWith("[GNUPG:] SIG_ID"))
+                {
+                    String[] parts = line.trim().split("\\s+");
+                    status.sigHash = parts.length>2 ? parts[2] : null;
+                    status.sigDate = parts.length>3 ? LocalDate.parse(parts[3]) : null;
+                    status.sigTime = parts.length>4 ? Long.parseLong(parts[4]) : 0;
+                }
+                else if (tuc.startsWith("[GNUPG:] GOODSIG"))
                 {
                     status.validSignature = true;
                     String[] parts = line.split(" ");

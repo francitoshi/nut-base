@@ -34,6 +34,7 @@ import static io.nut.base.crypto.gpg.GPG.RSA1024;
 import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
+import io.nut.base.encoding.Hex;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -161,7 +162,11 @@ public class GPGTest
         System.out.println("Firmante: " + (status.signer != null ? status.signer : "Ninguno"));
         System.out.println("Firma válida: " + status.validSignature);
         System.out.println("Receptores: " + Arrays.toString(status.getRecipients()));
-
+        byte[] sigHash = Base64.getDecoder().decode(status.getSigHash());
+        System.out.println("sigHash: " + status.getSigHash()+" => "+Hex.encode(sigHash));
+        System.out.println("sigDate: " + status.getSigDate());
+        System.out.println("sigTime: " + status.getSigTime());
+        
         // Solo receptores
         String[] recipients1 = gpg.getEncryptionRecipients(encryptedSigned, passphrase);
         System.out.println("Receptores (solo lista): " + Arrays.deepToString(recipients1));

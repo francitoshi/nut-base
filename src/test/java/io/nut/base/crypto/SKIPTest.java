@@ -20,7 +20,6 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.time.JavaTime;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.function.Function;
@@ -63,20 +62,20 @@ public class SKIPTest
         
         // --- Usage 1: Default KDF (hkdfExpand) ---
         SKIP alice = new SKIP(kripto, passphrase);
-        String msg1 = alice.buildMessage(1, "alice@example.com=0FC2FF07DD90113294B0C843FDD18FDBA1CC2773");
+        String msg1 = alice.buildChallenge(1, "alice@example.com=0FC2FF07DD90113294B0C843FDD18FDBA1CC2773");
         System.out.println();
         System.out.println("msg1 : " + msg1);
 
         SKIP bob = new SKIP(kripto, passphrase);
-        String[] id1 = bob.receiveMessage(1, msg1).split("=");
+        String[] id1 = bob.replyChallenge(1, msg1).split("=");
         System.out.println("Email : " + id1[0]);
         System.out.println("GPG   : " + id1[1]);
         
-        String msg2 = bob.buildMessage(2, "bob@example.com=3F7BB578958C8342B4A78E8076AF7B20E01B52F1");
+        String msg2 = bob.buildChallenge(2, "bob@example.com=3F7BB578958C8342B4A78E8076AF7B20E01B52F1");
         bob.destroy();
 
         System.out.println();
-        String[] id2 = alice.receiveMessage(3, msg2).split("=");
+        String[] id2 = alice.replyChallenge(3, msg2).split("=");
         System.out.println("msg2 : " + msg2);
         System.out.println("Email : " + id2[0]);
         System.out.println("GPG   : " + id2[1]);
@@ -126,20 +125,20 @@ public class SKIPTest
         
         // --- Usage 2: Custom KDF (Argon2id) ---
         SKIP alice = new SKIP(kripto, passphrase, argon2Kdf);
-        String msg1 = alice.buildMessage(1, "alice@example.com=0FC2FF07DD90113294B0C843FDD18FDBA1CC2773");
+        String msg1 = alice.buildChallenge(1, "alice@example.com=0FC2FF07DD90113294B0C843FDD18FDBA1CC2773");
         System.out.println();
         System.out.println("msg1 : " + msg1);
 
         SKIP bob = new SKIP(kripto, passphrase, argon2Kdf);
-        String[] id1 = bob.receiveMessage(2, msg1).split("=");
+        String[] id1 = bob.replyChallenge(2, msg1).split("=");
         System.out.println("Email : " + id1[0]);
         System.out.println("GPG   : " + id1[1]);
         
-        String msg2 = bob.buildMessage(3, "bob@example.com=3F7BB578958C8342B4A78E8076AF7B20E01B52F1");
+        String msg2 = bob.buildChallenge(3, "bob@example.com=3F7BB578958C8342B4A78E8076AF7B20E01B52F1");
         bob.destroy();
 
         System.out.println();
-        String[] id2 = alice.receiveMessage(4, msg2).split("=");
+        String[] id2 = alice.replyChallenge(4, msg2).split("=");
         System.out.println("msg2 : " + msg2);
         System.out.println("Email : " + id2[0]);
         System.out.println("GPG   : " + id2[1]);
