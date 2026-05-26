@@ -30,6 +30,8 @@ import java.security.InvalidParameterException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.StringJoiner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.bouncycastle.crypto.agreement.jpake.JPAKEParticipant;
 import org.bouncycastle.crypto.agreement.jpake.JPAKEPrimeOrderGroup;
 import org.bouncycastle.crypto.agreement.jpake.JPAKEPrimeOrderGroups;
@@ -227,15 +229,34 @@ public class JPAKE
      * Package-private constructor that creates the appropriate participant
      * implementation based on the {@code resumable} flag.
      *
-     * @param id        unique participant identifier
+     * <p>The {@code id} is passed through {@link #validateId(String)} before
+     * being forwarded to the underlying participant, so that any character that
+     * would corrupt the wire format is rejected eagerly with a clear error
+     * message rather than causing a silent protocol failure later.
+     *
+     * @param id        unique participant identifier; must not be null, empty,
+     *                  or contain {@value #FS} or whitespace
      * @param passphrase shared secret password
      * @param nist      prime-order group defining the J-PAKE parameters
      * @param resumable {@code true} to create a {@link ResumableJPAKEParticipant}
+     * @throws IllegalArgumentException if {@code id} fails validation
      */
     JPAKE(String id, char[] passphrase, JPAKEPrimeOrderGroup nist, boolean resumable)
     {
-        this.participant = resumable ? new ResumableJPAKEParticipant(id, passphrase, nist, new SHA256Digest(), RANDOM) 
-                                     : new JPAKEParticipant(id, passphrase, nist, new SHA256Digest(), RANDOM) ;
+        if (id == null || id.isEmpty())
+        {
+            throw new IllegalArgumentException("participantId must not be null or empty");
+        }
+        if (id.contains(FS))
+        {
+            throw new IllegalArgumentException("participantId must not contain the field separator '" + FS + "': \"" + id + "\"");
+        }
+        if (id.chars().anyMatch(Character::isWhitespace))
+        {
+            throw new IllegalArgumentException("participantId must not contain whitespace: \"" + id + "\"");
+        }
+        this.participant = resumable ? new ResumableJPAKEParticipant(id, passphrase, nist, new SHA256Digest(), RANDOM)
+                                     : new JPAKEParticipant(id, passphrase, nist, new SHA256Digest(), RANDOM);
     }
     /**
      * Package-private constructor that wraps an existing participant, used
@@ -587,6 +608,85 @@ public class JPAKE
         return new JPAKE(ResumableJPAKEParticipant.load(saved, password));
     }        
     
+    // ── Round-payload finder methods ─────────────────────────────────────────
+
+    /**
+     * Searches {@code s} for the first substring that matches a serialised
+     * round payload produced by this class.
+     *
+     * <p>The wire format is:
+     * <pre>
+     *   &lt;tag&gt; ( '/' &lt;field&gt; )+ '/'
+     * </pre>
+     * where every field is either a participant ID (no '/' allowed) or one or
+     * more URL-safe Base64 tokens optionally joined by ';'.  The regex is
+     * deliberately anchored to the known structure so that arbitrary text that
+     * merely contains the prefix does not produce a false positive.
+     *
+     * @param tag the round tag ({@value #R1}, {@value #R2}, or {@value #R3})
+     * @param s   the string to search (may contain surrounding text)
+     * @return the first matching payload substring, or {@code null} if none found
+     */
+    private static String findRoundPayload(String tag, String s)
+    {
+        // Breakdown of the pattern for, e.g., tag = "r1":
+        //
+        //   r1               – literal tag
+        //   /[^/\s]+         – '/' + participantId (no slashes, no whitespace)
+        //   (?:/[A-Za-z0-9_=;-]+)+ – one or more '/'-prefixed Base64/ZKP fields
+        //   /                – trailing slash that ends every encoded payload
+        //
+        // Base64-URL chars: A-Z a-z 0-9 _ -
+        // ZKP fields may contain ';' as the array-element separator.
+        // '=' is kept for robustness in case padded Base64 ever appears.
+        String pattern = tag + "/[^/\\s]+(?:/[A-Za-z0-9_=;-]+)+/";
+        Matcher m = Pattern.compile(pattern, Pattern.CASE_INSENSITIVE).matcher(s);
+        return m.find() ? m.group() : null;
+    }
+
+    /**
+     * Searches {@code s} for the first Round-1 payload substring — i.e. the
+     * result that the remote party's {@link #createRound1PayloadToSend()} would
+     * produce.  The match starts with {@code "r1/"} and contains at least five
+     * further slash-delimited Base64/ZKP fields plus a trailing slash.
+     *
+     * @param s the string to search
+     * @return the first {@code "r1/…/"} substring found, or {@code null}
+     */
+    public static String findRound1Payload(String s)
+    {
+        return findRoundPayload(R1, s);
+    }
+
+    /**
+     * Searches {@code s} for the first Round-2 payload substring — i.e. the
+     * result that the remote party's {@link #createRound2PayloadToSend()} would
+     * produce.  The match starts with {@code "r2/"} and contains at least three
+     * further slash-delimited Base64/ZKP fields plus a trailing slash.
+     *
+     * @param s the string to search
+     * @return the first {@code "r2/…/"} substring found, or {@code null}
+     */
+    public static String findRound2Payload(String s)
+    {
+        return findRoundPayload(R2, s);
+    }
+
+    /**
+     * Searches {@code s} for the first Round-3 payload substring — i.e. the
+     * result that the remote party's
+     * {@link #createRound3PayloadToSend(BigInteger)} would produce.  The match
+     * starts with {@code "r3/"} and contains at least two further
+     * slash-delimited Base64 fields plus a trailing slash.
+     *
+     * @param s the string to search
+     * @return the first {@code "r3/…/"} substring found, or {@code null}
+     */
+    public static String findRound3Payload(String s)
+    {
+        return findRoundPayload(R3, s);
+    }
+
     // ── Common utility methods ────────────────────────────────────────────────
     /**
      * Derives an AES-256 session key from the J-PAKE keying material using
