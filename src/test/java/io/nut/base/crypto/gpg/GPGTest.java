@@ -1,22 +1,20 @@
 /*
- *  GPGTest.java
+ * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.crypto.gpg;
 
@@ -35,12 +33,15 @@ import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
 import io.nut.base.encoding.Hex;
+import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Nested;
@@ -542,4 +543,202 @@ public class GPGTest
             assertFalse(GPG.isValidFingerprint(input));
         }
     }    
+    
+    private static boolean gpgAvailable;
+
+    @BeforeAll
+    static void detectGpg()
+    {
+        gpgAvailable = new GPG().isInstalled();
+    }
+    
+    @Nested
+    @DisplayName("Tests requiring gpg binary")
+    class RequiresGpg
+    {
+
+        // --- getVersion() --------------------------------------------------
+
+        @Test
+        @DisplayName("getVersion() returns a non-null, non-blank string")
+        void getVersion_returnsNonBlank() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String version = new GPG().getVersion();
+
+            assertNotNull(version, "version must not be null");
+            assertFalse(version.trim().isEmpty(), "version must not be blank");
+        }
+
+        @Test
+        @DisplayName("getVersion() output starts with 'gpg'")
+        void getVersion_startsWithGpg() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String version = new GPG().getVersion();
+
+            assertNotNull(version);
+            assertTrue(version.toLowerCase().startsWith("gpg"),
+                    "Expected first line to start with 'gpg', got: " + version);
+        }
+
+        @Test
+        @DisplayName("getVersion() output contains a version number pattern (x.y.z)")
+        void getVersion_containsVersionNumber() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String version = new GPG().getVersion();
+
+            assertNotNull(version);
+            assertTrue(version.matches(".*\\d+\\.\\d+.*"),
+                    "Expected a version number in output, got: " + version);
+        }
+
+        // --- enarmor() -----------------------------------------------------
+
+        @Test
+        @DisplayName("enarmor() wraps input in an ASCII-armor header and footer")
+        void enarmor_producesArmorHeaderAndFooter() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String result = new GPG().enarmor("hello gpg");
+
+            assertNotNull(result);
+            assertTrue(result.contains("-----BEGIN"),
+                    "Armored output must contain '-----BEGIN'");
+            assertTrue(result.contains("-----END"),
+                    "Armored output must contain '-----END'");
+        }
+
+        @Test
+        @DisplayName("enarmor() output contains a Base64-like body (alphanumeric/+/=)")
+        void enarmor_bodyIsBase64Like() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String result = new GPG().enarmor("test data 1234");
+
+            assertNotNull(result);
+            // At least one line that looks like Base64
+            boolean hasBase64Line = false;
+            for (String line : result.split("\n"))
+            {
+                if (line.matches("[A-Za-z0-9+/]+=*") && line.length() > 4)
+                {
+                    hasBase64Line = true;
+                    break;
+                }
+            }
+            assertTrue(hasBase64Line, "Expected at least one Base64 line in armored output");
+        }
+
+        @Test
+        @DisplayName("enarmor() throws NullPointerException for null input")
+        void enarmor_throwsOnNull()
+        {
+            assertThrows(NullPointerException.class, () -> new GPG().enarmor(null));
+        }
+
+        @Test
+        @DisplayName("enarmor() handles empty string without exception")
+        void enarmor_emptyString() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String result = new GPG().enarmor("");
+
+            // gpg may produce an armor block even for empty input; just must not throw
+            assertNotNull(result);
+        }
+
+        // --- dearmor() -----------------------------------------------------
+
+        @Test
+        @DisplayName("dearmor() throws NullPointerException for null input")
+        void dearmor_throwsOnNull()
+        {
+            assertThrows(NullPointerException.class, () -> new GPG().dearmor(null));
+        }
+
+        @Test
+        @DisplayName("dearmor() inverts enarmor() and recovers original bytes")
+        void dearmor_roundTrip() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String original = "round-trip test payload";
+            GPG gpg = new GPG();
+
+            String armored   = gpg.enarmor(original);
+            String recovered = gpg.dearmor(armored);
+
+            assertNotNull(recovered);
+            // The raw bytes of the original must appear inside the de-armored output
+            // (gpg --dearmor returns binary; reading as UTF-8 may add trailing nulls)
+            assertTrue(recovered.contains(original),
+                    "De-armored output must contain the original string");
+        }
+
+        @Test
+        @DisplayName("enarmor() then dearmor() preserves multi-line content")
+        void enarmor_dearmor_multiLine() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            String original = "line1\nline2\nline3";
+            GPG gpg = new GPG();
+
+            String armored   = gpg.enarmor(original);
+            String recovered = gpg.dearmor(armored);
+
+            assertNotNull(recovered);
+            assertTrue(recovered.contains("line1"), "Must contain 'line1'");
+            assertTrue(recovered.contains("line2"), "Must contain 'line2'");
+            assertTrue(recovered.contains("line3"), "Must contain 'line3'");
+        }
+
+        // --- cross-method --------------------------------------------------
+
+        @Test
+        @DisplayName("getVersion() is consistent across two consecutive calls")
+        void getVersion_isConsistent() throws IOException, InterruptedException
+        {
+            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
+
+            GPG gpg = new GPG();
+            String v1 = gpg.getVersion();
+            String v2 = gpg.getVersion();
+
+            assertEquals(v1, v2, "Repeated calls to getVersion() must return the same value");
+        }
+    }
+
+    // -----------------------------------------------------------------------
+    // Tests that do NOT need gpg (pure Java / null-guard logic)
+    // -----------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("Pure-Java / null-guard tests (no gpg required)")
+    class NoGpgRequired
+    {
+
+        @Test
+        @DisplayName("enarmor(null) throws NullPointerException regardless of gpg availability")
+        void enarmor_null_throwsNPE()
+        {
+            assertThrows(NullPointerException.class, () -> new GPG().enarmor(null));
+        }
+
+        @Test
+        @DisplayName("dearmor(null) throws NullPointerException regardless of gpg availability")
+        void dearmor_null_throwsNPE()
+        {
+            assertThrows(NullPointerException.class, () -> new GPG().dearmor(null));
+        }
+    }
+    
 }

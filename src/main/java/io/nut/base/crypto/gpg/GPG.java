@@ -1,22 +1,20 @@
 /*
- *  GPG.java
+ * Copyright (c) 2025-2026 francitoshi@gmail.com
  *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.crypto.gpg;
 
@@ -268,6 +266,20 @@ public class GPG
     private GnuPG gpg(String... params) throws IOException 
     {
         return new GnuPG(debug, params);
+    }
+    
+    
+    public boolean isInstalled()
+    {
+        try
+        {
+            Process process = gpg("--version").start();
+            return (process.waitFor() == 0);
+        }
+        catch (IOException | InterruptedException ex)
+        {
+            return false;
+        }
     }
     
     /**
@@ -1932,6 +1944,112 @@ public class GPG
         }
         return exitCode;
     }    
+
+    /**
+     * Returns the version string reported by the installed {@code gpg} binary.
+     *
+     * <p>Equivalent to running {@code gpg --version} and extracting the first
+     * line (e.g. {@code "gpg (GnuPG) 2.4.3"}).</p>
+     *
+     * @return the first line of {@code gpg --version} output, or {@code null}
+     *         if the output is empty
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
+    public String getVersion() throws IOException, InterruptedException
+    {
+        Process process = new GnuPG(debug, "--version").start();
+
+        String version = null;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)))
+        {
+            version = reader.readLine();
+        }
+        process.waitFor();
+        return version;
+    }
+
+    /**
+     * Wraps binary or plain data in an OpenPGP ASCII-armor envelope.
+     *
+     * <p>Equivalent to running {@code gpg --enarmor} and feeding {@code s}
+     * (encoded as UTF-8) to its standard input.  The result is the full
+     * armored block returned as a {@code String}.</p>
+     *
+     * @param s the data to armor; must not be {@code null}
+     * @return the ASCII-armored representation of {@code s}
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
+    public String enarmor(String s) throws IOException, InterruptedException
+    {
+        Objects.requireNonNull(s, "s must not be null");
+
+        Process process = new GnuPG(debug, "--enarmor").start();
+
+        try (OutputStream stdin = process.getOutputStream())
+        {
+            stdin.write(s.getBytes(StandardCharsets.UTF_8));
+        }
+
+        String result;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)))
+        {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+                sb.append(line).append('\n');
+            }
+            result = sb.toString();
+        }
+        process.waitFor();
+        return result;
+    }
+
+    /**
+     * Strips the OpenPGP ASCII-armor envelope and returns the raw content.
+     *
+     * <p>Equivalent to running {@code gpg --dearmor} and feeding the armored
+     * block {@code s} (encoded as UTF-8) to its standard input.  The result is
+     * the decoded payload returned as a {@code String}.</p>
+     *
+     * @param s the ASCII-armored block to decode; must not be {@code null}
+     * @return the de-armored (decoded) content as a {@code String}
+     * @throws IOException          if the GPG process cannot be started or an
+     *                              I/O error occurs
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the GPG process to finish
+     */
+    public String dearmor(String s) throws IOException, InterruptedException
+    {
+        Objects.requireNonNull(s, "s must not be null");
+
+        Process process = new GnuPG(debug, "--dearmor").start();
+
+        try (OutputStream stdin = process.getOutputStream())
+        {
+            stdin.write(s.getBytes(StandardCharsets.UTF_8));
+        }
+
+        String result;
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8)))
+        {
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null)
+            {
+                sb.append(line).append('\n');
+            }
+            result = sb.toString();
+        }
+        process.waitFor();
+        return result;
+    }
 
     /**
      * Returns {@code true} if the given string is a valid GPG key ID.
