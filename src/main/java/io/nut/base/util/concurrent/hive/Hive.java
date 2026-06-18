@@ -1,27 +1,27 @@
 /*
- *  Hive.java
+ * Copyright (c) 2024-2026 francitoshi@gmail.com
  *
- *  Copyright (C) 2024-2026 francitoshi@gmail.com
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.util.concurrent.hive;
 
 import io.nut.base.util.concurrent.CallerWaitsPolicy;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -33,73 +33,13 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-/**
- * A thread pool executor wrapper that manages and coordinates {@link Bee}
- * instances. The Hive provides a shared thread pool for executing tasks
- * submitted by multiple Bees, enabling efficient resource utilization and
- * centralized thread management.
- *
- * <p>
- * The Hive implements both {@link Executor} for task execution and
- * {@link AutoCloseable} for resource management in try-with-resources blocks.
- * It wraps a {@link ThreadPoolExecutor} with configurable pool sizes, queue
- * capacity, and rejection policies.
- *
- * <p>
- * <strong>Thread Pool Configuration:</strong>
- * <ul>
- * <li><strong>Core pool size:</strong> Minimum number of threads kept
- * alive</li>
- * <li><strong>Rush pool size:</strong> Maximum number of threads during high
- * load</li>
- * <li><strong>Queue capacity:</strong> Number of tasks that can be queued when
- * all threads are busy</li>
- * <li><strong>Keep-alive time:</strong> How long excess threads wait for work
- * before terminating</li>
- * </ul>
- *
- * <p>
- * <strong>Rejection Policies:</strong>
- * <ul>
- * <li><strong>CallerRunsPolicy:</strong> The calling thread executes the task
- * when the pool is saturated</li>
- * <li><strong>CallerWaitsPolicy:</strong> The calling thread waits until space
- * is available in the queue</li>
- * </ul>
- *
- * <p>
- * <strong>Usage example:</strong>
- * <pre>{@code
- * try (Hive hive = new Hive(4, 8, 100, 30000)) {
- *     Bee<String> bee1 = new Bee<String>(2, hive) {
- *         @Override
- *         protected void receive(String message) {
- *             System.out.println("Bee1: " + message);
- *         }
- *     };
- *
- *     Bee<Integer> bee2 = new Bee<Integer>(2, hive) {
- *         @Override
- *         protected void receive(Integer number) {
- *             System.out.println("Bee2: " + number);
- *         }
- *     };
- *
- *     hive.add(bee1, bee2);
- *
- *     bee1.send("Hello");
- *     bee2.send(42);
- *
- *     hive.shutdownAndAwaitTermination(bee1, bee2);
- * }
- * }</pre>
- *
- * @author franci
- */
 public class Hive implements AutoCloseable, Executor
 {
 
@@ -129,88 +69,56 @@ public class Hive implements AutoCloseable, Executor
      */
     private final ThreadPoolExecutor threadPoolExecutor;
 
-    /**
-     * Protected constructor that accepts a pre-configured ThreadPoolExecutor.
-     * This allows subclasses to provide custom executor configurations.
-     *
-     * @param threadPoolExecutor the configured thread pool executor to use
-     */
     protected Hive(ThreadPoolExecutor threadPoolExecutor)
     {
         this.threadPoolExecutor = threadPoolExecutor;
     }
 
-    /**
-     * Creates a Hive with the specified thread pool configuration and rejection
-     * policy.
-     *
-     * @param corePoolSize the minimum number of threads to keep in the pool,
-     * even if idle
-     * @param rushPoolSize the maximum number of threads allowed in the pool
-     * during high load
-     * @param queueCapacity the capacity of the task queue. Use 0 for a
-     * SynchronousQueue (direct handoff), or a positive value for a bounded
-     * LinkedBlockingQueue
-     * @param keepAliveMillis the time in milliseconds that excess idle threads
-     * will wait for new tasks before terminating
-     * @param callerWaitsPolicy if true, uses CallerWaitsPolicy (calling thread
-     * blocks until space is available); if false, uses CallerRunsPolicy
-     * (calling thread executes the task)
-     */
     public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
         BlockingQueue<Runnable> queue = queueCapacity == 0 ? new SynchronousQueue<>() : new LinkedBlockingQueue<>(queueCapacity);
         this.threadPoolExecutor = new ThreadPoolExecutor(corePoolSize, rushPoolSize, keepAliveMillis, TimeUnit.MILLISECONDS, queue, callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY);
     }
 
-    /**
-     * Creates a Hive with the specified thread pool configuration using the
-     * default CallerRunsPolicy for task rejection.
-     *
-     * @param corePoolSize the minimum number of threads to keep in the pool,
-     * even if idle
-     * @param rushPoolSize the maximum number of threads allowed in the pool
-     * during high load
-     * @param queueCapacity the capacity of the task queue. Use 0 for a
-     * SynchronousQueue, or a positive value for a bounded LinkedBlockingQueue
-     * @param keepAliveMillis the time in milliseconds that excess idle threads
-     * will wait for new tasks before terminating
-     */
     public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
     {
         this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, false);
     }
 
-    /**
-     * Creates a Hive with a fixed pool size. The core pool size, maximum pool
-     * size, and queue capacity are all set to the same value, with the default
-     * keep-alive time.
-     *
-     * @param corePoolSize the fixed number of threads in the pool and queue
-     * capacity
-     */
     public Hive(int corePoolSize)
     {
         this(corePoolSize, corePoolSize, corePoolSize, KEEP_ALIVE_MILLIS, false);
     }
 
-    /**
-     * Creates a Hive with default settings. The pool size is set to the number
-     * of available processor cores, with matching core, maximum, and queue
-     * sizes.
-     */
     public Hive()
     {
         this(CORES, CORES, CORES, KEEP_ALIVE_MILLIS, false);
     }
 
     /**
-     * Associates the specified Bees with this Hive. Each Bee will use this
-     * Hive's thread pool for executing tasks.
-     *
-     * @param bees the Bees to associate with this Hive
-     * @return this Hive instance for method chaining
+     * Convenience static factory for a Hive with default settings,
+     * e.g. {@code Hive hive = Hive.hive();}
      */
+    public static Hive hive()
+    {
+        return new Hive();
+    }
+
+    public static Hive hive(int corePoolSize)
+    {
+        return new Hive(corePoolSize);
+    }
+
+    public static Hive hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
+    {
+        return new Hive(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis);
+    }
+
+    public static Hive hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    {
+        return new Hive(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
+    }
+
     public Hive add(Bee<?>... bees)
     {
         Objects.requireNonNull(bees, "bees must not be null");
@@ -221,12 +129,6 @@ public class Hive implements AutoCloseable, Executor
         return this;
     }
 
-    /**
-     * Executes the given task using the underlying thread pool. This method is
-     * called by Bees to submit their tasks for execution.
-     *
-     * @param task the runnable task to execute
-     */
     @Override
     public void execute(Runnable task)
     {
@@ -235,136 +137,255 @@ public class Hive implements AutoCloseable, Executor
     }
 
     /**
-     * Called when the Hive has been terminated and all tasks have completed.
-     * Subclasses can override this method to perform cleanup or finalization
-     * logic.
+     * Creates a new Pipe&lt;T,R&gt; already attached to this Hive, so that
+     * sending a message to it is processed asynchronously on this Hive's
+     * thread pool. Use {@link PipeBee#linkTo} to chain it to the next stage.
      */
+    public <T,R> PipeBee<T,R> pipe(Function<T,R> function)
+    {
+        return new PipeBee<>(this, function);
+    }
+    public <T,R> PipeBee<T,R> pipe(int threads, Function<T,R> function)
+    {
+        return new PipeBee<>(threads, this, function);
+    }
+    public <T,R> PipeBee<T,R> pipe(int threads, int queueSize, Function<T,R> function)
+    {
+        return new PipeBee<>(threads, this, queueSize, function);
+    }
+
+    /**
+     * Creates a new terminal Bee&lt;T&gt; already attached to this Hive,
+     * whose receive() simply delegates to the given Consumer. Useful to
+     * close a chain of Pipes, e.g. {@code hive.bee(x -> System.out.println(x))}.
+     */
+    public <T> Bee<T> bee(Consumer<T> consumer)
+    {
+        Objects.requireNonNull(consumer, "consumer must not be null");
+        return new Bee<T>(this)
+        {
+            @Override
+            protected void receive(T m)
+            {
+                consumer.accept(m);
+            }
+        };
+    }
+    public <T> Bee<T> bee(int threads, Consumer<T> consumer)
+    {
+        Objects.requireNonNull(consumer, "consumer must not be null");
+        return new Bee<T>(threads, this)
+        {
+            @Override
+            protected void receive(T m)
+            {
+                consumer.accept(m);
+            }
+        };
+    }
+    public <T> Bee<T> bee(int threads, int queueSize, Consumer<T> consumer)
+    {
+        Objects.requireNonNull(consumer, "consumer must not be null");
+        return new Bee<T>(threads, this, queueSize)
+        {
+            @Override
+            protected void receive(T m)
+            {
+                consumer.accept(m);
+            }
+        };
+    }
+
+    /**
+     * Creates a new QueueBee&lt;E&gt; already attached to this Hive, whose
+     * receive() puts every message into the given BlockingQueue. Useful to
+     * close a chain of Pipes into a queue that another thread can drain
+     * with take()/poll(), e.g. {@code hive.queue(new LinkedBlockingQueue<>())}.
+     */
+    public <E> QueueBee<E> queue(BlockingQueue<E> queue)
+    {
+        Objects.requireNonNull(queue, "queue must not be null");
+        return new QueueBee<>(this, queue);
+    }
+    public <E> QueueBee<E> queue(int threads, BlockingQueue<E> queue)
+    {
+        Objects.requireNonNull(queue, "queue must not be null");
+        return new QueueBee<>(threads, this, queue);
+    }
+    public <E> QueueBee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
+    {
+        Objects.requireNonNull(queue, "queue must not be null");
+        return new QueueBee<>(threads, this, queueSize, queue);
+    }
+
+    /**
+     * Creates a new ListBee&lt;E&gt; already attached to this Hive, whose
+     * receive() appends every message to the given List, e.g.
+     * {@code hive.list(Collections.synchronizedList(new ArrayList<>()))}.
+     */
+    public <E> ListBee<E> list(List<E> list)
+    {
+        Objects.requireNonNull(list, "list must not be null");
+        return new ListBee<>(this, list);
+    }
+    public <E> ListBee<E> list(int threads, List<E> list)
+    {
+        Objects.requireNonNull(list, "list must not be null");
+        return new ListBee<>(threads, this, list);
+    }
+    public <E> ListBee<E> list(int threads, int queueSize, List<E> list)
+    {
+        Objects.requireNonNull(list, "list must not be null");
+        return new ListBee<>(threads, this, queueSize, list);
+    }
+
+    /**
+     * Creates a new SetBee&lt;T&gt; already attached to this Hive, whose
+     * receive() adds every message to the given Set, e.g.
+     * {@code hive.set(Collections.newSetFromMap(new ConcurrentHashMap<>()))}.
+     */
+    public <T> SetBee<T> set(Set<T> set)
+    {
+        Objects.requireNonNull(set, "set must not be null");
+        return new SetBee<>(this, set);
+    }
+    public <T> SetBee<T> set(int threads, Set<T> set)
+    {
+        Objects.requireNonNull(set, "set must not be null");
+        return new SetBee<>(threads, this, set);
+    }
+    public <T> SetBee<T> set(int threads, int queueSize, Set<T> set)
+    {
+        Objects.requireNonNull(set, "set must not be null");
+        return new SetBee<>(threads, this, queueSize, set);
+    }
+
+    /**
+     * Creates a new FilterBee&lt;T&gt; already attached to this Hive, whose
+     * receive() only forwards messages that satisfy the given Predicate.
+     * Use {@link FilterBee#linkTo} to chain it to the next stage.
+     */
+    public <T> FilterBee<T> filter(Predicate<T> predicate)
+    {
+        return new FilterBee<>(this, predicate);
+    }
+    public <T> FilterBee<T> filter(int threads, Predicate<T> predicate)
+    {
+        return new FilterBee<>(threads, this, predicate);
+    }
+    public <T> FilterBee<T> filter(int threads, int queueSize, Predicate<T> predicate)
+    {
+        return new FilterBee<>(threads, this, queueSize, predicate);
+    }
+
+    /**
+     * Creates a new BroadcastBee&lt;T&gt; already attached to this Hive,
+     * whose receive() fans out every message to all the given targets.
+     * More targets can be added later with {@link BroadcastBee#addTarget}.
+     */
+    @SafeVarargs
+    public final <T> BroadcastBee<T> broadcast(Sendable<T>... targets)
+    {
+        return new BroadcastBee<>(this, targets);
+    }
+    @SafeVarargs
+    public final <T> BroadcastBee<T> broadcast(int threads, Sendable<T>... targets)
+    {
+        return new BroadcastBee<>(threads, this, targets);
+    }
+    @SafeVarargs
+    public final <T> BroadcastBee<T> broadcast(int threads, int queueSize, Sendable<T>... targets)
+    {
+        return new BroadcastBee<>(threads, this, queueSize, targets);
+    }
+
+    /**
+     * Creates a new BatchBee&lt;T&gt; already attached to this Hive, whose
+     * receive() accumulates messages and forwards them, as a List&lt;T&gt;,
+     * once {@code maxSize} elements are reached or {@code maxWaitMillis}
+     * have elapsed since the last flush (pass 0 to disable the time-based
+     * flush). Use {@link BatchBee#linkTo} to chain it to the next stage.
+     */
+    public <T> BatchBee<T> batch(int maxSize, long maxWaitMillis)
+    {
+        return new BatchBee<>(this, maxSize, maxWaitMillis);
+    }
+    public <T> BatchBee<T> batch(int threads, int maxSize, long maxWaitMillis)
+    {
+        return new BatchBee<>(threads, this, maxSize, maxWaitMillis);
+    }
+    public <T> BatchBee<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
+    {
+        return new BatchBee<>(threads, this, queueSize, maxSize, maxWaitMillis);
+    }
+
+    /**
+     * Starts a type-safe, fluent {@link HivePipeline} attached to this
+     * Hive, e.g. {@code hive.pipeline(f1).then(f2).then(f3).sink(consumer)},
+     * which auto-chains the intermediate {@code PipeBee} stages so they
+     * don't need to be linked by hand with {@link PipeBee#linkTo}.
+     */
+    public <T,R> HivePipeline<T,R> pipeline(Function<T,R> first)
+    {
+        PipeBee<T,R> firstStage = this.pipe(first);
+        return new HivePipeline<>(this, firstStage, firstStage);
+    }
+    public <T,R> HivePipeline<T,R> pipeline(int threads, Function<T,R> first)
+    {
+        PipeBee<T,R> firstStage = this.pipe(threads, first);
+        return new HivePipeline<>(this, firstStage, firstStage);
+    }
+    public <T,R> HivePipeline<T,R> pipeline(int threads, int queueSize, Function<T,R> first)
+    {
+        PipeBee<T,R> firstStage = this.pipe(threads, queueSize, first);
+        return new HivePipeline<>(this, firstStage, firstStage);
+    }
+
     protected void terminated()
     {
     }
 
-    /**
-     * Initiates an orderly shutdown in which previously submitted tasks are
-     * executed, but no new tasks will be accepted. This method does not wait
-     * for previously submitted tasks to complete execution.
-     */
-    public void shutdown()
+    public Hive shutdown()
     {
         this.threadPoolExecutor.shutdown();
+        return this;
     }
 
-    /**
-     * Returns true if this Hive has been shut down.
-     *
-     * @return true if shutdown has been initiated
-     */
     public boolean isShutdown()
     {
         return threadPoolExecutor.isShutdown();
     }
 
-    /**
-     * Returns true if all tasks have completed following shutdown. This will
-     * only return true if shutdown() or shutdownNow() was called first.
-     *
-     * @return true if all tasks have completed following shutdown
-     */
     public boolean isTerminated()
     {
         return threadPoolExecutor.isTerminated();
     }
 
-    /**
-     * Blocks until all tasks have completed execution after a shutdown request,
-     * or the timeout occurs, or the current thread is interrupted, whichever
-     * happens first.
-     *
-     * @param millis the maximum time to wait in milliseconds
-     * @return true if this executor terminated, false if the timeout elapsed
-     * before termination
-     * @throws InterruptedException if interrupted while waiting
-     */
     public boolean awaitTermination(int millis) throws InterruptedException
     {
         return threadPoolExecutor.awaitTermination(millis, TimeUnit.MILLISECONDS);
     }
-
-    /**
-     * Shuts down the specified Bees and the Hive, waiting for all tasks to
-     * complete. This is a convenience method that:
-     * <ol>
-     * <li>Shuts down each Bee and waits for its termination</li>
-     * <li>Shuts down this Hive</li>
-     * <li>Waits for the Hive to terminate</li>
-     * </ol>
-     *
-     * @param bees the Bees to shut down before shutting down the Hive
-     */
-    public void shutdownAndAwaitTermination(Bee<?>... bees)
-    {
-        try
-        {
-            Bee.shutdownAndAwaitTermination(bees);
-            this.shutdown();
-            this.awaitTermination(Integer.MAX_VALUE);
-        }
-        catch (InterruptedException ex)
-        {
-            Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
-        }
-    }
-
-    /**
-     * Returns the core number of threads in the thread pool.
-     *
-     * @return the core pool size
-     */
+    
     public int getCorePoolSize()
     {
         return threadPoolExecutor.getCorePoolSize();
     }
 
-    /**
-     * Returns the maximum number of threads allowed in the thread pool.
-     *
-     * @return the maximum pool size
-     */
     public int getMaximumPoolSize()
     {
         return threadPoolExecutor.getMaximumPoolSize();
     }
 
-    /**
-     * Sets the core number of threads in the thread pool. If the new value is
-     * smaller than the current value, excess existing threads will be
-     * terminated when they next become idle.
-     *
-     * @param cps the new core pool size
-     * @throws IllegalArgumentException if i is less than zero or greater than
-     * the maximum pool size
-     */
     public void setCorePoolSize(int cps)
     {
         threadPoolExecutor.setCorePoolSize(cps);
     }
 
-    /**
-     * Sets the maximum number of threads allowed in the thread pool.
-     *
-     * @param mps the new maximum pool size
-     * @throws IllegalArgumentException if i is less than zero or less than the
-     * core pool size
-     */
     public void setMaximumPoolSize(int mps)
     {
         threadPoolExecutor.setMaximumPoolSize(mps);
     }
 
-    /**
-     * Closes this Hive by initiating an orderly shutdown and waiting for all
-     * tasks to complete. This method is called automatically when used in a
-     * try-with-resources statement.
-     */
     @Override
     public void close()
     {
@@ -379,56 +400,16 @@ public class Hive implements AutoCloseable, Executor
         }
     }
 
-    /**
-     * Executes the given {@link Runnable} asynchronously using the internal thread pool.
-     * The task starts immediately upon calling this method.
-     *
-     * <pre>{@code
-     * Future<Void> task = async(() -> { sort(a); sort(b); });
-     * task.get(); // blocks until done
-     * }</pre>
-     *
-     * @param runnable the task to execute asynchronously
-     * @return a {@link Future} that completes with {@code null} when the task finishes
-     */
     public Future<Void> async(Runnable runnable)
     {
         return CompletableFuture.runAsync(runnable, this.threadPoolExecutor);
     }
 
-    /**
-     * Executes the given {@link Supplier} asynchronously using the internal thread pool,
-     * returning its result through a {@link Future}.
-     * The task starts immediately upon calling this method.
-     *
-     * <pre>{@code
-     * Future<List<Integer>> task = async(() -> join(sort(a), sort(b)));
-     * List<Integer> result = task.get(); // blocks until done
-     * }</pre>
-     *
-     * @param <U>      the type of the result produced by the supplier
-     * @param supplier the task to execute asynchronously
-     * @return a {@link Future} that will hold the supplier's return value upon completion
-     */
     public <U> Future<U> async(Supplier<U> supplier)
     {
         return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
     }
 
-    /**
-     * Wraps the given {@link Runnable} in a lazy {@link Future} that only executes
-     * when {@link Future#get()} is called. The task runs on the calling thread at that point,
-     * not on the internal thread pool.
-     *
-     * <pre>{@code
-     * Future<Void> task = lazy(() -> { sort(a); sort(b); });
-     * // nothing runs yet...
-     * task.get(); // executes and blocks here
-     * }</pre>
-     *
-     * @param runnable the task to execute lazily
-     * @return a {@link Future} that executes the task on demand and completes with {@code null}
-     */
     public Future<Void> lazy(Runnable runnable)
     {
         return new FutureTask<Void>(runnable, null)
@@ -448,22 +429,6 @@ public class Hive implements AutoCloseable, Executor
         };
     }
 
-    /**
-     * Wraps the given {@link Supplier} in a lazy {@link Future} that only executes
-     * when {@link Future#get()} or {@link Future#get(long, TimeUnit)} is called.
-     * The task runs on the calling thread at that point, not on the internal thread pool.
-     *
-     * <pre>{@code
-     * Future<List<Integer>> task = lazy(() -> join(sort(a), sort(b)));
-     * // nothing runs yet...
-     * List<Integer> result = task.get();                  // executes and returns here
-     * List<Integer> result = task.get(5, TimeUnit.SECONDS); // with timeout
-     * }</pre>
-     *
-     * @param <U>      the type of the result produced by the supplier
-     * @param supplier the task to execute lazily
-     * @return a {@link Future} that executes the supplier on demand and returns its value
-     */
     public <U> Future<U> lazy(Supplier<U> supplier)
     {
         // We created a FutureTask that involves the supplier.
@@ -485,4 +450,109 @@ public class Hive implements AutoCloseable, Executor
             }
         };
     }
+
+    // STATIC UTILITY METHODS
+    
+    public static void shutdown(Sendable<?> stage, boolean cascading, boolean onlyWhenEmpty)
+    {
+        if (stage instanceof PipeBee)
+        {
+            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
+            pipe.shutdown(onlyWhenEmpty);
+            shutdown(pipe.getNext(), cascading, onlyWhenEmpty);
+        }
+        else if (stage instanceof FilterBee)
+        {
+            FilterBee<?> filter = (FilterBee<?>) stage;
+            filter.shutdown(onlyWhenEmpty);
+            shutdown(filter.getNext(), cascading, onlyWhenEmpty);
+        }
+        else if (stage instanceof BatchBee)
+        {
+            BatchBee<?> batch = (BatchBee<?>) stage;
+            batch.shutdown(onlyWhenEmpty);
+            shutdown(batch.getNext(), cascading, onlyWhenEmpty);
+        }
+        else if (stage instanceof BroadcastBee)
+        {
+            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
+            bc.shutdown(onlyWhenEmpty);
+            for (Sendable<?> target : bc.targets)
+            {
+                shutdown(target, cascading, onlyWhenEmpty);
+            }
+        }
+        else if (stage instanceof Bee)
+        {
+            // Plain Bee or other Bee subclass: shut it down, but don't traverse further
+            ((Bee<?>)stage).shutdown(onlyWhenEmpty);
+        }
+        // If it's a Sendable but not a Bee, we can't shut it down, so we stop here
+    }
+
+    private static void awaitTerminationUntilNanos(Sendable<?> stage, boolean cascading, long nanos) throws InterruptedException
+    {
+        if (stage instanceof PipeBee)
+        {
+            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
+            pipe.awaitTerminationUntilNanos(nanos);
+            awaitTerminationUntilNanos(pipe.getNext(), cascading, nanos);
+        }
+        else if (stage instanceof FilterBee)
+        {
+            FilterBee<?> filter = (FilterBee<?>) stage;
+            filter.awaitTerminationUntilNanos(nanos);
+            awaitTerminationUntilNanos(filter.getNext(), cascading, nanos);
+        }
+        else if (stage instanceof BatchBee)
+        {
+            BatchBee<?> batch = (BatchBee<?>) stage;
+            batch.awaitTerminationUntilNanos(nanos);
+            awaitTerminationUntilNanos(batch.getNext(), cascading, nanos);
+        }
+        else if (stage instanceof BroadcastBee)
+        {
+            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
+            bc.awaitTerminationUntilNanos(nanos);
+            for (Sendable<?> target : bc.targets)
+            {
+                awaitTerminationUntilNanos(target, cascading, nanos);
+            }
+        }
+        else if (stage instanceof Bee)
+        {
+            // Plain Bee or other Bee subclass: shut it down, but don't traverse further
+            ((Bee<?>) stage).awaitTerminationUntilNanos(nanos);
+        }
+        // If it's a Sendable but not a Bee, we can't shut it down, so we stop here
+    }
+    
+    public static void awaitTermination(Sendable<?> stage, boolean cascading, int millis) throws InterruptedException
+    {
+        long untilNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+        awaitTerminationUntilNanos(stage, cascading, untilNanos);
+    }
+    
+    public static void shutdownAndAwaitTermination(boolean cascading, boolean onlyWhenEmpty, Sendable<?> ...stages)
+    {
+        Objects.requireNonNull(stages, "stages must not be null");
+        for(Sendable<?> item : stages)
+        {
+            shutdown(item, cascading, onlyWhenEmpty);
+        }
+        for(Sendable<?> item : stages)
+        {
+            try
+            {
+                awaitTermination(item, cascading, Integer.MAX_VALUE);
+            }
+            catch (InterruptedException ex)
+            {
+                Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+    }
+    
 }
+
+

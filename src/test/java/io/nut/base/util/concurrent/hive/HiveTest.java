@@ -1,291 +1,361 @@
 /*
- *  HiveTest.java
+ * Copyright (c) 2026 francitoshi@gmail.com
  *
- *  Copyright (C) 2024-2026 francitoshi@gmail.com
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.util.concurrent.hive;
 
-import io.nut.base.profile.Profiler;
 import io.nut.base.util.Utils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.junit.jupiter.api.AfterEach;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
 
 /**
- *
- * @author franci
+ * Unit tests for {@link Hive}: the thread-pool lifecycle, the static
+ * factories, {@code add}/{@code execute}, every Bee-factory method
+ * ({@code pipe}, {@code bee}, {@code queue}, {@code list}, {@code set},
+ * {@code filter}, {@code broadcast}, {@code batch}, {@code pipeline}),
+ * and {@code async}/{@code lazy}.
  */
-public class HiveTest
+class HiveTest
 {
-    final Hive hive = new Hive();
-    final Bee<Byte> beeByte = new Bee<Byte>(1, hive) 
-    {
-        @Override
-        public void receive(Byte m)
-        {
-            beeShort.send(m.shortValue());
-        }
-    };
-    final Bee<Short> beeShort = new Bee<Short>(1, hive) 
-    {
-        @Override
-        public void receive(Short m)
-        {
-            beeInteger.send(m.intValue());
-        }
-    };
-    final Bee<Integer> beeInteger = new Bee<Integer>(1, hive) 
-    {
-        @Override
-        public void receive(Integer m)
-        {
-            beeLong.send(m.longValue());
-        }
-    };
-    final Bee<Long> beeLong = new Bee<Long>(1, hive) 
-    {
-        @Override
-        public void receive(Long m)
-        {
-            beeString.send(m.toString());
-            beeString.send(",");
-        }
-    };
-    final Bee<String> beeString = new Bee<String>(1, hive) 
-    {
-        @Override
-        public void receive(String m)
-        {
-            s += m;
-        }
-    };
-    
-    volatile String s = "";
-    
-    /**
-     * Test of shutdown method, of class Hive.
-     */
-    @Test
-    public void testSomeMethod1() throws InterruptedException
-    {   
-        hive.add(beeByte, beeShort, beeInteger, beeLong, beeString);
-        
-        hive.add(beeByte).add(beeShort).add(beeInteger).add(beeLong).add(beeString);
-        
-        for(int i=0;i<10;i++)
-        {
-            beeByte.send((byte)i);
-        }
-        
-        hive.shutdownAndAwaitTermination(beeByte, beeShort, beeInteger, beeLong, beeString);
-        
-        assertEquals("0,1,2,3,4,5,6,7,8,9,", s);
-        assertTrue(hive.isShutdown(), "Shutdown");
-        assertTrue(hive.isTerminated(), "Terminated");
-    }
-        
-    /**
-     * Test of shutdown method, of class Hive.
-     */
-    @Test
-    public void testWaitPolicy() throws InterruptedException
-    {   
-        final Runnable fastTask = new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                Utils.sleep(5);
-            }
-        };
-        final Runnable slowTask = new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                Utils.sleep(5_000);
-            }
-        };
-        int th = 5;
-        int q = 5;
-        int loops = 4000;
-        int slow = 10;
-        Profiler profiler = new Profiler();
-        Profiler.Task profilerRun = profiler.getTask("run");
-        Profiler.Task profilerWait = profiler.getTask("wait");
-        {
-            Hive hive1 = new Hive(th, th, q, 60_000, false);
-            profilerRun.start();
-            for(int i=0;i<loops;i++)
-            {
-                hive1.execute(i==slow ? slowTask : fastTask);
-                profilerRun.count();
-            }
-            hive1.shutdownAndAwaitTermination();
-            profilerRun.stop().count();
-        }
-        
-        {
-            Hive hive2 = new Hive(th, th, q, 60_000, true);
-            profilerWait.start();
-            for(int i=0;i<loops;i++)
-            {
-                hive2.execute(i==slow ? slowTask : fastTask);
-                profilerWait.count();
-            }
-            hive2.shutdownAndAwaitTermination();
-            profilerWait.stop().count();
-        }
-        profiler.print();
-        
-        assertTrue(profilerRun.nanos()>profilerWait.nanos());
-    }
-
-    /**
-     * Test of lazy method, of class Hive.
-     */
-    @Test
-    public void testLazy_Runnable() throws InterruptedException, ExecutionException
-    {
-        final AtomicInteger value = new AtomicInteger();
-        Hive instance = new Hive();
-        Future result = instance.lazy(()->value.set(7));
-        result.get();
-        assertEquals(7, value.get());
-    }
-
-    /**
-     * Test of lazy method, of class Hive.
-     */
-    @Test
-    public void testLazy_Supplier() throws InterruptedException, ExecutionException
-    {
-        Hive instance = new Hive();
-        Future<Integer> result = instance.lazy(()->1+2);
-        assertEquals(3, result.get());
-    }
-
-    private Hive taskManager;
-    private ThreadPoolExecutor executor;
+    private Hive hive;
 
     @BeforeEach
     void setUp()
     {
-        // Inicializamos un pool para las pruebas
-        executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(2);
-        taskManager = new Hive(executor);
+        hive = Hive.hive(2);
     }
 
     @AfterEach
     void tearDown()
     {
-        executor.shutdownNow();
-    }
-
-    @Test
-    @DisplayName("Async Runnable debe ejecutarse asíncronamente")
-    void testAsyncRunnable() throws Exception
-    {
-        AtomicBoolean executed = new AtomicBoolean(false);
-        CountDownLatch latch = new CountDownLatch(1);
-
-        Future<Void> future = taskManager.async(() ->
+        hive.shutdown();
+        try
         {
-            executed.set(true);
-            latch.countDown();
-        });
-
-        // Esperamos a que termine (máximo 1 segundo para no bloquear el test si falla)
-        latch.await(1, TimeUnit.SECONDS);
-
-        assertTrue(executed.get(), "El runnable debería haberse ejecutado");
-        assertTrue(future.isDone());
+            hive.awaitTermination(2000);
+        }
+        catch (InterruptedException ie)
+        {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Test
-    @DisplayName("Async Supplier debe retornar el valor correctamente")
-    void testAsyncSupplier() throws Exception
+    void coresConstantMatchesAvailableProcessors()
     {
-        Future<String> future = taskManager.async(() -> "Hola Mundo");
-        assertEquals("Hola Mundo", future.get(1, TimeUnit.SECONDS));
+        assertEquals(Runtime.getRuntime().availableProcessors(), Hive.CORES);
     }
 
     @Test
-    @DisplayName("Lazy Runnable NO debe ejecutarse hasta llamar a get()")
-    void testLazyRunnable() throws Exception
+    void staticFactoryMethodsCreateUsableHives() throws Exception
     {
-        AtomicBoolean executed = new AtomicBoolean(false);
+        runsATaskOn(Hive.hive());
+        runsATaskOn(Hive.hive(2));
+        runsATaskOn(Hive.hive(2, 2, 2, 1000));
+        runsATaskOn(Hive.hive(2, 2, 2, 1000, true));
+    }
 
-        Future<Void> future = taskManager.lazy(() -> executed.set(true));
-
-        // Verificamos que tras un pequeño tiempo NO se ha ejecutado
-        Thread.sleep(100);
-        assertFalse(executed.get(), "No debería haberse ejecutado todavía (es lazy)");
-
-        // Al llamar a get(), se debe ejecutar
-        future.get();
-        assertTrue(executed.get(), "Debería haberse ejecutado tras llamar a get()");
+    private void runsATaskOn(Hive h) throws Exception
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        h.execute(latch::countDown);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
+        h.shutdown();
+        h.awaitTermination(1000);
     }
 
     @Test
-    @DisplayName("Lazy Supplier NO debe ejecutarse hasta llamar a get() y debe devolver valor")
-    void testLazySupplier() throws Exception
+    void executeRunsTaskOnThePool() throws InterruptedException
     {
-        AtomicInteger counter = new AtomicInteger(0);
-
-        Future<Integer> future = taskManager.lazy(() -> counter.incrementAndGet());
-
-        // Verificamos que el contador sigue en 0
-        Thread.sleep(100);
-        assertEquals(0, counter.get(), "El supplier no debería haber incrementado el contador aún");
-
-        // Al llamar a get(), se ejecuta
-        Integer result = future.get();
-
-        assertEquals(1, result);
-        assertEquals(1, counter.get(), "El contador debería ser 1 tras el primer get()");
-
-        // Verificamos que si llamamos a get() otra vez, no se vuelve a ejecutar (comportamiento de FutureTask)
-        future.get();
-        assertEquals(1, counter.get(), "No debería ejecutarse dos veces");
+        CountDownLatch latch = new CountDownLatch(1);
+        hive.execute(latch::countDown);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
     }
 
     @Test
-    @DisplayName("Lazy Supplier debe funcionar con timeout")
-    void testLazySupplierWithTimeout() throws Exception
+    void executeRejectsNullTask()
     {
-        Future<String> future = taskManager.lazy(() -> "Resultado");
-
-        String result = future.get(500, TimeUnit.MILLISECONDS);
-
-        assertEquals("Resultado", result);
+        assertThrows(NullPointerException.class, () -> hive.execute(null));
     }
 
+    @Test
+    void addAttachesHiveToMultipleBeesAtOnceAndReturnsThis() throws InterruptedException
+    {
+        RecordingBee<Integer> b1 = new RecordingBee<>();
+        RecordingBee<Integer> b2 = new RecordingBee<>();
+
+        Hive returned = hive.add(b1, b2);
+        assertSame(hive, returned);
+
+        b1.send(1);
+        b2.send(2);
+        Hive.shutdownAndAwaitTermination(true, true, b1, b2);
+
+        assertEquals(Collections.singletonList(1), b1.received);
+        assertEquals(Collections.singletonList(2), b2.received);
+    }
+
+    @Test
+    void addRejectsNullArray()
+    {
+        assertThrows(NullPointerException.class, () -> hive.add((Bee<?>[]) null));
+    }
+
+    @Test
+    void pipeFactoryCreatesAttachedTransformingStage() throws InterruptedException
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        PipeBee<Integer,String> stage = hive.pipe(i -> "n" + i);
+        stage.linkTo(hive.bee(sink::add));
+
+        stage.send(5);
+        stage.waitForIdle().shutdown().awaitTermination(25);
+        Hive.shutdownAndAwaitTermination(true, true, stage);
+
+        assertEquals(Collections.singletonList("n5"), sink);
+    }
+
+    @Test
+    void beeFactoryCreatesAttachedConsumerBee() throws InterruptedException
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        Bee<String> b = hive.bee(sink::add);
+
+        b.send("hi");
+        Hive.shutdownAndAwaitTermination(true, true, b);
+
+        assertEquals(Collections.singletonList("hi"), sink);
+    }
+
+    @Test
+    void queueFactoryCreatesAttachedQueueBee() throws InterruptedException
+    {
+        QueueBee<Integer> q = hive.queue(new LinkedBlockingQueue<>());
+
+        q.send(1);
+        q.send(2);
+        Hive.shutdownAndAwaitTermination(true, true, q);
+
+        assertEquals(2, q.size());
+        assertEquals(Integer.valueOf(1), q.take());
+    }
+
+    @Test
+    void listFactoryCreatesAttachedListBee() throws InterruptedException
+    {
+        ListBee<String> l = hive.list(new ArrayList<>());
+
+        l.send("a");
+        l.send("b");
+        Hive.shutdownAndAwaitTermination(true, true, l);
+
+        assertEquals(Arrays.asList("a", "b"), l);
+    }
+
+    @Test
+    void setFactoryCreatesAttachedSetBee()
+    {
+        SetBee<String> s = hive.set(new HashSet<>());
+
+        s.send("x");
+        s.send("x");
+        s.send("y");
+        Hive.shutdownAndAwaitTermination(true, true, s);
+
+        assertEquals(new HashSet<>(Arrays.asList("x", "y")), new HashSet<>(s));
+    }
+
+    @Test
+    void filterFactoryCreatesAttachedFilterBee()
+    {
+        List<Integer> sink = new CopyOnWriteArrayList<>();
+        FilterBee<Integer> f = hive.filter(i -> i > 0);
+        f.linkTo(hive.bee(sink::add));
+
+        f.send(-1);
+        f.send(2);
+        Hive.shutdownAndAwaitTermination(true, true, f);
+
+        assertEquals(Collections.singletonList(2), sink);
+    }
+
+    @Test
+    void broadcastFactoryCreatesAttachedBroadcastBeeWithGivenTargets()
+    {
+        List<String> a = new CopyOnWriteArrayList<>();
+        List<String> b = new CopyOnWriteArrayList<>();
+        BroadcastBee<String> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
+
+        bc.send("m");
+
+        bc.waitForIdle().shutdown().awaitTermination(25);
+        Hive.shutdownAndAwaitTermination(true, true, bc);
+
+        assertEquals(Collections.singletonList("m"), a);
+        assertEquals(Collections.singletonList("m"), b);
+    }
+
+    @Test
+    void batchFactoryCreatesAttachedBatchBee()
+    {
+        List<List<Integer>> sink = new CopyOnWriteArrayList<>();
+        BatchBee<Integer> batch = hive.batch(2, 0L);
+        batch.linkTo(hive.bee(sink::add));
+
+        batch.send(1);
+        batch.send(2);
+        
+        batch.waitForIdle().shutdown().awaitTermination(25);
+        Hive.shutdownAndAwaitTermination(true, true, batch);
+
+        assertEquals(Collections.singletonList(Arrays.asList(1, 2)), sink);
+    }
+
+    @Test
+    void pipelineFactoryBuildsChainedHeadBee() throws InterruptedException
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        Bee<Integer> head = hive.pipeline((Integer i) -> i + 1)
+                                 .then(i -> "v" + i)
+                                 .sink(sink::add);
+
+        head.send(4);
+        
+        Utils.parkMillis(25);
+        Hive.shutdownAndAwaitTermination(true, true, head);
+
+        assertEquals(Collections.singletonList("v5"), sink);
+    }
+
+    @Test
+    void shutdownAndAwaitTerminationStopsThePool() throws InterruptedException
+    {
+        assertFalse(hive.isShutdown());
+        hive.shutdown();
+
+        assertTrue(hive.isShutdown());
+        assertTrue(hive.awaitTermination(2000));
+        assertTrue(hive.isTerminated());
+    }
+
+    @Test
+    void instanceShutdownAndAwaitTerminationDrainsBeesThenStopsThePool() throws InterruptedException
+    {
+        RecordingBee<Integer> bee = new RecordingBee<>(hive);
+        bee.send(1);
+        bee.send(2);
+
+        Hive.shutdownAndAwaitTermination(true, true, bee);
+        hive.shutdown().awaitTermination(1);
+
+        assertTrue(bee.isTerminated());
+        assertEquals(2, bee.received.size());
+        assertTrue(hive.isTerminated());
+    }
+
+    @Test
+    void corePoolSizeGetterAndSetterWork()
+    {
+        Hive h = Hive.hive(3);
+        assertEquals(3, h.getCorePoolSize());
+        assertEquals(3, h.getMaximumPoolSize());
+
+        h.setMaximumPoolSize(10);
+        h.setCorePoolSize(5);
+
+        assertEquals(5, h.getCorePoolSize());
+        assertEquals(10, h.getMaximumPoolSize());
+
+        h.shutdown();
+        try
+        {
+            h.awaitTermination(1000);
+        }
+        catch (InterruptedException ie)
+        {
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    @Test
+    void closeShutsDownAndAwaitsTermination() throws Exception
+    {
+        Hive h = Hive.hive(2);
+        CountDownLatch latch = new CountDownLatch(1);
+        h.execute(latch::countDown);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
+
+        h.close();
+
+        assertTrue(h.isTerminated());
+    }
+
+    @Test
+    void asyncRunnableCompletesAndAsyncSupplierReturnsValue() throws Exception
+    {
+        AtomicBoolean ran = new AtomicBoolean(false);
+        Future<Void> f1 = hive.async(() -> ran.set(true));
+        f1.get(1, TimeUnit.SECONDS);
+        assertTrue(ran.get());
+
+        Future<Integer> f2 = hive.async(() -> 21 * 2);
+        assertEquals(Integer.valueOf(42), f2.get(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void lazyRunnableOnlyRunsWhenGetIsCalled() throws Exception
+    {
+        AtomicBoolean ran = new AtomicBoolean(false);
+        Future<Void> lazy = hive.lazy(() -> ran.set(true));
+
+        assertFalse(ran.get());
+
+        lazy.get(1, TimeUnit.SECONDS);
+        assertTrue(ran.get());
+    }
+
+    @Test
+    void lazySupplierOnlyRunsWhenGetIsCalled() throws Exception
+    {
+        AtomicInteger calls = new AtomicInteger(0);
+        Future<Integer> lazy = hive.lazy(calls::incrementAndGet);
+
+        assertEquals(0, calls.get());
+
+        assertEquals(Integer.valueOf(1), lazy.get(1, TimeUnit.SECONDS));
+        assertEquals(1, calls.get());
+    }
 }
