@@ -19,29 +19,46 @@
 package io.nut.base.util.concurrent.hive;
 
 /**
- * A Bee that forwards every received message of type {@code F} to a
- * "forward" companion Bee, and that can produce an inverse Bee which
- * forwards messages of type {@code B} back to a "backward" companion Bee.
- * Pair instances are typically used to link two independent Bee chains
- * so that messages can flow in opposite directions between them.
+ * A bidirectional bridge between two independent {@link Bee} chains, enabling
+ * messages to flow in opposite directions between them.
+ * <p>
+ * A {@code PairBees<F,B>} acts as a {@link Sendable}{@code <F>}: calling
+ * {@link #send(Object)} with a value of type {@code F} forwards it to the
+ * <em>forward</em> Bee ({@code fw}). Calling {@link #inverse()} returns the
+ * companion {@code PairBees<B,F>}, whose {@link #send(Object)} forwards values
+ * of type {@code B} to the <em>backward</em> Bee ({@code bw}). The two
+ * instances form a mutually-referencing pair that is lazily created on the
+ * first call to {@link #inverse()}.
+ * <p>
+ * Typical use: linking two otherwise disconnected pipelines so that output
+ * produced by one can be fed as input to the other, and vice-versa.
+ * <pre>{@code
+ * PairBees<Request, Response> pair = new PairBees<>(requestBee, responseBee);
+ * // Sending a request:
+ * pair.send(new Request(...));
+ * // Sending a response back:
+ * pair.inverse().send(new Response(...));
+ * }</pre>
  *
- * @param <F> the type of messages this Pair receives and forwards
- * @param <B> the type of messages handled by the inverse Pair
+ * @param <F> the type of messages forwarded in the "forward" direction
+ * @param <B> the type of messages forwarded in the "backward" direction
  */
 public class PairBees<F, B> implements Sendable<F>
 {
-
+    /** The Bee that receives forward ({@code F}) messages. */
     protected final Bee<F> fw;
+    /** The Bee that receives backward ({@code B}) messages. */
     protected final Bee<B> bw;
+    /** The inverse pair, lazily created on the first call to {@link #inverse()}. */
     protected volatile PairBees<B, F> inv;
 
     /**
-     * Creates an Pair with a pre-existing inverse instance, used
-     * internally to link a pair of mutually-inverse Pairs.
+     * Creates a {@code PairBees} with a pre-existing inverse, used internally
+     * to link a pair of mutually-inverse instances.
      *
-     * @param fw the forward Bee that received messages are sent to
-     * @param bw the backward Bee, used to construct the inverse Pair
-     * @param inv the already-created inverse Pair, or null
+     * @param fw  the forward Bee that received messages are sent to
+     * @param bw  the backward Bee, used to construct the inverse pair
+     * @param inv the already-created inverse pair, or {@code null}
      */
     protected PairBees(Bee<F> fw, Bee<B> bw, PairBees<B, F> inv)
     {
@@ -51,11 +68,12 @@ public class PairBees<F, B> implements Sendable<F>
     }
 
     /**
-     * Creates a new Pair linking the given forward and backward Bees.
-     * The inverse Pair is lazily created on the first call to {@link #inverse()}.
+     * Creates a new {@code PairBees} linking the given forward and backward
+     * Bees. The inverse pair is created lazily on the first call to
+     * {@link #inverse()}.
      *
      * @param fw the forward Bee that received messages are sent to
-     * @param bw the backward Bee used by the inverse Pair
+     * @param bw the backward Bee used by the inverse pair
      */
     public PairBees(Bee<F> fw, Bee<B> bw)
     {
@@ -64,6 +82,13 @@ public class PairBees<F, B> implements Sendable<F>
         this.inv = null;
     }
 
+    /**
+     * Sends a message of type {@code F} to the forward Bee.
+     *
+     * @param f the message to deliver to the forward Bee
+     * @return {@code true} if the forward Bee accepted the message;
+     *         {@code false} if it was rejected (e.g. the Bee is shut down)
+     */
     @Override
     public boolean send(F f)
     {
@@ -71,15 +96,15 @@ public class PairBees<F, B> implements Sendable<F>
     }
 
     /**
-     * Returns the inverse of this Pair, lazily creating it on first
-     * invocation. The inverse forwards messages of type {@code B} to the
-     * backward Bee.
+     * Returns the inverse of this pair, lazily creating it on the first
+     * invocation. The inverse is a {@code PairBees<B,F>} whose
+     * {@link #send(Object)} forwards messages of type {@code B} to the backward
+     * Bee, and whose own {@link #inverse()} returns this instance.
      *
-     * @return the inverse Pair, linked back to this instance
+     * @return the inverse pair; never {@code null}
      */
     public PairBees<B, F> inverse()
     {
         return inv != null ? inv : (inv = new PairBees<>(bw, fw, this));
     }
-    
 }

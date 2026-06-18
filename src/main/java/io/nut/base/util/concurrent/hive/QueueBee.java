@@ -25,15 +25,37 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A Bee&lt;E&gt; that is, at the same time, a BlockingQueue&lt;E&gt;: every
- * message it receives via {@link #receive(Object)} is put into a delegate
- * {@code BlockingQueue<E>} supplied at construction time, and every
- * BlockingQueue method is forwarded ("delegated") to that same queue.
+ * A terminal pipeline stage that doubles as a {@link BlockingQueue}: every
+ * message received via the {@link Bee} machinery is put into a delegate
+ * {@link BlockingQueue}{@code <E>} supplied at construction time, and every
+ * {@code BlockingQueue} method is delegated to that same queue.
  * <p>
- * This makes it possible to use a QueueBee as the terminal stage of a
- * Bee/Pipe chain (e.g. with {@link PipeBee#linkTo}) while still being able
- * to consume the produced elements as a plain BlockingQueue from any other
- * thread, for instance with a blocking {@code take()} in a consumer loop.
+ * This makes it possible to use a {@code QueueBee} as the end-point of a
+ * {@link PipeBee} / {@link FilterBee} chain (e.g. with {@link PipeBee#linkTo})
+ * while still consuming the produced elements as a plain {@code BlockingQueue}
+ * from any other thread — for example with a blocking {@code take()} in a
+ * consumer loop:
+ * <pre>{@code
+ * BlockingQueue<String> q = new LinkedBlockingQueue<>();
+ * QueueBee<String>      qb = hive.queue(q);
+ * pipe.linkTo(qb);
+ *
+ * // in another thread:
+ * while (true) {
+ *     String item = q.take();
+ *     process(item);
+ * }
+ * }</pre>
+ * <p>
+ * {@link #receive(Object)} calls {@link BlockingQueue#put put()} on the
+ * delegate, blocking the worker thread if the queue is at capacity. This
+ * provides natural back-pressure: when the consumer is slow, the producer's
+ * worker thread stalls until space is available, slowing the whole pipeline.
+ * <p>
+ * Note that the {@code BlockingQueue} itself must be thread-safe (all standard
+ * implementations from {@code java.util.concurrent} are), but the caller is
+ * responsible for choosing a queue with the appropriate capacity and ordering
+ * semantics.
  *
  * @param <E> the type of elements held by the delegate queue
  */
@@ -41,30 +63,68 @@ public class QueueBee<E> extends Bee<E> implements BlockingQueue<E>
 {
     private final BlockingQueue<E> delegate;
 
+    /**
+     * Full constructor.
+     *
+     * @param threads   the maximum number of concurrent worker threads
+     * @param hive      the Hive thread pool, or {@code null} for synchronous mode
+     * @param queueSize the internal Bee queue capacity (0 = default); distinct
+     *                  from the delegate {@code BlockingQueue}'s capacity
+     * @param delegate  the {@code BlockingQueue} that stores received elements;
+     *                  must not be {@code null}
+     */
     public QueueBee(int threads, Hive hive, int queueSize, BlockingQueue<E> delegate)
     {
         super(threads, hive, queueSize);
         this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
     }
 
+    /**
+     * Constructs a QueueBee with the given thread count and Hive, using the
+     * default internal queue size.
+     *
+     * @param threads  the maximum number of concurrent worker threads
+     * @param hive     the Hive thread pool, or {@code null} for synchronous mode
+     * @param delegate the delegate queue; must not be {@code null}
+     */
     public QueueBee(int threads, Hive hive, BlockingQueue<E> delegate)
     {
         super(threads, hive);
         this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
     }
 
+    /**
+     * Constructs a QueueBee attached to the given Hive with the default thread
+     * count and internal queue size.
+     *
+     * @param hive     the Hive thread pool, or {@code null} for synchronous mode
+     * @param delegate the delegate queue; must not be {@code null}
+     */
     public QueueBee(Hive hive, BlockingQueue<E> delegate)
     {
         super(hive);
         this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
     }
 
+    /**
+     * Constructs a standalone QueueBee with the given thread count but no Hive.
+     * A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     *
+     * @param threads  the maximum number of concurrent worker threads
+     * @param delegate the delegate queue; must not be {@code null}
+     */
     public QueueBee(int threads, BlockingQueue<E> delegate)
     {
         super(threads);
         this.delegate = Objects.requireNonNull(delegate, "delegate must not be null");
     }
 
+    /**
+     * Constructs a standalone QueueBee with the default thread count and no
+     * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     *
+     * @param delegate the delegate queue; must not be {@code null}
+     */
     public QueueBee(BlockingQueue<E> delegate)
     {
         super();
@@ -72,10 +132,16 @@ public class QueueBee<E> extends Bee<E> implements BlockingQueue<E>
     }
 
     /**
-     * Receives a message and puts it into the delegate queue, blocking
-     * the calling/worker thread if the queue is currently at capacity.
+     * Receives a message from the Bee pipeline and puts it into the delegate
+     * queue, blocking the calling worker thread if the queue is currently at
+     * capacity. This implements natural back-pressure: a slow consumer slows the
+     * entire upstream pipeline.
      *
-     * @param e the message/element to insert into the delegate queue
+     * @param e the message to insert into the delegate queue
+     * @throws RuntimeException wrapping {@link InterruptedException} if the
+     *                          worker thread is interrupted while waiting for
+     *                          space in the delegate queue; the thread's
+     *                          interrupted flag is also restored
      */
     @Override
     protected void receive(E e)
@@ -91,153 +157,181 @@ public class QueueBee<E> extends Bee<E> implements BlockingQueue<E>
         }
     }
 
-    //=========================================================== Collection
+    // =========================================================== Collection
+
+    /** {@inheritDoc} */
     @Override
     public int size()
     {
         return delegate.size();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean isEmpty()
     {
         return delegate.isEmpty();
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean contains(Object o)
     {
         return delegate.contains(o);
     }
 
+    /** {@inheritDoc} */
     @Override
     public Iterator<E> iterator()
     {
         return delegate.iterator();
     }
 
+    /** {@inheritDoc} */
     @Override
     public Object[] toArray()
     {
         return delegate.toArray();
     }
 
+    /** {@inheritDoc} */
     @Override
     public <T> T[] toArray(T[] a)
     {
         return delegate.toArray(a);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean add(E e)
     {
         return delegate.add(e);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean remove(Object o)
     {
         return delegate.remove(o);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean containsAll(Collection<?> c)
     {
         return delegate.containsAll(c);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean addAll(Collection<? extends E> c)
     {
         return delegate.addAll(c);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean removeAll(Collection<?> c)
     {
         return delegate.removeAll(c);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean retainAll(Collection<?> c)
     {
         return delegate.retainAll(c);
     }
 
+    /** {@inheritDoc} */
     @Override
     public void clear()
     {
         delegate.clear();
     }
 
-    //================================================================= Queue
+    // ================================================================= Queue
+
+    /** {@inheritDoc} */
     @Override
     public boolean offer(E e)
     {
         return delegate.offer(e);
     }
 
+    /** {@inheritDoc} */
     @Override
     public E remove()
     {
         return delegate.remove();
     }
 
+    /** {@inheritDoc} */
     @Override
     public E poll()
     {
         return delegate.poll();
     }
 
+    /** {@inheritDoc} */
     @Override
     public E element()
     {
         return delegate.element();
     }
 
+    /** {@inheritDoc} */
     @Override
     public E peek()
     {
         return delegate.peek();
     }
 
-    //========================================================= BlockingQueue
+    // ========================================================= BlockingQueue
+
+    /** {@inheritDoc} */
     @Override
     public void put(E e) throws InterruptedException
     {
         delegate.put(e);
     }
 
+    /** {@inheritDoc} */
     @Override
     public boolean offer(E e, long timeout, TimeUnit unit) throws InterruptedException
     {
         return delegate.offer(e, timeout, unit);
     }
 
+    /** {@inheritDoc} */
     @Override
     public E take() throws InterruptedException
     {
         return delegate.take();
     }
 
+    /** {@inheritDoc} */
     @Override
     public E poll(long timeout, TimeUnit unit) throws InterruptedException
     {
         return delegate.poll(timeout, unit);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int remainingCapacity()
     {
         return delegate.remainingCapacity();
     }
 
+    /** {@inheritDoc} */
     @Override
     public int drainTo(Collection<? super E> c)
     {
         return delegate.drainTo(c);
     }
 
+    /** {@inheritDoc} */
     @Override
     public int drainTo(Collection<? super E> c, int maxElements)
     {
