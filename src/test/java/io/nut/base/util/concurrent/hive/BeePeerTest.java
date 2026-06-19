@@ -27,17 +27,17 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link PeerBees}, the symmetric (same message type in
+ * Unit tests for {@link BeePeer}, the symmetric (same message type in
  * both directions) specialization of {@link PairBees}.
  */
-class PeerBeesTest
+class BeePeerTest
 {
     @Test
     void sendDelegatesToTheForwardBee()
     {
         RecordingBee<String> fw = new RecordingBee<>();
         RecordingBee<String> bw = new RecordingBee<>();
-        PeerBees<String> peer = new PeerBees<>(fw, bw);
+        BeePeer<String> peer = new BeePeer<>(fw, bw);
 
         assertTrue(peer.send("ping"));
 
@@ -50,9 +50,9 @@ class PeerBeesTest
     {
         RecordingBee<String> fw = new RecordingBee<>();
         RecordingBee<String> bw = new RecordingBee<>();
-        PeerBees<String> peer = new PeerBees<>(fw, bw);
+        BeePeer<String> peer = new BeePeer<>(fw, bw);
 
-        PeerBees<String> inv = peer.inverse();
+        BeePeer<String> inv = peer.inverse();
         inv.send("pong");
 
         assertEquals(Collections.singletonList("pong"), bw.received);
@@ -62,9 +62,9 @@ class PeerBeesTest
     @Test
     void inverseOfInverseReturnsTheOriginalPeer()
     {
-        PeerBees<String> peer = new PeerBees<>(new RecordingBee<>(), new RecordingBee<>());
+        BeePeer<String> peer = new BeePeer<>(new RecordingBee<>(), new RecordingBee<>());
 
-        PeerBees<String> inv = peer.inverse();
+        BeePeer<String> inv = peer.inverse();
 
         assertSame(peer, inv.inverse());
     }

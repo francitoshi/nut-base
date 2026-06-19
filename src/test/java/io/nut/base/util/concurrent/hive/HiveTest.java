@@ -202,12 +202,13 @@ class HiveTest
     void filterFactoryCreatesAttachedFilterBee()
     {
         List<Integer> sink = new CopyOnWriteArrayList<>();
-        FilterBee<Integer> f = hive.filter(i -> i > 0);
-        f.linkTo(hive.bee(sink::add));
+        FilterBee<Integer> filter = hive.filter(i -> i > 0);
+        filter.linkTo(hive.bee(sink::add));
 
-        f.send(-1);
-        f.send(2);
-        Hive.shutdownAndAwaitTermination(true, true, f);
+        filter.send(-1);
+        filter.send(2);
+        filter.waitForIdle().shutdown(true).awaitTermination(1);
+        Hive.shutdownAndAwaitTermination(true, true, filter);
 
         assertEquals(Collections.singletonList(2), sink);
     }

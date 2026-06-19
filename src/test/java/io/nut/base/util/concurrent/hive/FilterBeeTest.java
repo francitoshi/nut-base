@@ -234,6 +234,7 @@ class FilterBeeTest
         filter.send(-1);
         filter.send(1);
 
+        filter.waitForIdle().shutdown(true).awaitTermination(1);
         Hive.shutdownAndAwaitTermination(true, true, filter);
 
         assertEquals(1, result.size());

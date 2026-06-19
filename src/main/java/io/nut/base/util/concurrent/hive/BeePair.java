@@ -43,14 +43,14 @@ package io.nut.base.util.concurrent.hive;
  * @param <F> the type of messages forwarded in the "forward" direction
  * @param <B> the type of messages forwarded in the "backward" direction
  */
-public class PairBees<F, B> implements Sendable<F>
+public class BeePair<F, B> implements Sendable<F>
 {
     /** The Bee that receives forward ({@code F}) messages. */
     protected final Bee<F> fw;
     /** The Bee that receives backward ({@code B}) messages. */
     protected final Bee<B> bw;
     /** The inverse pair, lazily created on the first call to {@link #inverse()}. */
-    protected volatile PairBees<B, F> inv;
+    protected volatile BeePair<B, F> inv;
 
     /**
      * Creates a {@code PairBees} with a pre-existing inverse, used internally
@@ -60,7 +60,7 @@ public class PairBees<F, B> implements Sendable<F>
      * @param bw  the backward Bee, used to construct the inverse pair
      * @param inv the already-created inverse pair, or {@code null}
      */
-    protected PairBees(Bee<F> fw, Bee<B> bw, PairBees<B, F> inv)
+    protected BeePair(Bee<F> fw, Bee<B> bw, BeePair<B, F> inv)
     {
         this.fw = fw;
         this.bw = bw;
@@ -75,7 +75,7 @@ public class PairBees<F, B> implements Sendable<F>
      * @param fw the forward Bee that received messages are sent to
      * @param bw the backward Bee used by the inverse pair
      */
-    public PairBees(Bee<F> fw, Bee<B> bw)
+    public BeePair(Bee<F> fw, Bee<B> bw)
     {
         this.fw = fw;
         this.bw = bw;
@@ -103,8 +103,8 @@ public class PairBees<F, B> implements Sendable<F>
      *
      * @return the inverse pair; never {@code null}
      */
-    public PairBees<B, F> inverse()
+    public BeePair<B, F> inverse()
     {
-        return inv != null ? inv : (inv = new PairBees<>(bw, fw, this));
+        return inv != null ? inv : (inv = new BeePair<>(bw, fw, this));
     }
 }

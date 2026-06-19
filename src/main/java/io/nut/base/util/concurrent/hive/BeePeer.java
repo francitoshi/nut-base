@@ -19,14 +19,14 @@
 package io.nut.base.util.concurrent.hive;
 
 /**
- * A symmetric specialization of {@link PairBees} where both directions
+ * A symmetric specialization of {@link BeePair} where both directions
  * carry the same message type {@code M}. A Peer forwards messages it
  * receives to its forward Bee, and its inverse forwards messages to its
  * backward Bee.
  *
  * @param <M> the type of messages exchanged in both directions
  */
-public class PeerBees<M> extends PairBees<M, M>
+public class BeePeer<M> extends BeePair<M, M>
 {
 
     /**
@@ -37,7 +37,7 @@ public class PeerBees<M> extends PairBees<M, M>
      * @param bw the backward Bee, used to construct the inverse Peer
      * @param inv the already-created inverse Peer, or null
      */
-    private PeerBees(Bee<M> fw, Bee<M> bw, PeerBees<M> inv)
+    private BeePeer(Bee<M> fw, Bee<M> bw, BeePeer<M> inv)
     {
         super(fw, bw, inv);
     }
@@ -49,7 +49,7 @@ public class PeerBees<M> extends PairBees<M, M>
      * @param fw the forward Bee that received messages are sent to
      * @param bw the backward Bee used by the inverse Peer
      */
-    public PeerBees(Bee<M> fw, Bee<M> bw)
+    public BeePeer(Bee<M> fw, Bee<M> bw)
     {
         super(fw, bw);
     }
@@ -61,9 +61,9 @@ public class PeerBees<M> extends PairBees<M, M>
      * @return the inverse Peer, linked back to this instance
      */
     @Override
-    public PeerBees<M> inverse()
+    public BeePeer<M> inverse()
     {
-        return inv != null ? (PeerBees<M>) inv : (PeerBees<M>) (inv = new PeerBees<>(bw, fw, this));
+        return inv != null ? (BeePeer<M>) inv : (BeePeer<M>) (inv = new BeePeer<>(bw, fw, this));
     }
     
 }

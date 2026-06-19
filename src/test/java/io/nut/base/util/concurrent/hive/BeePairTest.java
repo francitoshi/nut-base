@@ -27,17 +27,17 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link PairBees}: forward delegation, lazy creation and
+ * Unit tests for {@link BeePair}: forward delegation, lazy creation and
  * caching of the inverse, and the inverse-of-the-inverse identity.
  */
-class PairBeesTest
+class BeePairTest
 {
     @Test
     void sendDelegatesToTheForwardBee()
     {
         RecordingBee<String> fw = new RecordingBee<>();
         RecordingBee<Integer> bw = new RecordingBee<>();
-        PairBees<String,Integer> pair = new PairBees<>(fw, bw);
+        BeePair<String,Integer> pair = new BeePair<>(fw, bw);
 
         assertTrue(pair.send("hello"));
 
@@ -50,9 +50,9 @@ class PairBeesTest
     {
         RecordingBee<String> fw = new RecordingBee<>();
         RecordingBee<Integer> bw = new RecordingBee<>();
-        PairBees<String,Integer> pair = new PairBees<>(fw, bw);
+        BeePair<String,Integer> pair = new BeePair<>(fw, bw);
 
-        PairBees<Integer,String> inv = pair.inverse();
+        BeePair<Integer,String> inv = pair.inverse();
         assertTrue(inv.send(42));
 
         assertEquals(Collections.singletonList(42), bw.received);
@@ -62,10 +62,10 @@ class PairBeesTest
     @Test
     void inverseIsLazilyCreatedAndCached()
     {
-        PairBees<String,Integer> pair = new PairBees<>(new RecordingBee<>(), new RecordingBee<>());
+        BeePair<String,Integer> pair = new BeePair<>(new RecordingBee<>(), new RecordingBee<>());
 
-        PairBees<Integer,String> inv1 = pair.inverse();
-        PairBees<Integer,String> inv2 = pair.inverse();
+        BeePair<Integer,String> inv1 = pair.inverse();
+        BeePair<Integer,String> inv2 = pair.inverse();
 
         assertSame(inv1, inv2);
     }
@@ -73,9 +73,9 @@ class PairBeesTest
     @Test
     void inverseOfInverseReturnsTheOriginalPair()
     {
-        PairBees<String,Integer> pair = new PairBees<>(new RecordingBee<>(), new RecordingBee<>());
+        BeePair<String,Integer> pair = new BeePair<>(new RecordingBee<>(), new RecordingBee<>());
 
-        PairBees<Integer,String> inv = pair.inverse();
+        BeePair<Integer,String> inv = pair.inverse();
 
         assertSame(pair, inv.inverse());
     }
