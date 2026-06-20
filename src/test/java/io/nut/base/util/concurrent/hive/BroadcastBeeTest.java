@@ -186,7 +186,7 @@ class BroadcastBeeTest
             bc.send(i);
         }
         
-        bc.shutdown(true).awaitTermination(100);
+        bc.waitForIdle().shutdown(true).awaitTermination(100);
 
         assertEquals(10, a.size());
         assertEquals(10, b.size());

@@ -23,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 
@@ -131,18 +132,18 @@ class HivePipelineTest
     @Test
     void toClosesThePipelineWithAnArbitrarySendable() throws InterruptedException
     {
-        QueueBee<String> qb = hive.queue(new LinkedBlockingQueue<>());
+        BlockingQueue<String> q = new LinkedBlockingQueue<>();
+        Bee<String> b = hive.queue(q);
 
-        Bee<String> head = hive.pipeline((String s) -> s.toUpperCase())
-                                 .to(qb);
+        Bee<String> head = hive.pipeline((String s) -> s.toUpperCase()).to(b);
 
         head.send("hello");
 
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head, qb);
+        Hive.shutdownAndAwaitTermination(true, true, head, b);
 
-        assertEquals(1, qb.size());
-        assertEquals("HELLO", qb.peek());
+        assertEquals(1, q.size());
+        assertEquals("HELLO", q.peek());
     }
 
     @Test

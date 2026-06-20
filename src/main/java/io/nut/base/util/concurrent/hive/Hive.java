@@ -381,53 +381,92 @@ public class Hive implements AutoCloseable, Executor
     }
 
     /**
-     * Creates a new {@link QueueBee}{@code <E>} attached to this Hive whose
+     * Creates a new terminal {@link Bee}{@code <E>} attached to this Hive whose
      * {@link Bee#receive receive()} puts every message into {@code queue}.
-     * The resulting stage doubles as a {@link BlockingQueue}, so another thread
-     * can consume produced elements with {@code take()} or {@code poll()}.
      *
      * @param <E>   the element type
      * @param queue the delegate queue; must not be {@code null}
-     * @return a new QueueBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <E> QueueBee<E> queue(BlockingQueue<E> queue)
+    public <E> Bee<E> queue(BlockingQueue<E> queue)
     {
         Objects.requireNonNull(queue, "queue must not be null");
-        return new QueueBee<>(this, queue);
+        return new Bee<E>(this)
+        {
+            @Override
+            protected void receive(E m)
+            {
+                putIntoQueue(queue, m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link QueueBee} with the specified thread count.
+     * Creates a new terminal {@link Bee} with the specified thread count whose
+     * {@link Bee#receive receive()} puts every message into {@code queue}.
      *
      * @param <E>     the element type
      * @param threads the maximum number of concurrent worker threads
      * @param queue   the delegate queue; must not be {@code null}
-     * @return a new QueueBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <E> QueueBee<E> queue(int threads, BlockingQueue<E> queue)
+    public <E> Bee<E> queue(int threads, BlockingQueue<E> queue)
     {
         Objects.requireNonNull(queue, "queue must not be null");
-        return new QueueBee<>(threads, this, queue);
+        return new Bee<E>(threads, this)
+        {
+            @Override
+            protected void receive(E m)
+            {
+                putIntoQueue(queue, m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link QueueBee} with the specified thread count and
-     * internal queue size.
+     * Creates a new terminal {@link Bee} with the specified thread count and
+     * internal queue size whose {@link Bee#receive receive()} puts every
+     * message into {@code queue}.
      *
      * @param <E>       the element type
      * @param threads   the maximum number of concurrent worker threads
      * @param queueSize the internal queue capacity
      * @param queue     the delegate queue; must not be {@code null}
-     * @return a new QueueBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <E> QueueBee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
+    public <E> Bee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
         Objects.requireNonNull(queue, "queue must not be null");
-        return new QueueBee<>(threads, this, queueSize, queue);
+        return new Bee<E>(threads, this, queueSize)
+        {
+            @Override
+            protected void receive(E m)
+            {
+                putIntoQueue(queue, m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link ListBee}{@code <E>} attached to this Hive whose
+     * Puts {@code m} into {@code queue}, blocking if necessary. If the
+     * calling thread is interrupted while waiting, the interruption is
+     * logged and the thread's interrupt status is restored.
+     */
+    private static <E> void putIntoQueue(BlockingQueue<E> queue, E m)
+    {
+        try
+        {
+            queue.put(m);
+        }
+        catch (InterruptedException ex)
+        {
+            Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
+            Thread.currentThread().interrupt();
+        }
+    }
+
+    /**
+     * Creates a new terminal {@link Bee}{@code <E>} attached to this Hive whose
      * {@link Bee#receive receive()} appends every message to {@code list}.
      * Supply a thread-safe list (e.g.
      * {@code Collections.synchronizedList(new ArrayList<>())}) when the list
@@ -435,46 +474,70 @@ public class Hive implements AutoCloseable, Executor
      *
      * @param <E>  the element type
      * @param list the delegate list; must not be {@code null}
-     * @return a new ListBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <E> ListBee<E> list(List<E> list)
+    public <E> Bee<E> list(List<E> list)
     {
         Objects.requireNonNull(list, "list must not be null");
-        return new ListBee<>(this, list);
+        return new Bee<E>(this)
+        {
+            @Override
+            protected void receive(E m)
+            {
+                list.add(m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link ListBee} with the specified thread count.
+     * Creates a new terminal {@link Bee} with the specified thread count
+     * whose {@link Bee#receive receive()} appends every message to
+     * {@code list}.
      *
      * @param <E>     the element type
      * @param threads the maximum number of concurrent worker threads
      * @param list    the delegate list; must not be {@code null}
-     * @return a new ListBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <E> ListBee<E> list(int threads, List<E> list)
+    public <E> Bee<E> list(int threads, List<E> list)
     {
         Objects.requireNonNull(list, "list must not be null");
-        return new ListBee<>(threads, this, list);
+        return new Bee<E>(threads, this)
+        {
+            @Override
+            protected void receive(E m)
+            {
+                list.add(m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link ListBee} with the specified thread count and
-     * internal queue size.
+     * Creates a new terminal {@link Bee} with the specified thread count and
+     * internal queue size whose {@link Bee#receive receive()} appends every
+     * message to {@code list}.
      *
      * @param <E>       the element type
      * @param threads   the maximum number of concurrent worker threads
      * @param queueSize the internal queue capacity
      * @param list      the delegate list; must not be {@code null}
-     * @return a new ListBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <E> ListBee<E> list(int threads, int queueSize, List<E> list)
+    public <E> Bee<E> list(int threads, int queueSize, List<E> list)
     {
         Objects.requireNonNull(list, "list must not be null");
-        return new ListBee<>(threads, this, queueSize, list);
+        return new Bee<E>(threads, this, queueSize)
+        {
+            @Override
+            protected void receive(E m)
+            {
+                list.add(m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link SetBee}{@code <T>} attached to this Hive whose
+     * Creates a new terminal {@link Bee}{@code <T>} attached to this Hive whose
      * {@link Bee#receive receive()} adds every message to {@code set}.
      * Supply a thread-safe set (e.g.
      * {@code Collections.newSetFromMap(new ConcurrentHashMap<>())}) when the
@@ -482,42 +545,65 @@ public class Hive implements AutoCloseable, Executor
      *
      * @param <T> the element type
      * @param set the delegate set; must not be {@code null}
-     * @return a new SetBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <T> SetBee<T> set(Set<T> set)
+    public <T> Bee<T> set(Set<T> set)
     {
         Objects.requireNonNull(set, "set must not be null");
-        return new SetBee<>(this, set);
+        return new Bee<T>(this)
+        {
+            @Override
+            protected void receive(T m)
+            {
+                set.add(m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link SetBee} with the specified thread count.
+     * Creates a new terminal {@link Bee} with the specified thread count
+     * whose {@link Bee#receive receive()} adds every message to {@code set}.
      *
      * @param <T>     the element type
      * @param threads the maximum number of concurrent worker threads
      * @param set     the delegate set; must not be {@code null}
-     * @return a new SetBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <T> SetBee<T> set(int threads, Set<T> set)
+    public <T> Bee<T> set(int threads, Set<T> set)
     {
         Objects.requireNonNull(set, "set must not be null");
-        return new SetBee<>(threads, this, set);
+        return new Bee<T>(threads, this)
+        {
+            @Override
+            protected void receive(T m)
+            {
+                set.add(m);
+            }
+        };
     }
 
     /**
-     * Creates a new {@link SetBee} with the specified thread count and
-     * internal queue size.
+     * Creates a new terminal {@link Bee} with the specified thread count and
+     * internal queue size whose {@link Bee#receive receive()} adds every
+     * message to {@code set}.
      *
      * @param <T>       the element type
      * @param threads   the maximum number of concurrent worker threads
      * @param queueSize the internal queue capacity
      * @param set       the delegate set; must not be {@code null}
-     * @return a new SetBee attached to this Hive
+     * @return a new Bee attached to this Hive
      */
-    public <T> SetBee<T> set(int threads, int queueSize, Set<T> set)
+    public <T> Bee<T> set(int threads, int queueSize, Set<T> set)
     {
         Objects.requireNonNull(set, "set must not be null");
-        return new SetBee<>(threads, this, queueSize, set);
+        return new Bee<T>(threads, this, queueSize)
+        {
+            @Override
+            protected void receive(T m)
+            {
+                set.add(m);
+            }
+        };
     }
 
     /**

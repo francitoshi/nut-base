@@ -28,6 +28,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
@@ -163,11 +166,12 @@ class HiveTest
     @Test
     void queueFactoryCreatesAttachedQueueBee() throws InterruptedException
     {
-        QueueBee<Integer> q = hive.queue(new LinkedBlockingQueue<>());
+        BlockingQueue<Integer> q = new LinkedBlockingQueue<>();
+        Bee<Integer> b = hive.queue(q);
 
-        q.send(1);
-        q.send(2);
-        Hive.shutdownAndAwaitTermination(true, true, q);
+        b.send(1);
+        b.send(2);
+        Hive.shutdownAndAwaitTermination(true, true, b);
 
         assertEquals(2, q.size());
         assertEquals(Integer.valueOf(1), q.take());
@@ -176,24 +180,26 @@ class HiveTest
     @Test
     void listFactoryCreatesAttachedListBee() throws InterruptedException
     {
-        ListBee<String> l = hive.list(new ArrayList<>());
+        List<String> list = new ArrayList<>();
+        Bee<String> bee = hive.list(list);
 
-        l.send("a");
-        l.send("b");
-        Hive.shutdownAndAwaitTermination(true, true, l);
+        bee.send("a");
+        bee.send("b");
+        Hive.shutdownAndAwaitTermination(true, true, bee);
 
-        assertEquals(Arrays.asList("a", "b"), l);
+        assertEquals(Arrays.asList("a", "b"), list);
     }
 
     @Test
     void setFactoryCreatesAttachedSetBee()
     {
-        SetBee<String> s = hive.set(new HashSet<>());
+        Set<String> s = new HashSet<>();
+        Bee<String> b = hive.set(s);
 
-        s.send("x");
-        s.send("x");
-        s.send("y");
-        Hive.shutdownAndAwaitTermination(true, true, s);
+        b.send("x");
+        b.send("x");
+        b.send("y");
+        Hive.shutdownAndAwaitTermination(true, true, b);
 
         assertEquals(new HashSet<>(Arrays.asList("x", "y")), new HashSet<>(s));
     }
@@ -359,4 +365,56 @@ class HiveTest
         assertEquals(Integer.valueOf(1), lazy.get(1, TimeUnit.SECONDS));
         assertEquals(1, calls.get());
     }
+    
+    @Test
+    void directSendAddsMessageToTheSet()
+    {
+        Set<String> set = new HashSet<>();
+        Bee<String> sb = hive.set(set);
+
+        assertTrue(sb.send("hello"));
+
+        sb.waitForIdle();
+        assertEquals(1, set.size());
+        assertTrue(set.contains("hello"));
+    }
+
+    @Test
+    void duplicatesAreRejectedByTheUnderlyingSet()
+    {
+        Set<String> set = new HashSet<>();
+        Bee<String> bee = hive.set(set);
+
+        bee.send("a");
+        bee.send("a");
+        bee.send("b");
+
+        bee.waitForIdle();
+        
+        assertEquals(2, set.size());
+        assertTrue(set.contains("a"));
+        assertTrue(set.contains("b"));
+    }
+
+    @Test
+    void iteratorTraversesAllElements()
+    {
+        Set<String> set = new HashSet<>();
+        Bee<String> bee = hive.set(set);
+
+        bee.send("a");
+        bee.send("b");
+        bee.send("c");
+
+        bee.waitForIdle();
+        
+        Set<String> traversed = new HashSet<>();
+        for (String s : set)
+        {
+            traversed.add(s);
+        }
+        assertEquals(set, traversed);
+    }
+
+    
 }

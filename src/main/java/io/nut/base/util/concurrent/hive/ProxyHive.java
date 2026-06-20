@@ -156,55 +156,55 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <E> QueueBee<E> queue(BlockingQueue<E> queue)
+    public <E> Bee<E> queue(BlockingQueue<E> queue)
     {
         return hive.queue(queue);
     }
 
     @Override
-    public <E> QueueBee<E> queue(int threads, BlockingQueue<E> queue)
+    public <E> Bee<E> queue(int threads, BlockingQueue<E> queue)
     {
         return hive.queue(threads, queue);
     }
 
     @Override
-    public <E> QueueBee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
+    public <E> Bee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
         return hive.queue(threads, queueSize, queue);
     }
 
     @Override
-    public <E> ListBee<E> list(List<E> list)
+    public <E> Bee<E> list(List<E> list)
     {
         return hive.list(list);
     }
 
     @Override
-    public <E> ListBee<E> list(int threads, List<E> list)
+    public <E> Bee<E> list(int threads, List<E> list)
     {
         return hive.list(threads, list);
     }
 
     @Override
-    public <E> ListBee<E> list(int threads, int queueSize, List<E> list)
+    public <E> Bee<E> list(int threads, int queueSize, List<E> list)
     {
         return hive.list(threads, queueSize, list);
     }
 
     @Override
-    public <T> SetBee<T> set(Set<T> set)
+    public <T> Bee<T> set(Set<T> set)
     {
         return hive.set(set);
     }
 
     @Override
-    public <T> SetBee<T> set(int threads, Set<T> set)
+    public <T> Bee<T> set(int threads, Set<T> set)
     {
         return hive.set(threads, set);
     }
 
     @Override
-    public <T> SetBee<T> set(int threads, int queueSize, Set<T> set)
+    public <T> Bee<T> set(int threads, int queueSize, Set<T> set)
     {
         return hive.set(threads, queueSize, set);
     }
@@ -285,6 +285,12 @@ public class ProxyHive extends Hive implements AutoCloseable
     public <U> Future<U> lazy(Supplier<U> supplier)
     {
         return hive.lazy(supplier);
+    }
+
+    @Override
+    public <T> void forEach(Iterable<T> iterable, Consumer<? super T> consumer)
+    {
+        hive.forEach(iterable, consumer);
     }
 
 }
