@@ -19,11 +19,14 @@
 package io.nut.base.util.concurrent.hive;
 
 import io.nut.base.util.concurrent.CallerWaitsPolicy;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -33,6 +36,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -850,6 +854,57 @@ public class Hive implements AutoCloseable, Executor
     public <U> Future<U> async(Supplier<U> supplier)
     {
         return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
+    }
+
+    /**
+     * Applies {@code consumer} to every element of {@code iterable}, running
+     * the invocations on this Hive's thread pool (in parallel, subject to the
+     * pool's available threads) and blocking until all of them have finished.
+     * <p>
+     * Elements are submitted to the pool one by one, as {@code iterable}'s own
+     * {@link Iterable#forEach forEach} pulls them, so actual concurrency is
+     * bounded by the Hive's configured pool size and saturation policy. If
+     * any invocation of {@code consumer} throws an exception, this method
+     * waits for all other invocations to complete and then re-throws the
+     * first failure wrapped in a {@link CompletionException}, with any
+     * further failures added to it as
+     * {@linkplain Throwable#addSuppressed(Throwable) suppressed exceptions}.
+     *
+     * @param <T>      the element type
+     * @param iterable the elements to process; must not be {@code null}
+     * @param consumer the action to perform for each element; must not be
+     *                 {@code null}
+     * @throws CompletionException if one or more invocations of
+     *                             {@code consumer} threw an exception
+     */
+    public <T> void forEach(Iterable<T> iterable, Consumer<? super T> consumer)
+    {
+        Objects.requireNonNull(iterable, "iterable must not be null");
+        Objects.requireNonNull(consumer, "consumer must not be null");
+
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        iterable.forEach(item -> futures.add(CompletableFuture.runAsync(() -> consumer.accept(item), this.threadPoolExecutor)));
+
+        AtomicReference<Throwable> first = new AtomicReference<>();
+        futures.forEach(future ->
+        {
+            try
+            {
+                future.join();
+            }
+            catch (CompletionException | CancellationException ex)
+            {
+                Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                if (!first.compareAndSet(null, cause))
+                {
+                    first.get().addSuppressed(cause);
+                }
+            }
+        });
+        if (first.get() != null)
+        {
+            throw (first.get() instanceof CompletionException) ? (CompletionException) first.get() : new CompletionException(first.get());
+        }
     }
 
     /**
