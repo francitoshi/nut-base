@@ -1,22 +1,20 @@
 /*
- *  SchnorrTest.java
+ * Copyright (c) 2023-2026 francitoshi@gmail.com
  *
- *  Copyright (C) 2023 francitoshi@gmail.com
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.crypto.ec;
 
@@ -196,7 +194,7 @@ public class SchnorrTest
         Pipe<Data, Data> pipe = new PipeLine<Data, Data>(ths)//readable
         {
             @Override
-            public Data filter(Data data)//min+focus
+            public Data apply(Data data)//min+focus
             {
                 if(data!=POISON)
                 {
@@ -216,7 +214,7 @@ public class SchnorrTest
         }.link(new PipeLine<Data, Data>(ths)//split
         {
             @Override
-            public Data filter(Data data)
+            public Data apply(Data data)
             {
                 if(data!=POISON)
                 {
@@ -234,7 +232,7 @@ public class SchnorrTest
         }.link(new PipeLine<Data, Data>(ths)//split
         {
             @Override
-            public Data filter(Data data)
+            public Data apply(Data data)
             {
                 if(data!=POISON)
                 {
@@ -252,7 +250,7 @@ public class SchnorrTest
         }).link(new PipeLine<Data, Data>(ths)
         {
             @Override
-            public Data filter(Data data)
+            public Data apply(Data data)
             {
                 if(data!=POISON)
                 {

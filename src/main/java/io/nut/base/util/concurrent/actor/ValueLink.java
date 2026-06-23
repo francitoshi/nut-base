@@ -1,5 +1,5 @@
 /*
- *  ValueSync.java
+ *  ValueLink.java
  *
  *  Copyright (C) 2009-2023 francitoshi@gmail.com
  *
@@ -18,24 +18,30 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util.concurrent;
+package io.nut.base.util.concurrent.actor;
+
+import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 
 /**
  *
  * @author franci
  */
-public class ValueSync<V> implements Value<V>
+public class ValueLink<M,R> implements Value<R>
 {
-    private final V value;
+    private final Value<M> m;
+    private final Function<M,R> filter;
 
-    public ValueSync(V value)
+    public ValueLink(Function<M, R> filter,Value<M> m)
     {
-        this.value = value;
+        this.m = m;
+        this.filter = filter;
     }
-   
+
     @Override
-    public V get()
+    public R get() throws InterruptedException, ExecutionException
     {
-        return value;
+        return filter.apply(m.get());
     }
+    
 }

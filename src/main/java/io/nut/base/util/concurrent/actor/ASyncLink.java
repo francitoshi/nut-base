@@ -1,5 +1,5 @@
 /*
- *  Filter.java
+ *  ASyncLink.java
  *
  *  Copyright (C) 2009-2023 francitoshi@gmail.com
  *
@@ -17,15 +17,40 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *  Report bugs or new features to: francitoshi@gmail.com
- *
  */
-package io.nut.base.util.concurrent;
+package io.nut.base.util.concurrent.actor;
+
+import java.util.function.Function;
 
 /**
  *
  * @author franci
  */
-public interface Filter<A,B>
+public class ASyncLink<M,R> extends ASyncValue<R> implements Function<M,R>
 {
-    B filter(A a);
+    private final Value<M> m;
+    private final Function<M,R> filter;
+    
+    public ASyncLink(Function<M, R> filter,Value<M> m)
+    {
+        this.m = m;
+        this.filter = filter;
+    }
+    public ASyncLink(Value<M> m)
+    {
+        this.filter = this;
+        this.m = m;
+    }
+
+    @Override
+    protected R call() throws Exception
+    {
+        return filter.apply(m.get());
+    }
+
+    @Override
+    public R apply(M a)
+    {
+        return null;
+    }
 }

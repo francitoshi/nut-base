@@ -1,5 +1,5 @@
 /*
- *  ASyncFilter.java
+ *  ValueSync.java
  *
  *  Copyright (C) 2009-2023 francitoshi@gmail.com
  *
@@ -18,37 +18,24 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util.concurrent;
+package io.nut.base.util.concurrent.actor;
 
 /**
  *
  * @author franci
  */
-public class ASyncFilter<M,R> extends ASyncValue<R> implements Filter<M,R>
+public class ValueSync<V> implements Value<V>
 {
-    private final M m;
-    private final Filter<M,R> filter;
+    private final V value;
 
-    public ASyncFilter(Filter<M, R> filter,M m)
+    public ValueSync(V value)
     {
-        this.m = m;
-        this.filter = filter;
+        this.value = value;
     }
-    public ASyncFilter(M m)
-    {
-        this.filter = this;
-        this.m = m;
-    }
-
+   
     @Override
-    protected R call()
+    public V get()
     {
-        return filter.filter(m);
-    }
-
-    @Override
-    public R filter(M a)
-    {
-        return null;
+        return value;
     }
 }

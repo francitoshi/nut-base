@@ -1,22 +1,20 @@
 /*
- *  Strings.java
+ * Copyright (c) 2012-2026 francitoshi@gmail.com
  *
- *  Copyright (c) 2012-2026 francitoshi@gmail.com
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.util;
 
@@ -119,16 +117,21 @@ public class Strings
 
     public static String left(String s, int count)
     {
-        if(s.length()<=count)
+        if (s == null)
         {
-            return s;
+            return null;
         }
-        return s.substring(0, count);
+        return count >= s.length() ? s : s.substring(0, count);
     }
+    
     public static String right(String s, int count)
     {
-        int index = Math.max(s.length()-count,0);
-        return s.substring(index);
+        if (s == null)
+        {
+            return null;
+        }
+        int len = s.length();
+        return count >= len ? s : s.substring(len - count);
     }    
 
     /**

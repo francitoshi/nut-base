@@ -1,5 +1,5 @@
 /*
- *  ASyncLink.java
+ *  Value.java
  *
  *  Copyright (C) 2009-2023 francitoshi@gmail.com
  *
@@ -17,38 +17,17 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
  *  Report bugs or new features to: francitoshi@gmail.com
+ *
  */
-package io.nut.base.util.concurrent;
+package io.nut.base.util.concurrent.actor;
+
+import java.util.concurrent.ExecutionException;
 
 /**
  *
  * @author franci
  */
-public class ASyncLink<M,R> extends ASyncValue<R> implements Filter<M,R>
+public interface Value<V>
 {
-    private final Value<M> m;
-    private final Filter<M,R> filter;
-    
-    public ASyncLink(Filter<M, R> filter,Value<M> m)
-    {
-        this.m = m;
-        this.filter = filter;
-    }
-    public ASyncLink(Value<M> m)
-    {
-        this.filter = this;
-        this.m = m;
-    }
-
-    @Override
-    protected R call() throws Exception
-    {
-        return filter.filter(m.get());
-    }
-
-    @Override
-    public R filter(M a)
-    {
-        return null;
-    }
+    V get() throws InterruptedException, ExecutionException;
 }

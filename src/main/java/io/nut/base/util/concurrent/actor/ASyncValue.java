@@ -18,8 +18,9 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util.concurrent;
+package io.nut.base.util.concurrent.actor;
 
+import io.nut.base.util.concurrent.actor.Value;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;

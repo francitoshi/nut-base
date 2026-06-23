@@ -1,33 +1,31 @@
 /*
- *  PipeActor.java
+ * Copyright (c) 2009-2026 francitoshi@gmail.com
  *
- *  Copyright (C) 2009-2023 francitoshi@gmail.com
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
  *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
  *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
  *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Report bugs or new features to: francitoshi@gmail.com
  */
 package io.nut.base.util.concurrent.pipeline;
 
-import io.nut.base.util.concurrent.Filter;
-import io.nut.base.util.concurrent.ASyncValue;
-import io.nut.base.util.concurrent.Value;
+import io.nut.base.util.concurrent.actor.ASyncValue;
+import io.nut.base.util.concurrent.actor.Value;
 import io.nut.base.util.concurrent.actor.Actor;
 import io.nut.base.util.concurrent.actor.ActorPool;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.function.Function;
 
 /**
  *
@@ -47,15 +45,15 @@ public class PipeActor<M,R> implements Pipe<M,R>
         }
     };
     
-    PipeActor(ActorPool pool,int threads,Filter<M, R> filter)
+    PipeActor(ActorPool pool,int threads,Function<M, R> filter)
     {
         this.actor = new Actor(pool,threads,filter);
     }
-    PipeActor(int threads,Filter<M, R> filter)
+    PipeActor(int threads,Function<M, R> filter)
     {
         this.actor = new Actor(threads,filter);
     }
-    PipeActor(Filter<M, R> filter)
+    PipeActor(Function<M, R> filter)
     {
         this.actor = new Actor(1,filter);
     }
