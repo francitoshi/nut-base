@@ -21,6 +21,7 @@ package io.nut.base.util.concurrent.hive;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
@@ -658,7 +659,7 @@ public class Hive implements AutoCloseable, Executor
      * @return a new BroadcastBee attached to this Hive
      */
     @SafeVarargs
-    public final <T> BroadcastBee<T> broadcast(Sendable<T>... targets)
+    public final <T> BroadcastBee<T> broadcast(Consumer<T>... targets)
     {
         return new BroadcastBee<>(this, targets);
     }
@@ -672,7 +673,7 @@ public class Hive implements AutoCloseable, Executor
      * @return a new BroadcastBee attached to this Hive
      */
     @SafeVarargs
-    public final <T> BroadcastBee<T> broadcast(int threads, Sendable<T>... targets)
+    public final <T> BroadcastBee<T> broadcast(int threads, Consumer<T>... targets)
     {
         return new BroadcastBee<>(threads, this, targets);
     }
@@ -688,7 +689,7 @@ public class Hive implements AutoCloseable, Executor
      * @return a new BroadcastBee attached to this Hive
      */
     @SafeVarargs
-    public final <T> BroadcastBee<T> broadcast(int threads, int queueSize, Sendable<T>... targets)
+    public final <T> BroadcastBee<T> broadcast(int threads, int queueSize, Consumer<T>... targets)
     {
         return new BroadcastBee<>(threads, this, queueSize, targets);
     }
@@ -1054,6 +1055,73 @@ public class Hive implements AutoCloseable, Executor
     }
 
     // -------------------------------------------------------------------------
+    // Pub/Sub registry
+    // -------------------------------------------------------------------------
+
+    /**
+     * Topic → ordered list of subscribers. The list is created on first access
+     * and is protected by its own intrinsic lock (see {@link Pub#accept}).
+     */
+    private final ConcurrentHashMap<String, List<Consumer<?>>> pubSubRegistry = new ConcurrentHashMap<>();
+
+    /**
+     * Registers {@code bee} as a subscriber for {@code topic}.
+     * <p>
+     * After this call, every message published via the {@link Pub} returned by
+     * {@link #pub(String)} for the same topic will be delivered to {@code bee}
+     * through {@link Co#accept(Object)}. Subscribers are notified in
+     * registration order. Registering the same Bee instance more than once for
+     * the same topic will result in duplicate deliveries.
+     *
+     * @param <T>   the message type
+     * @param topic the topic name; must not be {@code null}
+     * @param bee   the subscriber; must not be {@code null}
+     * @return return the same Bee passed as parameter
+     */
+    public <T> Bee<T> sub(String topic, Bee<T> bee)
+    {
+        Objects.requireNonNull(topic, "topic must not be null");
+        Objects.requireNonNull(bee,   "bee must not be null");
+        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
+        synchronized (list)
+        {
+            list.add(bee);
+        }
+        return bee;
+    }
+    
+    public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
+    {
+        return sub(topic, bee(threads, consumer));
+    }
+    
+    public <T> Bee<T> sub(String topic, Consumer<T> consumer)
+    {
+        return sub(topic, bee(consumer));
+    }
+
+    /**
+     * Returns a {@link Pub}{@code <T>} that publishes messages to all
+     * {@link Bee} instances currently (and future) registered for {@code topic}.
+     * <p>
+     * The returned {@code Pub} holds a live reference to the subscriber list, so
+     * Bees subscribed after this call will automatically receive subsequent
+     * publishes. Multiple calls with the same topic return publishers backed by
+     * the same list.
+     *
+     * @param <T>   the message type
+     * @param topic the topic name; must not be {@code null}
+     * @return a publisher for {@code topic}
+     */
+    @SuppressWarnings("unchecked")
+    public <T> Pub<T> pub(String topic)
+    {
+        Objects.requireNonNull(topic, "topic must not be null");
+        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
+        return new Pub<>((List<Consumer<T>>) (List<?>) list);
+    }
+
+    // -------------------------------------------------------------------------
     // Static utility methods for chain-level lifecycle management
     // -------------------------------------------------------------------------
 
@@ -1062,7 +1130,7 @@ public class Hive implements AutoCloseable, Executor
      * {@link Bee#shutdown(boolean)} on each {@link Bee} stage encountered.
      * The traversal follows the {@code next} link of {@link PipeBee},
      * {@link FilterBee}, and {@link BatchBee} stages, and recursively visits
-     * every target of a {@link BroadcastBee}. Stages that are {@link Sendable}
+     * every target of a {@link BroadcastBee}. Stages that are {@link Consumer}
      * but not {@link Bee} instances are silently skipped (no shutdown is
      * possible for them).
      *
@@ -1074,7 +1142,7 @@ public class Hive implements AutoCloseable, Executor
      *                       {@code true} defers shutdown until the stage's queue
      *                       is empty
      */
-    public static void shutdown(Sendable<?> stage, boolean cascading, boolean onlyWhenEmpty)
+    public static void shutdown(Consumer<?> stage, boolean cascading, boolean onlyWhenEmpty)
     {
         if (stage instanceof PipeBee)
         {
@@ -1098,7 +1166,7 @@ public class Hive implements AutoCloseable, Executor
         {
             BroadcastBee<?> bc = (BroadcastBee<?>) stage;
             bc.shutdown(onlyWhenEmpty);
-            for (Sendable<?> target : bc.targets)
+            for (Consumer<?> target : bc.targets)
             {
                 shutdown(target, cascading, onlyWhenEmpty);
             }
@@ -1123,7 +1191,7 @@ public class Hive implements AutoCloseable, Executor
      * @throws InterruptedException if the calling thread is interrupted while
      *                              waiting
      */
-    private static void awaitTerminationUntilNanos(Sendable<?> stage, boolean cascading, long nanos) throws InterruptedException
+    private static void awaitTerminationUntilNanos(Consumer<?> stage, boolean cascading, long nanos) throws InterruptedException
     {
         if (stage instanceof PipeBee)
         {
@@ -1147,7 +1215,7 @@ public class Hive implements AutoCloseable, Executor
         {
             BroadcastBee<?> bc = (BroadcastBee<?>) stage;
             bc.awaitTerminationUntilNanos(nanos);
-            for (Sendable<?> target : bc.targets)
+            for (Consumer<?> target : bc.targets)
             {
                 awaitTerminationUntilNanos(target, cascading, nanos);
             }
@@ -1172,7 +1240,7 @@ public class Hive implements AutoCloseable, Executor
      * @throws InterruptedException if the calling thread is interrupted while
      *                              waiting
      */
-    public static void awaitTermination(Sendable<?> stage, boolean cascading, int millis) throws InterruptedException
+    public static void awaitTermination(Consumer<?> stage, boolean cascading, int millis) throws InterruptedException
     {
         long untilNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
         awaitTerminationUntilNanos(stage, cascading, untilNanos);
@@ -1191,14 +1259,14 @@ public class Hive implements AutoCloseable, Executor
      * @param stages        the head stages of the chains to shut down; must not
      *                      be {@code null}
      */
-    public static void shutdownAndAwaitTermination(boolean cascading, boolean onlyWhenEmpty, Sendable<?>... stages)
+    public static void shutdownAndAwaitTermination(boolean cascading, boolean onlyWhenEmpty, Consumer<?>... stages)
     {
         Objects.requireNonNull(stages, "stages must not be null");
-        for(Sendable<?> item : stages)
+        for(Consumer<?> item : stages)
         {
             shutdown(item, cascading, onlyWhenEmpty);
         }
-        for(Sendable<?> item : stages)
+        for(Consumer<?> item : stages)
         {
             try
             {

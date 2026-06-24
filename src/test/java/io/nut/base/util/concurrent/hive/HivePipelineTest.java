@@ -63,7 +63,7 @@ class HivePipelineTest
                                  .then(String::toUpperCase)
                                  .sink(result::add);
 
-        head.send(10);
+        head.accept(10);
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
 
@@ -81,9 +81,9 @@ class HivePipelineTest
                                  .then((Integer i) -> "n=" + i)
                                  .sink(result::add);
 
-        head.send(1);
-        head.send(5);
-        head.send(10);
+        head.accept(1);
+        head.accept(5);
+        head.accept(10);
 
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
@@ -102,7 +102,7 @@ class HivePipelineTest
         HivePipeline<Integer,String> stage3 = stage2.then(String::toUpperCase);
 
         List<String> result = new CopyOnWriteArrayList<>();
-        stage3.sink(result::add).send(5);
+        stage3.sink(result::add).accept(5);
         
         stage3.head().waitForIdle().awaitTermination(25);
 
@@ -120,7 +120,7 @@ class HivePipelineTest
         Bee<String> head = hive.pipeline((String s) -> s)
                                  .sink(result::add);
 
-        assertTrue(head.send("msg"));
+        head.accept("msg");
 
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
@@ -137,7 +137,7 @@ class HivePipelineTest
 
         Bee<String> head = hive.pipeline((String s) -> s.toUpperCase()).to(b);
 
-        head.send("hello");
+        head.accept("hello");
 
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head, b);
@@ -160,7 +160,7 @@ class HivePipelineTest
                                  .then((Integer i) -> i)
                                  .head();
 
-        assertTrue(head.send(1));
+        head.accept(1);
     }
 
     @Test
@@ -171,7 +171,7 @@ class HivePipelineTest
         HivePipeline<Integer,String> pipeline = hive.pipeline(i -> "v=" + i);
         Bee<Integer> unused = pipeline.sink(result::add);
 
-        pipeline.send(42);
+        pipeline.accept(42);
 
         pipeline.head().waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, unused);
@@ -191,7 +191,7 @@ class HivePipelineTest
                                  .then(d -> String.format("%.2f", d))  // Double -> String
                                  .sink(result::add);
 
-        head.send(6);
+        head.accept(6);
         
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
@@ -212,8 +212,8 @@ class HivePipelineTest
         FilterBee<Integer> filter = hive.filter(i -> i > 5);
         filter.linkTo(head);
 
-        filter.send(3);
-        filter.send(10);
+        filter.accept(3);
+        filter.accept(10);
         filter.waitForIdle().awaitTermination(25);
 
         Hive.shutdownAndAwaitTermination(true, true, head, filter);
@@ -231,7 +231,7 @@ class HivePipelineTest
                                  .then(s -> s.toUpperCase())
                                  .sink(result::add);
 
-        head.send(7);
+        head.accept(7);
 
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
@@ -248,7 +248,7 @@ class HivePipelineTest
         Bee<Integer> head = hive.pipeline(2, 10, (Integer i) -> "v=" + i)
                                  .sink(result::add);
 
-        head.send(99);
+        head.accept(99);
 
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
@@ -266,7 +266,7 @@ class HivePipelineTest
         HivePipeline<Integer,String> p2 = p1.then(2, i -> "v=" + i); // different thread count
         Bee<Integer> head = p2.sink(result::add);
 
-        head.send(5);
+        head.accept(5);
 
         head.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
@@ -287,8 +287,8 @@ class HivePipelineTest
         PipeBee<Integer,String> pipe = (PipeBee<Integer,String>) head;
         pipe.linkTo(broadcaster);
 
-        pipe.send(5);
-        pipe.send(10);
+        pipe.accept(5);
+        pipe.accept(10);
 
         pipe.waitForIdle().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, head, broadcaster);
@@ -306,7 +306,7 @@ class HivePipelineTest
                                  .then((String s) -> s.toUpperCase())
                                  .to(collector);
 
-        head.send(1);
+        head.accept(1);
 
         head.waitForIdle().shutdown().awaitTermination(Integer.MAX_VALUE);
 
@@ -321,10 +321,10 @@ class HivePipelineTest
     {
         HivePipeline<Integer,String> pipeline = hive.pipeline((Integer i) -> "v=" + i);
         Bee<Integer> head = pipeline.sink(s -> {});
-
         head.shutdown();
+        head.dryLogger();
 
-        assertFalse(pipeline.send(1));
+        pipeline.accept(1);
     }
 
     private static <T> boolean assertFalse(boolean condition)

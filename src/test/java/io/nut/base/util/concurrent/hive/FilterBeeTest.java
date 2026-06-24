@@ -67,10 +67,10 @@ class FilterBeeTest
         FilterBee<Integer> filter = new FilterBee<>(i -> i > 0);
         filter.linkTo(sink);
 
-        filter.send(-1);
-        filter.send(2);
-        filter.send(-3);
-        filter.send(4);
+        filter.accept(-1);
+        filter.accept(2);
+        filter.accept(-3);
+        filter.accept(4);
 
         assertEquals(Arrays.asList(2, 4), sink.received);
     }
@@ -82,10 +82,10 @@ class FilterBeeTest
         FilterBee<String> filter = new FilterBee<>(s -> s.length() > 2);
         filter.linkTo(sink);
 
-        filter.send("a");
-        filter.send("hello");
-        filter.send("x");
-        filter.send("ok");
+        filter.accept("a");
+        filter.accept("hello");
+        filter.accept("x");
+        filter.accept("ok");
 
         assertEquals(1, sink.received.size());
         assertTrue(sink.received.contains("hello"));
@@ -98,7 +98,7 @@ class FilterBeeTest
         FilterBee<Integer> filter = new FilterBee<>(i -> true);
         filter.linkTo(sink);
 
-        filter.send(42);
+        filter.accept(42);
 
         assertEquals(Integer.valueOf(42), sink.received.get(0));
     }
@@ -123,10 +123,10 @@ class FilterBeeTest
 
         positive.linkTo(small).linkTo(sink);
 
-        positive.send(-5);
-        positive.send(1);
-        positive.send(200);
-        positive.send(50);
+        positive.accept(-5);
+        positive.accept(1);
+        positive.accept(200);
+        positive.accept(50);
 
         assertEquals(2, sink.received.size());
         assertTrue(sink.received.contains(1));
@@ -143,10 +143,10 @@ class FilterBeeTest
 
         filter.linkTo(pipe);
 
-        filter.send(1);
-        filter.send(2);
-        filter.send(3);
-        filter.send(4);
+        filter.accept(1);
+        filter.accept(2);
+        filter.accept(3);
+        filter.accept(4);
         
         filter.waitForIdle();
                 
@@ -170,7 +170,7 @@ class FilterBeeTest
         };
 
         FilterBee<Integer> filter = new FilterBee<>(i -> true);
-        filter.send(1);
+        filter.accept(1);
         // No error, predicate is evaluated even without a next stage
     }
 
@@ -196,8 +196,8 @@ class FilterBeeTest
         FilterBee<Integer> filter = hive.filter(i -> i > 10);
         filter.linkTo(hive.bee(result::add));
 
-        filter.send(5);
-        filter.send(15);
+        filter.accept(5);
+        filter.accept(15);
 
         filter.waitForIdle().shutdown().awaitTermination(Integer.MAX_VALUE);
         
@@ -214,8 +214,8 @@ class FilterBeeTest
         FilterBee<String> filter = hive.filter(2, s -> s.length() > 3);
         filter.linkTo(hive.bee(result::add));
 
-        filter.send("hi");
-        filter.send("hello");
+        filter.accept("hi");
+        filter.accept("hello");
 
         filter.waitForIdle().shutdown().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, filter);
@@ -231,8 +231,8 @@ class FilterBeeTest
         FilterBee<Integer> filter = hive.filter(20, 10, i -> i > 0);
         filter.linkTo(hive.bee(result::add));
 
-        filter.send(-1);
-        filter.send(1);
+        filter.accept(-1);
+        filter.accept(1);
 
         filter.waitForIdle().shutdown(true).awaitTermination(1);
         Hive.shutdownAndAwaitTermination(true, true, filter);
@@ -247,9 +247,9 @@ class FilterBeeTest
         FilterBee<String> filter = new FilterBee<>(s -> false);
         filter.linkTo(sink);
 
-        filter.send("a");
-        filter.send("b");
-        filter.send("c");
+        filter.accept("a");
+        filter.accept("b");
+        filter.accept("c");
 
         assertTrue(sink.received.isEmpty());
     }
@@ -261,9 +261,9 @@ class FilterBeeTest
         FilterBee<String> filter = new FilterBee<>(s -> true);
         filter.linkTo(sink);
 
-        filter.send("a");
-        filter.send("b");
-        filter.send("c");
+        filter.accept("a");
+        filter.accept("b");
+        filter.accept("c");
 
         assertEquals(3, sink.received.size());
     }

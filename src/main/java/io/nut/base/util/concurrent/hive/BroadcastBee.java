@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 /**
  * A pipeline stage that fans out every received message to a set of downstream
@@ -30,7 +31,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>
  * Each message delivered to {@link #receive(Object)} is forwarded — unchanged
  * and in order — to every registered {@code Sendable<T>} target by calling
- * {@link Sendable#send send()} on each of them in turn. Because the targets are
+ * {@link Consumer#send send()} on each of them in turn. Because the targets are
  * invoked from the same worker thread, the fan-out itself is sequential; true
  * parallelism is achieved when each target is backed by its own Hive worker.
  * <p>
@@ -41,7 +42,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>
  * <strong>Fan-in</strong> (the inverse pattern, merging several sources into
  * one consumer) needs no dedicated class: any number of producers can simply
- * call {@link Sendable#send send()} on the same downstream {@link Bee}.
+ * call {@link Consumer#send send()} on the same downstream {@link Bee}.
  * <p>
  * Example:
  * <pre>{@code
@@ -62,7 +63,7 @@ public class BroadcastBee<T> extends Bee<T>
      * with ongoing message delivery without requiring synchronization in
      * {@link #receive(Object)}.
      */
-    protected final List<Sendable<T>> targets = new CopyOnWriteArrayList<>();
+    protected final List<Consumer<T>> targets = new CopyOnWriteArrayList<>();
 
     /**
      * Full constructor.
@@ -73,7 +74,7 @@ public class BroadcastBee<T> extends Bee<T>
      * @param targets   zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(int threads, Hive hive, int queueSize, Sendable<T>... targets)
+    public BroadcastBee(int threads, Hive hive, int queueSize, Consumer<T>... targets)
     {
         super(threads, hive, queueSize);
         addTargets(targets);
@@ -88,7 +89,7 @@ public class BroadcastBee<T> extends Bee<T>
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(int threads, Hive hive, Sendable<T>... targets)
+    public BroadcastBee(int threads, Hive hive, Consumer<T>... targets)
     {
         super(threads, hive);
         addTargets(targets);
@@ -102,7 +103,7 @@ public class BroadcastBee<T> extends Bee<T>
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(Hive hive, Sendable<T>... targets)
+    public BroadcastBee(Hive hive, Consumer<T>... targets)
     {
         super(hive);
         addTargets(targets);
@@ -116,7 +117,7 @@ public class BroadcastBee<T> extends Bee<T>
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(int threads, Sendable<T>... targets)
+    public BroadcastBee(int threads, Consumer<T>... targets)
     {
         super(threads);
         addTargets(targets);
@@ -129,7 +130,7 @@ public class BroadcastBee<T> extends Bee<T>
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(Sendable<T>... targets)
+    public BroadcastBee(Consumer<T>... targets)
     {
         super();
         addTargets(targets);
@@ -142,9 +143,9 @@ public class BroadcastBee<T> extends Bee<T>
      * @param array the targets to register; individual elements must not be
      *              {@code null}
      */
-    private void addTargets(Sendable<T>[] array)
+    private void addTargets(Consumer<T>[] array)
     {
-        for (Sendable<T> target : array)
+        for (Consumer<T> target : array)
         {
             addTarget(target);
         }
@@ -157,7 +158,7 @@ public class BroadcastBee<T> extends Bee<T>
      * @param target the downstream stage to add; must not be {@code null}
      * @return this BroadcastBee, for fluent chaining of additions
      */
-    public BroadcastBee<T> addTarget(Sendable<T> target)
+    public BroadcastBee<T> addTarget(Consumer<T> target)
     {
         this.targets.add(Objects.requireNonNull(target, "target must not be null"));
         return this;
@@ -171,7 +172,7 @@ public class BroadcastBee<T> extends Bee<T>
      * @return {@code true} if the target was present and has been removed;
      *         {@code false} if it was not found
      */
-    public boolean removeTarget(Sendable<T> target)
+    public boolean removeTarget(Consumer<T> target)
     {
         return this.targets.remove(target);
     }
@@ -181,14 +182,14 @@ public class BroadcastBee<T> extends Bee<T>
      *
      * @return an unmodifiable {@code List} of the registered downstream stages
      */
-    public List<Sendable<T>> getTargets()
+    public List<Consumer<T>> getTargets()
     {
         return Collections.unmodifiableList(targets);
     }
 
     /**
      * Forwards {@code m} to every registered target by calling
-     * {@link Sendable#send send(m)} on each in turn. Targets added or removed
+     * {@link Consumer#send send(m)} on each in turn. Targets added or removed
      * concurrently during this call are handled safely by the underlying
      * {@link CopyOnWriteArrayList}.
      *
@@ -197,9 +198,9 @@ public class BroadcastBee<T> extends Bee<T>
     @Override
     protected void receive(T m)
     {
-        for (Sendable<T> target : targets)
+        for (Consumer<T> target : targets)
         {
-            target.send(m);
+            target.accept(m);
         }
     }
 

@@ -19,6 +19,7 @@
 package io.nut.base.util.concurrent.hive;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -28,7 +29,7 @@ import java.util.function.Predicate;
  * Like {@link PipeBee}, {@code FilterBee} follows the
  * <em>Continuation-Passing Style</em> (CPS) pattern: {@link #receive(Object)}
  * tests the message against the predicate and, only if the test passes, calls
- * {@link Sendable#send send()} on the linked {@code next} stage. The message
+ * {@link Consumer#send send()} on the linked {@code next} stage. The message
  * type is never changed, so {@code next} must be a {@code Sendable<T>}.
  * <p>
  * Stages are wired together with {@link #linkTo}, which returns the next stage
@@ -56,7 +57,7 @@ public class FilterBee<T> extends Bee<T>
      * from one thread is immediately visible to worker threads invoking
      * {@link #receive(Object)}.
      */
-    protected volatile Sendable<T> next;
+    protected volatile Consumer<T> next;
 
     /**
      * Full constructor.
@@ -138,7 +139,7 @@ public class FilterBee<T> extends Bee<T>
      *             {@code null}
      * @return {@code next}, typed as {@code S}, enabling fluent chaining
      */
-    public <S extends Sendable<T>> S linkTo(S next)
+    public <S extends Consumer<T>> S linkTo(S next)
     {
         this.next = Objects.requireNonNull(next, "next must not be null");
         return next;
@@ -151,7 +152,7 @@ public class FilterBee<T> extends Bee<T>
      *
      * @return the linked next stage, or {@code null}
      */
-    protected Sendable<T> getNext()
+    protected Consumer<T> getNext()
     {
         return next;
     }
@@ -168,10 +169,10 @@ public class FilterBee<T> extends Bee<T>
     {
         if (predicate.test(m))
         {
-            Sendable<T> n = this.next;
+            Consumer<T> n = this.next;
             if (n != null)
             {
-                n.send(m);
+                n.accept(m);
             }
         }
     }

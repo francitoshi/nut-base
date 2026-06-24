@@ -67,7 +67,7 @@ class PipeBeeTest
         RecordingBee<String> sink = new RecordingBee<>();
         pipe.linkTo(sink);
 
-        assertTrue(pipe.send(7));
+        pipe.accept(7);
 
         assertEquals(Arrays.asList("n7"), sink.received);
     }
@@ -81,8 +81,8 @@ class PipeBeeTest
 
         doubler.linkTo(stringify).linkTo(sink);
 
-        doubler.send(10);
-        doubler.send(20);
+        doubler.accept(10);
+        doubler.accept(20);
 
         doubler.waitForIdle().shutdown(true).awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, doubler, stringify, sink);
@@ -120,7 +120,7 @@ class PipeBeeTest
             return i;
         });
 
-        assertTrue(pipe.send(1));
+        pipe.accept(1);
         assertEquals(1, calls.get());
     }
 
@@ -142,7 +142,7 @@ class PipeBeeTest
         });
         pipe.dryLogger();
 
-        assertFalse(pipe.send(1));
+        pipe.accept(1);
         assertSame(boom, pipe.getException());
     }
 }

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -63,7 +64,7 @@ class BroadcastBeeTest
         RecordingBee<String> t3 = new RecordingBee<>();
         BroadcastBee<String> bc = new BroadcastBee<>(t1, t2, t3);
 
-        bc.send("msg");
+        bc.accept("msg");
 
         assertEquals(Arrays.asList("msg"), t1.received);
         assertEquals(Arrays.asList("msg"), t2.received);
@@ -77,9 +78,9 @@ class BroadcastBeeTest
         RecordingBee<Integer> t2 = new RecordingBee<>();
         BroadcastBee<Integer> bc = new BroadcastBee<>(t1, t2);
 
-        bc.send(1);
-        bc.send(2);
-        bc.send(3);
+        bc.accept(1);
+        bc.accept(2);
+        bc.accept(3);
 
         assertEquals(Arrays.asList(1, 2, 3), t1.received);
         assertEquals(Arrays.asList(1, 2, 3), t2.received);
@@ -92,10 +93,10 @@ class BroadcastBeeTest
         RecordingBee<String> t2 = new RecordingBee<>();
         BroadcastBee<String> bc = new BroadcastBee<>(t1);
 
-        bc.send("before");
+        bc.accept("before");
 
         bc.addTarget(t2);
-        bc.send("after");
+        bc.accept("after");
 
         assertEquals(Arrays.asList("before", "after"), t1.received);
         assertEquals(Arrays.asList("after"), t2.received);
@@ -113,7 +114,7 @@ class BroadcastBeeTest
         assertSame(bc, returned);
         returned.addTarget(t2);
 
-        bc.send("chained");
+        bc.accept("chained");
 
         assertEquals(1, t1.received.size());
         assertEquals(1, t2.received.size());
@@ -133,9 +134,9 @@ class BroadcastBeeTest
         RecordingBee<String> t2 = new RecordingBee<>();
         BroadcastBee<String> bc = new BroadcastBee<>(t1, t2);
 
-        bc.send("before");
+        bc.accept("before");
         assertTrue(bc.removeTarget(t2));
-        bc.send("after");
+        bc.accept("after");
 
         assertEquals(Arrays.asList("before", "after"), t1.received);
         assertEquals(Arrays.asList("before"), t2.received);
@@ -158,7 +159,7 @@ class BroadcastBeeTest
         RecordingBee<String> t2 = new RecordingBee<>();
         BroadcastBee<String> bc = new BroadcastBee<>(t1, t2);
 
-        java.util.List<Sendable<String>> targets = bc.getTargets();
+        List<Consumer<String>> targets = bc.getTargets();
 
         assertEquals(2, targets.size());
         assertThrows(UnsupportedOperationException.class, () -> targets.add(new RecordingBee<>()));
@@ -168,7 +169,7 @@ class BroadcastBeeTest
     void emptyBroadcastBeeWithNoTargetsStillAcceptsMessages()
     {
         BroadcastBee<String> bc = new BroadcastBee<>();
-        assertTrue(bc.send("msg"));
+        bc.accept("msg");
         // Message is silently dropped, no targets present
     }
 
@@ -183,7 +184,7 @@ class BroadcastBeeTest
 
         for (int i = 0; i < 10; i++)
         {
-            bc.send(i);
+            bc.accept(i);
         }
         
         bc.waitForIdle().shutdown(true).awaitTermination(100);
@@ -207,7 +208,7 @@ class BroadcastBeeTest
         RecordingBee<String> t2 = new RecordingBee<>();
         BroadcastBee<String> bc = hive.broadcast(t1, t2);
 
-        bc.send("msg");
+        bc.accept("msg");
         Utils.parkMillis(100);
         
         assertEquals(1, t1.received.size());
@@ -220,7 +221,7 @@ class BroadcastBeeTest
         RecordingBee<String> t1 = new RecordingBee<>();
         BroadcastBee<String> bc = hive.broadcast(2, t1);
 
-        bc.send("msg");
+        bc.accept("msg");
         Utils.parkMillis(100);
 
         assertEquals(1, t1.received.size());
@@ -232,7 +233,7 @@ class BroadcastBeeTest
         RecordingBee<String> t1 = new RecordingBee<>();
         BroadcastBee<String> bc = hive.broadcast(2, 10, t1);
 
-        bc.send("msg");
+        bc.accept("msg");
         Utils.parkMillis(100);
 
         assertEquals(1, t1.received.size());
@@ -251,8 +252,8 @@ class BroadcastBeeTest
 
         BroadcastBee<Integer> bc = hive.broadcast(p1, p2);
 
-        bc.send(5);
-        bc.send(10);
+        bc.accept(5);
+        bc.accept(10);
         
         Utils.parkMillis(100);
 

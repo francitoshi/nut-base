@@ -23,6 +23,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -59,7 +60,7 @@ import java.util.logging.Logger;
  *
  * @param <M> the type of messages this Bee processes
  */
-public abstract class Bee<M> implements Sendable<M>
+public abstract class Bee<M> implements Consumer<M>
 {
     /** Internal state: accepting and processing messages. */
     private static final int RUNNING    = 0;
@@ -111,7 +112,7 @@ public abstract class Bee<M> implements Sendable<M>
         {
             throw new IllegalArgumentException("queueSize < 0");
         }
-        this.threads = threads != 0 ? threads : Runtime.getRuntime().availableProcessors();
+        this.threads = threads != 0 ? threads : Hive.CORES;
         this.hive = hive;
         this.queue = new LinkedBlockingQueue<>(queueSize != 0 ? queueSize : QUEUE_SIZE);
         this.semaphore = new Semaphore(this.threads);
@@ -241,13 +242,14 @@ public abstract class Bee<M> implements Sendable<M>
      *         Bee is shut down or an error occurred while enqueuing
      */
     @Override
-    public boolean send(M message)
+    public void accept(M message)
     {
         try
         {
             if(this.status!=RUNNING)
             {
-                return false;
+                throw new IllegalStateException("status!=RUNNING");
+                //666 return false;
             }
 
             if(this.hive!=null)
@@ -263,7 +265,7 @@ public abstract class Bee<M> implements Sendable<M>
             {
                 this.receive(message);
             }
-            return true;
+            //666 return true;
         }
         catch (Exception ex)
         {
@@ -273,7 +275,7 @@ public abstract class Bee<M> implements Sendable<M>
                 Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
             }
             exception(ex);
-            return false;
+            //666 return false;
         }
     }
 
@@ -534,5 +536,29 @@ public abstract class Bee<M> implements Sendable<M>
     public void setHive(Hive hive)
     {
         this.hive = hive;
+    }
+
+    /**
+     * Subscribes this Bee to {@code topic} on the attached {@link Hive}.
+     * <p>
+     * After this call, every message published via {@link Hive#pub(String)}
+     * for the same topic will be delivered to this Bee through
+     * {@link #accept(Object)}. The Bee must have been constructed with a
+     * non-{@code null} Hive (or one must have been attached via
+     * {@link #setHive(Hive)}) before calling this method.
+     *
+     * @param topic the topic name; must not be {@code null}
+     * @return this Bee, for fluent chaining
+     * @throws IllegalStateException if no Hive has been attached to this Bee
+     */
+    @SuppressWarnings("unchecked")
+    public Bee<M> sub(String topic)
+    {
+        if (!(this.hive instanceof Hive))
+        {
+            throw new IllegalStateException("No Hive attached; call setHive(Hive) first or use a Hive-aware constructor.");
+        }
+        ((Hive) this.hive).sub(topic, this);
+        return this;
     }
 }

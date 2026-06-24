@@ -123,8 +123,8 @@ class HiveTest
         Hive returned = hive.add(b1, b2);
         assertSame(hive, returned);
 
-        b1.send(1);
-        b2.send(2);
+        b1.accept(1);
+        b2.accept(2);
         Hive.shutdownAndAwaitTermination(true, true, b1, b2);
 
         assertEquals(Collections.singletonList(1), b1.received);
@@ -144,7 +144,7 @@ class HiveTest
         PipeBee<Integer,String> stage = hive.pipe(i -> "n" + i);
         stage.linkTo(hive.bee(sink::add));
 
-        stage.send(5);
+        stage.accept(5);
         stage.waitForIdle().shutdown().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, stage);
 
@@ -157,7 +157,7 @@ class HiveTest
         List<String> sink = new CopyOnWriteArrayList<>();
         Bee<String> b = hive.bee(sink::add);
 
-        b.send("hi");
+        b.accept("hi");
         Hive.shutdownAndAwaitTermination(true, true, b);
 
         assertEquals(Collections.singletonList("hi"), sink);
@@ -169,8 +169,8 @@ class HiveTest
         BlockingQueue<Integer> q = new LinkedBlockingQueue<>();
         Bee<Integer> b = hive.queue(q);
 
-        b.send(1);
-        b.send(2);
+        b.accept(1);
+        b.accept(2);
         Hive.shutdownAndAwaitTermination(true, true, b);
 
         assertEquals(2, q.size());
@@ -183,8 +183,8 @@ class HiveTest
         List<String> list = new ArrayList<>();
         Bee<String> bee = hive.list(list);
 
-        bee.send("a");
-        bee.send("b");
+        bee.accept("a");
+        bee.accept("b");
         Hive.shutdownAndAwaitTermination(true, true, bee);
 
         assertEquals(Arrays.asList("a", "b"), list);
@@ -196,9 +196,9 @@ class HiveTest
         Set<String> s = new HashSet<>();
         Bee<String> b = hive.set(s);
 
-        b.send("x");
-        b.send("x");
-        b.send("y");
+        b.accept("x");
+        b.accept("x");
+        b.accept("y");
         Hive.shutdownAndAwaitTermination(true, true, b);
 
         assertEquals(new HashSet<>(Arrays.asList("x", "y")), new HashSet<>(s));
@@ -211,8 +211,8 @@ class HiveTest
         FilterBee<Integer> filter = hive.filter(i -> i > 0);
         filter.linkTo(hive.bee(sink::add));
 
-        filter.send(-1);
-        filter.send(2);
+        filter.accept(-1);
+        filter.accept(2);
         filter.waitForIdle().shutdown(true).awaitTermination(1);
         Hive.shutdownAndAwaitTermination(true, true, filter);
 
@@ -226,7 +226,7 @@ class HiveTest
         List<String> b = new CopyOnWriteArrayList<>();
         BroadcastBee<String> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
 
-        bc.send("m");
+        bc.accept("m");
 
         bc.waitForIdle().shutdown().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, bc);
@@ -242,8 +242,8 @@ class HiveTest
         BatchBee<Integer> batch = hive.batch(2, 0L);
         batch.linkTo(hive.bee(sink::add));
 
-        batch.send(1);
-        batch.send(2);
+        batch.accept(1);
+        batch.accept(2);
         
         batch.waitForIdle().shutdown().awaitTermination(25);
         Hive.shutdownAndAwaitTermination(true, true, batch);
@@ -259,7 +259,7 @@ class HiveTest
                                  .then(i -> "v" + i)
                                  .sink(sink::add);
 
-        head.send(4);
+        head.accept(4);
         
         Utils.parkMillis(25);
         Hive.shutdownAndAwaitTermination(true, true, head);
@@ -282,8 +282,8 @@ class HiveTest
     void instanceShutdownAndAwaitTerminationDrainsBeesThenStopsThePool() throws InterruptedException
     {
         RecordingBee<Integer> bee = new RecordingBee<>(hive);
-        bee.send(1);
-        bee.send(2);
+        bee.accept(1);
+        bee.accept(2);
 
         Hive.shutdownAndAwaitTermination(true, true, bee);
         hive.shutdown().awaitTermination(1);
@@ -372,7 +372,7 @@ class HiveTest
         Set<String> set = new HashSet<>();
         Bee<String> sb = hive.set(set);
 
-        assertTrue(sb.send("hello"));
+        sb.accept("hello");
 
         sb.waitForIdle();
         assertEquals(1, set.size());
@@ -385,9 +385,9 @@ class HiveTest
         Set<String> set = new HashSet<>();
         Bee<String> bee = hive.set(set);
 
-        bee.send("a");
-        bee.send("a");
-        bee.send("b");
+        bee.accept("a");
+        bee.accept("a");
+        bee.accept("b");
 
         bee.waitForIdle();
         
@@ -402,9 +402,9 @@ class HiveTest
         Set<String> set = new HashSet<>();
         Bee<String> bee = hive.set(set);
 
-        bee.send("a");
-        bee.send("b");
-        bee.send("c");
+        bee.accept("a");
+        bee.accept("b");
+        bee.accept("c");
 
         bee.waitForIdle();
         

@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 /**
  * A pipeline stage that accumulates individual messages into a pending batch
@@ -66,7 +67,7 @@ public class BatchBee<T> extends Bee<T>
      * thread is immediately visible to the worker and scheduler threads that
      * call {@link #forward(List)}.
      */
-    protected volatile Sendable<List<T>> next;
+    protected volatile Consumer<List<T>> next;
 
     private final ScheduledExecutorService scheduler;
 
@@ -183,7 +184,7 @@ public class BatchBee<T> extends Bee<T>
      *             {@code null}
      * @return {@code next}, typed as {@code S}, enabling fluent chaining
      */
-    public <S extends Sendable<List<T>>> S linkTo(S next)
+    public <S extends Consumer<List<T>>> S linkTo(S next)
     {
         this.next = Objects.requireNonNull(next, "next must not be null");
         return next;
@@ -196,7 +197,7 @@ public class BatchBee<T> extends Bee<T>
      *
      * @return the linked next stage, or {@code null}
      */
-    protected Sendable<List<T>> getNext()
+    protected Consumer<List<T>> getNext()
     {
         return next;
     }
@@ -275,10 +276,10 @@ public class BatchBee<T> extends Bee<T>
      */
     private void forward(List<T> values)
     {
-        Sendable<List<T>> n = this.next;
+        Consumer<List<T>> n = this.next;
         if (n != null)
         {
-            n.send(values);
+            n.accept(values);
         }
     }
 

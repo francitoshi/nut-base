@@ -58,7 +58,7 @@ class BeeTest
     {
         RecordingBee<String> bee = new RecordingBee<>();
 
-        assertTrue(bee.send("hello"));
+        bee.accept("hello");
 
         assertEquals(Collections.singletonList("hello"), bee.received);
     }
@@ -75,9 +75,9 @@ class BeeTest
     {
         RecordingBee<String> bee = new RecordingBee<>();
         bee.shutdown();
-
+        bee.dryLogger();
         assertTrue(bee.isShutdown());
-        assertFalse(bee.send("too late"));
+        bee.accept("too late");
         assertTrue(bee.received.isEmpty());
     }
 
@@ -120,7 +120,7 @@ class BeeTest
             throw boom;
         });
 
-        assertFalse(bee.send("x"));
+        bee.accept("x");
         assertSame(boom, bee.getException());
         assertSame(boom, bee.lastException.get());
     }
@@ -131,7 +131,7 @@ class BeeTest
         RecordingBee<Integer> bee = new RecordingBee<>(hive);
         for (int i = 0; i < 20; i++)
         {
-            assertTrue(bee.send(i));
+            bee.accept(i);
         }
 
         bee.shutdown().awaitTermination(1);
@@ -151,7 +151,7 @@ class BeeTest
         RecordingBee<Integer> bee = new RecordingBee<>(2, hive);
         for (int i = 0; i < 50; i++)
         {
-            bee.send(i);
+            bee.accept(i);
         }
 
         bee.shutdown(true);
@@ -164,10 +164,10 @@ class BeeTest
     void setHiveAttachesHiveAfterConstructionForLaterSends()
     {
         RecordingBee<String> bee = new RecordingBee<>(); // no hive yet
-        assertTrue(bee.send("direct")); // processed synchronously, no hive involved
+        bee.accept("direct"); // processed synchronously, no hive involved
 
         bee.setHive(hive);
-        assertTrue(bee.send("via-hive"));
+        bee.accept("via-hive");
 
         bee.shutdown().awaitTermination(1);
 
@@ -188,8 +188,8 @@ class BeeTest
     {
         RecordingBee<Integer> b1 = new RecordingBee<>(hive);
         RecordingBee<Integer> b2 = new RecordingBee<>(hive);
-        b1.send(1);
-        b2.send(2);
+        b1.accept(1);
+        b2.accept(2);
 
         Hive.shutdownAndAwaitTermination(true, true, b1, b2);
 

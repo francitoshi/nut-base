@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -58,14 +59,14 @@ class BatchBeeTest
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(3, 0L); // no time-based flush
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
-        batch.send(2);
+        batch.accept(1);
+        batch.accept(2);
         assertEquals(0, batches.size());
         assertEquals(2, batch.pending());
 
-        batch.send(3);
+        batch.accept(3);
         // Batch should be full now, flushed immediately
         assertEquals(1, batches.size());
         assertEquals(0, batch.pending());
@@ -77,14 +78,14 @@ class BatchBeeTest
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(2, 0L);
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
-        batch.send(2);
+        batch.accept(1);
+        batch.accept(2);
         assertEquals(1, batches.size());
 
-        batch.send(3);
-        batch.send(4);
+        batch.accept(3);
+        batch.accept(4);
         assertEquals(2, batches.size());
 
         assertEquals(Arrays.asList(1, 2), batches.get(0));
@@ -98,16 +99,16 @@ class BatchBeeTest
 
         assertEquals(0, batch.pending());
 
-        batch.send("a");
-        batch.send("b");
+        batch.accept("a");
+        batch.accept("b");
         assertEquals(2, batch.pending());
 
-        batch.send("c");
-        batch.send("d");
-        batch.send("e");
+        batch.accept("c");
+        batch.accept("d");
+        batch.accept("e");
         assertEquals(0, batch.pending()); // flushed when size reached 5
 
-        batch.send("f");
+        batch.accept("f");
         assertEquals(1, batch.pending());
     }
 
@@ -116,11 +117,11 @@ class BatchBeeTest
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(10, 0L); // high threshold
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
-        batch.send(2);
-        batch.send(3);
+        batch.accept(1);
+        batch.accept(2);
+        batch.accept(3);
         assertEquals(0, batches.size());
 
         batch.flush();
@@ -135,7 +136,7 @@ class BatchBeeTest
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(10, 0L);
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
         batch.flush();
 
@@ -149,9 +150,9 @@ class BatchBeeTest
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(100, 100L); // 100ms window, high size threshold
 
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
+        batch.accept(1);
         assertEquals(0, batches.size());
         assertEquals(1, batch.pending());
 
@@ -169,10 +170,10 @@ class BatchBeeTest
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(2, 1000L); // 1s window, low size threshold
 
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
-        batch.send(2);
+        batch.accept(1);
+        batch.accept(2);
 
         // Size threshold is reached, no need to wait for the time window
         assertEquals(1, batches.size());
@@ -185,10 +186,10 @@ class BatchBeeTest
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(5, 0L); // no time-based flush
 
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
-        batch.send(2);
+        batch.accept(1);
+        batch.accept(2);
         assertEquals(0, batches.size());
 
         // Time passes, but no flush should happen without size threshold
@@ -211,10 +212,10 @@ class BatchBeeTest
         List<List<String>> batches = new CopyOnWriteArrayList<>();
         BatchBee<String> batch = hive.batch(10, 0L); // high threshold
 
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send("a");
-        batch.send("b");
+        batch.accept("a");
+        batch.accept("b");
 
         batch.shutdown();
         batch.awaitTermination(1000);
@@ -228,9 +229,9 @@ class BatchBeeTest
     {
         BatchBee<Integer> batch = new BatchBee<>(3, 0L);
 
-        batch.send(1);
-        batch.send(2);
-        batch.send(3);
+        batch.accept(1);
+        batch.accept(2);
+        batch.accept(3);
 
         assertEquals(0, batch.pending()); // should be flushed
     }
@@ -254,9 +255,9 @@ class BatchBeeTest
     {
         BatchBee<Integer> batch = new BatchBee<>(3, 100L);
         java.util.function.Consumer<List<Integer>> consumer = m -> {};
-        Sendable<List<Integer>> next = m -> { consumer.accept(m); return true; };
+        Consumer<List<Integer>> next = m -> consumer.accept(m);
 
-        Sendable<List<Integer>> returned = batch.linkTo(next);
+        Consumer<List<Integer>> returned = batch.linkTo(next);
 
         assertEquals(next, returned);
     }
@@ -266,10 +267,10 @@ class BatchBeeTest
     {
         List<List<String>> batches = new CopyOnWriteArrayList<>();
         BatchBee<String> batch = hive.batch(2, 0L);
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send("a");
-        batch.send("b");
+        batch.accept("a");
+        batch.accept("b");
 
         Hive.shutdownAndAwaitTermination(true, true, batch);
 
@@ -282,11 +283,11 @@ class BatchBeeTest
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = hive.batch(2, 3, 0L);
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
-        batch.send(2);
-        batch.send(3);
+        batch.accept(1);
+        batch.accept(2);
+        batch.accept(3);
 
         Hive.shutdownAndAwaitTermination(true, true, batch);
 
@@ -298,11 +299,11 @@ class BatchBeeTest
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = hive.batch(2, 10, 3, 0L);
-        batch.linkTo(m -> { batches.add(m); return true; });
+        batch.linkTo(m -> batches.add(m));
 
-        batch.send(1);
-        batch.send(2);
-        batch.send(3);
+        batch.accept(1);
+        batch.accept(2);
+        batch.accept(3);
 
         Hive.shutdownAndAwaitTermination(true, true, batch);
 
@@ -315,12 +316,12 @@ class BatchBeeTest
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchBee<Integer> batch = new BatchBee<>(2, 0L);
-        batch.linkTo(m -> { batches.add(new ArrayList<>(m)); return true; });
+        batch.linkTo(m -> batches.add(new ArrayList<>(m)));
 
-        batch.send(1);
-        batch.send(2);
-        batch.send(3);
-        batch.send(4);
+        batch.accept(1);
+        batch.accept(2);
+        batch.accept(3);
+        batch.accept(4);
 
         assertEquals(2, batches.size());
         assertTrue(batches.get(0) instanceof ArrayList);

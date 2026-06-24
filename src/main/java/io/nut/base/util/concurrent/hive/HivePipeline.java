@@ -50,7 +50,7 @@ import java.util.function.Function;
  * @param <T> the type of message accepted by the first stage of the chain (the head)
  * @param <R> the type currently produced by the last stage added so far (the tail)
  */
-public final class HivePipeline<T,R> implements Sendable<T>
+public final class HivePipeline<T,R> implements Consumer<T>
 {
     private final Hive hive;
     private final Bee<T> head;
@@ -136,7 +136,7 @@ public final class HivePipeline<T,R> implements Sendable<T>
      * @param consumer the terminal action applied to each fully-transformed
      *                 value; must not be {@code null}
      * @return the head {@link Bee}{@code <T>} of the chain — the entry point
-     *         for {@link Sendable#send} and {@link Bee#shutdown}
+     *         for {@link Consumer#send} and {@link Bee#shutdown}
      */
     public Bee<T> sink(Consumer<R> consumer)
     {
@@ -147,7 +147,7 @@ public final class HivePipeline<T,R> implements Sendable<T>
 
     /**
      * Closes the chain by linking it to an already-built
-     * {@link Sendable}{@code <R>} and returns the head of the fully-wired
+     * {@link Consumer}{@code <R>} and returns the head of the fully-wired
      * chain. The {@code next} argument can be any {@code Sendable<R>} —
      * another pipeline's head, a {@link QueueBee}, a {@link ListBee},
      * a {@link BroadcastBee}, and so on.
@@ -156,7 +156,7 @@ public final class HivePipeline<T,R> implements Sendable<T>
      *             must not be {@code null}
      * @return the head {@link Bee}{@code <T>} of the chain
      */
-    public Bee<T> to(Sendable<R> next)
+    public Bee<T> to(Consumer<R> next)
     {
         tail.linkTo(Objects.requireNonNull(next, "next must not be null"));
         return head;
@@ -186,8 +186,8 @@ public final class HivePipeline<T,R> implements Sendable<T>
      * @return {@code true} if the head stage accepted the message
      */
     @Override
-    public boolean send(T message)
+    public void accept(T message)
     {
-        return head.send(message);
+        head.accept(message);
     }
 }

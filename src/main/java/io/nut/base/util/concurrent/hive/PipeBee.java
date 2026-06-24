@@ -19,6 +19,7 @@
 package io.nut.base.util.concurrent.hive;
 
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -28,10 +29,10 @@ import java.util.function.Function;
  * {@code PipeBee} follows the <em>Continuation-Passing Style</em> (CPS)
  * pattern: {@link #receive(Object)} never returns the transformed value to its
  * caller. Instead, it applies the configured {@link Function}{@code <T,R>} and
- * immediately calls {@link Sendable#send send()} on the linked {@code next}
+ * immediately calls {@link Consumer#send send()} on the linked {@code next}
  * stage. The next stage can be another {@code PipeBee<R,S>} (which keeps
  * transforming), a plain {@link Bee}{@code <R>} (which consumes the value),
- * or any other {@link Sendable}{@code <R>} (such as a {@link QueueBee} or a
+ * or any other {@link Consumer}{@code <R>} (such as a {@link QueueBee} or a
  * {@link ListBee}).
  * <p>
  * Stages are wired together with {@link #linkTo}, which returns the next stage
@@ -61,7 +62,7 @@ public class PipeBee<T,R> extends Bee<T>
      * thread is immediately visible to worker threads invoking
      * {@link #receive(Object)}.
      */
-    protected volatile Sendable<R> next;
+    protected volatile Consumer<R> next;
 
     /**
      * Full constructor.
@@ -148,7 +149,7 @@ public class PipeBee<T,R> extends Bee<T>
      *             be {@code null}
      * @return {@code next}, typed as {@code S}, enabling fluent chaining
      */
-    public <S extends Sendable<R>> S linkTo(S next)
+    public <S extends Consumer<R>> S linkTo(S next)
     {
         this.next = Objects.requireNonNull(next, "next must not be null");
         return next;
@@ -161,7 +162,7 @@ public class PipeBee<T,R> extends Bee<T>
      *
      * @return the linked next stage, or {@code null}
      */
-    protected Sendable<R> getNext()
+    protected Consumer<R> getNext()
     {
         return next;
     }
@@ -177,10 +178,10 @@ public class PipeBee<T,R> extends Bee<T>
     protected void receive(T m)
     {
         R r = function.apply(m);
-        Sendable<R> n = this.next;
+        Consumer<R> n = this.next;
         if(n != null)
         {
-            n.send(r);
+            n.accept(r);
         }
     }
 
