@@ -353,7 +353,15 @@ public abstract class Bee<M> implements Consumer<M>
                             terminate();
                             break;
                         }
-                        lock.wait();
+                        semaphore.release(threads); 
+                        try
+                        {
+                            lock.wait();
+                        }
+                        finally
+                        {
+                            semaphore.acquireUninterruptibly(threads); // Re-adquirir                        
+                        }
                     }
                     lock.notifyAll();
                 }

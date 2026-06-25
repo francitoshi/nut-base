@@ -27,7 +27,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -84,7 +83,9 @@ class PipeBeeTest
         doubler.accept(10);
         doubler.accept(20);
 
-        doubler.waitForIdle().shutdown(true).awaitTermination(25);
+        doubler.waitForIdle();
+        stringify.waitForIdle();
+        sink.waitForIdle();
         Hive.shutdownAndAwaitTermination(true, true, doubler, stringify, sink);
 
         assertEquals(2, sink.received.size());

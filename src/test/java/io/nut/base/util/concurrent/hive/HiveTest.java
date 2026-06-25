@@ -28,16 +28,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -96,8 +93,8 @@ class HiveTest
         CountDownLatch latch = new CountDownLatch(1);
         h.execute(latch::countDown);
         assertTrue(latch.await(1, TimeUnit.SECONDS));
-        h.shutdown();
-        h.awaitTermination(1000);
+
+        h.waitForIdle().shutdown().awaitTermination(1000);
     }
 
     @Test
@@ -329,42 +326,6 @@ class HiveTest
 
         assertTrue(h.isTerminated());
     }
-
-    @Test
-    void asyncRunnableCompletesAndAsyncSupplierReturnsValue() throws Exception
-    {
-        AtomicBoolean ran = new AtomicBoolean(false);
-        Future<Void> f1 = hive.async(() -> ran.set(true));
-        f1.get(1, TimeUnit.SECONDS);
-        assertTrue(ran.get());
-
-        Future<Integer> f2 = hive.async(() -> 21 * 2);
-        assertEquals(Integer.valueOf(42), f2.get(1, TimeUnit.SECONDS));
-    }
-
-    @Test
-    void lazyRunnableOnlyRunsWhenGetIsCalled() throws Exception
-    {
-        AtomicBoolean ran = new AtomicBoolean(false);
-        Future<Void> lazy = hive.lazy(() -> ran.set(true));
-
-        assertFalse(ran.get());
-
-        lazy.get(1, TimeUnit.SECONDS);
-        assertTrue(ran.get());
-    }
-
-    @Test
-    void lazySupplierOnlyRunsWhenGetIsCalled() throws Exception
-    {
-        AtomicInteger calls = new AtomicInteger(0);
-        Future<Integer> lazy = hive.lazy(calls::incrementAndGet);
-
-        assertEquals(0, calls.get());
-
-        assertEquals(Integer.valueOf(1), lazy.get(1, TimeUnit.SECONDS));
-        assertEquals(1, calls.get());
-    }
     
     @Test
     void directSendAddsMessageToTheSet()
@@ -382,7 +343,7 @@ class HiveTest
     @Test
     void duplicatesAreRejectedByTheUnderlyingSet()
     {
-        Set<String> set = new HashSet<>();
+        Set<String> set = ConcurrentHashMap.newKeySet();
         Bee<String> bee = hive.set(set);
 
         bee.accept("a");
@@ -397,9 +358,9 @@ class HiveTest
     }
 
     @Test
-    void iteratorTraversesAllElements()
+    void iteratorTraversesAllElements() throws InterruptedException
     {
-        Set<String> set = new HashSet<>();
+        Set<String> set = ConcurrentHashMap.newKeySet();
         Bee<String> bee = hive.set(set);
 
         bee.accept("a");
@@ -413,6 +374,7 @@ class HiveTest
         {
             traversed.add(s);
         }
+        
         assertEquals(set, traversed);
     }
 

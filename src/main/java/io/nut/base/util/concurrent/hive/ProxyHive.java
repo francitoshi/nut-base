@@ -180,33 +180,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <E> Bee<E> list(int threads, List<E> list)
-    {
-        return hive.list(threads, list);
-    }
-
-    @Override
-    public <E> Bee<E> list(int threads, int queueSize, List<E> list)
-    {
-        return hive.list(threads, queueSize, list);
-    }
-
-    @Override
     public <T> Bee<T> set(Set<T> set)
     {
         return hive.set(set);
-    }
-
-    @Override
-    public <T> Bee<T> set(int threads, Set<T> set)
-    {
-        return hive.set(threads, set);
-    }
-
-    @Override
-    public <T> Bee<T> set(int threads, int queueSize, Set<T> set)
-    {
-        return hive.set(threads, queueSize, set);
     }
 
     @Override
@@ -264,27 +240,51 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public Future<Void> async(Runnable runnable)
+    public <T> Bee<T> sub(String topic, Bee<T> bee)
     {
-        return hive.async(runnable);
+        return hive.sub(topic, bee);
     }
 
     @Override
-    public <U> Future<U> async(Supplier<U> supplier)
+    public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
     {
-        return hive.async(supplier);
+        return hive.sub(topic, threads, consumer);
     }
 
     @Override
-    public Future<Void> lazy(Runnable runnable)
+    public <T> Bee<T> sub(String topic, Consumer<T> consumer)
     {
-        return hive.lazy(runnable);
+        return hive.sub(topic, consumer);
     }
 
     @Override
-    public <U> Future<U> lazy(Supplier<U> supplier)
+    public <T> Pub<T> pub(String topic)
     {
-        return hive.lazy(supplier);
+        return hive.pub(topic);
+    }
+
+    @Override
+    public void run(Runnable task)
+    {
+        hive.run(task);
+    }
+
+    @Override
+    public void spawn(Runnable task)
+    {
+        hive.spawn(task);
+    }
+
+    @Override
+    public Future<Void> submit(Runnable task)
+    {
+        return hive.submit(task);
+    }
+
+    @Override
+    public <U> Future<U> submit(Supplier<U> supplier)
+    {
+        return hive.submit(supplier);
     }
 
     @Override

@@ -214,4 +214,18 @@ public class BroadcastBee<T> extends Bee<T>
     {
         return (BroadcastBee<T>) super.shutdown(onlyWhenEmpty);
     }
+
+    @Override
+    public Bee<T> waitForIdle()
+    {
+        for (Consumer<T> target : targets)
+        {
+            if(target instanceof Bee)
+            {
+                ((Bee<T>)target).waitForIdle();
+            }
+        }
+        return super.waitForIdle();
+    }
+    
 }
