@@ -19,26 +19,19 @@
 package io.nut.base.util.concurrent.hive;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -110,6 +103,23 @@ public class Hive extends Queen implements AutoCloseable, Executor
         super(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
     }
 
+    /**
+     * Full constructor with explicit active-task tracking control.
+     *
+     * @param corePoolSize      the number of threads kept alive even when idle
+     * @param rushPoolSize      the maximum number of threads allowed in the pool
+     * @param queueCapacity     the capacity of the task queue; use {@code 0}
+     *                          for a {@link SynchronousQueue} (no buffering)
+     * @param keepAliveMillis   how long excess idle threads are kept alive
+     *                          before being terminated, in milliseconds
+     * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
+     *                          caller; if {@code false}, the caller runs the
+     *                          task itself
+     * @param avoidTracker      if {@code true}, active-task tracking via the
+     *                          internal {@link java.util.concurrent.Phaser} is
+     *                          disabled, which reduces overhead but makes
+     *                          {@link Queen#waitForIdle()} a no-op
+     */
     public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
         super(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, avoidTracker);
@@ -706,286 +716,6 @@ public class Hive extends Queen implements AutoCloseable, Executor
         return new HivePipeline<>(this, firstStage, firstStage);
     }
 
-    /**
-     * {@inheritDoc}
-     *
-     * @return this Hive, for fluent chaining
-     */
-    public Hive shutdown()
-    {
-        return (Hive) super.shutdown();
-    }
-
-    // -------------------------------------------------------------------------
-    // Pub/Sub registry
-    // -------------------------------------------------------------------------
-
-    /**
-     * Topic → ordered list of subscribers. The list is created on first access
-     * and is protected by its own intrinsic lock (see {@link Pub#accept}).
-     */
-    private final ConcurrentHashMap<String, List<Consumer<?>>> pubSubRegistry = new ConcurrentHashMap<>();
-
-    /**
-     * Registers {@code bee} as a subscriber for {@code topic}.
-     * <p>
-     * After this call, every message published via the {@link Pub} returned by
-     * {@link #pub(String)} for the same topic will be delivered to {@code bee}
-     * through {@link Bee#accept(Object)}. Subscribers are notified in
-     * registration order. Registering the same Bee instance more than once for
-     * the same topic will result in duplicate deliveries.
-     *
-     * @param <T>   the message type
-     * @param topic the topic name; must not be {@code null}
-     * @param bee   the subscriber; must not be {@code null}
-     * @return return the same Bee passed as parameter
-     */
-    public <T> Bee<T> sub(String topic, Bee<T> bee)
-    {
-        Objects.requireNonNull(topic, "topic must not be null");
-        Objects.requireNonNull(bee,   "bee must not be null");
-        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
-        synchronized (list)
-        {
-            list.add(bee);
-        }
-        return bee;
-    }
-    
-    public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
-    {
-        return sub(topic, bee(threads, consumer));
-    }
-    
-    public <T> Bee<T> sub(String topic, Consumer<T> consumer)
-    {
-        return sub(topic, bee(consumer));
-    }
-
-    /**
-     * Returns a {@link Pub}{@code <T>} that publishes messages to all
-     * {@link Bee} instances currently (and future) registered for {@code topic}.
-     * <p>
-     * The returned {@code Pub} holds a live reference to the subscriber list, so
-     * Bees subscribed after this call will automatically receive subsequent
-     * publishes. Multiple calls with the same topic return publishers backed by
-     * the same list.
-     *
-     * @param <T>   the message type
-     * @param topic the topic name; must not be {@code null}
-     * @return a publisher for {@code topic}
-     */
-    @SuppressWarnings("unchecked")
-    public <T> Pub<T> pub(String topic)
-    {
-        Objects.requireNonNull(topic, "topic must not be null");
-        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
-        return new Pub<>((List<Consumer<T>>) (List<?>) list);
-    }
-
-    // -------------------------------------------------------------------------
-    // Static utility methods for chain-level lifecycle management
-    // -------------------------------------------------------------------------
-
-    /**
-     * Traverses the chain rooted at {@code stage} and calls
-     * {@link Bee#waitForIdle()} on each {@link Bee} stage encountered.
-     * The traversal strategy mirrors {@link #shutdown(Consumer, boolean, boolean)}:
-     * linked stages ({@link PipeBee}, {@link FilterBee}, {@link BatchBee}) are
-     * followed via {@code getNext()}, and {@link BroadcastBee} fans out to all
-     * its targets.
-     *
-     * @param stage the first stage to wait on; {@code null} is a no-op
-     */
-    public static void waitForIdle(Consumer<?> stage)
-    {
-        if (stage instanceof PipeBee)
-        {
-            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
-            pipe.waitForIdle();
-            waitForIdle(pipe.getNext());
-        }
-        else if (stage instanceof FilterBee)
-        {
-            FilterBee<?> filter = (FilterBee<?>) stage;
-            filter.waitForIdle();
-            waitForIdle(filter.getNext());
-        }
-        else if (stage instanceof BatchBee)
-        {
-            BatchBee<?> batch = (BatchBee<?>) stage;
-            batch.waitForIdle();
-            waitForIdle(batch.getNext());
-        }
-        else if (stage instanceof BroadcastBee)
-        {
-            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
-            bc.waitForIdle();
-            for (Consumer<?> target : bc.targets)
-            {
-                waitForIdle(target);
-            }
-        }
-        else if (stage instanceof Bee)
-        {
-            ((Bee<?>) stage).waitForIdle();
-        }
-    }
-
-    /**
-     * Traverses the chain rooted at {@code stage} and calls
-     * {@link Bee#shutdown(boolean)} on each {@link Bee} stage encountered.
-     * The traversal follows the {@code next} link of {@link PipeBee},
-     * {@link FilterBee}, and {@link BatchBee} stages, and recursively visits
-     * every target of a {@link BroadcastBee}. Stages that are {@link Consumer}
-     * but not {@link Bee} instances are silently skipped (no shutdown is
-     * possible for them).
-     *
-     * @param stage          the first stage to shut down; may be {@code null}
-     *                       (in which case this method is a no-op)
-     * @param cascading      reserved for future use; has no effect in the
-     *                       current implementation (traversal is always performed)
-     * @param onlyWhenEmpty  passed to each {@link Bee#shutdown(boolean)} call;
-     *                       {@code true} defers shutdown until the stage's queue
-     *                       is empty
-     */
-    public static void shutdown(Consumer<?> stage, boolean cascading, boolean onlyWhenEmpty)
-    {
-        if (stage instanceof PipeBee)
-        {
-            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
-            pipe.shutdown(onlyWhenEmpty);
-            shutdown(pipe.getNext(), cascading, onlyWhenEmpty);
-        }
-        else if (stage instanceof FilterBee)
-        {
-            FilterBee<?> filter = (FilterBee<?>) stage;
-            filter.shutdown(onlyWhenEmpty);
-            shutdown(filter.getNext(), cascading, onlyWhenEmpty);
-        }
-        else if (stage instanceof BatchBee)
-        {
-            BatchBee<?> batch = (BatchBee<?>) stage;
-            batch.shutdown(onlyWhenEmpty);
-            shutdown(batch.getNext(), cascading, onlyWhenEmpty);
-        }
-        else if (stage instanceof BroadcastBee)
-        {
-            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
-            bc.shutdown(onlyWhenEmpty);
-            for (Consumer<?> target : bc.targets)
-            {
-                shutdown(target, cascading, onlyWhenEmpty);
-            }
-        }
-        else if (stage instanceof Bee)
-        {
-            // Plain Bee or other Bee subclass: shut it down but don't traverse further.
-            ((Bee<?>)stage).shutdown(onlyWhenEmpty);
-        }
-        // If it's a Sendable but not a Bee, we can't shut it down, so we stop here.
-    }
-
-    /**
-     * Traverses the chain rooted at {@code stage} and calls
-     * {@link Bee#awaitTerminationUntilNanos} on each {@link Bee} stage
-     * encountered, using an absolute deadline expressed in nanoseconds. The
-     * traversal strategy is the same as {@link #shutdown}.
-     *
-     * @param stage     the first stage to wait on; may be {@code null}
-     * @param cascading reserved for future use
-     * @param nanos     the absolute deadline as returned by {@link System#nanoTime()}
-     * @throws InterruptedException if the calling thread is interrupted while
-     *                              waiting
-     */
-    private static void awaitTerminationUntilNanos(Consumer<?> stage, boolean cascading, long nanos) throws InterruptedException
-    {
-        if (stage instanceof PipeBee)
-        {
-            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
-            pipe.awaitTerminationUntilNanos(nanos);
-            awaitTerminationUntilNanos(pipe.getNext(), cascading, nanos);
-        }
-        else if (stage instanceof FilterBee)
-        {
-            FilterBee<?> filter = (FilterBee<?>) stage;
-            filter.awaitTerminationUntilNanos(nanos);
-            awaitTerminationUntilNanos(filter.getNext(), cascading, nanos);
-        }
-        else if (stage instanceof BatchBee)
-        {
-            BatchBee<?> batch = (BatchBee<?>) stage;
-            batch.awaitTerminationUntilNanos(nanos);
-            awaitTerminationUntilNanos(batch.getNext(), cascading, nanos);
-        }
-        else if (stage instanceof BroadcastBee)
-        {
-            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
-            bc.awaitTerminationUntilNanos(nanos);
-            for (Consumer<?> target : bc.targets)
-            {
-                awaitTerminationUntilNanos(target, cascading, nanos);
-            }
-        }
-        else if (stage instanceof Bee)
-        {
-            // Plain Bee or other Bee subclass: shut it down, but don't traverse further
-            ((Bee<?>) stage).awaitTerminationUntilNanos(nanos);
-        }
-        // If it's a Sendable but not a Bee, we can't shut it down, so we stop here
-    }
-
-    /**
-     * Traverses the chain rooted at {@code stage} and waits for each
-     * {@link Bee} stage to terminate, giving up once {@code millis}
-     * milliseconds have elapsed from the moment this method was called
-     * (the deadline is shared across all stages).
-     *
-     * @param stage     the first stage to wait on; may be {@code null}
-     * @param cascading reserved for future use
-     * @param millis    the total maximum wait time, in milliseconds
-     * @throws InterruptedException if the calling thread is interrupted while
-     *                              waiting
-     */
-    public static void awaitTermination(Consumer<?> stage, boolean cascading, int millis) throws InterruptedException
-    {
-        long untilNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
-        awaitTerminationUntilNanos(stage, cascading, untilNanos);
-    }
-
-    /**
-     * Convenience method that shuts down all given {@code stages} (and their
-     * downstream chains) and then blocks until every one of them has
-     * terminated. Shutdown is issued to all stages before waiting, so stages
-     * can drain concurrently rather than sequentially.
-     *
-     * @param cascading     reserved for future use; passed to
-     *                      {@link #shutdown(Sendable, boolean, boolean)}
-     * @param onlyWhenEmpty if {@code true}, each stage defers its own shutdown
-     *                      until its queue is empty
-     * @param stages        the head stages of the chains to shut down; must not
-     *                      be {@code null}
-     */
-    public static void shutdownAndAwaitTermination(boolean cascading, boolean onlyWhenEmpty, Consumer<?>... stages)
-    {
-        Objects.requireNonNull(stages, "stages must not be null");
-        for(Consumer<?> item : stages)
-        {
-            shutdown(item, cascading, onlyWhenEmpty);
-        }
-        for(Consumer<?> item : stages)
-        {
-            try
-            {
-                awaitTermination(item, cascading, Integer.MAX_VALUE);
-            }
-            catch (InterruptedException ex)
-            {
-                Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-    }
-
     // -------------------------------------------------------------------------
     // BatchBee factory methods
     // -------------------------------------------------------------------------
@@ -1036,6 +766,335 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public <T> BatchBee<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
         return new BatchBee<>(threads, this, queueSize, maxSize, maxWaitMillis);
+    }
+    
+    /**
+     * {@inheritDoc}
+     *
+     * @return this Hive, for fluent chaining
+     */
+    public Hive shutdown()
+    {
+        return (Hive) super.shutdown();
+    }
+
+    // -------------------------------------------------------------------------
+    // Pub/Sub registry
+    // -------------------------------------------------------------------------
+
+    /**
+     * Topic → ordered list of subscribers. The list is created on first access
+     * and is protected by its own intrinsic lock (see {@link Pub#accept}).
+     */
+    private final ConcurrentHashMap<String, List<Consumer<?>>> pubSubRegistry = new ConcurrentHashMap<>();
+
+    /**
+     * Registers {@code bee} as a subscriber for {@code topic}.
+     * <p>
+     * After this call, every message published via the {@link Pub} returned by
+     * {@link #pub(String)} for the same topic will be delivered to {@code bee}
+     * through {@link Bee#accept(Object)}. Subscribers are notified in
+     * registration order. Registering the same Bee instance more than once for
+     * the same topic will result in duplicate deliveries.
+     *
+     * @param <T>   the message type
+     * @param topic the topic name; must not be {@code null}
+     * @param bee   the subscriber; must not be {@code null}
+     * @return return the same Bee passed as parameter
+     */
+    public <T> Bee<T> sub(String topic, Bee<T> bee)
+    {
+        Objects.requireNonNull(topic, "topic must not be null");
+        Objects.requireNonNull(bee,   "bee must not be null");
+        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
+        synchronized (list)
+        {
+            list.add(bee);
+        }
+        return bee;
+    }
+    
+    /**
+     * Creates a new {@link Bee} with the given thread count, subscribes it to
+     * {@code topic}, and returns it. Convenience shorthand for
+     * {@code sub(topic, bee(threads, consumer))}.
+     *
+     * @param <T>      the message type
+     * @param topic    the topic name; must not be {@code null}
+     * @param threads  the maximum number of concurrent worker threads for the
+     *                 new Bee
+     * @param consumer the action performed for each message; must not be
+     *                 {@code null}
+     * @return the newly created and subscribed Bee
+     */
+    public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
+    {
+        return sub(topic, bee(threads, consumer));
+    }
+    
+    /**
+     * Creates a new {@link Bee}, subscribes it to {@code topic}, and returns
+     * it. Convenience shorthand for {@code sub(topic, bee(consumer))}.
+     *
+     * @param <T>      the message type
+     * @param topic    the topic name; must not be {@code null}
+     * @param consumer the action performed for each message; must not be
+     *                 {@code null}
+     * @return the newly created and subscribed Bee
+     */
+    public <T> Bee<T> sub(String topic, Consumer<T> consumer)
+    {
+        return sub(topic, bee(consumer));
+    }
+
+    /**
+     * Returns a {@link Pub}{@code <T>} that publishes messages to all
+     * {@link Bee} instances currently (and future) registered for {@code topic}.
+     * <p>
+     * The returned {@code Pub} holds a live reference to the subscriber list, so
+     * Bees subscribed after this call will automatically receive subsequent
+     * publishes. Multiple calls with the same topic return publishers backed by
+     * the same list.
+     *
+     * @param <T>   the message type
+     * @param topic the topic name; must not be {@code null}
+     * @return a publisher for {@code topic}
+     */
+    @SuppressWarnings("unchecked")
+    public <T> Pub<T> pub(String topic)
+    {
+        Objects.requireNonNull(topic, "topic must not be null");
+        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
+        return new Pub<>((List<Consumer<T>>) (List<?>) list);
+    }
+
+    // -------------------------------------------------------------------------
+    // Static utility methods for chain-level lifecycle management
+    // -------------------------------------------------------------------------
+
+    private static void waitForIdle(Set<Consumer<?>> set, Consumer<?> stage)
+    {
+        if(set.contains(stage))
+        {
+            return;
+        }
+        
+        set.add(stage);
+        
+        if (stage instanceof PipeBee)
+        {
+            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
+            pipe.waitForIdle();
+            waitForIdle(set, pipe.getNext());
+        }
+        else if (stage instanceof FilterBee)
+        {
+            FilterBee<?> filter = (FilterBee<?>) stage;
+            filter.waitForIdle();
+            waitForIdle(set, filter.getNext());
+        }
+        else if (stage instanceof BatchBee)
+        {
+            BatchBee<?> batch = (BatchBee<?>) stage;
+            batch.waitForIdle();
+            waitForIdle(set, batch.getNext());
+        }
+        else if (stage instanceof BroadcastBee)
+        {
+            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
+            bc.waitForIdle();
+            for (Consumer<?> target : bc.targets)
+            {
+                waitForIdle(set, target);
+            }
+        }
+        else if (stage instanceof Bee)
+        {
+            ((Bee<?>) stage).waitForIdle();
+        }
+    }
+    
+    /**
+     * Blocks the calling thread until every stage in the given chain is idle
+     * and its internal queue is empty. Stages linked via {@link PipeBee},
+     * {@link FilterBee}, {@link BatchBee}, and {@link BroadcastBee} are
+     * traversed automatically; cycles are handled safely.
+     *
+     * @param stages the root stage(s) of the chain(s) to wait on; must not be
+     *               {@code null}
+     */
+    public static void waitForIdle(Consumer<?>... stages)
+    {
+        Set<Consumer<?>> set = new HashSet();
+        for(Consumer<?> s : stages)
+        {
+            waitForIdle(set, s);
+        }
+    }
+    
+    private static void shutdown(Set<Consumer<?>> set, boolean onlyWhenEmpty, Consumer<?> stage)
+    {
+        if(set.contains(stage))
+        {
+            return;
+        }
+        
+        set.add(stage);
+        
+        if (stage instanceof PipeBee)
+        {
+            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
+            pipe.shutdown(onlyWhenEmpty);
+            shutdown(set, onlyWhenEmpty, pipe.getNext());
+        }
+        else if (stage instanceof FilterBee)
+        {
+            FilterBee<?> filter = (FilterBee<?>) stage;
+            filter.shutdown(onlyWhenEmpty);
+            shutdown(set, onlyWhenEmpty, filter.getNext());
+        }
+        else if (stage instanceof BatchBee)
+        {
+            BatchBee<?> batch = (BatchBee<?>) stage;
+            batch.shutdown(onlyWhenEmpty);
+            shutdown(set, onlyWhenEmpty, batch.getNext());
+        }
+        else if (stage instanceof BroadcastBee)
+        {
+            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
+            bc.shutdown(onlyWhenEmpty);
+            for (Consumer<?> target : bc.targets)
+            {
+                shutdown(set, onlyWhenEmpty, target);
+            }
+        }
+        else if (stage instanceof Bee)
+        {
+            // Plain Bee or other Bee subclass: shut it down but don't traverse further.
+            ((Bee<?>)stage).shutdown(onlyWhenEmpty);
+        }
+    }
+
+    /**
+     * Initiates a graceful shutdown on every stage in the given chain(s).
+     * Stages linked via {@link PipeBee}, {@link FilterBee}, {@link BatchBee},
+     * and {@link BroadcastBee} are traversed automatically; cycles are handled
+     * safely.
+     *
+     * @param onlyWhenEmpty if {@code true}, each stage defers its shutdown until
+     *                      its queue is empty (see {@link Bee#shutdown(boolean)});
+     *                      if {@code false}, shutdown starts immediately
+     * @param stages        the root stage(s) of the chain(s) to shut down; must
+     *                      not be {@code null}
+     */
+    public static void shutdown(boolean onlyWhenEmpty, Consumer<?>... stages)
+    {
+        Set<Consumer<?>> set = new HashSet();
+        for(Consumer<?> s : stages)
+        {
+            shutdown(set, onlyWhenEmpty, s);
+        }
+    }
+    
+    private static void awaitTerminationUntilNanos(Set<Consumer<?>> set, Consumer<?> stage, long nanos) throws InterruptedException
+    {
+        if(set.contains(stage))
+        {
+            return;
+        }
+        
+        set.add(stage);
+        
+        if (stage instanceof PipeBee)
+        {
+            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
+            pipe.awaitTerminationUntilNanos(nanos);
+            awaitTerminationUntilNanos(set, pipe.getNext(), nanos);
+        }
+        else if (stage instanceof FilterBee)
+        {
+            FilterBee<?> filter = (FilterBee<?>) stage;
+            filter.awaitTerminationUntilNanos(nanos);
+            awaitTerminationUntilNanos(set, filter.getNext(), nanos);
+        }
+        else if (stage instanceof BatchBee)
+        {
+            BatchBee<?> batch = (BatchBee<?>) stage;
+            batch.awaitTerminationUntilNanos(nanos);
+            awaitTerminationUntilNanos(set, batch.getNext(), nanos);
+        }
+        else if (stage instanceof BroadcastBee)
+        {
+            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
+            bc.awaitTerminationUntilNanos(nanos);
+            for (Consumer<?> target : bc.targets)
+            {
+                awaitTerminationUntilNanos(set, target, nanos);
+            }
+        }
+        else if (stage instanceof Bee)
+        {
+            // Plain Bee or other Bee subclass: shut it down, but don't traverse further
+            ((Bee<?>) stage).awaitTerminationUntilNanos(nanos);
+        }
+        // If it's a Sendable but not a Bee, we can't shut it down, so we stop here
+    }
+
+    /**
+     * Blocks the calling thread until every stage in the given chain(s) has
+     * terminated or the timeout elapses, whichever comes first. Stages linked
+     * via {@link PipeBee}, {@link FilterBee}, {@link BatchBee}, and
+     * {@link BroadcastBee} are traversed automatically; cycles are handled
+     * safely.
+     *
+     * @param millis the maximum time to wait in total, in milliseconds
+     * @param stages the root stage(s) of the chain(s) to wait on; must not be
+     *               {@code null}
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting
+     */
+    public static void awaitTermination(int millis, Consumer<?>... stages) throws InterruptedException
+    {
+        long untilNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+        Set<Consumer<?>> set = new HashSet();
+        for(Consumer<?> s : stages)
+        {
+            awaitTerminationUntilNanos(set, s, untilNanos);
+        }
+    }
+
+    /**
+     * Shuts down every stage in the given chain(s) and blocks until all of
+     * them have terminated. This is a convenience combination of
+     * {@link #shutdown(boolean, Consumer[])} followed by
+     * {@link #awaitTermination(int, Consumer[])} with an effectively infinite
+     * timeout. Stages linked via {@link PipeBee}, {@link FilterBee},
+     * {@link BatchBee}, and {@link BroadcastBee} are traversed automatically;
+     * cycles are handled safely.
+     * <p>
+     * If the calling thread is interrupted while waiting, the interruption is
+     * logged and the method returns without re-interrupting the thread.
+     *
+     * @param onlyWhenEmpty if {@code true}, each stage defers its shutdown until
+     *                      its queue is empty; if {@code false}, shutdown starts
+     *                      immediately
+     * @param stages        the root stage(s) of the chain(s) to shut down; must
+     *                      not be {@code null}
+     */
+    public static void shutdownAndAwaitTermination(boolean onlyWhenEmpty, Consumer<?>... stages)
+    {
+        Objects.requireNonNull(stages, "stages must not be null");
+
+        shutdown(onlyWhenEmpty, stages);
+
+        try
+        {
+            awaitTermination(Integer.MAX_VALUE, stages);
+        }
+        catch (InterruptedException ex)
+        {
+            Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
 }

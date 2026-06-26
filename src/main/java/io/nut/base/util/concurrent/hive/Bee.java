@@ -234,12 +234,12 @@ public abstract class Bee<M> implements Consumer<M>
      * available). If no Hive is attached, {@link #receive(Object)} is called
      * directly in the calling thread.
      * <p>
-     * Messages sent after {@link #shutdown()} has been called are silently
-     * discarded and {@code false} is returned.
+     * Messages sent after {@link #shutdown()} has been called cause an
+     * {@link IllegalStateException} which is passed to {@link #exception(Exception)}
+     * and, unless suppressed by {@link #dryLogger()}, logged at {@code SEVERE} level.
      *
      * @param message the message to deliver
-     * @return {@code true} if the message was accepted; {@code false} if the
-     *         Bee is shut down or an error occurred while enqueuing
+     * @throws IllegalStateException if this Bee has already been shut down
      */
     @Override
     public void accept(M message)

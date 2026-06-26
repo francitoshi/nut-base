@@ -272,7 +272,7 @@ class BatchBeeTest
         batch.accept("a");
         batch.accept("b");
 
-        Hive.shutdownAndAwaitTermination(true, true, batch);
+        Hive.shutdownAndAwaitTermination(true, batch);
 
         assertEquals(1, batches.size());
         assertEquals(Arrays.asList("a", "b"), batches.get(0));
@@ -289,7 +289,7 @@ class BatchBeeTest
         batch.accept(2);
         batch.accept(3);
 
-        Hive.shutdownAndAwaitTermination(true, true, batch);
+        Hive.shutdownAndAwaitTermination(true, batch);
 
         assertEquals(1, batches.size());
     }
@@ -305,7 +305,7 @@ class BatchBeeTest
         batch.accept(2);
         batch.accept(3);
 
-        Hive.shutdownAndAwaitTermination(true, true, batch);
+        Hive.shutdownAndAwaitTermination(true, batch);
 
         assertEquals(1, batches.size());
         assertEquals(Arrays.asList(1, 2, 3), batches.get(0));

@@ -185,7 +185,9 @@ public class Queen implements AutoCloseable, Executor
     // Static factories
     // -------------------------------------------------------------------------
 
-    /** @return a new Queen with default (CPU-core-sized) settings. */
+    /**
+     * @return a new Queen with default (CPU-core-sized) settings.
+     */
     public static Queen queen()
     {
         return new Queen();
@@ -246,7 +248,7 @@ public class Queen implements AutoCloseable, Executor
         
         return () ->
         {
-            // Registramos la llegada de una nueva tarea en el Phaser inmediatamente
+            // We register the arrival of a new task in the Phaser immediately
             phaser.register();
             try
             {
@@ -254,7 +256,7 @@ public class Queen implements AutoCloseable, Executor
             }
             finally
             {
-                // Al terminar, la tarea llega y se da de baja del Phaser
+                // Upon completion, the task arrives and is unloaded from the Phaser
                 phaser.arriveAndDeregister();
             }
         };

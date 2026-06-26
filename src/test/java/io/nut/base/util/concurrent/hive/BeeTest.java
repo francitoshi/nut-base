@@ -191,7 +191,7 @@ class BeeTest
         b1.accept(1);
         b2.accept(2);
 
-        Hive.shutdownAndAwaitTermination(true, true, b1, b2);
+        Hive.shutdownAndAwaitTermination(true, b1, b2);
 
         assertTrue(b1.isTerminated());
         assertTrue(b2.isTerminated());

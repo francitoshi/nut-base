@@ -65,7 +65,7 @@ class HivePipelineTest
 
         head.accept(10);
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("VALUE=20"));
@@ -86,7 +86,7 @@ class HivePipelineTest
         head.accept(10);
 
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
 
         assertEquals(3, result.size());
         assertTrue(result.contains("n=4")); // (1+1)*2 = 4
@@ -106,7 +106,7 @@ class HivePipelineTest
         
         stage3.head().waitForIdle().awaitTermination(25);
 
-        Hive.shutdownAndAwaitTermination(true, true, stage1.head());
+        Hive.shutdownAndAwaitTermination(true, stage1.head());
 
         assertEquals(1, result.size());
         assertTrue(result.contains("V=10"));
@@ -123,7 +123,7 @@ class HivePipelineTest
         head.accept("msg");
 
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("msg"));
@@ -140,7 +140,7 @@ class HivePipelineTest
         head.accept("hello");
 
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head, b);
+        Hive.shutdownAndAwaitTermination(true, head, b);
 
         assertEquals(1, q.size());
         assertEquals("HELLO", q.peek());
@@ -174,7 +174,7 @@ class HivePipelineTest
         pipeline.accept(42);
 
         pipeline.head().waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, unused);
+        Hive.shutdownAndAwaitTermination(true, unused);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("v=42"));
@@ -194,7 +194,7 @@ class HivePipelineTest
         head.accept(6);
         
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
 
         // (6+1)*2 = 14, 14/3 ≈ 4.67
         assertEquals(1, result.size());
@@ -216,7 +216,7 @@ class HivePipelineTest
         filter.accept(10);
         filter.waitForIdle().awaitTermination(25);
 
-        Hive.shutdownAndAwaitTermination(true, true, head, filter);
+        Hive.shutdownAndAwaitTermination(true, head, filter);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("n=10"));
@@ -234,7 +234,7 @@ class HivePipelineTest
         head.accept(7);
 
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("V=7"));
@@ -251,7 +251,7 @@ class HivePipelineTest
         head.accept(99);
 
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("v=99"));
@@ -269,7 +269,7 @@ class HivePipelineTest
         head.accept(5);
 
         head.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("v=10"));
@@ -291,7 +291,7 @@ class HivePipelineTest
         pipe.accept(10);
 
         pipe.waitForIdle().awaitTermination(25);
-        Hive.shutdownAndAwaitTermination(true, true, head, broadcaster);
+        Hive.shutdownAndAwaitTermination(true, head, broadcaster);
 
         assertEquals(2, a.size());
         assertEquals(2, b.size());
@@ -310,7 +310,7 @@ class HivePipelineTest
 
         head.waitForIdle().shutdown().awaitTermination(Integer.MAX_VALUE);
 
-        Hive.shutdownAndAwaitTermination(true, true, head);
+        Hive.shutdownAndAwaitTermination(true, head);
         
         assertTrue(head.isTerminated());
         assertTrue(collector.isTerminated());
