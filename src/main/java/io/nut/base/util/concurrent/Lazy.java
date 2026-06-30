@@ -22,6 +22,8 @@ package io.nut.base.util.concurrent;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -71,10 +73,43 @@ import java.util.function.Supplier;
  * }
  * }</pre>
  *
+ * <h2>Forced invalidation (ephemeral mode only)</h2>
+ * <p>{@link #invalidate()} marks the cached value as stale so that the next
+ * {@link #get()} recomputes it. It returns {@code this} for chaining:
+ *
+ * <pre>{@code
+ * T fresh = cfg.invalidate().get();   // expire and fetch synchronously
+ * }</pre>
+ *
+ * <p>{@code invalidate()} is only available in ephemeral mode; calling it on
+ * a permanent instance throws {@link IllegalStateException}, because permanent
+ * instances guarantee the value is computed exactly once.
+ *
+ * <h2>Asynchronous pre-warming (permanent mode only)</h2>
+ * <p>Call {@link #async()} or {@link #async(Executor)} immediately after
+ * construction to kick off the supplier in a background thread. Subsequent
+ * calls to {@link #get()} return instantly if the background computation has
+ * already finished, or block briefly until it does — exactly as they would
+ * without {@code async()}, just with a head start.
+ *
+ * <pre>{@code
+ * // Start computing in the background right away
+ * Lazy<Config> cfg = new Lazy<>(() -> Config.load()).async();
+ * // … do other work …
+ * cfg.get();   // likely already cached; returns immediately
+ * }</pre>
+ *
+ * <p>{@code async()} is only supported in <em>permanent</em> mode. Calling it
+ * on an ephemeral instance throws {@link IllegalStateException}, because the
+ * TTL semantics (the value should expire and be refreshed on demand) conflict
+ * with eager background computation.
+ *
  * <h2>Error handling</h2>
  * <p>If the supplier throws, the exception propagates to the caller and the
  * {@code Lazy} remains uninitialized (or expired, in ephemeral mode), so a
- * future call will retry.
+ * future call will retry. In async mode, a supplier exception is silently
+ * swallowed by the background thread; the next call to {@link #get()} will
+ * retry synchronously and surface the error to that caller.
  *
  * @param <T> the type of the lazily computed value
  */
@@ -289,6 +324,110 @@ public final class Lazy<T> implements Supplier<T>
     public boolean isEphemeral()
     {
         return ttlNanos != PERMANENT;
+    }
+
+    // ------------------------------------------------------------------ //
+    // Invalidation
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Forces the next call to {@link #get()} to recompute the value by
+     * resetting the timestamp to {@code NEVER}.
+     *
+     * <p>This method is only supported in <em>ephemeral</em> mode. Permanent
+     * instances guarantee "computed exactly once"; invalidating that guarantee
+     * would contradict the contract. Calling {@code invalidate()} on a permanent
+     * instance throws {@link IllegalStateException}.
+     *
+     * <p>Returns {@code this} so that invalidation can be chained with
+     * {@link #async()} or {@link #async(Executor)} is not applicable here since
+     * {@code async()} is permanent-only — but chaining with {@link #get()} for
+     * an immediate synchronous refresh is idiomatic:
+     *
+     * <pre>{@code
+     * // Expire the cache and fetch the new value right now
+     * T fresh = cfg.invalidate().get();
+     * }</pre>
+     *
+     * @return {@code this}, for chaining
+     * @throws IllegalStateException if called on a permanent instance
+     */
+    public synchronized Lazy<T> invalidate()
+    {
+        if (!isEphemeral())
+        {
+            throw new IllegalStateException(
+                    "invalidate() is not supported in permanent mode: " +
+                    "the value is guaranteed to be computed exactly once.");
+        }
+        lastComputedAt.set(NEVER);
+        return this;
+    }
+
+    // ------------------------------------------------------------------ //
+    // Async pre-warming
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Schedules the supplier to run asynchronously on the
+     * {@link ForkJoinPool#commonPool() common pool}, so that the value is
+     * likely already cached by the time {@link #get()} is first called.
+     *
+     * <p>This method is only supported in <em>permanent</em> mode. Ephemeral
+     * instances have TTL-based expiry semantics that conflict with eager
+     * background computation; calling {@code async()} on them throws
+     * {@link IllegalStateException}.
+     *
+     * <p>If the supplier throws during background execution the exception is
+     * silently discarded; the {@code Lazy} remains uninitialized and the next
+     * call to {@link #get()} will retry synchronously.
+     *
+     * @return {@code this}, for chaining: {@code new Lazy<>(...).async()}
+     * @throws IllegalStateException if called on an ephemeral instance
+     */
+    public Lazy<T> async()
+    {
+        return async(ForkJoinPool.commonPool());
+    }
+
+    /**
+     * Schedules the supplier to run asynchronously on the given
+     * {@link Executor}, so that the value is likely already cached by the time
+     * {@link #get()} is first called.
+     *
+     * <p>This method is only supported in <em>permanent</em> mode. Ephemeral
+     * instances have TTL-based expiry semantics that conflict with eager
+     * background computation; calling {@code async(Executor)} on them throws
+     * {@link IllegalStateException}.
+     *
+     * <p>If the supplier throws during background execution the exception is
+     * silently discarded; the {@code Lazy} remains uninitialized and the next
+     * call to {@link #get()} will retry synchronously.
+     *
+     * <pre>{@code
+     * Executor io = Executors.newCachedThreadPool();
+     * Lazy<Config> cfg = new Lazy<>(() -> Config.load()).async(io);
+     * }</pre>
+     *
+     * @param executor the executor on which to run the supplier; must not be
+     *                 {@code null}
+     * @return {@code this}, for chaining
+     * @throws NullPointerException  if {@code executor} is {@code null}
+     * @throws IllegalStateException if called on an ephemeral instance
+     */
+    public Lazy<T> async(Executor executor)
+    {
+        Objects.requireNonNull(executor, "executor must not be null");
+        if (isEphemeral())
+        {
+            throw new IllegalStateException("async() is not supported in ephemeral mode: TTL-based expiry conflicts with eager background computation.");
+        }
+        executor.execute(() ->
+        {
+            try { get(); }
+            catch (Exception ignored) { /* caller will retry on next get() */ }
+        });
+        return this;
     }
 
     // ------------------------------------------------------------------ //
