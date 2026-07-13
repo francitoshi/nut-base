@@ -1,44 +1,17 @@
 /*
- * EmailsTest.java
- *
- * Copyright (c) 2014-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2014-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.net;
 
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.params.provider.NullAndEmptySource;
-import org.junit.jupiter.params.provider.ValueSource;
 
-/**
- *
- * @author franci
- */
 public class EmailsTest
 {
-    static final String[] valid = 
+    static final String[] VALID = 
     { 
         "example@yahoo.com",
         "example-100@yahoo.com", 
@@ -50,8 +23,14 @@ public class EmailsTest
         "example@gmail.com.com", 
         "example+100@gmail.com",
         "example-100@yahoo-test.com",
+        "alice@example.com",
+        "bob.smith@sub.example.org",
+        "user+tag@example.co.uk",
+        "a@b.co",
+        "nombre_apellido123@mi-empresa.es",
+        "x.y.z@dominio.com"
     };
-    static final String[] invalid = 
+    static final String[] INVALID = 
     {
         "example", 
         "example@.com.my",
@@ -64,25 +43,47 @@ public class EmailsTest
         "example..2002@gmail.com", 
         "example.@gmail.com",
         "example@example@gmail.com", 
-        "example@gmail.com.1a",
         "@", 
         "example@", 
-        "@example.com"
+        "@example.com",
+        "",
+        null,
+        "correo_sin_arroba",
+        "@sindominio.com",
+        "usuario@",
+        "usuario@@doble.com",
+        "usuario espacio@example.com",
+        "usuario@dominio..com",
+        ".usuario@example.com"        
     };
 
+    // Correos que solo son válidos si se permiten dominios locales (allowLocalDomains = true)
+    private static final String[] LOCAL_VALID = 
+    {
+            "alice@localhost",
+            "admin@mailserver",
+            "test@intranet",
+            "root@docker-host",
+            "usuario@dev"
+    };    
     /**
      * Test of isValidEmail method, of class Emails.
      */
     @Test
     public void testIsValidEmail()
     {
-        for(String email : valid)
+        for(String email : VALID)
         {
             assertTrue(Emails.isValidEmail(email), email);
         }
-        for(String email : invalid)
+        for(String email : INVALID)
         {
             assertFalse(Emails.isValidEmail(email), email);
+        }
+        for(String email : LOCAL_VALID)
+        {
+            assertTrue(Emails.isValidEmail(email, true), email);
+            assertFalse(Emails.isValidEmail(email, false), email);
         }
 
     }
