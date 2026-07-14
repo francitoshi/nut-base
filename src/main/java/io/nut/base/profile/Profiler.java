@@ -9,6 +9,8 @@ import io.nut.base.text.Table;
 import io.nut.base.time.JavaTime;
 import java.io.PrintStream;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
@@ -166,20 +168,26 @@ public class Profiler
         {
             return toString(JavaTime.Resolution.MS);
         }
-        
+
     }
 
     private final HashMap<String, Task> map = new HashMap<>();
     private final JavaTime.Resolution resolution;
+    private final boolean sortByTime;
 
-    public Profiler(JavaTime.Resolution resolution)
+    public Profiler(JavaTime.Resolution resolution, boolean sortByTime)
     {
         this.resolution = resolution;
+        this.sortByTime = sortByTime;
+    }
+    public Profiler(JavaTime.Resolution resolution)
+    {
+        this(resolution, false);
     }
 
     public Profiler()
     {
-        this(JavaTime.Resolution.MS);
+        this(JavaTime.Resolution.MS, false);
     }
 
     public Task getTask(String label)
@@ -191,10 +199,36 @@ public class Profiler
         }
         return task;
     }
+
     private static final String[] COL_NAMES = {"id","count","time","avg","speed","min","max"};
+
+    private static final Comparator<Task> CMP_LABEL = (Task a, Task b) ->
+    {
+        return a.label.compareToIgnoreCase(b.label);
+    };
+
+    private static final Comparator<Task> CMP_TIME = (Task a, Task b) ->
+    {
+        int cmp = Long.compare(a.accumNanos, b.accumNanos);
+        if(cmp==0)
+        {
+            cmp = a.label.compareToIgnoreCase(b.label);
+        }
+        return cmp;
+    };
+
     public void print(PrintStream out)
     {
         Task[] tasks = map.values().toArray(new Task[0]);
+        if(sortByTime)
+        {
+            Arrays.sort(tasks, CMP_TIME);
+        }
+        else
+        {
+            Arrays.sort(tasks, CMP_LABEL);
+        }
+        
         String[][] cells = new String[tasks.length][];
         for(int i=0;i<cells.length;i++)
         {

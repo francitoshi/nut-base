@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.gpg;
 
@@ -2064,15 +2051,13 @@ public class GPG
      * <pre>
      *   "DEADBEEF"          // short, 8 hex chars
      *   "0xDEADBEEF"        // short with prefix
-     *   "DEADBEEF01234567"  // long, 16 hex chars
-     *   "0xDEADBEEF01234567"
      * </pre>
      *
      * @param s the string to validate; may be {@code null}
      * @return {@code true} if {@code s} is a valid GPG key ID, {@code false}
      * otherwise
      */
-    public static boolean isValidKeyId(String s)
+    public static boolean isValidShortKeyId(String s)
     {
         if (s == null || s.isEmpty())
         {
@@ -2081,8 +2066,41 @@ public class GPG
         // strip optional "0x" prefix
         String v = s.startsWith("0x") ? s.substring(2) : s;
         // 8 hex chars (short key ID) or 16 hex chars (long key ID)
-        return v.matches("[0-9A-Fa-f]{8}([0-9A-Fa-f]{8})?");
+        return v.matches("[0-9A-Fa-f]{8}");
     }
+
+    /**
+     * Returns {@code true} if the given string is a valid GPG key ID.
+     *
+     * <p>
+     * A GPG key ID is either a <em>short</em> key ID (8 hexadecimal characters)
+     * or a <em>long</em> key ID (16 hexadecimal characters). An optional
+     * {@code "0x"} prefix is accepted. The check is case-insensitive.</p>
+     *
+     * <p>
+     * Examples of valid inputs:</p>
+     * <pre>
+     *   "DEADBEEF01234567"  // long, 16 hex chars
+     *   "0xDEADBEEF01234567"
+     * </pre>
+     *
+     * @param s the string to validate; may be {@code null}
+     * @return {@code true} if {@code s} is a valid GPG key ID, {@code false}
+     * otherwise
+     */
+    public static boolean isValidLongKeyId(String s)
+    {
+        if (s == null || s.isEmpty())
+        {
+            return false;
+        }
+        // strip optional "0x" prefix
+        String v = s.startsWith("0x") ? s.substring(2) : s;
+        // 8 hex chars (short key ID) or 16 hex chars (long key ID)
+        return v.matches("[0-9A-Fa-f]{16}");
+    }
+
+    private static final Pattern FINGERPRINT = Pattern.compile("[0-9A-Fa-f]{40}([0-9A-Fa-f]{24})?");
 
     /**
      * Returns {@code true} if the given string is a valid GPG fingerprint.
@@ -2122,6 +2140,6 @@ public class GPG
         // strip spaces (canonical "XXXX XXXX …" display format)
         v = v.replace(" ", "");
         // 40 hex chars (v4 / SHA-1) or 64 hex chars (v5 / SHA-256)
-        return v.matches("[0-9A-Fa-f]{40}([0-9A-Fa-f]{24})?");
-    }    
+        return FINGERPRINT.matcher(v).matches();
+    }   
 }

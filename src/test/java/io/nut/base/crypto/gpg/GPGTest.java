@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.gpg;
 
@@ -33,6 +20,8 @@ import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
 import io.nut.base.encoding.Hex;
+import io.nut.base.profile.Profiler;
+import io.nut.base.time.JavaTime;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -308,19 +297,20 @@ public class GPGTest
     // -------------------------------------------------------------------------
  
     @Nested
-    @DisplayName("isValidKeyId")
-    class IsValidGpgKeyId
+    @DisplayName("isValidShortKeyId")
+    class IsValidGpgShortKeyId
     {
         @ParameterizedTest(name = "null or empty -> false: [{0}]")
         @NullAndEmptySource
         @DisplayName("returns false for null or empty input")
         void returnsFalseForNullOrEmpty(String input)
         {
-            assertFalse(GPG.isValidKeyId(input));
+            assertFalse(GPG.isValidShortKeyId(input));
         }
  
         @ParameterizedTest(name = "valid short key ID (8 hex): [{0}]")
-        @ValueSource(strings = {
+        @ValueSource(strings = 
+        {
             "DEADBEEF",
             "deadbeef",
             "DeAdBeEf",
@@ -332,7 +322,7 @@ public class GPGTest
         @DisplayName("returns true for valid short key IDs (8 hex chars)")
         void returnsTrueForValidShortKeyId(String input)
         {
-            assertTrue(GPG.isValidKeyId(input));
+            assertTrue(GPG.isValidShortKeyId(input));
         }
  
         @ParameterizedTest(name = "valid short key ID with 0x prefix: [{0}]")
@@ -346,35 +336,7 @@ public class GPGTest
         @DisplayName("returns true for valid short key IDs with '0x' prefix")
         void returnsTrueForValidShortKeyIdWithPrefix(String input)
         {
-            assertTrue(GPG.isValidKeyId(input));
-        }
- 
-        @ParameterizedTest(name = "valid long key ID (16 hex): [{0}]")
-        @ValueSource(strings = {
-            "DEADBEEF01234567",
-            "deadbeef01234567",
-            "DeAdBeEf01234567",
-            "0000000000000000",
-            "FFFFFFFFFFFFFFFF",
-            "ABCDEF0123456789"
-        })
-        @DisplayName("returns true for valid long key IDs (16 hex chars)")
-        void returnsTrueForValidLongKeyId(String input)
-        {
-            assertTrue(GPG.isValidKeyId(input));
-        }
- 
-        @ParameterizedTest(name = "valid long key ID with 0x prefix: [{0}]")
-        @ValueSource(strings = {
-            "0xDEADBEEF01234567",
-            "0xdeadbeef01234567",
-            "0x0000000000000000",
-            "0xFFFFFFFFFFFFFFFF"
-        })
-        @DisplayName("returns true for valid long key IDs with '0x' prefix")
-        void returnsTrueForValidLongKeyIdWithPrefix(String input)
-        {
-            assertTrue(GPG.isValidKeyId(input));
+            assertTrue(GPG.isValidShortKeyId(input));
         }
  
         @ParameterizedTest(name = "invalid length: [{0}]")
@@ -388,7 +350,7 @@ public class GPGTest
         @DisplayName("returns false for key IDs with invalid length")
         void returnsFalseForInvalidLength(String input)
         {
-            assertFalse(GPG.isValidKeyId(input));
+            assertFalse(GPG.isValidShortKeyId(input));
         }
  
         @ParameterizedTest(name = "invalid characters: [{0}]")
@@ -403,7 +365,7 @@ public class GPGTest
         @DisplayName("returns false when input contains non-hex characters")
         void returnsFalseForNonHexCharacters(String input)
         {
-            assertFalse(GPG.isValidKeyId(input));
+            assertFalse(GPG.isValidShortKeyId(input), input);
         }
  
         @ParameterizedTest(name = "fingerprint-length strings are rejected: [{0}]")
@@ -414,7 +376,124 @@ public class GPGTest
         @DisplayName("returns false for fingerprint-length inputs")
         void returnsFalseForFingerprintLengthInput(String input)
         {
-            assertFalse(GPG.isValidKeyId(input));
+            assertFalse(GPG.isValidShortKeyId(input));
+        }
+    }
+ 
+    // -------------------------------------------------------------------------
+    // isValidLongKeyId
+    // -------------------------------------------------------------------------
+ 
+    @Nested
+    @DisplayName("isValidLongKeyId")
+    class IsValidGpgLongKeyId
+    {
+        @ParameterizedTest(name = "null or empty -> false: [{0}]")
+        @NullAndEmptySource
+        @DisplayName("returns false for null or empty input")
+        void returnsFalseForNullOrEmpty(String input)
+        {
+            assertFalse(GPG.isValidLongKeyId(input));
+        }
+ 
+        @ParameterizedTest(name = "valid short key ID (8 hex): [{0}]")
+        @ValueSource(strings = 
+        {
+            "DEADBEEF",
+            "deadbeef",
+            "DeAdBeEf",
+            "00000000",
+            "FFFFFFFF",
+            "12345678",
+            "ABCDEF01"
+        })
+        @DisplayName("returns false for valid short key IDs (8 hex chars)")
+        void returnsFalseForValidShortKeyId(String input)
+        {
+            assertFalse(GPG.isValidLongKeyId(input));
+        }
+ 
+        @ParameterizedTest(name = "valid short key ID with 0x prefix: [{0}]")
+        @ValueSource(strings = {
+            "0xDEADBEEF",
+            "0xdeadbeef",
+            "0xDeAdBeEf",
+            "0x00000000",
+            "0xFFFFFFFF"
+        })
+        @DisplayName("returns false for valid short key IDs with '0x' prefix")
+        void returnsFalseForValidShortKeyIdWithPrefix(String input)
+        {
+            assertFalse(GPG.isValidLongKeyId(input));
+        }
+ 
+        @ParameterizedTest(name = "valid long key ID (16 hex): [{0}]")
+        @ValueSource(strings = {
+            "DEADBEEF01234567",
+            "deadbeef01234567",
+            "DeAdBeEf01234567",
+            "0000000000000000",
+            "FFFFFFFFFFFFFFFF",
+            "ABCDEF0123456789"
+        })
+        @DisplayName("returns true for valid long key IDs (16 hex chars)")
+        void returnsTrueForValidLongKeyId(String input)
+        {
+            assertTrue(GPG.isValidLongKeyId(input));
+        }
+ 
+        @ParameterizedTest(name = "valid long key ID with 0x prefix: [{0}]")
+        @ValueSource(strings = {
+            "0xDEADBEEF01234567",
+            "0xdeadbeef01234567",
+            "0x0000000000000000",
+            "0xFFFFFFFFFFFFFFFF"
+        })
+        @DisplayName("returns true for valid long key IDs with '0x' prefix")
+        void returnsTrueForValidLongKeyIdWithPrefix(String input)
+        {
+            assertTrue(GPG.isValidLongKeyId(input));
+        }
+ 
+        @ParameterizedTest(name = "invalid length: [{0}]")
+        @ValueSource(strings = {
+            "DEAD",           // 4 chars – too short
+            "DEADBEE",        // 7 chars – one short
+            "DEADBEEF0",      // 9 chars – one over short
+            "DEADBEEF0123456",  // 15 chars – one short of long
+            "DEADBEEF012345678" // 17 chars – one over long
+        })
+        @DisplayName("returns false for key IDs with invalid length")
+        void returnsFalseForInvalidLength(String input)
+        {
+            assertFalse(GPG.isValidLongKeyId(input));
+        }
+ 
+        @ParameterizedTest(name = "invalid characters: [{0}]")
+        @ValueSource(strings = {
+            "DEADBEEG",       // 'G' is not hex
+            "DEADBEE!",       // special char
+            "DEAD BEEF",      // space inside
+            "DEADBEEF\t",     // tab character
+            "ZZZZZZZZ",
+            "--------"
+        })
+        @DisplayName("returns false when input contains non-hex characters")
+        void returnsFalseForNonHexCharacters(String input)
+        {
+            assertFalse(GPG.isValidLongKeyId(input), input);
+        }
+ 
+        @ParameterizedTest(name = "fingerprint-length strings are rejected: [{0}]")
+        @ValueSource(strings = 
+        {
+            "D4C5E60F0A4A4B3E2F3A1B7C9D8E5F6A7B8C9D0E",  // 40 chars (v4 fingerprint)
+            "D4C5E60F0A4A4B3E2F3A1B7C9D8E5F6A7B8C9D0E1122334455667788990AABB" // 64 chars (v5)
+        })
+        @DisplayName("returns false for fingerprint-length inputs")
+        void returnsFalseForFingerprintLengthInput(String input)
+        {
+            assertFalse(GPG.isValidLongKeyId(input));
         }
     }
  
