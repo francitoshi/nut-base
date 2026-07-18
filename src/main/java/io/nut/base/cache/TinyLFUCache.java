@@ -1,22 +1,7 @@
 /*
- *  TinyLFUCache.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.cache;
 
@@ -90,7 +75,7 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         value = mainCache.get(key);
         if(statistics && value!=null)
         {
-            countWindowHits.incrementAndGet();
+            countMainHits.incrementAndGet();
         }
         return value;
     }
@@ -131,6 +116,13 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 
     private void tryAdmitToMain(K key, V value)
     {
+        if (mainSize <= 0)
+        {
+            // Main cache has no room at all (can happen with very small
+            // overall capacities), so the evicted item is simply discarded.
+            return;
+        }
+
         if (mainCache.size() < mainSize)
         {
             mainCache.put(key, value);
@@ -138,6 +130,13 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         }
 
         // Compare frequencies - admit only if better than victim
+        if (mainCache.isEmpty())
+        {
+            // Nothing to compare against; just admit the candidate.
+            mainCache.put(key, value);
+            return;
+        }
+
         K victim = mainCache.peekVictim();
         int candidateFreq = sketch.estimate(key);
         int victimFreq = sketch.estimate(victim);
@@ -297,9 +296,15 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 
         K peekVictim()
         {
-            return probation.isEmpty()
-                    ? protect.keySet().iterator().next()
-                    : probation.keySet().iterator().next();
+            if (!probation.isEmpty())
+            {
+                return probation.keySet().iterator().next();
+            }
+            if (!protect.isEmpty())
+            {
+                return protect.keySet().iterator().next();
+            }
+            return null;
         }
 
         void evictVictim()
@@ -359,8 +364,7 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
             int hash = key.hashCode();
             for (int i = 0; i < depth; i++)
             {
-                //the following line was sugested by Claude Sonnect 4.6
-                int index = Math.abs((hash ^ (hash >>> 16) * (i + 1)) & (width - 1));
+                int index = indexFor(hash, i);
                 counters[i][index] = Math.min(15, counters[i][index] + 1);
             }
         }
@@ -372,11 +376,21 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 
             for (int i = 0; i < depth; i++)
             {
-                int index = Math.abs((hash + i) % width);
+                int index = indexFor(hash, i);
                 min = Math.min(min, counters[i][index]);
             }
 
             return min;
+        }
+
+        // Same mixing function used by both increment() and estimate() so that
+        // a given (key, row) pair always maps to the same counter slot.
+        // width is a power of two, so '& (width - 1)' is used instead of '%'
+        // to also avoid Math.abs(Integer.MIN_VALUE) returning a negative value.
+        private int indexFor(int hash, int row)
+        {
+            int mixed = hash ^ ((hash >>> 16) * (row + 1));
+            return mixed & (width - 1);
         }
 
         private void reset()
