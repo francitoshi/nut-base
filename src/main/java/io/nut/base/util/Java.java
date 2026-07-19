@@ -1,24 +1,12 @@
 /*
- *  Java.java
- *
- *  Copyright (c) 2024-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.RuntimeMXBean;
 
 /**
  *
@@ -58,5 +46,20 @@ public class Java
     public static int LONG_BITS = Long.BYTES * 8;
     public static int FLOAT_BITS = Float.BYTES * 8;
     public static int DOUBLE_BITS = Double.BYTES * 8;
+
+    private static class HolderMX
+    {
+        static final RuntimeMXBean BEAN = ManagementFactory.getRuntimeMXBean();
+        static final long START_TIME = BEAN.getStartTime();
+    }
+    
+    public static long getStartTime()
+    {
+        return HolderMX.START_TIME;
+    }
+    public static long getUptime()
+    {
+        return HolderMX.BEAN.getUptime();
+    }    
     
 }
