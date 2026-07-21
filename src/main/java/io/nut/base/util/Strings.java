@@ -468,6 +468,20 @@ public class Strings
         return false;
     }
 
+    /**
+     * <p>Converts a String to lower case as per {@link String#toLowerCase()}.</p>
+     *
+     * <p>A <code>null</code> input String returns <code>null</code>.</p>
+     *
+     * <pre>
+     * Strings.toLowerCase(null)  = null
+     * Strings.toLowerCase("")    = ""
+     * Strings.toLowerCase("aBc") = "abc"
+     * </pre>
+     *
+     * @param s the String to lower case, may be null
+     * @return the lower cased String, <code>null</code> if null String input
+     */
     public static String toLowerCase(String s)
     {
         return (s!=null) ? s.toLowerCase() : null;
@@ -476,6 +490,21 @@ public class Strings
     {
         return (s!=null) ? s.toLowerCase(locale) : null;
     }
+    
+    /**
+     * <p>Converts a String to upper case as per {@link String#toUpperCase()}.</p>
+     *
+     * <p>A <code>null</code> input String returns <code>null</code>.</p>
+     *
+     * <pre>
+     * Strings.toUpperCase(null)  = null
+     * Strings.toUpperCase("")    = ""
+     * Strings.toUpperCase("aBc") = "ABC"
+     * </pre>
+     *
+     * @param s the String to upper case, may be null
+     * @return the upper cased String, <code>null</code> if null String input
+     */
     public static String toUpperCase(String s)
     {
         return (s!=null) ? s.toUpperCase() : null;

@@ -5,11 +5,16 @@
  */
 package io.nut.base.util.concurrent.locks;
 
+import java.util.Objects;
+
 /**
  * A simple wait/notify style synchronization utility built on top of
- * the intrinsic monitor of a private lock object ({@code synchronized}
- * / {@link Object#wait()} / {@link Object#notify()} /
- * {@link Object#notifyAll()}).
+ * the intrinsic monitor of a lock object ({@code synchronized} /
+ * {@link Object#wait()} / {@link Object#notify()} /
+ * {@link Object#notifyAll()}). By default the lock is a private
+ * object created internally, but an external lock object may be
+ * supplied via {@link #AwaitSignal(Object)} instead, e.g. to
+ * coordinate with other code synchronizing on the same object.
  * <p>
  * Any number of threads may call {@link #await()} (or its timed
  * variant {@link #await(long)}) to block until another thread calls
@@ -35,8 +40,37 @@ package io.nut.base.util.concurrent.locks;
  */
 public class AwaitSignal
 {
-    private final Object lock = new Object();
+    private final Object lock;
     private int waiting = 0;
+
+    /**
+     * Creates a new instance that uses its own private object as the
+     * lock for the internal wait/notify synchronization.
+     */
+    public AwaitSignal()
+    {
+        this(new Object());
+    }
+
+    /**
+     * Creates a new instance that uses the given external object as
+     * the lock for the internal wait/notify synchronization, instead
+     * of a private one.
+     * <p>
+     * This allows the caller to coordinate this instance's
+     * {@code await}/{@code signal} calls with other code that
+     * synchronizes on the same {@code lock} object, or with a
+     * {@code lock} object shared by several {@code AwaitSignal}
+     * instances.
+     *
+     * @param lock the object to synchronize on; must not be
+     * {@code null}
+     * @throws NullPointerException if {@code lock} is {@code null}
+     */
+    public AwaitSignal(Object lock)
+    {
+        this.lock = Objects.requireNonNull(lock, "lock must not be null");
+    }
 
     /**
      * Blocks the current thread until it is woken up by a call to
