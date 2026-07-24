@@ -1,22 +1,7 @@
 /*
- *  AndroidShell.java
- *
- *  Copyright (c) 2015-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2015-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.os;
 
@@ -284,5 +269,135 @@ public abstract class Shell
         }
 
         return proc;
+    }
+    
+    /**
+     * Expands shell-style environment variable references within a string,
+     * replicating bash's basic "parameter expansion" rules for this specific
+     * case (not tilde expansion, not advanced parameter expansion operators).
+     *
+     * Supported formats: $VAR -> value of environment variable VAR. The name
+     * may contain letters, digits and '_', but must NOT start with a digit
+     * (same rule as bash). The longest possible valid identifier is consumed.
+     * ${VAR} -> same as $VAR, but with explicit boundaries via braces; useful
+     * when you need to concatenate text right after the variable (e.g.
+     * "${VAR}rest" vs "$VARrest", which bash would treat as a single variable
+     * named "VARrest"). \$ -> an escaped '$' is treated as a literal character
+     * and is NOT expanded (same as bash in an unquoted context).
+     *
+     * Undefined variable: Just like bash without "set -u" (nounset), a variable
+     * that doesn't exist is replaced with an empty string, NOT left as the
+     * original literal text.
+     *
+     * Out of scope (not implemented, since these are advanced parameter
+     * expansion features, not basic variable expansion): - Default values:
+     * ${VAR:-value}, ${VAR:=value} - Substitution/length: ${VAR/pattern/repl},
+     * ${#VAR} - Command substitution: $(command) or `command` - Arithmetic
+     * expansion: $((expression)) - Arrays: ${ARR[0]} - Special parameters: $$,
+     * $1, $@, etc.
+     */
+    public static String expandShellVariables(String s)
+    {
+        if (s == null || s.isEmpty())
+        {
+            return s;
+        }
+
+        StringBuilder out = new StringBuilder(s.length());
+        int i = 0;
+        int len = s.length();
+
+        while (i < len)
+        {
+            char c = s.charAt(i);
+
+            if (c == '\\' && i + 1 < len && s.charAt(i + 1) == '$')
+            {
+                // Escaped '\$' -> literal '$', do not expand
+                out.append('$');
+                i += 2;
+                continue;
+            }
+
+            if (c != '$')
+            {
+                out.append(c);
+                i++;
+                continue;
+            }
+
+            // c == '$'
+            if (i + 1 >= len)
+            {
+                // Trailing '$' with nothing after it -> literal
+                out.append('$');
+                i++;
+                continue;
+            }
+
+            char next = s.charAt(i + 1);
+
+            if (next == '{')
+            {
+                // ${VAR}
+                int closeBrace = s.indexOf('}', i + 2);
+                if (closeBrace == -1)
+                {
+                    // No closing '}' -> bash would raise a syntax error;
+                    // here, to be lenient, we just leave it as-is.
+                    out.append(c);
+                    i++;
+                    continue;
+                }
+                String varName = s.substring(i + 2, closeBrace);
+                out.append(resolveVar(varName));
+                i = closeBrace + 1;
+            }
+            else if (isValidVarStart(next))
+            {
+                // $VAR (no braces): consume the longest possible identifier
+                int j = i + 1;
+                while (j < len && isValidVarPart(s.charAt(j)))
+                {
+                    j++;
+                }
+                String varName = s.substring(i + 1, j);
+                out.append(resolveVar(varName));
+                i = j;
+            }
+            else
+            {
+                // '$' followed by something that doesn't form a valid name
+                // (e.g. "$ ", "$5", "$$"). Bash has special cases for $$,
+                // $1, $@, etc. (special parameters), which are not
+                // arbitrary environment variables and are out of scope
+                // for this method -> left as literal.
+                out.append(c);
+                i++;
+            }
+        }
+
+        return out.toString();
+    }
+
+    private static boolean isValidVarStart(char c)
+    {
+        return Character.isLetter(c) || c == '_';
+    }
+
+    private static boolean isValidVarPart(char c)
+    {
+        return Character.isLetterOrDigit(c) || c == '_';
+    }
+
+    private static String resolveVar(String varName)
+    {
+        if (varName.isEmpty())
+        {
+            return "";
+        }
+        String value = System.getenv(varName);
+        // Same as bash without "nounset": undefined variable -> empty string
+        return (value != null) ? value : "";
     }
 }
