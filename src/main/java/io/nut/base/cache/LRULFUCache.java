@@ -7,6 +7,8 @@ package io.nut.base.cache;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * A cache that balances recency (LRU) and frequency (LFU). Items are
@@ -19,22 +21,34 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 {
 
     private final int capacity;
+    private final long ttlNanos;
     private final Map<K, Node<K, V>> cache;
     private final Map<Integer, FrequencyBucket<K, V>> frequencyMap;
     private int minFrequency;
 
-    public LRULFUCache(int capacity)
+    public LRULFUCache(int capacity, long ttlNanos)
     {
         if (capacity <= 0)
         {
             throw new IllegalArgumentException("Capacity must be positive");
         }
         this.capacity = capacity;
+        this.ttlNanos = ttlNanos;
         this.cache = new HashMap<>(capacity);
         this.frequencyMap = new HashMap<>();
         this.minFrequency = 0;
     }
 
+    public LRULFUCache(int capacity)
+    {
+        this(capacity, Long.MAX_VALUE);
+    }
+
+    public LRULFUCache(int capacity, long ttl, TimeUnit timeUnit)
+    {
+        this(capacity, timeUnit.toNanos(ttl));
+    }
+    
     /**
      * Retrieves a value from the cache. Increases the frequency count for the
      * key.
@@ -43,17 +57,64 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
      * @return the value associated with the key, or null if not found
      */
     @Override
-    public V get(K key)
+    public V get(K key, Function<? super K, ? extends V> creator)
     {
         Node<K, V> node = cache.get(key);
-        if (node == null)
+        long now = System.nanoTime();
+        if (node != null)
+        {
+            if (node.value != null && node.value.isExpired(now))
+            {
+                removeNodeCompletely(node);
+            }
+            else
+            {
+                updateFrequency(node);
+                return node.value != null ? node.value.v : null;
+            }
+        }
+
+        if (creator == null)
         {
             return null;
         }
 
-        // Increment frequency
-        updateFrequency(node);
-        return node.value;
+        V value = creator.apply(key);
+        long exp = calculateExpiration(now, ttlNanos);
+        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
+
+        if (cache.size() >= capacity)
+        {
+            evictLFU();
+        }
+
+        Node<K, V> newNode = new Node<>(key, item);
+        cache.put(key, newNode);
+
+        // Add to frequency 1 bucket
+        FrequencyBucket<K, V> bucket = frequencyMap.computeIfAbsent(1, k -> new FrequencyBucket<>());
+        bucket.addToFront(newNode);
+        minFrequency = 1;
+
+        return value;
+    }
+
+    @Override
+    public boolean containsKey(K key)
+    {
+        Node<K, V> node = cache.get(key);
+        if (node == null)
+        {
+            return false;
+        }
+
+        if (node.value != null && node.value.isExpired(System.nanoTime()))
+        {
+            removeNodeCompletely(node);
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -66,12 +127,25 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     @Override
     public void put(K key, V value)
     {
+        long now = System.nanoTime();
+        long exp = calculateExpiration(now, ttlNanos);
+        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
+
         Node<K, V> node = cache.get(key);
 
         if (node != null)
         {
+            if (node.value != null && node.value.isExpired(now))
+            {
+                removeNodeCompletely(node);
+                node = null;
+            }
+        }
+
+        if (node != null)
+        {
             // Update existing node
-            node.value = value;
+            node.value = item;
             updateFrequency(node);
         }
         else
@@ -82,13 +156,43 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
                 evictLFU();
             }
 
-            Node<K, V> newNode = new Node<>(key, value);
+            Node<K, V> newNode = new Node<>(key, item);
             cache.put(key, newNode);
 
             // Add to frequency 1 bucket
             FrequencyBucket<K, V> bucket = frequencyMap.computeIfAbsent(1, k -> new FrequencyBucket<>());
             bucket.addToFront(newNode);
             minFrequency = 1;
+        }
+    }
+
+    private void removeNodeCompletely(Node<K, V> node)
+    {
+        cache.remove(node.key);
+        FrequencyBucket<K, V> bucket = frequencyMap.get(node.frequency);
+        if (bucket != null)
+        {
+            bucket.remove(node);
+            if (bucket.isEmpty())
+            {
+                frequencyMap.remove(node.frequency);
+                if (node.frequency == minFrequency)
+                {
+                    if (cache.isEmpty())
+                    {
+                        minFrequency = 0;
+                    }
+                    else
+                    {
+                        int nextMin = minFrequency;
+                        while (!frequencyMap.containsKey(nextMin))
+                        {
+                            nextMin++;
+                        }
+                        minFrequency = nextMin;
+                    }
+                }
+            }
         }
     }
 
@@ -144,6 +248,20 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     }
 
     @Override
+    public void purgeExpired()
+    {
+        long now = System.nanoTime();
+        java.util.List<Node<K, V>> nodes = new java.util.ArrayList<>(cache.values());
+        for (Node<K, V> node : nodes)
+        {
+            if (node.value != null && node.value.isExpired(now))
+            {
+                removeNodeCompletely(node);
+            }
+        }
+    }
+
+    @Override
     public boolean isEmpty()
     {
         return cache.isEmpty();
@@ -154,12 +272,12 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     {
 
         K key;
-        V value;
+        AbstractCache.Item<V> value;
         int frequency = 1;
         Node<K, V> prev;
         Node<K, V> next;
 
-        Node(K key, V value)
+        Node(K key, AbstractCache.Item<V> value)
         {
             this.key = key;
             this.value = value;

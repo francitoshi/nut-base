@@ -5,6 +5,7 @@
  */
 package io.nut.base.cache;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -81,4 +82,39 @@ public class LRULFUCacheTest
         assertTrue(cache.isEmpty());
     }
 
+    @Test
+    public void testNullValues()
+    {
+        Cache<Integer, String> cache = new LRULFUCache<>(2);
+
+        // 1. Test put(key, null)
+        try
+        {
+            cache.put(1, null);
+            assertEquals(1, cache.size());
+            assertNull(cache.get(1)); // Must return the stored null value
+        }
+        catch (Exception e)
+        {
+            fail("LRULFUCache failed when storing/retrieving a null value via put(): " + e.getMessage());
+        }
+
+        // 2. Test get(key, Function) returning null
+        try
+        {
+            String val = cache.get(2, k -> null);
+            assertNull(val);
+            assertNull(cache.get(2));
+        }
+        catch (Exception e)
+        {
+            fail("LRULFUCache failed when handling a null value via get(key, Function): " + e.getMessage());
+        }
+
+        final AtomicInteger i = new AtomicInteger();
+        cache.get(3, (x) -> {i.incrementAndGet(); return null;});
+        assertEquals(1, i.get());
+        cache.get(3, (x) -> {i.incrementAndGet(); return null;});
+        assertEquals(1, i.get());
+    }
 }

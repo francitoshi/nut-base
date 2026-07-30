@@ -71,6 +71,16 @@ public interface Cache<K, V>
     void put(K key, V value);
 
     /**
+     * Returns {@code true} if this cache contains a mapping for the specified
+     * key and that mapping has not expired.
+     *
+     * @param key the key whose presence in this cache is to be tested
+     * @return {@code true} if this cache contains a mapping for the specified
+     * key and it has not expired
+     */
+    boolean containsKey(K key);
+
+    /**
      * Returns the number of key-value mappings in this cache.
      *
      * @return the number of entries in the cache
@@ -89,6 +99,11 @@ public interface Cache<K, V>
      * after this call returns.
      */
     void clear();
+
+    /**
+     * Removes all expired entries from this cache.
+     */
+    void purgeExpired();
     
-    Cache<K, V> synchronizedCache();
+    Cache<K,V> synchronizedCache();
 }

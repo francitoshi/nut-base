@@ -7,6 +7,7 @@ package io.nut.base.cache;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A simple {@link Cache} implementation backed by a plain {@link HashMap}.
@@ -35,7 +36,22 @@ import java.util.Map;
  */
 public class HashMapCache<K, V> extends AbstractCache<K, V>
 {
-    private final Map<K, V> map;
+    private final Map<K, AbstractCache.Item<V>> map;
+    private final long ttlNanos;
+
+    /**
+     * Creates a new, empty cache backed by a {@link HashMap} with the given
+     * initial capacity and time-to-live.
+     *
+     * @param initialCapacity the initial capacity of the underlying
+     * {@link HashMap}
+     * @param ttlNanos time-to-live of elements in nanoseconds
+     */
+    public HashMapCache(int initialCapacity, long ttlNanos)
+    {
+        this.map = new HashMap<>(initialCapacity);
+        this.ttlNanos = ttlNanos;
+    }
 
     /**
      * Creates a new, empty cache backed by a default-constructed
@@ -43,60 +59,91 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
      */
     public HashMapCache()
     {
-        this.map = new HashMap<>();
+        this(16, Long.MAX_VALUE);
     }
 
-    /**
-     * Creates a new, empty cache backed by a {@link HashMap} with the given
-     * initial capacity.
-     *
-     * @param initialCapacity the initial capacity of the underlying
-     * {@link HashMap}
-     */
-    public HashMapCache(int initialCapacity)
+    public HashMapCache(int initialCapacity, long ttl, TimeUnit timeUnit)
     {
-        this.map = new HashMap<>(initialCapacity);
-    }
-
-    /**
-     * Creates a new cache backed by a {@link HashMap}, pre-populated with the
-     * entries of the given map.
-     *
-     * @param initial the entries to seed this cache with; a defensive copy is
-     * made, so subsequent changes to {@code initial} are not reflected here
-     */
-    public HashMapCache(Map<? extends K, ? extends V> initial)
-    {
-        this.map = new HashMap<>(initial);
+        this(initialCapacity, timeUnit.toNanos(ttl));
     }
 
     @Override
-    public V get(K key)
+    public V get(K key, java.util.function.Function<? super K, ? extends V> creator)
     {
-        return map.get(key);
+        AbstractCache.Item<V> item = map.get(key);
+        if (item != null)
+        {
+            if (item.isExpired(System.nanoTime()))
+            {
+                map.remove(key);
+            }
+            else
+            {
+                return item.v;
+            }
+        }
+
+        if (creator == null)
+        {
+            return null;
+        }
+
+        V value = creator.apply(key);
+        long now = System.nanoTime();
+        long exp = calculateExpiration(now, ttlNanos);
+        map.put(key, new AbstractCache.Item<>(value, exp));
+        return value;
+    }
+
+    @Override
+    public boolean containsKey(K key)
+    {
+        AbstractCache.Item<V> item = map.get(key);
+        if (item == null)
+        {
+            return false;
+        }
+        if (item.isExpired(System.nanoTime()))
+        {
+            map.remove(key);
+            return false;
+        }
+        return true;
     }
 
     @Override
     public void put(K key, V value)
     {
-        map.put(key, value);
+        long now = System.nanoTime();
+        long exp = calculateExpiration(now, ttlNanos);
+        map.put(key, new AbstractCache.Item<>(value, exp));
     }
 
     @Override
     public int size()
     {
+        // Clean up expired items lazily to make size as accurate as possible
+        long now = System.nanoTime();
+        map.values().removeIf(item -> item.isExpired(now));
         return map.size();
     }
 
     @Override
     public boolean isEmpty()
     {
-        return map.isEmpty();
+        return size() == 0;
     }
 
     @Override
     public void clear()
     {
         map.clear();
+    }
+
+    @Override
+    public void purgeExpired()
+    {
+        long now = System.nanoTime();
+        map.values().removeIf(item -> item.isExpired(now));
     }
 }

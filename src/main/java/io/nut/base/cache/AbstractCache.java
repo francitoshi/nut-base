@@ -22,44 +22,45 @@ import java.util.function.Function;
  */
 public abstract class AbstractCache<K, V> implements Cache<K, V>
 {
-
-    /**
-     * Retrieves the value associated with the given key from this cache. If no
-     * value is present, it computes a new value using the provided
-     * {@code creator} function, stores it in the cache, and then returns the
-     * new value.
-     * <p>
-     * This implementation first calls the abstract {@link #get(Object)} method.
-     * If the result is {@code null} (indicating a cache miss), it then calls
-     * the {@code creator.apply(key)} to produce a new value. This new value is
-     * then inserted into the cache via the abstract
-     * {@link #put(Object, Object)} method before being returned.
-     *
-     * @param key the key whose associated value is to be returned
-     * @param creator the function to compute a value if one is not already
-     * present. This function must not return {@code null}.
-     * @return the current (existing or computed) value associated with the
-     * specified key.
-     * @see #get(Object)
-     * @see #put(Object, Object)
-     */
-    @Override
-    public V get(K key, Function<? super K, ? extends V> creator) 
+    public static class Item<V>
     {
-        // First, try to retrieve the value from the cache using the subclass's implementation.
-        V value = get(key);
+        public volatile long expirationNanoTime;
+        public volatile V v;
 
-        // If the value is null, it's a cache miss.
-        if (value == null) 
+        public Item(V v, long expirationNanoTime)
         {
-            // Create the new value using the provided function.
-            value = creator.apply(key);
-            // Store the newly created value in the cache for future requests.
-            put(key, value);
+            this.v = v;
+            this.expirationNanoTime = expirationNanoTime;
         }
 
-        // Return the existing or newly created value.
-        return value;
+        public boolean isExpired(long now)
+        {
+            if (expirationNanoTime == Long.MAX_VALUE)
+            {
+                return false;
+            }
+            return now - expirationNanoTime >= 0;
+        }
+    }
+
+    protected static long calculateExpiration(long now, long ttlNanos)
+    {
+        if (ttlNanos == Long.MAX_VALUE)
+        {
+            return Long.MAX_VALUE;
+        }
+        long exp = now + ttlNanos;
+        if (ttlNanos > 0 && exp < now)
+        {
+            return Long.MAX_VALUE;
+        }
+        return exp;
+    }
+
+    @Override
+    public V get(K key)
+    {
+        return get(key, null);
     }
 
     private static class SynchronizedCache<K,V> implements Cache<K,V>
@@ -100,6 +101,15 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
         }
 
         @Override
+        public boolean containsKey(K key)
+        {
+            synchronized(lock)
+            {
+                return cache.containsKey(key);
+            }
+        }
+
+        @Override
         public int size()
         {
             synchronized(lock)
@@ -127,6 +137,15 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
         }
 
         @Override
+        public void purgeExpired()
+        {
+            synchronized(lock)
+            {
+                cache.purgeExpired();
+            }
+        }
+
+        @Override
         public Cache<K, V> synchronizedCache()
         {
             synchronized(lock)
@@ -135,6 +154,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
             }
         }
     }
+    
     @Override
     public Cache<K, V> synchronizedCache()
     {

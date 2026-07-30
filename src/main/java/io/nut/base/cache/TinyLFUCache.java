@@ -7,6 +7,7 @@ package io.nut.base.cache;
 
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -49,6 +50,7 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 {
 
     private final int capacity;
+    private final long ttlNanos;
 
     // Window/main boundary. Not fixed: resizeWindow() moves capacity
     // between the two caches at runtime as the climber adapts.
@@ -77,10 +79,10 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     private static final int TIE_BREAK_ADMIT_ONE_IN = 100;
 
     // Window cache (starts at 1% of capacity) - protects against bursts
-    private final LRUCache<K, V> windowCache;
+    private final LRUCache<K, AbstractCache.Item<V>> windowCache;
 
     // Main cache (starts at 99% of capacity) - for frequent items
-    private final SegmentedLFUCache<K, V> mainCache;
+    private final SegmentedLFUCache<K, AbstractCache.Item<V>> mainCache;
 
     // Frequency sketch - probabilistic counter with doorkeeper
     private final CountMinSketch<K> sketch;
@@ -90,13 +92,14 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     private final AtomicInteger countMainHits = new AtomicInteger();
     private final AtomicInteger countAttempts = new AtomicInteger();
 
-    public TinyLFUCache(int capacity, boolean statistics)
+    public TinyLFUCache(int capacity, long ttlNanos, boolean statistics)
     {
         if (capacity <= 0)
         {
             throw new IllegalArgumentException("Capacity must be positive");
         }
         this.capacity = capacity;
+        this.ttlNanos = ttlNanos;
         this.windowSize = Math.max(1, capacity / 100); // 1% for window, initial value
         this.mainSize = capacity - windowSize;
 
@@ -114,38 +117,134 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         this.sketch = new CountMinSketch<>(capacity * 10);
         this.statistics = statistics;
     }
+
+    public TinyLFUCache(int capacity, long ttlNanos)
+    {
+        this(capacity, ttlNanos, false);
+    }
+
     public TinyLFUCache(int capacity)
     {
-        this(capacity, false);
+        this(capacity, Long.MAX_VALUE, false);
+    }
+
+    public TinyLFUCache(int capacity, long ttl, TimeUnit timeUnit, boolean statistics)
+    {
+        this(capacity, timeUnit.toNanos(ttl), statistics);
+    }
+    public TinyLFUCache(int capacity, long ttl, TimeUnit timeUnit)
+    {
+        this(capacity, timeUnit.toNanos(ttl), false);
     }
 
     @Override
-    public synchronized V get(K key)
+    public synchronized V get(K key, java.util.function.Function<? super K, ? extends V> creator)
     {
         // Record access
         sketch.increment(key);
         adaptRequests++;
         if(statistics) countAttempts.incrementAndGet();
 
+        long now = System.nanoTime();
+
         // Try window cache first
-        V value = windowCache.get(key);
-        if (value != null)
+        AbstractCache.Item<V> windowItem = windowCache.get(key);
+        if (windowItem != null)
         {
-            adaptHits++;
-            if(statistics) countWindowHits.incrementAndGet();
-            maybeAdapt();
-            return value;
+            if (windowItem.isExpired(now))
+            {
+                windowCache.remove(key);
+            }
+            else
+            {
+                adaptHits++;
+                if(statistics) countWindowHits.incrementAndGet();
+                maybeAdapt();
+                return windowItem.v;
+            }
         }
 
         // Try main cache
-        value = mainCache.get(key);
-        if (value != null)
+        AbstractCache.Item<V> mainItem = mainCache.get(key);
+        if (mainItem != null)
         {
-            adaptHits++;
-            if(statistics) countMainHits.incrementAndGet();
+            if (mainItem.isExpired(now))
+            {
+                mainCache.remove(key);
+            }
+            else
+            {
+                adaptHits++;
+                if(statistics) countMainHits.incrementAndGet();
+                maybeAdapt();
+                return mainItem.v;
+            }
         }
+
+        if (creator == null)
+        {
+            maybeAdapt();
+            return null;
+        }
+
+        // Miss - calculate and insert
+        V value = creator.apply(key);
+        long exp = calculateExpiration(now, ttlNanos);
+        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
+
+        // New item - try admission to window
+        if (windowCache.size() < windowSize)
+        {
+            windowCache.put(key, item);
+        }
+        else
+        {
+            // Window is full - evict from window and try admission to main
+            Map.Entry<K, AbstractCache.Item<V>> evicted = windowCache.evict();
+            windowCache.put(key, item);
+
+            // Check if the evicted item is expired!
+            if (evicted.getValue() != null && !evicted.getValue().isExpired(now))
+            {
+                // Admit to main if frequency is good and not expired
+                tryAdmitToMain(evicted.getKey(), evicted.getValue());
+            }
+        }
+
         maybeAdapt();
         return value;
+    }
+
+    @Override
+    public synchronized boolean containsKey(K key)
+    {
+        long now = System.nanoTime();
+
+        // Try window cache first
+        AbstractCache.Item<V> windowItem = windowCache.get(key);
+        if (windowItem != null)
+        {
+            if (windowItem.isExpired(now))
+            {
+                windowCache.remove(key);
+                return false;
+            }
+            return true;
+        }
+
+        // Try main cache
+        AbstractCache.Item<V> mainItem = mainCache.peek(key);
+        if (mainItem != null)
+        {
+            if (mainItem.isExpired(now))
+            {
+                mainCache.remove(key);
+                return false;
+            }
+            return true;
+        }
+
+        return false;
     }
 
     @Override
@@ -153,41 +252,66 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     {
         sketch.increment(key);
 
-        // Check if already exists
+        long now = System.nanoTime();
+        long exp = calculateExpiration(now, ttlNanos);
+        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
+
+        // Check if already exists in window cache
         if (windowCache.contains(key))
         {
-            windowCache.put(key, value);
-            return;
+            AbstractCache.Item<V> existing = windowCache.get(key);
+            if (existing != null && existing.isExpired(now))
+            {
+                windowCache.remove(key);
+            }
+            else
+            {
+                windowCache.put(key, item);
+                return;
+            }
         }
 
+        // Check if already exists in main cache
         if (mainCache.contains(key))
         {
-            mainCache.put(key, value);
-            return;
+            AbstractCache.Item<V> existing = mainCache.peek(key);
+            if (existing != null && existing.isExpired(now))
+            {
+                mainCache.remove(key);
+            }
+            else
+            {
+                mainCache.put(key, item);
+                return;
+            }
         }
 
         // New item - try admission to window
         if (windowCache.size() < windowSize)
         {
-            windowCache.put(key, value);
+            windowCache.put(key, item);
         }
         else
         {
             // Window is full - evict from window and try admission to main
-            Map.Entry<K, V> evicted = windowCache.evict();
-            windowCache.put(key, value);
+            Map.Entry<K, AbstractCache.Item<V>> evicted = windowCache.evict();
+            windowCache.put(key, item);
 
-            // Admit to main if frequency is good
-            tryAdmitToMain(evicted.getKey(), evicted.getValue());
+            // Check if the evicted item is expired!
+            if (evicted.getValue() != null && !evicted.getValue().isExpired(now))
+            {
+                // Admit to main if frequency is good and not expired
+                tryAdmitToMain(evicted.getKey(), evicted.getValue());
+            }
         }
     }
 
-    private void tryAdmitToMain(K key, V value)
+    private void tryAdmitToMain(K key, AbstractCache.Item<V> value)
     {
         admitToMain(key, value, mainSize);
     }
 
-    private void admitToMain(K key, V value, int mainCapacity)
+    private void admitToMain(K key, AbstractCache.Item<V> value, int mainCapacity)
     {
         if (mainCapacity <= 0)
         {
@@ -211,6 +335,17 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         }
 
         K victim = mainCache.peekVictim();
+        if (victim != null)
+        {
+            AbstractCache.Item<V> victimItem = mainCache.peek(victim);
+            if (victimItem != null && victimItem.isExpired(System.nanoTime()))
+            {
+                mainCache.evictVictim();
+                mainCache.put(key, value);
+                return;
+            }
+        }
+
         int candidateFreq = sketch.estimate(key);
         int victimFreq = sketch.estimate(victim);
 
@@ -321,8 +456,11 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         windowCache.setCapacity(newWindowSize);
         while (windowCache.size() > newWindowSize)
         {
-            Map.Entry<K, V> evicted = windowCache.evict();
-            admitToMain(evicted.getKey(), evicted.getValue(), newMainSize);
+            Map.Entry<K, AbstractCache.Item<V>> evicted = windowCache.evict();
+            if (evicted.getValue() != null && !evicted.getValue().isExpired(System.nanoTime()))
+            {
+                admitToMain(evicted.getKey(), evicted.getValue(), newMainSize);
+            }
         }
 
         this.windowSize = newWindowSize;
@@ -359,6 +497,14 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         windowCache.clear();
         mainCache.clear();
     }
+
+    @Override
+    public synchronized void purgeExpired()
+    {
+        long now = System.nanoTime();
+        windowCache.purgeExpired(now);
+        mainCache.purgeExpired(now);
+    }
     
     
     // Simple LRU for window cache
@@ -391,6 +537,11 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
             map.put(key, value);
         }
 
+        void remove(K key)
+        {
+            map.remove(key);
+        }
+
         boolean contains(K key)
         {
             return map.containsKey(key);
@@ -414,6 +565,11 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         void clear()
         {
             map.clear();
+        }
+
+        void purgeExpired(long now)
+        {
+            map.values().removeIf(item -> item != null && ((AbstractCache.Item<?>) item).isExpired(now));
         }
 
         /** Changes the target capacity used by removeEldestEntry(). Does not
@@ -468,6 +624,24 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
             }
 
             return null;
+        }
+
+        V peek(K key)
+        {
+            V value = protect.get(key);
+            if (value != null)
+            {
+                return value;
+            }
+            return probation.get(key);
+        }
+
+        void remove(K key)
+        {
+            if (protect.remove(key) == null)
+            {
+                probation.remove(key);
+            }
         }
 
         void put(K key, V value)
@@ -543,6 +717,12 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         {
             probation.clear();
             protect.clear();
+        }
+
+        void purgeExpired(long now)
+        {
+            probation.values().removeIf(item -> item != null && ((AbstractCache.Item<?>) item).isExpired(now));
+            protect.values().removeIf(item -> item != null && ((AbstractCache.Item<?>) item).isExpired(now));
         }
 
         /** Changes the target capacity (and derived protected-segment size).

@@ -87,9 +87,15 @@ public class NullCache<K,V> extends AbstractCache<K, V> implements Cache<K, V>
      * @return {@code null}
      */
     @Override
-    public V get(K key)
+    public V get(K key, java.util.function.Function<? super K, ? extends V> creator)
     {
-        return null;
+        return creator != null ? creator.apply(key) : null;
+    }
+
+    @Override
+    public boolean containsKey(K key)
+    {
+        return false;
     }
 
     /**
@@ -106,4 +112,8 @@ public class NullCache<K,V> extends AbstractCache<K, V> implements Cache<K, V>
     {        
     }
 
+    @Override
+    public void purgeExpired()
+    {
+    }
 }
