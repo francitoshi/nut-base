@@ -49,7 +49,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
      */
     public HashMapCache(int initialCapacity, long ttlNanos)
     {
-        this.map = new HashMap<>(initialCapacity);
+        this.map = new HashMap<>(Math.min(initialCapacity, 1024 * 1024));
         this.ttlNanos = ttlNanos;
     }
 
