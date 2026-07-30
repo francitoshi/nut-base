@@ -20,7 +20,7 @@ public class CacheBenchmarkTest
     {
         int N = 4000;
         int C = 400;
-        int T = 1;
+        int T = 1000;
         Cache<Integer, String> cache0 = new TinyLFUCache<Integer, String>(C).synchronizedCache();
         Cache<Integer, String> cache1 = new ARCCache<Integer, String>(C).synchronizedCache();
         Cache<Integer, String> cache2 = new LRULFUCache<Integer, String>(C).synchronizedCache();
