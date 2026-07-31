@@ -384,7 +384,7 @@ public class Queen implements AutoCloseable, Executor
      *
      * @param task the task to spawn; must not be {@code null}
      */
-    public void spawn(Runnable task)
+    public Queen spawn(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
 
@@ -405,6 +405,7 @@ public class Queen implements AutoCloseable, Executor
             Thread.currentThread().interrupt();
             this.threadPoolExecutor.execute(wrap(task)); // fallback: do not lose the task
         }
+        return this;
     }
 
     /**

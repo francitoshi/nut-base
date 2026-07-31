@@ -211,6 +211,13 @@ public class Hive extends Queen implements AutoCloseable, Executor
         return new Hive(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
     }
 
+    @Override
+    public Hive spawn(Runnable task)
+    {
+        super.spawn(task);
+        return this;
+    }   
+    
     /**
      * Attaches one or more pre-built Bee stages to this Hive, so that messages
      * sent to them are processed on this Hive's thread pool. Useful when a Bee

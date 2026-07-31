@@ -148,10 +148,7 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
         @Override
         public Cache<K, V> synchronizedCache()
         {
-            synchronized(lock)
-            {
-                return this;
-            }
+            return this;
         }
     }
     

@@ -204,15 +204,15 @@ class ScopeGuardTest
     }
 
     // ---------------------------------------------------------------
-    // asThreadSafe()
+    // threadSafe()
     // ---------------------------------------------------------------
 
     @Test
-    void asThreadSafeReturnsWorkingWrapper()
+    void threadSafeReturnsWorkingWrapper()
     {
         AtomicInteger counter = new AtomicInteger(0);
 
-        try (ScopeGuard guard = ScopeGuard.create().asThreadSafe())
+        try (ScopeGuard guard = ScopeGuard.create().threadSafe())
         {
             guard.onExit(counter::incrementAndGet);
             guard.onExit(counter::incrementAndGet);
@@ -222,10 +222,10 @@ class ScopeGuardTest
     }
 
     @Test
-    void asThreadSafeCalledTwiceDoesNotDoubleWrap()
+    void threadSafeCalledTwiceDoesNotDoubleWrap()
     {
-        ScopeGuard guard = ScopeGuard.create().asThreadSafe();
-        ScopeGuard wrappedAgain = guard.asThreadSafe();
+        ScopeGuard guard = ScopeGuard.create().threadSafe();
+        ScopeGuard wrappedAgain = guard.threadSafe();
 
         assertSame(guard, wrappedAgain);
     }
@@ -236,7 +236,7 @@ class ScopeGuardTest
         int threadCount = 16;
         int actionsPerThread = 100;
 
-        ScopeGuard guard = ScopeGuard.create().asThreadSafe();
+        ScopeGuard guard = ScopeGuard.create().threadSafe();
         AtomicInteger counter = new AtomicInteger(0);
 
         ExecutorService pool = Executors.newFixedThreadPool(threadCount);
@@ -280,7 +280,7 @@ class ScopeGuardTest
     @Test
     void threadSafeWrapperOnlyRunsActionsOnce() throws InterruptedException
     {
-        ScopeGuard guard = ScopeGuard.create().asThreadSafe();
+        ScopeGuard guard = ScopeGuard.create().threadSafe();
         AtomicInteger counter = new AtomicInteger(0);
         guard.onExit(counter::incrementAndGet);
 
@@ -321,7 +321,7 @@ class ScopeGuardTest
     {
         AtomicInteger counter = new AtomicInteger(0);
 
-        ScopeGuard guard = ScopeGuard.create().asThreadSafe();
+        ScopeGuard guard = ScopeGuard.create().threadSafe();
         guard.onExit(counter::incrementAndGet);
         guard.dismiss();
         guard.close();

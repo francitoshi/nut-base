@@ -16,7 +16,7 @@ import java.util.Objects;
  * <p>The core implementation is <b>not</b> thread-safe, since the common
  * case is a guard created and used within a single method / single thread
  * (e.g. inside a try-with-resources block). If you need to share a guard
- * across threads, wrap it with {@link #asThreadSafe()}.
+ * across threads, wrap it with {@link #threadSafe()}.
  *
  * <p>Typical usage with try-with-resources:
  * <pre>{@code
@@ -48,7 +48,7 @@ import java.util.Objects;
  *
  * <p>Thread-safe usage, when a guard must be shared across threads:
  * <pre>{@code
- * ScopeGuard guard = ScopeGuard.create().asThreadSafe();
+ * ScopeGuard guard = ScopeGuard.create().threadSafe();
  * // onExit / dismiss / close can now be called concurrently
  * }</pre>
  */
@@ -94,7 +94,7 @@ public class ScopeGuard implements AutoCloseable
      *
      * @return a new ScopeGuard instance that delegates to this one under a lock
      */
-    public ScopeGuard asThreadSafe()
+    public ScopeGuard threadSafe()
     {
         return new SynchronizedScopeGuard(this);
     }
@@ -200,7 +200,7 @@ public class ScopeGuard implements AutoCloseable
         }
 
         @Override
-        public ScopeGuard asThreadSafe()
+        public ScopeGuard threadSafe()
         {
             return this; // already thread-safe, no need to wrap again
         }

@@ -270,9 +270,10 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public void spawn(Runnable task)
+    public ProxyHive spawn(Runnable task)
     {
         hive.spawn(task);
+        return this;
     }
 
     @Override
