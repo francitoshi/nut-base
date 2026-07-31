@@ -16,6 +16,11 @@ import java.util.concurrent.TimeUnit;
  * <p>Unlike debouncing, throttling ensures that a task is executed immediately (leading)
  * and subsequent calls within the interval window are ignored (throttled).</p>
  *
+ * <p>Note: the throttle window is reserved <em>before</em> the task actually runs. If the
+ * task (or, when using an {@link Executor}, the call to {@link Executor#execute(Runnable)})
+ * throws an exception, the throttler's internal state is not rolled back; the interval is
+ * still considered "consumed" as if the task had completed successfully.</p>
+ *
  * <p>Example usage:</p>
  * <pre>{@code
  * Throttler throttler = Throttler.of(1, TimeUnit.SECONDS);
@@ -30,6 +35,7 @@ import java.util.concurrent.TimeUnit;
  */
 public final class Throttler
 {
+    private final Object lock = new Object();
     private final long intervalNanos;
     private final Executor executor;
 
@@ -72,28 +78,41 @@ public final class Throttler
      * since the last execution has elapsed), the task is run and this method returns
      * {@code true}. Otherwise, the task is dropped and this method returns {@code false}.
      *
+     * <p>The internal state (last-execution timestamp) is updated under lock, but the
+     * task itself is invoked <em>outside</em> the lock, so it cannot block concurrent
+     * calls to {@link #isReady()}, {@link #getRemainingDelay(TimeUnit)}, {@link #reset()},
+     * or other invocations of this method.</p>
+     *
      * @param task the task to execute; must not be {@code null}
      * @return {@code true} if the task was executed, {@code false} if it was throttled
      * @throws NullPointerException if task is null
      */
-    public synchronized boolean submit(Runnable task)
+    public boolean submit(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
-        if (isReady())
+
+        synchronized (lock)
         {
+            if (!isReady())
+            {
+                return false;
+            }
             lastExecutionNanos = System.nanoTime();
             hasExecuted = true;
-            if (executor != null)
-            {
-                executor.execute(task);
-            }
-            else
-            {
-                task.run();
-            }
-            return true;
         }
-        return false;
+
+        // Run the task outside the lock so a slow task (or a blocking Executor.execute,
+        // e.g. a bounded queue with CallerRunsPolicy) does not stall other threads that
+        // are only checking state (isReady/getRemainingDelay) or calling reset().
+        if (executor != null)
+        {
+            executor.execute(task);
+        }
+        else
+        {
+            task.run();
+        }
+        return true;
     }
 
     /**
@@ -102,13 +121,16 @@ public final class Throttler
      * @return {@code true} if the interval delay has elapsed since the last execution,
      *         or if no task has been executed yet; otherwise {@code false}
      */
-    public synchronized boolean isReady()
+    public boolean isReady()
     {
-        if (!hasExecuted)
+        synchronized (lock)
         {
-            return true;
+            if (!hasExecuted)
+            {
+                return true;
+            }
+            return System.nanoTime() - lastExecutionNanos >= intervalNanos;
         }
-        return System.nanoTime() - lastExecutionNanos >= intervalNanos;
     }
 
     /**
@@ -118,25 +140,31 @@ public final class Throttler
      * @return the remaining delay in the specified unit, or 0 if it is ready immediately
      * @throws NullPointerException if unit is null
      */
-    public synchronized long getRemainingDelay(TimeUnit unit)
+    public long getRemainingDelay(TimeUnit unit)
     {
-        Objects.requireNonNull(unit, "unit must not be null");
-        if (!hasExecuted)
+        synchronized (lock)
         {
-            return 0L;
+            Objects.requireNonNull(unit, "unit must not be null");
+            if (!hasExecuted)
+            {
+                return 0L;
+            }
+            long elapsed = System.nanoTime() - lastExecutionNanos;
+            long remaining = intervalNanos - elapsed;
+            return remaining <= 0 ? 0L : unit.convert(remaining, TimeUnit.NANOSECONDS);
         }
-        long elapsed = System.nanoTime() - lastExecutionNanos;
-        long remaining = intervalNanos - elapsed;
-        return remaining <= 0 ? 0L : unit.convert(remaining, TimeUnit.NANOSECONDS);
     }
 
     /**
      * Resets the throttler state, making it ready immediately.
      */
-    public synchronized void reset()
+    public void reset()
     {
-        hasExecuted = false;
-        lastExecutionNanos = 0L;
+        synchronized (lock)
+        {
+            hasExecuted = false;
+            lastExecutionNanos = 0L;
+        }
     }
 
     /**

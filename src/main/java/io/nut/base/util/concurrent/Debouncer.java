@@ -30,6 +30,7 @@ public final class Debouncer implements AutoCloseable
 {
     private static final Logger LOGGER = Logger.getLogger(Debouncer.class.getName());
 
+    private final Object lock = new Object();
     private final long delayNanos;
     private final ScheduledExecutorService scheduler;
     private final Executor executor;
@@ -42,6 +43,14 @@ public final class Debouncer implements AutoCloseable
     private DebouncedTask pendingTask;
     private boolean cooldownActive;
     private boolean shutdown;
+    // Monotonically increasing token. Every time a new schedule "supersedes"
+    // a previous one, generation is bumped. Scheduled callbacks capture the
+    // generation that was current when *they* were scheduled and check it
+    // again once they acquire the lock: if it no longer matches, another
+    // call already superseded them (even if Future.cancel(false) failed
+    // because the callback had already started running), so they become a
+    // no-op instead of firing a stale/premature execution.
+    private long generation;
 
     private Debouncer(Builder builder)
     {
@@ -131,7 +140,10 @@ public final class Debouncer implements AutoCloseable
 
     private void submitInternal(DebouncedTask task)
     {
-        synchronized (this)
+        boolean fireScheduled = false;
+        boolean fireCancelled = false;
+
+        synchronized (lock)
         {
             if (shutdown)
             {
@@ -141,8 +153,9 @@ public final class Debouncer implements AutoCloseable
             if (leading && !cooldownActive)
             {
                 cooldownActive = true;
-                scheduledFuture = scheduler.schedule(this::onCooldownExpired, delayNanos, TimeUnit.NANOSECONDS);
-                executor.execute(task);
+                long gen = ++generation;
+                scheduledFuture = scheduler.schedule(() -> onCooldownExpired(gen), delayNanos, TimeUnit.NANOSECONDS);
+                safeExecute(task);
             }
             else
             {
@@ -150,49 +163,48 @@ public final class Debouncer implements AutoCloseable
                 {
                     if (pendingTask != null)
                     {
-                        if (listener != null)
-                        {
-                            try
-                            {
-                                listener.onCancelled();
-                            }
-                            catch (RuntimeException e)
-                            {
-                                LOGGER.log(Level.WARNING, "Error in listener onCancelled", e);
-                            }
-                        }
+                        fireCancelled = true;
                     }
+                    // generation is bumped below regardless of what cancel()
+                    // returns, so even if this future already fired and is
+                    // waiting on the lock, its callback will see a stale
+                    // generation and do nothing.
                     scheduledFuture.cancel(false);
                 }
 
                 if (trailing || !leading)
                 {
                     pendingTask = task;
-                    if (listener != null)
-                    {
-                        try
-                        {
-                            listener.onScheduled();
-                        }
-                        catch (RuntimeException e)
-                        {
-                            LOGGER.log(Level.WARNING, "Error in listener onScheduled", e);
-                        }
-                    }
+                    fireScheduled = true;
+                    long gen = ++generation;
                     if (leading)
                     {
-                        scheduledFuture = scheduler.schedule(this::onCooldownExpired, delayNanos, TimeUnit.NANOSECONDS);
+                        scheduledFuture = scheduler.schedule(() -> onCooldownExpired(gen), delayNanos, TimeUnit.NANOSECONDS);
                     }
                     else
                     {
-                        scheduledFuture = scheduler.schedule(this::executePending, delayNanos, TimeUnit.NANOSECONDS);
+                        scheduledFuture = scheduler.schedule(() -> executePending(gen), delayNanos, TimeUnit.NANOSECONDS);
                     }
                 }
                 else
                 {
-                    scheduledFuture = scheduler.schedule(this::onCooldownExpired, delayNanos, TimeUnit.NANOSECONDS);
+                    long gen = ++generation;
+                    scheduledFuture = scheduler.schedule(() -> onCooldownExpired(gen), delayNanos, TimeUnit.NANOSECONDS);
                 }
             }
+        }
+
+        // Listener callbacks are invoked outside the lock so a slow/blocking
+        // listener can't stall submit()/cancel()/flush() on other threads
+        // (this also matches how onExecuted() is already invoked outside
+        // the lock in DebouncedTask.run()).
+        if (fireCancelled)
+        {
+            notifyCancelled();
+        }
+        if (fireScheduled)
+        {
+            notifyScheduled();
         }
     }
 
@@ -203,9 +215,15 @@ public final class Debouncer implements AutoCloseable
      */
     public boolean cancel()
     {
-        synchronized (this)
+        boolean cancelled;
+        boolean fireCancelled = false;
+
+        synchronized (lock)
         {
-            boolean cancelled = false;
+            cancelled = false;
+            // Invalidate any in-flight scheduled callback, even one that has
+            // already started running and is waiting on this lock.
+            generation++;
             if (scheduledFuture != null)
             {
                 scheduledFuture.cancel(false);
@@ -216,21 +234,16 @@ public final class Debouncer implements AutoCloseable
             {
                 pendingTask = null;
                 cancelled = true;
-                if (listener != null)
-                {
-                    try
-                    {
-                        listener.onCancelled();
-                    }
-                    catch (RuntimeException e)
-                    {
-                        LOGGER.log(Level.WARNING, "Error in listener onCancelled", e);
-                    }
-                }
+                fireCancelled = true;
             }
             cooldownActive = false;
-            return cancelled;
         }
+
+        if (fireCancelled)
+        {
+            notifyCancelled();
+        }
+        return cancelled;
     }
 
     /**
@@ -240,7 +253,7 @@ public final class Debouncer implements AutoCloseable
      */
     public boolean flush()
     {
-        synchronized (this)
+        synchronized (lock)
         {
             if (pendingTask != null)
             {
@@ -251,8 +264,9 @@ public final class Debouncer implements AutoCloseable
                     scheduledFuture.cancel(false);
                 }
                 cooldownActive = true;
-                scheduledFuture = scheduler.schedule(this::onCooldownExpired, delayNanos, TimeUnit.NANOSECONDS);
-                executor.execute(task);
+                long gen = ++generation;
+                scheduledFuture = scheduler.schedule(() -> onCooldownExpired(gen), delayNanos, TimeUnit.NANOSECONDS);
+                safeExecute(task);
                 return true;
             }
             return false;
@@ -266,7 +280,7 @@ public final class Debouncer implements AutoCloseable
      */
     public boolean isPending()
     {
-        synchronized (this)
+        synchronized (lock)
         {
             return pendingTask != null;
         }
@@ -284,31 +298,44 @@ public final class Debouncer implements AutoCloseable
         return unit.convert(delayNanos, TimeUnit.NANOSECONDS);
     }
 
-    private void executePending()
+    private void executePending(long gen)
     {
         DebouncedTask task;
-        synchronized (this)
+        synchronized (lock)
         {
+            if (gen != generation)
+            {
+                // Superseded by a later submit()/cancel()/flush() while this
+                // callback was already in flight: do nothing, the current
+                // state belongs to whoever bumped the generation.
+                return;
+            }
             task = pendingTask;
             pendingTask = null;
             scheduledFuture = null;
         }
         if (task != null)
         {
-            executor.execute(task);
+            safeExecute(task);
         }
     }
 
-    private void onCooldownExpired()
+    private void onCooldownExpired(long gen)
     {
         DebouncedTask task = null;
-        synchronized (this)
+        synchronized (lock)
         {
+            if (gen != generation)
+            {
+                // Stale invocation, see executePending(long) above.
+                return;
+            }
             if (pendingTask != null)
             {
                 task = pendingTask;
                 pendingTask = null;
-                scheduledFuture = scheduler.schedule(this::onCooldownExpired, delayNanos, TimeUnit.NANOSECONDS);
+                long newGen = ++generation;
+                scheduledFuture = scheduler.schedule(() -> onCooldownExpired(newGen), delayNanos, TimeUnit.NANOSECONDS);
             }
             else
             {
@@ -318,7 +345,67 @@ public final class Debouncer implements AutoCloseable
         }
         if (task != null)
         {
+            safeExecute(task);
+        }
+    }
+
+    /**
+     * Submits a task to the configured executor, catching and logging any
+     * exception the executor itself throws (e.g. a {@link
+     * java.util.concurrent.RejectedExecutionException} if a user-supplied
+     * executor was shut down externally) instead of letting it escape from
+     * internal scheduler callbacks.
+     */
+    private void safeExecute(DebouncedTask task)
+    {
+        try
+        {
             executor.execute(task);
+        }
+        catch (RuntimeException e)
+        {
+            LOGGER.log(Level.WARNING, "Error submitting debounced task to executor", e);
+            if (listener != null)
+            {
+                try
+                {
+                    listener.onExecuted(e);
+                }
+                catch (RuntimeException ex)
+                {
+                    LOGGER.log(Level.WARNING, "Error in listener onExecuted", ex);
+                }
+            }
+        }
+    }
+
+    private void notifyScheduled()
+    {
+        if (listener != null)
+        {
+            try
+            {
+                listener.onScheduled();
+            }
+            catch (RuntimeException e)
+            {
+                LOGGER.log(Level.WARNING, "Error in listener onScheduled", e);
+            }
+        }
+    }
+
+    private void notifyCancelled()
+    {
+        if (listener != null)
+        {
+            try
+            {
+                listener.onCancelled();
+            }
+            catch (RuntimeException e)
+            {
+                LOGGER.log(Level.WARNING, "Error in listener onCancelled", e);
+            }
         }
     }
 
@@ -332,7 +419,7 @@ public final class Debouncer implements AutoCloseable
      */
     public void shutdown()
     {
-        synchronized (this)
+        synchronized (lock)
         {
             if (shutdown)
             {
