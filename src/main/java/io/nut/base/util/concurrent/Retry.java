@@ -13,6 +13,8 @@ import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A thread-safe, immutable utility class for executing tasks with retry logic.
@@ -36,6 +38,8 @@ import java.util.function.Predicate;
  */
 public final class Retry
 {
+    private static final Logger LOGGER = Logger.getLogger(Retry.class.getName());
+    
     private static final Sleeper DEFAULT_SLEEPER = Thread::sleep;
     private static final Retry DEFAULTS = new Builder().build();
 
@@ -122,6 +126,10 @@ public final class Retry
                     }
                     continue;
                 }
+                if (t instanceof InterruptedException)
+                {
+                    Thread.currentThread().interrupt();
+                }
                 if (t instanceof Exception)
                 {
                     throw (Exception) t;
@@ -164,6 +172,10 @@ public final class Retry
                         sleeper.sleep(delay);
                     }
                     continue;
+                }
+                if (t instanceof InterruptedException)
+                {
+                    Thread.currentThread().interrupt();
                 }
                 if (t instanceof Exception)
                 {
@@ -219,17 +231,35 @@ public final class Retry
 
     private boolean isInterrupt(Throwable t)
     {
-        return t instanceof InterruptedException || t instanceof InterruptedIOException;
+        for (Throwable current = t; current != null; current = current.getCause())
+        {
+            if (current instanceof InterruptedException || current instanceof InterruptedIOException)
+            {
+                return true;
+            }
+            if (current.getCause() == current)
+            {
+                break; // evita bucle infinito si una excepción se referencia a sí misma como causa
+            }
+        }
+        return false;
     }
-
+    
     private void notifyListeners(int attempt, Throwable error, long delayMillis)
     {
         for (RetryListener listener : listeners)
         {
-            listener.onFailure(attempt, error, delayMillis);
+            try
+            {
+                listener.onFailure(attempt, error, delayMillis);
+            }
+            catch (RuntimeException listenerError)
+            {
+                LOGGER.log(Level.INFO, "", listenerError);
+            }
         }
     }
-
+    
     /**
      * A builder for configuring and creating instances of {@link Retry}.
      */
@@ -548,7 +578,8 @@ public final class Retry
             {
                 throw new IllegalArgumentException("percentage must be between 0.0 and 1.0: " + percentage);
             }
-            return attempt -> {
+            return attempt -> 
+            {
                 long delay = backoff.delayMillis(attempt);
                 if (delay <= 0)
                 {
