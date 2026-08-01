@@ -1,22 +1,7 @@
 /*
- * BagBaseTest.java
- *
- * Copyright (c) 2024 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.bag;
 
@@ -261,5 +246,50 @@ public class BagBaseTest
             String[] exp2 = {"b"};
             assertArrayEquals(exp2, instance.get("b"));
         }        
+    }
+
+    static class Base {
+        final String name;
+        Base(String name) { this.name = name; }
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Base base = (Base) o;
+            return name != null ? name.equals(base.name) : base.name == null;
+        }
+        @Override
+        public int hashCode() { return name != null ? name.hashCode() : 0; }
+    }
+    static class Sub1 extends Base {
+        Sub1(String name) { super(name); }
+    }
+    static class Sub2 extends Base {
+        Sub2(String name) { super(name); }
+    }
+
+    @Test
+    public void testHeterogeneousSubclasses()
+    {
+        Bag<Base> bag = Bag.create();
+        Sub1 s1 = new Sub1("one");
+        Sub2 s2 = new Sub2("two");
+
+        bag.add(s1);
+        bag.add(s2);
+
+        Base[] res1 = bag.get(s1);
+        assertNotNull(res1);
+        assertEquals(1, res1.length);
+        assertTrue(res1[0] instanceof Sub1);
+
+        Base[] res2 = bag.get(s2);
+        assertNotNull(res2);
+        assertEquals(1, res2.length);
+        assertTrue(res2[0] instanceof Sub2);
+
+        Base[][] res2d = bag.toArray(new Base[0][0]);
+        assertNotNull(res2d);
+        assertEquals(2, res2d.length);
     }
 }

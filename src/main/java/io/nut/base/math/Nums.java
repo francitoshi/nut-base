@@ -1,22 +1,7 @@
 /*
- *  Nums.java
- *
- *  Copyright (c) 2024-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.math;
 
@@ -570,9 +555,9 @@ public class Nums
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     public static long ITER = 1000;
     public static MathContext context = new MathContext( 100 );
-    private static final int ROUNDING_MODE = BigDecimal.ROUND_HALF_EVEN;
-    public static BigDecimal PI_DIV_180 = new BigDecimal("3.1415926535897932384626433832795").divide(BigDecimal.valueOf(180), 32, BigDecimal.ROUND_HALF_UP);
-    public static BigDecimal PI_DIV_200 = new BigDecimal("3.1415926535897932384626433832795").divide(BigDecimal.valueOf(200), 32, BigDecimal.ROUND_HALF_UP);
+    private static final RoundingMode ROUNDING_MODE = RoundingMode.HALF_EVEN;
+    public static BigDecimal PI_DIV_180 = new BigDecimal("3.1415926535897932384626433832795").divide(BigDecimal.valueOf(180), 32, RoundingMode.HALF_UP);
+    public static BigDecimal PI_DIV_200 = new BigDecimal("3.1415926535897932384626433832795").divide(BigDecimal.valueOf(200), 32, RoundingMode.HALF_UP);
     public static BigDecimal EPS = BigDecimal.ONE.scaleByPowerOfTen(-100);
 
  
@@ -642,7 +627,7 @@ public class Nums
         BigDecimal sin = sine(x);
         BigDecimal cos = cosine(x);
 
-        return sin.divide(cos, SCALE, BigDecimal.ROUND_HALF_UP);
+        return sin.divide(cos, SCALE, RoundingMode.HALF_UP);
     }
     
     public static BigDecimal log10(BigDecimal b) {

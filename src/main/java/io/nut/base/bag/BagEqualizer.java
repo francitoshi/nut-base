@@ -1,22 +1,7 @@
 /*
- * BagEqualizer.java
- *
- * Copyright (c) 2024 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.bag;
 
@@ -35,7 +20,6 @@ import java.util.Set;
  */
 public class BagEqualizer<E> extends Bag<E>
 {
-    private volatile E[] empty;
     private final Bag<EqualsProxy<E>> data;
     private final Equalizer<E> equalizer;
     private final Set<EqualsSame<E>> set;
@@ -108,7 +92,6 @@ public class BagEqualizer<E> extends Bag<E>
     @Override
     public E[][] toArray(E[][] dst)
     {
-        E[] empty = this.empty;
         ArrayList<E[]> items = new ArrayList<>();
         
         EqualsProxy<E>[][] array1st = data.toArray(new EqualsProxy[0][0]);
@@ -116,17 +99,15 @@ public class BagEqualizer<E> extends Bag<E>
         for( EqualsProxy<E>[] array2nd : array1st)
         {
             ArrayList<E> sub = new ArrayList<>();
-            
             for( EqualsProxy<E> p : array2nd)
             {
-                E e = p.data;
-                if(empty==null)
-                {
-                    empty = this.empty = (E[]) Array.newInstance(e.getClass(), 0);
-                }
-                sub.add(e);
+                sub.add(p.data);
             }
-            items.add(sub.toArray(empty));
+            if (!sub.isEmpty())
+            {
+                E[] subArray = (E[]) Array.newInstance(sub.get(0).getClass(), sub.size());
+                items.add(sub.toArray(subArray));
+            }
         }
         return items.toArray(dst);
     }
