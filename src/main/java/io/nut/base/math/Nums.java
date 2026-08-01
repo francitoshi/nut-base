@@ -1393,15 +1393,16 @@ public class Nums
         return 1L << pow;
     }
 
-    public static int gcd(int a, int ... b)
+    public static int gcd(int ... values)
     {
-        int result = a;
-        if (b != null)
+        if (values == null || values.length == 0)
         {
-            for (int element : b)
-            {
-                result = gcd(result, element);
-            }
+            return 0;
+        }
+        int result = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            result = gcd(result, values[i]);
         }
         return result;
     }
@@ -1483,61 +1484,96 @@ public class Nums
         return count;
     }
 
-    public static double maxDouble(double a, double... b) 
+    public static double maxDouble(double... values) 
     {
-        for(int i=0;i<b.length;i++)
+        if (values == null || values.length == 0)
         {
-            a = Math.max(a,b[i]);
+            return 0.0;
         }
-        return a;
+        double max = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            max = Math.max(max, values[i]);
+        }
+        return max;
     }
-    public static float maxFloat(float a, float... b) 
+    public static float maxFloat(float... values) 
     {
-        for(int i=0;i<b.length;i++)
+        if (values == null || values.length == 0)
         {
-            a = Math.max(a,b[i]);
+            return 0.0f;
         }
-        return a;
+        float max = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            max = Math.max(max, values[i]);
+        }
+        return max;
     }
-    public static int maxInteger(int a, int... b)
+    public static int maxInteger(int... values)
     {
-        for(int i=0;i<b.length;i++)
+        if (values == null || values.length == 0)
         {
-            a = Math.max(a,b[i]);
+            return 0;
         }
-        return a;
+        int max = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            max = Math.max(max, values[i]);
+        }
+        return max;
     }
-    public static long	maxLong(long a, long... b) 
+    public static long	maxLong(long... values) 
     {
-        for(int i=0;i<b.length;i++)
+        if (values == null || values.length == 0)
         {
-            a = Math.max(a,b[i]);
+            return 0L;
         }
-        return a;
+        long max = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            max = Math.max(max, values[i]);
+        }
+        return max;
     }
-    public static double minDouble(double a, double... b) 
+    public static double minDouble(double... values) 
     {
-        for(int i=0;i<b.length;i++)
+        if (values == null || values.length == 0)
         {
-            a = Math.min(a,b[i]);
+            return 0.0;
         }
-        return a;
+        double min = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            min = Math.min(min, values[i]);
+        }
+        return min;
     }
-    public static float minFloat(float a, float... b) 
+    public static float minFloat(float... values) 
     {
-        for(int i=0;i<b.length;i++)
+        if (values == null || values.length == 0)
         {
-            a = Math.min(a,b[i]);
+            return 0.0f;
         }
-        return a;
+        float min = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            min = Math.min(min, values[i]);
+        }
+        return min;
     }
-    public static int minInteger(int a, int... b) 
+    public static int minInteger(int... values) 
     {
-        for(int i=0;i<b.length;i++)
+        if (values == null || values.length == 0)
         {
-            a = Math.min(a,b[i]);
+            return 0;
         }
-        return a;
+        int min = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            min = Math.min(min, values[i]);
+        }
+        return min;
     }
     public static long	minLong(long... items) 
     {
@@ -1620,15 +1656,16 @@ public class Nums
         }
     }
         
-    public static long gcd(long a, long ... b)
+    public static long gcd(long ... values)
     {
-        long result = a;
-        if (b != null)
+        if (values == null || values.length == 0)
         {
-            for (long element : b)
-            {
-                result = gcd(result, element);
-            }
+            return 0;
+        }
+        long result = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            result = gcd(result, values[i]);
         }
         return result;
     }
@@ -1637,15 +1674,16 @@ public class Nums
         return a.gcd(b);
     }
 
-    public static BigInteger gcd(BigInteger a, BigInteger... b)
+    public static BigInteger gcd(BigInteger... values)
     {
-        BigInteger result = a;
-        if (b != null)
+        if (values == null || values.length == 0)
         {
-            for (BigInteger element : b)
-            {
-                result = gcd(result, element);
-            }
+            return BigInteger.ZERO;
+        }
+        BigInteger result = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            result = gcd(result, values[i]);
         }
         return result;
     }
@@ -1654,15 +1692,16 @@ public class Nums
     {
         return (a*b)/gcd(a,b);
     }
-    public static long lcm(long a, long ... b)
+    public static long lcm(long ... values)
     {
-        long result = a;
-        if (b != null)
+        if (values == null || values.length == 0)
         {
-            for (long element : b)
-            {
-                result = lcm(result, element);
-            }
+            return 0;
+        }
+        long result = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            result = lcm(result, values[i]);
         }
         return result;
     }
@@ -1671,15 +1710,16 @@ public class Nums
         return a.multiply(b).divide(gcd(a, b));
     }
 
-    public static BigInteger lcm(BigInteger a, BigInteger... b)
+    public static BigInteger lcm(BigInteger... values)
     {
-        BigInteger result = a;
-        if (b != null)
+        if (values == null || values.length == 0)
         {
-            for (BigInteger element : b)
-            {
-                result = lcm(result, element);
-            }
+            return BigInteger.ZERO;
+        }
+        BigInteger result = values[0];
+        for (int i = 1; i < values.length; i++)
+        {
+            result = lcm(result, values[i]);
         }
         return result;
     }
