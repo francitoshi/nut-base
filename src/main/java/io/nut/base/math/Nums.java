@@ -18,8 +18,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Random;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  *
@@ -358,7 +356,6 @@ public class Nums
             ixPrev = ix;
             // x = (x + n/x)/2
             ix = ix.add(n.divide(ix)).shiftRight(1);
-            Thread.yield();
         } 
         while (ix.compareTo(ixPrev) != 0);
 
@@ -673,30 +670,46 @@ public class Nums
         return ans;
     }
     
-    public static BigDecimal cuberoot(BigDecimal b) {
+    public static BigDecimal cuberoot(BigDecimal b) 
+    {
+        if (b.compareTo(BigDecimal.ZERO) == 0 || b.compareTo(BigDecimal.ONE) == 0)
+        {
+            return b;
+        }
+
         // Specify a math context with 40 digits of precision.
 
         MathContext mc = new MathContext(40);
 
         BigDecimal x = new BigDecimal("1", mc);
+        BigDecimal xPrev;
 
         // Search for the cube root via the Newton-Raphson loop. Output each // successive iteration's value.
 
-        for (int i = 0; i < ITER; i++) {
+        for (int i = 0; i < ITER; i++) 
+        {
+            xPrev = x;
             x = x.subtract(x.pow(3, mc).subtract(b, mc).divide(new BigDecimal("3", mc).multiply(x.pow(2, mc), mc), mc), mc);
+            if (x.compareTo(xPrev) == 0)
+            {
+                break;
+            }
         }
         return x;
     }
 
-    public static BigDecimal asin(BigDecimal val) {
+    public static BigDecimal asin(BigDecimal val)
+    {
         return BigDecimal.valueOf(Math.asin(val.doubleValue()));
     }
 
-    public static BigDecimal acos(BigDecimal val) {
+    public static BigDecimal acos(BigDecimal val)
+    {
         return BigDecimal.valueOf(Math.acos(val.doubleValue()));
     }
 
-    public static BigDecimal atan(BigDecimal val) {
+    public static BigDecimal atan(BigDecimal val)
+    {
         return BigDecimal.valueOf(Math.atan(val.doubleValue()));
     }    
     
@@ -1382,53 +1395,38 @@ public class Nums
 
     public static int gcd(int a, int ... b)
     {
-        return gcd(a,gcd(b,0,b.length));
-    }
-    private static int gcd(int[] n,int from, int to)
-    {
-        if (from == to)
+        int result = a;
+        if (b != null)
         {
-            return 0;
+            for (int element : b)
+            {
+                result = gcd(result, element);
+            }
         }
-        if(from+1 == to)
-        {
-            return n[from];
-        }
-        if(from+2 == to)
-        {
-            return gcd(n[from],n[from+1]);
-        }
-        int mid = (from+to)/2;
-        return gcd(gcd(n,from,mid),gcd(n,mid,to));
+        return result;
     }
 
     public static int lcm(int a, int b)
     {
-        return (a*b)/gcd(a,b);
+//        return (a*b)/gcd(a,b);
+        return (a / gcd(a,b)) * b;
     }
-    public static int lcm(int a, int ... b)
+    public static int lcm(int ... values)
     {
-        return lcm(a,lcm(b,0,b.length));
-    }
-
-    private static int lcm(int[] n,int from, int to)
-    {
-        if (from == to)
+        if (values == null || values.length == 0)
         {
             return 0;
         }
-        if(from+1 == to)
+        int result = values[0];
+        for (int i = 1; i < values.length; i++)
         {
-            return n[from];
+            result = lcm(result, values[i]);
         }
-        if(from+2 == to)
-        {
-            return lcm(n[from],n[from+1]);
-        }
-        int mid = (from+to)/2;
-        return lcm(lcm(n,from,mid),lcm(n,mid,to));
+        return result;
     }   
+    
     static final double[] log_cache=new double[256];
+    
     public static double log(int n)
     {
         if(n==1)
@@ -1624,24 +1622,15 @@ public class Nums
         
     public static long gcd(long a, long ... b)
     {
-        return gcd(a,gcd(b,0,b.length));
-    }
-    private static long gcd(long[] n,int from, int to)
-    {
-        if (from == to)
+        long result = a;
+        if (b != null)
         {
-            return 0;
+            for (long element : b)
+            {
+                result = gcd(result, element);
+            }
         }
-        if(from+1 == to)
-        {
-            return n[from];
-        }
-        if(from+2 == to)
-        {
-            return gcd(n[from],n[from+1]);
-        }
-        int mid = (from+to)/2;
-        return gcd(gcd(n,from,mid),gcd(n,mid,to));
+        return result;
     }
     public static BigInteger gcd(BigInteger a, BigInteger b)
     {
@@ -1650,25 +1639,15 @@ public class Nums
 
     public static BigInteger gcd(BigInteger a, BigInteger... b)
     {
-        return gcd(a, gcd(b, 0, b.length));
-    }
-
-    private static BigInteger gcd(BigInteger[] n, int from, int to)
-    {
-        if (from == to)
+        BigInteger result = a;
+        if (b != null)
         {
-            return BigInteger.ZERO;
+            for (BigInteger element : b)
+            {
+                result = gcd(result, element);
+            }
         }
-        if (from + 1 == to)
-        {
-            return n[from];
-        }
-        if (from + 2 == to)
-        {
-            return gcd(n[from], n[from + 1]);
-        }
-        int mid = (from + to) / 2;
-        return gcd(gcd(n, from, mid), gcd(n, mid, to));
+        return result;
     }
 
     public static long lcm(long a, long b)
@@ -1677,25 +1656,15 @@ public class Nums
     }
     public static long lcm(long a, long ... b)
     {
-        return lcm(a,lcm(b,0,b.length));
-    }
-
-    private static long lcm(long[] n, int from, int to)
-    {
-        if (from == to)
+        long result = a;
+        if (b != null)
         {
-            return 0;
+            for (long element : b)
+            {
+                result = lcm(result, element);
+            }
         }
-        if(from+1 == to)
-        {
-            return n[from];
-        }
-        if(from+2 == to)
-        {
-            return lcm(n[from],n[from+1]);
-        }
-        int mid = (from+to)/2;
-        return lcm(lcm(n,from,mid),lcm(n,mid,to));
+        return result;
     }
     public static BigInteger lcm(BigInteger a, BigInteger b)
     {
@@ -1704,25 +1673,15 @@ public class Nums
 
     public static BigInteger lcm(BigInteger a, BigInteger... b)
     {
-        return lcm(a, lcm(b, 0, b.length));
-    }
-
-    private static BigInteger lcm(BigInteger[] n, int from, int to)
-    {
-        if (from == to)
+        BigInteger result = a;
+        if (b != null)
         {
-            return BigInteger.ZERO;
+            for (BigInteger element : b)
+            {
+                result = lcm(result, element);
+            }
         }
-        if (from + 1 == to)
-        {
-            return n[from];
-        }
-        if (from + 2 == to)
-        {
-            return lcm(n[from], n[from + 1]);
-        }
-        int mid = (from + to) / 2;
-        return lcm(lcm(n, from, mid), lcm(n, mid, to));
+        return result;
     }
 
     public static int fibonacci(long[] seq)
@@ -1843,7 +1802,6 @@ public class Nums
     public static BigInteger safePrime(Random random, int bitLength, int certainty)
     {
         //get p=2q+1 is faster than q=(p-1)/2
-        Logger.getLogger(Nums.class.getName()).log(Level.CONFIG, "Nums.safePrime() (this will take a while)");
         
         for (int i = 0; true; i++)
         {
@@ -1851,7 +1809,6 @@ public class Nums
             BigInteger p = q.multiply(BIG_INT_TWO).add(BigInteger.ONE);
             if (p.isProbablePrime(certainty))
             {
-                Logger.getLogger(Nums.class.getName()).log(Level.CONFIG, "BigInteger.safePrime (loops={})",new Object[]{i});
                 return p;
             }
         }

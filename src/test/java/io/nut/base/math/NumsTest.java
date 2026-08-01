@@ -295,6 +295,22 @@ public class NumsTest
             assertEquals(0, Nums.sqrt(xx).compareTo(x));
         }
     }
+    @Test
+    public void testCuberoot()
+    {
+        assertEquals(0, Nums.cuberoot(BigDecimal.ONE).compareTo(BigDecimal.ONE));
+        assertEquals(0, Nums.cuberoot(BigDecimal.ZERO).compareTo(BigDecimal.ZERO));
+
+        BigDecimal root8 = Nums.cuberoot(BigDecimal.valueOf(8));
+        assertEquals(0, root8.compareTo(BigDecimal.valueOf(2)));
+
+        BigDecimal root27 = Nums.cuberoot(BigDecimal.valueOf(27));
+        assertEquals(0, root27.compareTo(BigDecimal.valueOf(3)));
+
+        BigDecimal root1000 = Nums.cuberoot(BigDecimal.valueOf(1000));
+        assertEquals(0, root1000.compareTo(BigDecimal.valueOf(10)));
+    }
+    
     
     /**
      * Test of equals method, of class Nums.
