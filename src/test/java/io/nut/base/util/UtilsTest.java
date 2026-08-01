@@ -2933,4 +2933,114 @@ public class UtilsTest
         assertEquals(0xFFFF, Utils.crc16(bytes0));
     }
 
+    @Test
+    public void testMinMax_byte()
+    {
+        assertNull(Utils.minMax((byte[]) null));
+        assertArrayEquals(new byte[]{0, 0}, Utils.minMax(new byte[]{}));
+        assertArrayEquals(new byte[]{5, 5}, Utils.minMax(new byte[]{5}));
+        assertArrayEquals(new byte[]{2, 8}, Utils.minMax(new byte[]{2, 8}));
+        assertArrayEquals(new byte[]{2, 8}, Utils.minMax(new byte[]{8, 2}));
+        assertArrayEquals(new byte[]{-5, 10}, Utils.minMax(new byte[]{3, 10, -5, 0, 7}));
+    }
+
+    @Test
+    public void testMinMax_short()
+    {
+        assertNull(Utils.minMax((short[]) null));
+        assertArrayEquals(new short[]{0, 0}, Utils.minMax(new short[]{}));
+        assertArrayEquals(new short[]{5, 5}, Utils.minMax(new short[]{5}));
+        assertArrayEquals(new short[]{2, 8}, Utils.minMax(new short[]{2, 8}));
+        assertArrayEquals(new short[]{2, 8}, Utils.minMax(new short[]{8, 2}));
+        assertArrayEquals(new short[]{-5, 10}, Utils.minMax(new short[]{3, 10, -5, 0, 7}));
+    }
+
+    @Test
+    public void testMinMax_char()
+    {
+        assertNull(Utils.minMax((char[]) null));
+        assertArrayEquals(new char[]{0, 0}, Utils.minMax(new char[]{}));
+        assertArrayEquals(new char[]{'a', 'a'}, Utils.minMax(new char[]{'a'}));
+        assertArrayEquals(new char[]{'a', 'z'}, Utils.minMax(new char[]{'a', 'z'}));
+        assertArrayEquals(new char[]{'a', 'z'}, Utils.minMax(new char[]{'z', 'a'}));
+        assertArrayEquals(new char[]{'b', 'y'}, Utils.minMax(new char[]{'m', 'y', 'b', 'd', 's'}));
+    }
+
+    @Test
+    public void testMinMax_int()
+    {
+        assertNull(Utils.minMax((int[]) null));
+        assertArrayEquals(new int[]{0, 0}, Utils.minMax(new int[]{}));
+        assertArrayEquals(new int[]{5, 5}, Utils.minMax(new int[]{5}));
+        assertArrayEquals(new int[]{2, 8}, Utils.minMax(new int[]{2, 8}));
+        assertArrayEquals(new int[]{2, 8}, Utils.minMax(new int[]{8, 2}));
+        assertArrayEquals(new int[]{-5, 10}, Utils.minMax(new int[]{3, 10, -5, 0, 7}));
+    }
+
+    @Test
+    public void testMinMax_long()
+    {
+        assertNull(Utils.minMax((long[]) null));
+        assertArrayEquals(new long[]{0L, 0L}, Utils.minMax(new long[]{}));
+        assertArrayEquals(new long[]{5L, 5L}, Utils.minMax(new long[]{5L}));
+        assertArrayEquals(new long[]{2L, 8L}, Utils.minMax(new long[]{2L, 8L}));
+        assertArrayEquals(new long[]{2L, 8L}, Utils.minMax(new long[]{8L, 2L}));
+        assertArrayEquals(new long[]{-5L, 10L}, Utils.minMax(new long[]{3L, 10L, -5L, 0L, 7L}));
+    }
+
+    @Test
+    public void testMinMax_float()
+    {
+        assertNull(Utils.minMax((float[]) null));
+        assertArrayEquals(new float[]{0.0f, 0.0f}, Utils.minMax(new float[]{}), 0.0f);
+        assertArrayEquals(new float[]{5.0f, 5.0f}, Utils.minMax(new float[]{5.0f}), 0.0f);
+        assertArrayEquals(new float[]{2.0f, 8.0f}, Utils.minMax(new float[]{2.0f, 8.0f}), 0.0f);
+        assertArrayEquals(new float[]{2.0f, 8.0f}, Utils.minMax(new float[]{8.0f, 2.0f}), 0.0f);
+        assertArrayEquals(new float[]{-5.0f, 10.0f}, Utils.minMax(new float[]{3.0f, 10.0f, -5.0f, 0.0f, 7.0f}), 0.0f);
+    }
+
+    @Test
+    public void testMinMax_double()
+    {
+        assertNull(Utils.minMax((double[]) null));
+        assertArrayEquals(new double[]{0.0, 0.0}, Utils.minMax(new double[]{}), 0.0);
+        assertArrayEquals(new double[]{5.0, 5.0}, Utils.minMax(new double[]{5.0}), 0.0);
+        assertArrayEquals(new double[]{2.0, 8.0}, Utils.minMax(new double[]{2.0, 8.0}), 0.0);
+        assertArrayEquals(new double[]{2.0, 8.0}, Utils.minMax(new double[]{8.0, 2.0}), 0.0);
+        assertArrayEquals(new double[]{-5.0, 10.0}, Utils.minMax(new double[]{3.0, 10.0, -5.0, 0.0, 7.0}), 0.0);
+    }
+
+    @Test
+    public void testMinMax_boolean()
+    {
+        assertNull(Utils.minMax((boolean[]) null));
+        assertArrayEquals(new boolean[]{false, false}, Utils.minMax(new boolean[]{}));
+        assertArrayEquals(new boolean[]{true, true}, Utils.minMax(new boolean[]{true}));
+        assertArrayEquals(new boolean[]{false, false}, Utils.minMax(new boolean[]{false}));
+        assertArrayEquals(new boolean[]{false, true}, Utils.minMax(new boolean[]{false, true}));
+        assertArrayEquals(new boolean[]{false, true}, Utils.minMax(new boolean[]{true, false}));
+        assertArrayEquals(new boolean[]{false, true}, Utils.minMax(new boolean[]{true, true, false, true}));
+    }
+
+    @Test
+    public void testMinMax_comparable()
+    {
+        assertNull(Utils.minMax((String[]) null));
+        assertArrayEquals(new String[]{null, null}, Utils.minMax(new String[]{}));
+        assertArrayEquals(new String[]{"apple", "apple"}, Utils.minMax(new String[]{"apple"}));
+        assertArrayEquals(new String[]{"apple", "banana"}, Utils.minMax(new String[]{"banana", "apple"}));
+        assertArrayEquals(new String[]{"apple", "cherry"}, Utils.minMax(new String[]{"banana", "cherry", null, "apple"}));
+    }
+
+    @Test
+    public void testMinMax_iterable()
+    {
+        assertNull(Utils.minMax((Iterable<String>) null));
+        assertArrayEquals(new String[]{null, null}, Utils.minMax(Arrays.<String>asList()));
+        assertArrayEquals(new String[]{null, null}, Utils.minMax(Arrays.<String>asList(null, null)));
+        assertArrayEquals(new String[]{"apple", "apple"}, Utils.minMax(Arrays.asList("apple")));
+        assertArrayEquals(new String[]{"apple", "banana"}, Utils.minMax(Arrays.asList("banana", "apple")));
+        assertArrayEquals(new String[]{"apple", "cherry"}, Utils.minMax(Arrays.asList("banana", "cherry", null, "apple")));
+    }
+
 }

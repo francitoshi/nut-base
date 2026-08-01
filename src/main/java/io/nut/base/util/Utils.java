@@ -1316,6 +1316,382 @@ public abstract class Utils
         return max(d);
     }
 
+    /**
+     * Finds the minimum and maximum values in the given byte array.
+     *
+     * @param d the byte array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static byte[] minMax(byte[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new byte[]{0, 0};
+        }
+        byte min = d[0];
+        byte max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            byte val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new byte[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given short array.
+     *
+     * @param d the short array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static short[] minMax(short[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new short[]{0, 0};
+        }
+        short min = d[0];
+        short max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            short val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new short[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given char array.
+     *
+     * @param d the char array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static char[] minMax(char[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new char[]{0, 0};
+        }
+        char min = d[0];
+        char max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            char val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new char[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given int array.
+     *
+     * @param d the int array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static int[] minMax(int[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new int[]{0, 0};
+        }
+        int min = d[0];
+        int max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            int val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new int[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given long array.
+     *
+     * @param d the long array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0L, 0L}.
+     */
+    public static long[] minMax(long[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new long[]{0L, 0L};
+        }
+        long min = d[0];
+        long max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            long val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new long[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given float array.
+     *
+     * @param d the float array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0.0f, 0.0f}.
+     */
+    public static float[] minMax(float[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new float[]{0.0f, 0.0f};
+        }
+        float min = d[0];
+        float max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            float val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new float[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given double array.
+     *
+     * @param d the double array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0.0, 0.0}.
+     */
+    public static double[] minMax(double[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new double[]{0.0, 0.0};
+        }
+        double min = d[0];
+        double max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            double val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new double[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given boolean array.
+     * False is considered less than true.
+     *
+     * @param d the boolean array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {false, false}.
+     */
+    public static boolean[] minMax(boolean[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new boolean[]{false, false};
+        }
+        boolean min = d[0];
+        boolean max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            if (!min && max)
+            {
+                break;
+            }
+            boolean val = d[i];
+            if (!val)
+            {
+                min = false;
+            }
+            else
+            {
+                max = true;
+            }
+        }
+        return new boolean[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given array of Comparable objects.
+     * Null elements in the array are ignored.
+     *
+     * @param <T> the type of elements in the array, which must implement Comparable
+     * @param d the array of Comparable elements
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {null, null}.
+     */
+    public static <T extends Comparable<T>> T[] minMax(T[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        T[] result = java.util.Arrays.copyOf(d, 2);
+        T min = null;
+        T max = null;
+        for (int i = 0; i < d.length; i++)
+        {
+            T val = d[i];
+            if (val != null)
+            {
+                if (min == null || val.compareTo(min) < 0)
+                {
+                    min = val;
+                }
+                if (max == null || val.compareTo(max) > 0)
+                {
+                    max = val;
+                }
+            }
+        }
+        result[0] = min;
+        result[1] = max;
+        return result;
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given Iterable of Comparable objects.
+     * Null elements in the Iterable are ignored.
+     *
+     * @param <T> the type of elements in the Iterable, which must implement Comparable
+     * @param d the Iterable of Comparable elements
+     * @return a two-element array containing the minimum and maximum values, or null if the input Iterable is null.
+     *         If the Iterable is empty or contains only null elements, returns a two-element array with null values.
+     */
+    @SuppressWarnings("unchecked")
+    public static <T extends Comparable<T>> T[] minMax(Iterable<T> d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        T min = null;
+        T max = null;
+        for (T val : d)
+        {
+            if (val != null)
+            {
+                if (min == null || val.compareTo(min) < 0)
+                {
+                    min = val;
+                }
+                if (max == null || val.compareTo(max) > 0)
+                {
+                    max = val;
+                }
+            }
+        }
+        
+        Class<?> clazz = null;
+        if (min != null)
+        {
+            clazz = min.getClass();
+        }
+        else
+        {
+            for (T val : d)
+            {
+                if (val != null)
+                {
+                    clazz = val.getClass();
+                    break;
+                }
+            }
+        }
+        
+        if (clazz == null)
+        {
+            clazz = Comparable.class;
+        }
+        
+        T[] result = (T[]) java.lang.reflect.Array.newInstance(clazz, 2);
+        result[0] = min;
+        result[1] = max;
+        return result;
+    }
+
     public static byte[] sequence(byte[] items, byte first, byte step)
     {
         for (int i = 0; i < items.length; i++, first += step)

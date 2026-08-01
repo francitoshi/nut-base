@@ -140,6 +140,25 @@ class IterablesTest
         assertThrows(NullPointerException.class, () -> Iterables.associateBy(null, Object::toString, (a, b) -> a));
         assertThrows(NullPointerException.class, () -> Iterables.associateBy(Collections.emptyList(), null, (a, b) -> a));
         assertThrows(NullPointerException.class, () -> Iterables.associateBy(Collections.emptyList(), Object::toString, (java.util.function.BinaryOperator<Object>) null));
+
+        assertThrows(NullPointerException.class, () -> Iterables.any(null, x -> true));
+        assertThrows(NullPointerException.class, () -> Iterables.any(Collections.emptyList(), null));
+
+        assertThrows(NullPointerException.class, () -> Iterables.all(null, x -> true));
+        assertThrows(NullPointerException.class, () -> Iterables.all(Collections.emptyList(), null));
+
+        assertThrows(NullPointerException.class, () -> Iterables.none(null, x -> true));
+        assertThrows(NullPointerException.class, () -> Iterables.none(Collections.emptyList(), null));
+
+        assertThrows(NullPointerException.class, () -> Iterables.count(null));
+        assertThrows(NullPointerException.class, () -> Iterables.count(null, x -> true));
+        assertThrows(NullPointerException.class, () -> Iterables.count(Collections.emptyList(), (java.util.function.Predicate<Object>) null));
+
+        assertThrows(NullPointerException.class, () -> Iterables.concat((Iterable<Object>[]) null));
+        assertThrows(NullPointerException.class, () -> Iterables.concat(Collections.emptyList(), null));
+
+        assertThrows(NullPointerException.class, () -> Iterables.filter(null, x -> true));
+        assertThrows(NullPointerException.class, () -> Iterables.filter(Collections.emptyList(), null));
     }
 
     @Test
@@ -186,5 +205,116 @@ class IterablesTest
         assertEquals(2, map5.size());
         assertEquals("apple,peach", map5.get(5));
         assertEquals("banana", map5.get(6));
+    }
+
+    @Test
+    @DisplayName("any returns true if at least one element satisfies predicate")
+    void testAny()
+    {
+        List<String> list = Arrays.asList("apple", "banana", "cherry");
+        assertTrue(Iterables.any(list, s -> s.startsWith("b")));
+        assertFalse(Iterables.any(list, s -> s.startsWith("z")));
+        assertFalse(Iterables.any(Collections.emptyList(), s -> true));
+    }
+
+    @Test
+    @DisplayName("all returns true if all elements satisfy predicate")
+    void testAll()
+    {
+        List<String> list = Arrays.asList("apple", "banana", "cherry");
+        assertTrue(Iterables.all(list, s -> s.length() >= 5));
+        assertFalse(Iterables.all(list, s -> s.startsWith("a")));
+        assertTrue(Iterables.all(Collections.emptyList(), s -> false));
+    }
+
+    @Test
+    @DisplayName("none returns true if no elements satisfy predicate")
+    void testNone()
+    {
+        List<String> list = Arrays.asList("apple", "banana", "cherry");
+        assertTrue(Iterables.none(list, s -> s.startsWith("z")));
+        assertFalse(Iterables.none(list, s -> s.startsWith("a")));
+        assertTrue(Iterables.none(Collections.emptyList(), s -> true));
+    }
+
+    @Test
+    @DisplayName("count returns correct element count")
+    void testCount()
+    {
+        List<String> list = Arrays.asList("apple", "banana", "cherry");
+        assertEquals(3, Iterables.count(list));
+        assertEquals(2, Iterables.count(list, s -> s.length() == 6));
+        assertEquals(0, Iterables.count(list, s -> s.startsWith("z")));
+
+        // Test non-Collection Iterable
+        Iterable<String> iterable = () -> list.iterator();
+        assertEquals(3, Iterables.count(iterable));
+        assertEquals(2, Iterables.count(iterable, s -> s.length() == 6));
+
+        assertEquals(0, Iterables.count(Collections.emptyList()));
+        assertEquals(0, Iterables.count(Collections.emptyList(), s -> true));
+    }
+
+    @Test
+    @DisplayName("concat combines multiple iterables lazily")
+    void testConcat()
+    {
+        List<Integer> list1 = Arrays.asList(1, 2);
+        List<Integer> list2 = Arrays.asList(3, 4);
+        List<Integer> list3 = Collections.singletonList(5);
+
+        Iterable<Integer> concatenated = Iterables.concat(list1, list2, list3);
+
+        Iterator<Integer> iterator = concatenated.iterator();
+        assertTrue(iterator.hasNext());
+        assertEquals(Integer.valueOf(1), iterator.next());
+        assertTrue(iterator.hasNext());
+        assertEquals(Integer.valueOf(2), iterator.next());
+        assertTrue(iterator.hasNext());
+        assertEquals(Integer.valueOf(3), iterator.next());
+        assertTrue(iterator.hasNext());
+        assertEquals(Integer.valueOf(4), iterator.next());
+        assertTrue(iterator.hasNext());
+        assertEquals(Integer.valueOf(5), iterator.next());
+        assertFalse(iterator.hasNext());
+
+        // Test with empty iterables
+        Iterable<Integer> concatWithEmpty = Iterables.concat(
+            Collections.emptyList(),
+            Arrays.asList(1, 2),
+            Collections.emptyList(),
+            Collections.singletonList(3)
+        );
+        Iterator<Integer> emptyIterator = concatWithEmpty.iterator();
+        assertTrue(emptyIterator.hasNext());
+        assertEquals(Integer.valueOf(1), emptyIterator.next());
+        assertTrue(emptyIterator.hasNext());
+        assertEquals(Integer.valueOf(2), emptyIterator.next());
+        assertTrue(emptyIterator.hasNext());
+        assertEquals(Integer.valueOf(3), emptyIterator.next());
+        assertFalse(emptyIterator.hasNext());
+    }
+
+    @Test
+    @DisplayName("filter lazily matches elements according to predicate")
+    void testFilter()
+    {
+        List<String> list = Arrays.asList("apple", "banana", "cherry", "apricot");
+        Iterable<String> filtered = Iterables.filter(list, s -> s.startsWith("a"));
+
+        Iterator<String> iterator = filtered.iterator();
+        assertTrue(iterator.hasNext());
+        assertEquals("apple", iterator.next());
+        assertTrue(iterator.hasNext());
+        assertEquals("apricot", iterator.next());
+        assertFalse(iterator.hasNext());
+
+        // Test with no matches
+        Iterable<String> noMatches = Iterables.filter(list, s -> s.startsWith("z"));
+        assertFalse(noMatches.iterator().hasNext());
+
+        // Test with empty collection
+        Iterable<String> emptyFilter = Iterables.filter(Collections.emptyList(), s -> true);
+        assertFalse(emptyFilter.iterator().hasNext());
     }
 }
