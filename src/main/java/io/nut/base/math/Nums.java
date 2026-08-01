@@ -1361,27 +1361,25 @@ public class Nums
     {
         return SmalPrimesHolder.SMALL_PRIMES.clone();
     }
+    
     public static int log2(long n)
     {
         return log2(n,false);
     }
+
     public static int log2(long n, boolean ceil)
     {
-        for(int i=0;i<Pow2Holder.POW2.length;i++)
-        {
-            if(Pow2Holder.POW2[i] >= n)
-            {
-                return Pow2Holder.POW2[i]==n? i : (ceil? i : i-1);
-            }
-        }
-        return 32;
-    }
-
-    public static long pow2(int pow)
-    {
-        return Pow2Holder.POW2[pow];
+        if (n <= 0) return -1; // o lo que definas para el caso inválido
+        int floor = 63 - Long.numberOfLeadingZeros(n);
+        if (ceil && (n & (n - 1)) != 0) floor++; // no es potencia exacta de 2
+        return floor;
     }
     
+    public static long pow2(int pow)
+    {
+        return 1L << pow;
+    }
+
     public static int gcd(int a, int ... b)
     {
         return gcd(a,gcd(b,0,b.length));
