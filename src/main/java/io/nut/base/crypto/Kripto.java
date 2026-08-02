@@ -128,8 +128,10 @@ public class Kripto
     public static final SecretKeyTransformation AES_GCM_NOPADDING = SecretKeyTransformation.AES_GCM_NoPadding;
 
     ////////////////////////////////////////////////////////////////////////////
-    ///// Static Members /////////////////////////////////////////////////////
+    ///// Random data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
+
+    private static volatile boolean drbgUnavailable = false;
 
     public static SecureRandom getSecureRandomStrong()
     {
@@ -142,6 +144,54 @@ public class Kripto
             throw new RuntimeException("there is no strong algorithm", ex);
         }
     }
+
+    private static class StrongHolder
+    {
+        static final SecureRandom STRONG = getSecureRandomStrong();
+    }
+
+    public static SecureRandom getSecureRandomStrongFast()
+    {
+        if (!drbgUnavailable)
+        {
+            try
+            {
+                SecureRandom sr = SecureRandom.getInstance("DRBG"); // Java 9+
+                sr.setSeed(StrongHolder.STRONG.generateSeed(64)); // 512 bits de entropía real
+                return sr;
+            }
+            catch (NoSuchAlgorithmException e)
+            {
+                drbgUnavailable = true;
+            }
+        }
+
+        return getSecureRandomStrong(); // Java 8
+    }
+
+    public static SecureRandom getSecureRandom()
+    {
+        return new SecureRandom();
+    }
+
+    public static Rand getRandStrong()
+    {
+        return new Rand(getSecureRandomStrong());
+    }
+
+    public static Rand getRandStrongFast()
+    {
+        return new Rand(getSecureRandomStrongFast());
+    }
+
+    public static Rand getRand()
+    {
+        return new Rand(getSecureRandom());
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Static Members /////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
 
     private enum Holder
     {
@@ -1200,38 +1250,6 @@ public class Kripto
         {
             out.println("  " + service.toString());
         }
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Random data  /////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    private enum StrongSecureRandomHolder
-    {
-        INSTANCE;
-        final SecureRandom secureRandom = getSecureRandomStrong();
-        final byte[] strongSeed = secureRandom.generateSeed(32);
-    }
-
-    public static SecureRandom getSecureRandom(boolean strong)
-    {
-        return strong ? StrongSecureRandomHolder.INSTANCE.secureRandom : getSecureRandom();
-    }
-
-    public static SecureRandom getSecureRandom()
-    {
-        SecureRandom secureRandom =  new SecureRandom();
-        secureRandom.setSeed(StrongSecureRandomHolder.INSTANCE.strongSeed);
-        return secureRandom;
-    }
-
-    public static Rand getRand(boolean strong)
-    {
-        return new Rand(getSecureRandom(strong));
-    }
-
-    public static Rand getRand()
-    {
-        return new Rand(getSecureRandom());
     }
 
     ////////////////////////////////////////////////////////////////////////////
