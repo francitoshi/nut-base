@@ -5,6 +5,8 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -236,7 +238,6 @@ public abstract class Bee<M> implements Consumer<M>
             if(this.status!=RUNNING)
             {
                 throw new IllegalStateException("status!=RUNNING");
-                //666 return false;
             }
 
             if(this.hive!=null)
@@ -252,7 +253,6 @@ public abstract class Bee<M> implements Consumer<M>
             {
                 this.receive(message);
             }
-            //666 return true;
         }
         catch (Exception ex)
         {
@@ -262,7 +262,6 @@ public abstract class Bee<M> implements Consumer<M>
                 Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
             }
             exception(ex);
-            //666 return false;
         }
     }
 
@@ -575,5 +574,16 @@ public abstract class Bee<M> implements Consumer<M>
         }
         ((Hive) this.hive).sub(topic, this);
         return this;
+    }
+
+    /**
+     * Returns a collection of downstream target consumers currently linked to this stage.
+     * The default implementation returns an empty collection.
+     *
+     * @return the collection of downstream target consumers
+     */
+    public Collection<Consumer<?>> getLinkedTargets()
+    {
+        return Collections.emptyList();
     }
 }

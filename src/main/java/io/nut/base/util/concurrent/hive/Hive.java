@@ -1,23 +1,11 @@
 /*
- * Copyright (c) 2024-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util.concurrent.hive;
 
+import java.util.Collection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -888,36 +876,14 @@ public class Hive extends Queen implements AutoCloseable, Executor
         
         set.add(stage);
         
-        if (stage instanceof PipeBee)
+        if (stage instanceof Bee)
         {
-            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
-            pipe.waitForIdle();
-            waitForIdle(set, pipe.getNext());
-        }
-        else if (stage instanceof FilterBee)
-        {
-            FilterBee<?> filter = (FilterBee<?>) stage;
-            filter.waitForIdle();
-            waitForIdle(set, filter.getNext());
-        }
-        else if (stage instanceof BatchBee)
-        {
-            BatchBee<?> batch = (BatchBee<?>) stage;
-            batch.waitForIdle();
-            waitForIdle(set, batch.getNext());
-        }
-        else if (stage instanceof BroadcastBee)
-        {
-            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
-            bc.waitForIdle();
-            for (Consumer<?> target : bc.targets)
+            Bee<?> bee = (Bee<?>) stage;
+            bee.waitForIdle();
+            for (Consumer<?> target : bee.getLinkedTargets())
             {
                 waitForIdle(set, target);
             }
-        }
-        else if (stage instanceof Bee)
-        {
-            ((Bee<?>) stage).waitForIdle();
         }
     }
     
@@ -948,37 +914,14 @@ public class Hive extends Queen implements AutoCloseable, Executor
         
         set.add(stage);
         
-        if (stage instanceof PipeBee)
+        if (stage instanceof Bee)
         {
-            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
-            pipe.shutdown(onlyWhenEmpty);
-            shutdown(set, onlyWhenEmpty, pipe.getNext());
-        }
-        else if (stage instanceof FilterBee)
-        {
-            FilterBee<?> filter = (FilterBee<?>) stage;
-            filter.shutdown(onlyWhenEmpty);
-            shutdown(set, onlyWhenEmpty, filter.getNext());
-        }
-        else if (stage instanceof BatchBee)
-        {
-            BatchBee<?> batch = (BatchBee<?>) stage;
-            batch.shutdown(onlyWhenEmpty);
-            shutdown(set, onlyWhenEmpty, batch.getNext());
-        }
-        else if (stage instanceof BroadcastBee)
-        {
-            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
-            bc.shutdown(onlyWhenEmpty);
-            for (Consumer<?> target : bc.targets)
+            Bee<?> bee = (Bee<?>) stage;
+            bee.shutdown(onlyWhenEmpty);
+            for (Consumer<?> target : bee.getLinkedTargets())
             {
                 shutdown(set, onlyWhenEmpty, target);
             }
-        }
-        else if (stage instanceof Bee)
-        {
-            // Plain Bee or other Bee subclass: shut it down but don't traverse further.
-            ((Bee<?>)stage).shutdown(onlyWhenEmpty);
         }
     }
 
@@ -1012,39 +955,15 @@ public class Hive extends Queen implements AutoCloseable, Executor
         
         set.add(stage);
         
-        if (stage instanceof PipeBee)
+        if (stage instanceof Bee)
         {
-            PipeBee<?,?> pipe = (PipeBee<?,?>) stage;
-            pipe.awaitTerminationUntilNanos(nanos);
-            awaitTerminationUntilNanos(set, pipe.getNext(), nanos);
-        }
-        else if (stage instanceof FilterBee)
-        {
-            FilterBee<?> filter = (FilterBee<?>) stage;
-            filter.awaitTerminationUntilNanos(nanos);
-            awaitTerminationUntilNanos(set, filter.getNext(), nanos);
-        }
-        else if (stage instanceof BatchBee)
-        {
-            BatchBee<?> batch = (BatchBee<?>) stage;
-            batch.awaitTerminationUntilNanos(nanos);
-            awaitTerminationUntilNanos(set, batch.getNext(), nanos);
-        }
-        else if (stage instanceof BroadcastBee)
-        {
-            BroadcastBee<?> bc = (BroadcastBee<?>) stage;
-            bc.awaitTerminationUntilNanos(nanos);
-            for (Consumer<?> target : bc.targets)
+            Bee<?> bee = (Bee<?>) stage;
+            bee.awaitTerminationUntilNanos(nanos);
+            for (Consumer<?> target : bee.getLinkedTargets())
             {
                 awaitTerminationUntilNanos(set, target, nanos);
             }
         }
-        else if (stage instanceof Bee)
-        {
-            // Plain Bee or other Bee subclass: shut it down, but don't traverse further
-            ((Bee<?>) stage).awaitTerminationUntilNanos(nanos);
-        }
-        // If it's a Sendable but not a Bee, we can't shut it down, so we stop here
     }
 
     /**

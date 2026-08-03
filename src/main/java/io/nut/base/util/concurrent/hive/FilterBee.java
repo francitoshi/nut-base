@@ -1,23 +1,12 @@
 /*
- * Copyright (c) 2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util.concurrent.hive;
 
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -83,8 +72,7 @@ public class FilterBee<T> extends Bee<T>
      */
     public FilterBee(int threads, Hive hive, Predicate<T> predicate)
     {
-        super(threads, hive);
-        this.predicate = Objects.requireNonNull(predicate, "predicate must not be null");
+        this(threads, hive, 0, predicate);
     }
 
     /**
@@ -96,8 +84,7 @@ public class FilterBee<T> extends Bee<T>
      */
     public FilterBee(Hive hive, Predicate<T> predicate)
     {
-        super(hive);
-        this.predicate = Objects.requireNonNull(predicate, "predicate must not be null");
+        this(0, hive, 0, predicate);
     }
 
     /**
@@ -109,8 +96,7 @@ public class FilterBee<T> extends Bee<T>
      */
     public FilterBee(int threads, Predicate<T> predicate)
     {
-        super(threads);
-        this.predicate = Objects.requireNonNull(predicate, "predicate must not be null");
+        this(threads, null, 0, predicate);
     }
 
     /**
@@ -121,8 +107,7 @@ public class FilterBee<T> extends Bee<T>
      */
     public FilterBee(Predicate<T> predicate)
     {
-        super();
-        this.predicate = Objects.requireNonNull(predicate, "predicate must not be null");
+        this(0, null, 0, predicate);
     }
 
     /**
@@ -197,5 +182,11 @@ public class FilterBee<T> extends Bee<T>
     public FilterBee<T> shutdown(boolean onlyWhenEmpty)
     {
         return (FilterBee<T>) super.shutdown(onlyWhenEmpty);
+    }
+
+    @Override
+    public Collection<Consumer<?>> getLinkedTargets()
+    {
+        return next != null ? Collections.singletonList(next) : Collections.emptyList();
     }
 }
