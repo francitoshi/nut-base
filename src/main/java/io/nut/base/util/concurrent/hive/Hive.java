@@ -237,7 +237,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T,R> PipeBee<T,R> pipe(Function<T,R> function)
     {
-        return new PipeBee<>(this, function);
+        return pipe(0, 0, function);
     }
 
     /**
@@ -251,7 +251,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T,R> PipeBee<T,R> pipe(int threads, Function<T,R> function)
     {
-        return new PipeBee<>(threads, this, function);
+        return pipe(threads, 0, function);
     }
 
     /**
@@ -283,15 +283,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> Bee<T> bee(Consumer<T> consumer)
     {
-        Objects.requireNonNull(consumer, "consumer must not be null");
-        return new Bee<T>(this)
-        {
-            @Override
-            protected void receive(T m)
-            {
-                consumer.accept(m);
-            }
-        };
+        return bee(0, 0, consumer);
     }
 
     /**
@@ -305,15 +297,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> Bee<T> bee(int threads, Consumer<T> consumer)
     {
-        Objects.requireNonNull(consumer, "consumer must not be null");
-        return new Bee<T>(threads, this)
-        {
-            @Override
-            protected void receive(T m)
-            {
-                consumer.accept(m);
-            }
-        };
+        return bee(threads, 0, consumer);
     }
 
     /**
@@ -350,15 +334,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <E> Bee<E> queue(BlockingQueue<E> queue)
     {
-        Objects.requireNonNull(queue, "queue must not be null");
-        return new Bee<E>(this)
-        {
-            @Override
-            protected void receive(E m)
-            {
-                putIntoQueue(queue, m);
-            }
-        };
+        return queue(0, 0, queue);
     }
 
     /**
@@ -372,15 +348,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <E> Bee<E> queue(int threads, BlockingQueue<E> queue)
     {
-        Objects.requireNonNull(queue, "queue must not be null");
-        return new Bee<E>(threads, this)
-        {
-            @Override
-            protected void receive(E m)
-            {
-                putIntoQueue(queue, m);
-            }
-        };
+        return queue(threads, 0, queue);
     }
 
     /**
@@ -438,15 +406,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <E> Bee<E> list(List<E> list)
     {
-        Objects.requireNonNull(list, "list must not be null");
-        return new Bee<E>(this)
-        {
-            @Override
-            protected void receive(E m)
-            {
-                list.add(m);
-            }
-        };
+        return list(0, 0, list);
     }
 
     /**
@@ -461,15 +421,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <E> Bee<E> list(int threads, List<E> list)
     {
-        Objects.requireNonNull(list, "list must not be null");
-        return new Bee<E>(threads, this)
-        {
-            @Override
-            protected void receive(E m)
-            {
-                list.add(m);
-            }
-        };
+        return list(threads, 0, list);
     }
 
     /**
@@ -509,15 +461,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> Bee<T> set(Set<T> set)
     {
-        Objects.requireNonNull(set, "set must not be null");
-        return new Bee<T>(this)
-        {
-            @Override
-            protected void receive(T m)
-            {
-                set.add(m);
-            }
-        };
+        return set(0, 0, set);
     }
 
     /**
@@ -531,15 +475,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> Bee<T> set(int threads, Set<T> set)
     {
-        Objects.requireNonNull(set, "set must not be null");
-        return new Bee<T>(threads, this)
-        {
-            @Override
-            protected void receive(T m)
-            {
-                set.add(m);
-            }
-        };
+        return set(threads, 0, set);
     }
 
     /**
@@ -578,7 +514,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> FilterBee<T> filter(Predicate<T> predicate)
     {
-        return new FilterBee<>(this, predicate);
+        return filter(0, 0, predicate);
     }
 
     /**
@@ -591,7 +527,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> FilterBee<T> filter(int threads, Predicate<T> predicate)
     {
-        return new FilterBee<>(threads, this, predicate);
+        return filter(threads, 0, predicate);
     }
 
     /**
@@ -621,7 +557,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     @SafeVarargs
     public final <T> BroadcastBee<T> broadcast(Consumer<T>... targets)
     {
-        return new BroadcastBee<>(this, targets);
+        return broadcast(0, 0, targets);
     }
 
     /**
@@ -635,7 +571,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     @SafeVarargs
     public final <T> BroadcastBee<T> broadcast(int threads, Consumer<T>... targets)
     {
-        return new BroadcastBee<>(threads, this, targets);
+        return broadcast(threads, 0, targets);
     }
 
     /**
@@ -673,8 +609,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T,R> HivePipeline<T,R> pipeline(Function<T,R> first)
     {
-        PipeBee<T,R> firstStage = this.pipe(first);
-        return new HivePipeline<>(this, firstStage, firstStage);
+        return pipeline(0, 0, first);
     }
 
     /**
@@ -690,8 +625,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T,R> HivePipeline<T,R> pipeline(int threads, Function<T,R> first)
     {
-        PipeBee<T,R> firstStage = this.pipe(threads, first);
-        return new HivePipeline<>(this, firstStage, firstStage);
+        return pipeline(threads, 0, first);
     }
 
     /**
@@ -730,7 +664,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> BatchBee<T> batch(int maxSize, long maxWaitMillis)
     {
-        return new BatchBee<>(this, maxSize, maxWaitMillis);
+        return batch(0, 0, maxSize, maxWaitMillis);
     }
 
     /**
@@ -744,7 +678,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> BatchBee<T> batch(int threads, int maxSize, long maxWaitMillis)
     {
-        return new BatchBee<>(threads, this, maxSize, maxWaitMillis);
+        return batch(threads, 0, maxSize, maxWaitMillis);
     }
 
     /**

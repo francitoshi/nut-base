@@ -322,19 +322,6 @@ public class Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Submits {@code task} to the thread pool for fire-and-forget execution.
-     * Equivalent to {@link #execute} but named consistently with the rest of
-     * the execution API.
-     *
-     * @param task the task to run; must not be {@code null}
-     */
-    public void run(Runnable task)
-    {
-        Objects.requireNonNull(task, "task must not be null");
-        this.threadPoolExecutor.execute(wrap(task));
-    }
-
-    /**
      * Submits {@code task} to the thread pool and returns a
      * {@link Future}{@code <Void>} that completes when the task finishes.
      *

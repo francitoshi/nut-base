@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2024-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util.concurrent.hive;
 
@@ -120,33 +107,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T, R> PipeBee<T, R> pipe(Function<T, R> function)
-    {
-        return hive.pipe(function);
-    }
-
-    @Override
-    public <T, R> PipeBee<T, R> pipe(int threads, Function<T, R> function)
-    {
-        return hive.pipe(threads, function);
-    }
-
-    @Override
     public <T, R> PipeBee<T, R> pipe(int threads, int queueSize, Function<T, R> function)
     {
         return hive.pipe(threads, queueSize, function);
-    }
-
-    @Override
-    public <T> Bee<T> bee(Consumer<T> consumer)
-    {
-        return hive.bee(consumer);
-    }
-
-    @Override
-    public <T> Bee<T> bee(int threads, Consumer<T> consumer)
-    {
-        return hive.bee(threads, consumer);
     }
 
     @Override
@@ -156,45 +119,21 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <E> Bee<E> queue(BlockingQueue<E> queue)
-    {
-        return hive.queue(queue);
-    }
-
-    @Override
-    public <E> Bee<E> queue(int threads, BlockingQueue<E> queue)
-    {
-        return hive.queue(threads, queue);
-    }
-
-    @Override
     public <E> Bee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
         return hive.queue(threads, queueSize, queue);
     }
 
     @Override
-    public <E> Bee<E> list(List<E> list)
+    public <E> Bee<E> list(int threads, int queueSize, List<E> list)
     {
-        return hive.list(list);
+        return hive.list(threads, queueSize, list);
     }
 
     @Override
-    public <T> Bee<T> set(Set<T> set)
+    public <T> Bee<T> set(int threads, int queueSize, Set<T> set)
     {
-        return hive.set(set);
-    }
-
-    @Override
-    public <T> FilterBee<T> filter(Predicate<T> predicate)
-    {
-        return hive.filter(predicate);
-    }
-
-    @Override
-    public <T> FilterBee<T> filter(int threads, Predicate<T> predicate)
-    {
-        return hive.filter(threads, predicate);
+        return hive.set(threads, queueSize, set);
     }
 
     @Override
@@ -204,33 +143,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> BatchBee<T> batch(int maxSize, long maxWaitMillis)
-    {
-        return hive.batch(maxSize, maxWaitMillis);
-    }
-
-    @Override
-    public <T> BatchBee<T> batch(int threads, int maxSize, long maxWaitMillis)
-    {
-        return hive.batch(threads, maxSize, maxWaitMillis);
-    }
-
-    @Override
     public <T> BatchBee<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
         return hive.batch(threads, queueSize, maxSize, maxWaitMillis);
-    }
-
-    @Override
-    public <T, R> HivePipeline<T, R> pipeline(Function<T, R> first)
-    {
-        return hive.pipeline(first);
-    }
-
-    @Override
-    public <T, R> HivePipeline<T, R> pipeline(int threads, Function<T, R> first)
-    {
-        return hive.pipeline(threads, first);
     }
 
     @Override
@@ -246,28 +161,11 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
-    {
-        return hive.sub(topic, threads, consumer);
-    }
-
-    @Override
-    public <T> Bee<T> sub(String topic, Consumer<T> consumer)
-    {
-        return hive.sub(topic, consumer);
-    }
-
-    @Override
     public <T> Pub<T> pub(String topic)
     {
         return hive.pub(topic);
     }
 
-    @Override
-    public void run(Runnable task)
-    {
-        hive.run(task);
-    }
 
     @Override
     public ProxyHive spawn(Runnable task)
