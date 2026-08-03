@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2012-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2012-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
 
@@ -35,31 +22,6 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class StringsTest
 {
-    
-    public StringsTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
     /**
      * Test of repeat method, of class Strings.
      */
@@ -1516,6 +1478,31 @@ public class StringsTest
         assertTrue(Strings.hasNullsOrBlank(new String[]{"", " "}));
         assertFalse(Strings.hasNullsOrBlank(new String[]{"a", "b"}));
         assertTrue(Strings.hasNullsOrBlank(new String[]{" ", null}));
+    }
+
+    @Test
+    public void testIsIsogram()
+    {
+        assertFalse(Strings.isIsogram(null));
+        assertTrue(Strings.isIsogram(""));
+        assertTrue(Strings.isIsogram("a"));
+        assertTrue(Strings.isIsogram("isogram"));
+        assertFalse(Strings.isIsogram("eleven"));
+        assertTrue(Strings.isIsogram("subdermatoglyphic"));
+        assertFalse(Strings.isIsogram("Alphabet"));
+        assertTrue(Strings.isIsogram("thumbscrew-japingly"));
+        assertTrue(Strings.isIsogram("six-year-old"));
+        assertFalse(Strings.isIsogram("aba"));
+        assertTrue(Strings.isIsogram("abcdefghijklmnopqrstuvwxyz"));
+        assertFalse(Strings.isIsogram("abcdefghijklmnopqrstuvwxyza"));
+        assertTrue(Strings.isIsogram("a b c"));
+        
+        // Unicode / Other alphabets
+        assertTrue(Strings.isIsogram("ñandú"));
+        assertFalse(Strings.isIsogram("ñandú-ñ"));
+        assertFalse(Strings.isIsogram("Ñandú-ñ"));
+        assertTrue(Strings.isIsogram("Абвг"));
+        assertFalse(Strings.isIsogram("Абвга"));
     }
 
 }

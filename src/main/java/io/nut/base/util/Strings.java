@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2012-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2012-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
 
@@ -24,6 +11,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -1859,5 +1847,88 @@ public class Strings
         }
         return str.contains(searchStr);
     }
-    
+
+    /**
+     * <p>Checks if the String is an isogram (case-insensitive).</p>
+     * <p>An isogram is a word or phrase without repeating letters.
+     * Non-alphabetic characters (like spaces and hyphens) are ignored.</p>
+     * <p>Supports full Unicode letters (e.g. Spanish 'ñ', Cyrillic, accented characters)
+     * and surrogate pairs.</p>
+     *
+     * <pre>
+     * Strings.isIsogram(null)      = false
+     * Strings.isIsogram("")        = true
+     * Strings.isIsogram("isogram") = true
+     * Strings.isIsogram("eleven")  = false
+     * Strings.isIsogram("ñandú")   = true
+     * Strings.isIsogram("ñandú-ñ") = false
+     * </pre>
+     *
+     * @param s the String to check, may be null
+     * @return true if the String is an isogram, false otherwise
+     */
+    public static boolean isIsogram(String s)
+    {
+        if (s == null)
+        {
+            return false;
+        }
+        int len = s.length();
+        if (len <= 1)
+        {
+            return true;
+        }
+        
+        int asciiBitmask = 0;
+        Set<Integer> unicodeSet = null;
+        
+        for (int i = 0; i < len; )
+        {
+            int cp = s.codePointAt(i);
+            if (Character.isLetter(cp))
+            {
+                int lower = Character.toLowerCase(cp);
+                if (lower >= 'a' && lower <= 'z')
+                {
+                    int bit = 1 << (lower - 'a');
+                    if (unicodeSet != null)
+                    {
+                        if (!unicodeSet.add(lower))
+                        {
+                            return false;
+                        }
+                    }
+                    else
+                    {
+                        if ((asciiBitmask & bit) != 0)
+                        {
+                            return false;
+                        }
+                        asciiBitmask |= bit;
+                    }
+                }
+                else
+                {
+                    if (unicodeSet == null)
+                    {
+                        unicodeSet = new HashSet<>();
+                        for (int b = 0; b < 26; b++)
+                        {
+                            if ((asciiBitmask & (1 << b)) != 0)
+                            {
+                                unicodeSet.add('a' + b);
+                            }
+                        }
+                    }
+                    if (!unicodeSet.add(lower))
+                    {
+                        return false;
+                    }
+                }
+            }
+            i += Character.charCount(cp);
+        }
+        return true;
+    }
 }
+
