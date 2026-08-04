@@ -1,39 +1,24 @@
 /*
- *  UptimeTiming.java
- *
- *  Copyright (c) 2023-2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.profile;
 
 
-import io.nut.base.util.Utils;
 import java.io.PrintStream;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 public abstract class UptimeTiming
 {
     public enum Unit
     {
-        Seconds(Utils.SECOND_NANOS,"s"), Millis(Utils.NANOS_PER_MILLIS,"ms"), Nanos(1,"ns");
+        S(TimeUnit.SECONDS,"s"), MS(TimeUnit.MILLISECONDS,"ms"), NS(TimeUnit.NANOSECONDS,"ns");
 
-        Unit(long unitNanos, String unitName)
+        Unit(TimeUnit timeUnit, String unitName)
         {
-            this.unitNanos = unitNanos;
+            this.unitNanos = timeUnit.toNanos(1);
             this.unitName = unitName;
         }
         final long unitNanos;
@@ -42,7 +27,7 @@ public abstract class UptimeTiming
 
     private static class Holder
     {
-        private static final UptimeTiming UPTIME = UptimeTiming.getInstance(false, "[uptime]", 16, Unit.Millis, System.out);
+        private static final UptimeTiming ROOT = UptimeTiming.getInstance(false, "[root]", 16, Unit.MS, System.out);
     }
 
     public static UptimeTiming getInstance(boolean fake, String name, int min, Unit unit, PrintStream out)
@@ -55,11 +40,11 @@ public abstract class UptimeTiming
     }
     public static UptimeTiming getInstance(boolean fake, String name, int min)
     {
-        return fake ? new FakeTracer(Unit.Millis) : new RealTracer(name, min, Unit.Millis, System.out);
+        return fake ? new FakeTracer(Unit.MS) : new RealTracer(name, min, Unit.MS, System.out);
     }
-    public static UptimeTiming getUptime()
+    public static UptimeTiming getRootInstance()
     {
-        return Holder.UPTIME;
+        return Holder.ROOT;
     }
 
     public abstract void trace(String pointName);
@@ -85,11 +70,11 @@ public abstract class UptimeTiming
             this.min = min;
             this.unitNanos = unit.unitNanos;
             this.unitName = unit.unitName;
+            this.start = now;
+            this.last  = now;
+            this.out = out;
             synchronized(lock)
             {
-                this.start = now;
-                this.last  = now;
-                this.out = out;
                 this.out.println(format("<init>", 0, 0));
                 this.last = System.nanoTime();
             }
