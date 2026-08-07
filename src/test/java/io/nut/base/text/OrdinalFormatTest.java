@@ -1,22 +1,7 @@
 /*
- *  OrdinalFormatTest.java
- *
- *  Copyright (C) 2014-2024 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2014-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.text;
 
@@ -149,25 +134,25 @@ public class OrdinalFormatTest
         __(102344321, "einhundertzwei Millionen dreihundertvierundvierzigtausenddreihunderteinundzwanzigste"),
         __(1000000000, "eine Milliardeste"),
         __(1023454321, "eine Milliarde dreiundzwanzig Millionen vierhundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
-        __(10000000000L, "zehn Milliarden"),
+        __(10000000000L, "zehn Milliardenste"),
         __(10234554321L, "zehn Milliarden zweihundertvierunddreißig Millionen fünfhundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
-        __(100000000000L, "einhundert Milliarden"),
+        __(100000000000L, "einhundert Milliardenste"),
         __(102345654321L, "einhundertzwei Milliarden dreihundertfünfundvierzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
-        __(1000000000000L, "eine Billion"), 
-        __(1023456654321L, "eine Billion dreiundzwanzig Milliarden vierhundertsechsundfünfzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzig"),
-        __(10000000000000L, "zehn Billionen"),
-        __(10234567654321L, "zehn Billionen zweihundertvierunddreißig Milliarden fünfhundertsiebenundsechzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzig"),
-        __(100000000000000L, "einhundert Billionen"),
-        __(102345677654321L, "einhundertzwei Billionen dreihundertfünfundvierzig Milliarden sechshundertsiebenundsiebzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzig"),
-        __(1000000000000000L, "eine Billiarde"),
-        __(1023456787654321L, "eine Billiarde dreiundzwanzig Billionen vierhundertsechsundfünfzig Milliarden siebenhundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzig"),
-        __(10000000000000000L, "zehn Billiarden"),
-        __(10234567887654321L, "zehn Billiarden zweihundertvierunddreißig Billionen fünfhundertsiebenundsechzig Milliarden achthundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzig"),
-        __(100000000000000000L, "einhundert Billiarden"),
-        __(102345678987654321L, "einhundertzwei Billiarden dreihundertfünfundvierzig Billionen sechshundertachtundsiebzig Milliarden neunhundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzig"),
-        __(1000000000000000000L, "eine Trillion"),
-        __(1023456789987654321L, "eine Trillion dreiundzwanzig Billiarden vierhundertsechsundfünfzig Billionen siebenhundertneunundachtzig Milliarden neunhundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzig"),
-        __(9223372036854775807L ,"neun Trillionen zweihundertdreiundzwanzig Billiarden dreihundertzweiundsiebzig Billionen sechsunddreißig Milliarden achthundertvierundfünfzig Millionen siebenhundertfünfundsiebzigtausendachthundertsieben")
+        __(1000000000000L, "eine Billionste"), 
+        __(1023456654321L, "eine Billion dreiundzwanzig Milliarden vierhundertsechsundfünfzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
+        __(10000000000000L, "zehn Billionenste"),
+        __(10234567654321L, "zehn Billionen zweihundertvierunddreißig Milliarden fünfhundertsiebenundsechzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
+        __(100000000000000L, "einhundert Billionenste"),
+        __(102345677654321L, "einhundertzwei Billionen dreihundertfünfundvierzig Milliarden sechshundertsiebenundsiebzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
+        __(1000000000000000L, "eine Billiardeste"),
+        __(1023456787654321L, "eine Billiarde dreiundzwanzig Billionen vierhundertsechsundfünfzig Milliarden siebenhundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
+        __(10000000000000000L, "zehn Billiardenste"),
+        __(10234567887654321L, "zehn Billiarden zweihundertvierunddreißig Billionen fünfhundertsiebenundsechzig Milliarden achthundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
+        __(100000000000000000L, "einhundert Billiardenste"),
+        __(102345678987654321L, "einhundertzwei Billiarden dreihundertfünfundvierzig Billionen sechshundertachtundsiebzig Milliarden neunhundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
+        __(1000000000000000000L, "eine Trillionste"),
+        __(1023456789987654321L, "eine Trillion dreiundzwanzig Billiarden vierhundertsechsundfünfzig Billionen siebenhundertneunundachtzig Milliarden neunhundertsiebenundachtzig Millionen sechshundertvierundfünfzigtausenddreihunderteinundzwanzigste"),
+        __(9223372036854775807L ,"neun Trillionen zweihundertdreiundzwanzig Billiarden dreihundertzweiundsiebzig Billionen sechsunddreißig Milliarden achthundertvierundfünfzig Millionen siebenhundertfünfundsiebzigtausendachthundertsiebente")
     };
     
     // some test have been tested through these webs
