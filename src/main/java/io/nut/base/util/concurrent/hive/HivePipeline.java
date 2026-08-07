@@ -1,26 +1,16 @@
 /*
- * Copyright (c) 2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util.concurrent.hive;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A fluent, type-safe builder for linear chains of {@link PipeBee} stages all
@@ -190,4 +180,35 @@ public final class HivePipeline<T,R> implements Consumer<T>
     {
         head.accept(message);
     }
+
+    public HivePipeline<T,R> shutdown()
+    {
+        head.shutdown();
+        tail.shutdown();
+        return this;
+    }
+
+    public HivePipeline<T,R> shutdown(boolean onlyWhenEmpty)
+    {
+        head.shutdown(onlyWhenEmpty);
+        tail.shutdown(onlyWhenEmpty);
+        return this;
+    }
+
+    
+    public boolean awaitTermination(int millis)
+    {
+        try
+        { 
+            long nanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+            boolean h = head.awaitTerminationUntilNanos(nanos);
+            boolean t = tail.awaitTerminationUntilNanos(nanos);
+            return h && t;
+        }        
+        catch (InterruptedException ex)
+        {
+            return false;
+        }
+    }
+    
 }

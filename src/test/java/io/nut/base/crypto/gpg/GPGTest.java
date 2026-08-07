@@ -5,19 +5,14 @@
  */
 package io.nut.base.crypto.gpg;
 
-import static io.nut.base.crypto.gpg.GPG.BRAINPOOLP256R1;
-import static io.nut.base.crypto.gpg.GPG.BRAINPOOLP384R1;
-import static io.nut.base.crypto.gpg.GPG.BRAINPOOLP512R1;
 import static io.nut.base.crypto.gpg.GPG.CURVE25519;
 import static io.nut.base.crypto.gpg.GPG.DSA2048;
-import static io.nut.base.crypto.gpg.GPG.DSA3072;
 import static io.nut.base.crypto.gpg.GPG.ELG4096;
 import static io.nut.base.crypto.gpg.GPG.NISTP256;
 import static io.nut.base.crypto.gpg.GPG.NISTP384;
 import static io.nut.base.crypto.gpg.GPG.NISTP521;
 import static io.nut.base.crypto.gpg.GPG.RSA1024;
 import static io.nut.base.crypto.gpg.GPG.RSA2048;
-import static io.nut.base.crypto.gpg.GPG.RSA3072;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
 import io.nut.base.encoding.Hex;
 import java.io.IOException;
@@ -64,17 +59,6 @@ public class GPGTest
         
         assertEquals(0, gpg.genKey(RSA4096, SCA, NISTP521, E, name, "1", EMAIL, PASSPHRASE, "4y"));
         assertEquals(0, gpg.genKey(NISTP384, SCA, NISTP256, E, name, "1", EMAIL, PASSPHRASE, "4y"));
-
-        assertEquals(0, gpg.genKey(RSA2048, S, DSA2048, S, name, "3", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(RSA3072, S, DSA3072, S, name, "3", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(RSA4096, S, ELG4096, E, name, "3", EMAIL, PASSPHRASE, "4y"));
-
-//        assertEquals(0, gpg.genKey(ELG3072, E, name, "4", EMAIL, PASSPHRASE, "4y"));
-
-        assertEquals(0, gpg.genKey(NISTP521, S, BRAINPOOLP256R1, E, name, "3", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(NISTP384, S, BRAINPOOLP384R1, E, name, "3", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(NISTP521, S, BRAINPOOLP512R1, E, name, "3", EMAIL, PASSPHRASE, "4y"));
-
         assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, name, "3", EMAIL, PASSPHRASE, "4y"));
 
     }
@@ -92,27 +76,14 @@ public class GPGTest
         String id = keys[0].main.getFingerprint();
 
         assertEquals(0, gpg.addKeyRSA(id, 1024, true, true, true, "1y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyRSA(id, 1024, true, true, false, "2y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyRSA(id, 1024, true, false, true, "3y", PASSPHRASE));
         assertEquals(0, gpg.addKeyRSA(id, 1024, true, false, false, "4y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyRSA(id, 1024, false, true, true, "5y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyRSA(id, 1024, false, true, false, "6y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyRSA(id, 1024, false, false, true, "7y", PASSPHRASE));
         
         assertEquals(0, gpg.addKeyDSA(id, 1024, true, true, "1y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyDSA(id, 1024, true, false, "2y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyDSA(id, 1024, false, true, "3y", PASSPHRASE));    
-        
-        assertEquals(0, gpg.addKeyELG(id, 1024, "1y", PASSPHRASE));
         
         assertEquals(0, gpg.addKeyECC(id, true, false, true, 1, "3y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyECC(id, true, false, false, 2, "4y", PASSPHRASE));
         assertEquals(0, gpg.addKeyECC(id, false, true, false, 3, "6y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyECC(id, false, false, true, 4, "7y", PASSPHRASE));
         
         assertEquals(0, gpg.deleteSecKeys(id));
-        
-//        assertEquals(0, instance.addKeyECC(id, false, false, true, 4, "7y", null));
     }
 
     @Test

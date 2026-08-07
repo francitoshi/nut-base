@@ -51,6 +51,20 @@ wrapper
 test 
 {
     useJUnitPlatform()
+
+    afterTest 
+    { 
+        descriptor, result ->
+        if (result.resultType == org.gradle.api.tasks.testing.TestResult.ResultType.SUCCESS)
+        {
+            long ms = result.endTime - result.startTime
+            if (ms > 9999)
+            {
+                println String.format("%6d ms  %s.%s", ms, descriptor.className, descriptor.name)
+            }
+        }
+    }
+
 }
 
 publishing 

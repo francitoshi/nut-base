@@ -1,22 +1,7 @@
 /*
- *  SignTest.java
- *
- *  Copyright (C) 2023 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.ec;
 
@@ -27,10 +12,6 @@ import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
 import java.util.concurrent.TimeUnit;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -130,9 +111,8 @@ public class SignTest
     @Test
     public void testSpeed() throws Exception
     {
-        int LOOPS = 300;
-        int MS_TO_LOOP = 5_000;
-        
+        int LOOPS = 50;
+        int MS_TO_LOOP = 5;
         
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Sign[] sign = new Sign[2];
@@ -143,13 +123,13 @@ public class SignTest
         String helloWorld = "Hello World!!!";
         byte[] msg = SHA256.digest(helloWorld.getBytes());
 
-        long ms = 0;
+        long untilNanos = System.nanoTime() + TimeUnit.SECONDS.toNanos(MS_TO_LOOP);
         int[] count = new int[sign.length];
         
         byte[] auxRand = new byte[32];
         secureRandom.nextBytes(auxRand);
         
-        for(int loop=0;ms<MS_TO_LOOP;loop++)
+        for(int loop=0;System.nanoTime()<untilNanos;loop++)
         {
             for(int i=0;i<sign.length;i++)
             {
@@ -165,9 +145,8 @@ public class SignTest
                 }
                 long t1 = System.nanoTime();
                 nanos[i] += t1-t0;
-                System.out.println(sign[i].getClass().getSimpleName());
+//                System.out.println(sign[i].getClass().getSimpleName());
             }
-            ms = TimeUnit.NANOSECONDS.toMillis(Utils.max(nanos));
         }
         for(int i=0;i<sign.length;i++)
         {

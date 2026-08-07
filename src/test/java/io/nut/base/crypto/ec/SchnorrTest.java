@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2023-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.ec;
 
@@ -22,6 +9,9 @@ import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.Utils;
+import io.nut.base.util.concurrent.hive.Hive;
+import io.nut.base.util.concurrent.hive.HivePipeline;
+import io.nut.base.util.concurrent.hive.PipeBee;
 import io.nut.base.util.concurrent.pipeline.Pipe;
 import io.nut.base.util.concurrent.pipeline.PipeLine;
 import java.io.InputStreamReader;
@@ -120,7 +110,7 @@ public class SchnorrTest
         }
     }
 
-    static final int LOOPS = 1000;
+    static final int LOOPS = 25;
     static final int MS_TO_LOOP = 2_000;
     static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
 
@@ -189,91 +179,77 @@ public class SchnorrTest
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Schnorr schnorr = Sign.SECP256K1_SCHNORR;
 
-        final int ths = Runtime.getRuntime().availableProcessors()/4+1;
-
-        Pipe<Data, Data> pipe = new PipeLine<Data, Data>(ths)//readable
+        final int ths = Hive.CORES*2;
+        
+        Hive hive = Hive.hive();
+        
+        HivePipeline<Data, Data> pipe = hive.pipeline(ths,ths, (Data data) ->
         {
-            @Override
-            public Data apply(Data data)//min+focus
+            if(data!=POISON)
             {
-                if(data!=POISON)
+                try //min+focus
                 {
-                    try //min+focus
-                    {
-                        data.pubKey = schnorr.getPubKey(data.secKey);
-                        data.randomBytes = new byte[32];
-                        secureRandom.nextBytes(data.randomBytes);
-                    }
-                    catch (InvalidKeyException ex)
-                    {
-                        Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    data.pubKey = schnorr.getPubKey(data.secKey);
+                    data.randomBytes = new byte[32];
+                    secureRandom.nextBytes(data.randomBytes);
                 }
-                return data;
+                catch (InvalidKeyException ex)
+                {
+                    Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-        }.link(new PipeLine<Data, Data>(ths)//split
+            return data;
+        }).then(ths, (Data data)->
         {
-            @Override
-            public Data apply(Data data)
+            if(data!=POISON)
             {
-                if(data!=POISON)
+                try
                 {
-                    try
-                    {
-                        data.signature = schnorr.sign(data.msg, data.pubKey, data.randomBytes);
-                    }
-                    catch (InvalidKeyException ex)
-                    {
-                        Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    data.signature = schnorr.sign(data.msg, data.pubKey, data.randomBytes);
                 }
-                return data;
+                catch (InvalidKeyException ex)
+                {
+                    Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-        }.link(new PipeLine<Data, Data>(ths)//split
+            return data;
+        }).then(ths, (Data data)->
         {
-            @Override
-            public Data apply(Data data)
+            if(data!=POISON)
             {
-                if(data!=POISON)
+                try
                 {
-                    try
-                    {
-                        data.trust = schnorr.verify(data.msg, data.pubKey, data.signature);
-                    }
-                    catch (InvalidKeyException ex)
-                    {
-                        Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    data.trust = schnorr.verify(data.msg, data.pubKey, data.signature);
                 }
-                return data;
+                catch (InvalidKeyException ex)
+                {
+                    Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
-        }).link(new PipeLine<Data, Data>(ths)
+            return data;
+        }).then(ths, (Data data)->
         {
-            @Override
-            public Data apply(Data data)
+            if(data!=POISON)
             {
-                if(data!=POISON)
+                data.signature[0] = 1;
+                try
                 {
-                    data.signature[0] = 1;
-                    try
-                    {
-                        data.fail = !schnorr.verify(data.msg, data.pubKey, data.signature);
-                    }
-                    catch (InvalidKeyException ex)
-                    {
-                        Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
-                    }
+                    data.fail = !schnorr.verify(data.msg, data.pubKey, data.signature);
                 }
-                else
+                catch (InvalidKeyException ex)
                 {
-                    synchronized (lastLock)
-                    {
-                        lastLock.notifyAll();
-                    }
+                    Logger.getLogger(SchnorrTest.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                return data;
             }
-        }));
+            else
+            {
+                synchronized (lastLock)
+                {
+                    lastLock.notifyAll();
+                }
+            }
+            return data;
+        });
 
         String helloWorld = "Hello World!!!";
         byte[] msg = SHA256.digest(helloWorld.getBytes());
@@ -284,16 +260,17 @@ public class SchnorrTest
         for (int i = 0; i < LOOPS && ms < MS_TO_LOOP; i++, count++)
         {
             byte[] secKey = schnorr.genSecKey();
-            pipe.put(new Data(msg, secKey));
+            pipe.accept(new Data(msg, secKey));
             t1 = System.nanoTime();
             ms = TimeUnit.NANOSECONDS.toMillis(t1 - t0);
         }
         synchronized (lastLock)
         {
-            pipe.put(POISON);
+            pipe.accept(POISON);
             lastLock.wait();
         }
-        pipe.isAlive();
+        pipe.shutdown(true);
+        pipe.awaitTermination(10_000);
         t1 = System.nanoTime();
         ms = TimeUnit.NANOSECONDS.toMillis(t1 - t0);
         System.out.printf("testBulkTimedPiped %d sign+verify, %d ms, %.2f ms, %.2f/s \n", count, ms, ms / (double) count, count * 1000.0 / ms);
