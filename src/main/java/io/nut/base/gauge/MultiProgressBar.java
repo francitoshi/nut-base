@@ -8,9 +8,9 @@ package io.nut.base.gauge;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * MultiProgressBar
@@ -163,15 +163,13 @@ public class MultiProgressBar implements AutoCloseable
     /** A handle to a single row in the bars area. Obtained via {@link #addBar}. */
     public final class ProgressBar extends AbstractGauge implements AutoCloseable
     {
-        private final int id;
         private final AtomicBoolean barClosed = new AtomicBoolean(false);
         private String label;
         private int percent;
 
-        private ProgressBar(int id, String label)
+        private ProgressBar(String label)
         {
             super();
-            this.id = id;
             this.label = label == null ? "" : label;
             this.percent = 0;
             setPrefix(this.label);
@@ -241,7 +239,6 @@ public class MultiProgressBar implements AutoCloseable
     private int cols; // not final anymore: refreshed periodically, see maybeRefreshWidth()
     private final Config config;
     private final List<ProgressBar> bars = new ArrayList<>();
-    private final AtomicInteger nextId = new AtomicInteger(1);
     private final AtomicBoolean closed = new AtomicBoolean(false);
 
     /** How often (in milliseconds) the terminal width is allowed to be re-checked. */
@@ -299,8 +296,7 @@ public class MultiProgressBar implements AutoCloseable
                 throw new IllegalStateException("No room for another progress bar: the terminal only has " + rows + " rows");
             }
 
-            int id = nextId.getAndIncrement();
-            ProgressBar bar = new ProgressBar(id, label == null ? "" : label);
+            ProgressBar bar = new ProgressBar(label == null ? "" : label);
 
             // Remember exactly where the caller's cursor is (e.g. a shell
             // prompt mid-screen) BEFORE we touch anything, so we can put it
@@ -659,10 +655,7 @@ public class MultiProgressBar implements AutoCloseable
     {
         List<String> cmd = new ArrayList<>();
         cmd.add("stty");
-        for (String a : args)
-        {
-            cmd.add(a);
-        }
+        cmd.addAll(Arrays.asList(args));
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
         Process p = pb.start();
@@ -681,10 +674,7 @@ public class MultiProgressBar implements AutoCloseable
         {
             List<String> cmd = new ArrayList<>();
             cmd.add("stty");
-            for (String a : args) 
-            {
-                cmd.add(a);
-            }
+            cmd.addAll(Arrays.asList(args));
             ProcessBuilder pb = new ProcessBuilder(cmd);
             pb.redirectInput(ProcessBuilder.Redirect.INHERIT);
             pb.start().waitFor();
@@ -858,8 +848,7 @@ public class MultiProgressBar implements AutoCloseable
                 .labelColor(Colors.CYAN)
                 .boldPercentage(true);
 
-        final MultiProgressBar multi = new MultiProgressBar(config);
-        try 
+        try(MultiProgressBar multi = new MultiProgressBar(config))
         {
             multi.log("Reading package lists... Done");
 
@@ -881,8 +870,7 @@ public class MultiProgressBar implements AutoCloseable
                     @Override
                     public void run()
                     {
-                        ProgressBar bar = multi.addBar("Downloading " + pkg);
-                        try 
+                        try(ProgressBar bar = multi.addBar("Downloading " + pkg))
                         {
                             for (int p = 0; p <= 100; p += 4)
                             {
@@ -894,10 +882,6 @@ public class MultiProgressBar implements AutoCloseable
                         catch (InterruptedException ignored) 
                         {
                             Thread.currentThread().interrupt();
-                        } 
-                        finally 
-                        {
-                            bar.close();
                         }
                     }
                 });
@@ -913,10 +897,6 @@ public class MultiProgressBar implements AutoCloseable
                 w.join();
             }
             multi.log("All packages downloaded.");
-        } 
-        finally
-        {
-            multi.close();
         }
 
         System.out.println("Done.");

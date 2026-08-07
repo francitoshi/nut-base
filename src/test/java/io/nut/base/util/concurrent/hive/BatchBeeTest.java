@@ -26,6 +26,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -157,7 +159,7 @@ class BatchBeeTest
         assertEquals(1, batch.pending());
 
         // Wait for the time window to trigger
-        assertTrue(TestUtil.awaitTrue(() -> batches.size() > 0, 500));
+        assertTrue(awaitTrue(() -> batches.size() > 0, 500));
 
         assertEquals(1, batches.size());
         assertEquals(Arrays.asList(1), batches.get(0));
@@ -326,5 +328,31 @@ class BatchBeeTest
         assertEquals(2, batches.size());
         assertTrue(batches.get(0) instanceof ArrayList);
         assertTrue(batches.get(1) instanceof ArrayList);
+    }
+
+    /**
+     * Polls the given condition every 5ms until it becomes true or the
+     * timeout elapses, returning the last observed value.
+     */
+    static boolean awaitTrue(BooleanSupplier condition, long timeoutMillis)
+    {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        while (System.nanoTime() < deadline)
+        {
+            if (condition.getAsBoolean())
+            {
+                return true;
+            }
+            try
+            {
+                Thread.sleep(5);
+            }
+            catch (InterruptedException ie)
+            {
+                Thread.currentThread().interrupt();
+                return condition.getAsBoolean();
+            }
+        }
+        return condition.getAsBoolean();
     }
 }
