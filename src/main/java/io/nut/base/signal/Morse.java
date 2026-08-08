@@ -21,7 +21,7 @@
 package io.nut.base.signal;
 
 import io.nut.base.math.Nums;
-import io.nut.base.queue.CircularQueueInt;
+import io.nut.base.collections.ring.RingQueueInt;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.util.ArrayList;
@@ -883,7 +883,7 @@ public class Morse
 
         for(int[] item : pattern)
         {
-            CircularQueueInt cqi = new CircularQueueInt(item);
+            RingQueueInt cqi = new RingQueueInt(item);
             
             long unitT = baseUnit(cqi.array());
             long pulseThreshold = unitT * 2;

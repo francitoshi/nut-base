@@ -1,66 +1,51 @@
 /*
- *  CircularQueueLong.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.queue;
+package io.nut.base.collections.ring;
 
 // Claude Sonnet 4.5
 
 import java.util.Objects;
-import java.util.function.LongConsumer;
+import java.util.function.Consumer;
 
 /**
- * A fixed-size circular queue (ring buffer) implementation for {@code long} primitives.
+ * A fixed-size circular queue (ring buffer) implementation for {@code byte} primitives.
  * <p>
  * This structure operates with a fixed capacity. When elements are pushed into a full queue,
  * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
-public class CircularQueueLong
+public class RingQueueByte
 {
-    private final long[] buffer;
+    private final byte[] buffer;
     private final int capacity;
     private int head;
     private int tail;
     private int size;
 
     /**
-     * Constructs a new CircularQueueLong with the specified capacity.
+     * Constructs a new RingQueueByte with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
-    public CircularQueueLong(int capacity)
+    public RingQueueByte(int capacity)
     {
         if (capacity <= 0)
         {
             throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
         }
         this.capacity = capacity;
-        this.buffer = new long[capacity];
+        this.buffer = new byte[capacity];
         this.head = 0;
         this.tail = 0;
         this.size = 0;
     }
 
-    public CircularQueueLong(long[] data)
+    public RingQueueByte(byte[] data)
     {
         Objects.requireNonNull(data, "data cannot be null");
         if (data.length <= 0)
@@ -73,19 +58,19 @@ public class CircularQueueLong
         this.tail = 0;
         this.size = data.length;
     }
-
+    
     /**
-     * Adds a value to the end of the queue.
+     * Adds a new element to the end of the queue.
      * <p>
-     * If the queue is currently at maximum capacity, the oldest element (at the
-     * head) is overwritten/removed to accommodate the new value.
+     * If the queue is currently at maximum capacity, the oldest element (at the head)
+     * is overwritten/removed to accommodate the new value.
      *
-     * @param value the long value to add.
-     * @return the value that was overwritten if the queue was full, otherwise 0.
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise 0.
      */
-    public long push(long value)
+    public byte push(byte value)
     {
-        long removed = 0;
+        byte removed = 0;
         if (size == capacity)
         {
             removed = buffer[head];
@@ -98,9 +83,9 @@ public class CircularQueueLong
         return removed;
     }
 
-    public void pushAll(long[] value)
+    public void pushAll(byte[] value)
     {
-        for(long v : value)
+        for(byte v : value)
         {
             push(v);
         }
@@ -111,13 +96,13 @@ public class CircularQueueLong
      *
      * @return the oldest element in the queue, or 0 if the queue is empty.
      */
-    public long pop()
+    public byte pop()
     {
         if (size == 0)
         {
             return 0;
         }
-        long value = buffer[head];
+        byte value = buffer[head];
         head = (head + 1) % capacity;
         size--;
         return value;
@@ -128,7 +113,7 @@ public class CircularQueueLong
      *
      * @return the oldest element in the queue, or 0 if the queue is empty.
      */
-    public long peek()
+    public byte peek()
     {
         if (size == 0)
         {
@@ -145,7 +130,7 @@ public class CircularQueueLong
      * @param n the relative index of the element to retrieve.
      * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
      */
-    public long get(int n)
+    public byte get(int n)
     {
         if (n < 0 || n >= size)
         {
@@ -153,14 +138,14 @@ public class CircularQueueLong
         }
         return buffer[(head + n) % capacity];
     }
-    
+
     /**
      * Performs the given action for each element in the queue.
      * Elements are processed in order from head (oldest) to tail (newest).
      *
      * @param consumer the action to perform on each element.
      */
-    public void foreach(LongConsumer consumer)
+    public void foreach(Consumer<Byte> consumer)
     {
         for (int i = 0; i < size; i++)
         {
@@ -169,14 +154,14 @@ public class CircularQueueLong
     }
 
     /**
-     * Returns a copy of the current queue elements as an array. 
+     * Returns a copy of the current queue elements as an array.
      * The array is ordered from head (oldest) to tail (newest).
      *
-     * @return a new long array containing the queue elements.
+     * @return a new boolean array containing the queue elements.
      */
-    public long[] array()
+    public byte[] array()
     {
-        long[] result = new long[size];
+        byte[] result = new byte[size];
         for (int i = 0; i < size; i++)
         {
             result[i] = buffer[(head + i) % capacity];
@@ -210,14 +195,12 @@ public class CircularQueueLong
         {
             return 0;
         }
-        return sum() / (double) size;
+        return (double) sum() / size;
     }
 
     /**
      * Calculates the sum of all values in the queue.
-     * <p>
-     * Note: This method returns a standard {@code long}, so overflow may occur
-     * if the sum of elements exceeds {@code Long.MAX_VALUE}.
+     * The result is returned as a {@code long} to prevent overflow.
      *
      * @return the sum of all elements.
      */
@@ -236,16 +219,16 @@ public class CircularQueueLong
      *
      * @return the smallest value, or 0 if the queue is empty.
      */
-    public long min()
+    public byte min()
     {
         if (size == 0)
         {
             return 0;
         }
-        long minValue = buffer[head];
+        byte minValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            long value = buffer[(head + i) % capacity];
+            byte value = buffer[(head + i) % capacity];
             if (value < minValue)
             {
                 minValue = value;
@@ -259,16 +242,16 @@ public class CircularQueueLong
      *
      * @return the largest value, or 0 if the queue is empty.
      */
-    public long max()
+    public byte max()
     {
         if (size == 0)
         {
             return 0;
         }
-        long maxValue = buffer[head];
+        byte maxValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            long value = buffer[(head + i) % capacity];
+            byte value = buffer[(head + i) % capacity];
             if (value > maxValue)
             {
                 maxValue = value;
@@ -277,14 +260,14 @@ public class CircularQueueLong
         return maxValue;
     }
 
-    public static CircularQueueLong getSynchronized(CircularQueueLong queue)
+    public static RingQueueByte getSynchronized(RingQueueByte queue)
     {
-        return new CircularQueueLong(queue.capacity)
+        return new RingQueueByte(queue.capacity)
         {
             final Object lock = new Object();
             
             @Override
-            public long push(long value)
+            public byte push(byte value)
             {
                 synchronized(lock)
                 {
@@ -293,7 +276,7 @@ public class CircularQueueLong
             }
 
             @Override
-            public void pushAll(long[] value)
+            public void pushAll(byte[] value)
             {
                 synchronized(lock)
                 {
@@ -302,7 +285,7 @@ public class CircularQueueLong
             }
 
             @Override
-            public long pop()
+            public byte pop()
             {
                 synchronized(lock)
                 {
@@ -311,7 +294,7 @@ public class CircularQueueLong
             }
 
             @Override
-            public long peek()
+            public byte peek()
             {
                 synchronized(lock)
                 {
@@ -320,7 +303,7 @@ public class CircularQueueLong
             }
 
             @Override
-            public long get(int n)
+            public byte get(int n)
             {
                 synchronized(lock)
                 {
@@ -347,7 +330,7 @@ public class CircularQueueLong
             }
 
             @Override
-            public long[] array()
+            public byte[] array()
             {
                 synchronized(lock)
                 {
@@ -356,16 +339,16 @@ public class CircularQueueLong
             }
 
             @Override
-            public void foreach(LongConsumer consumer)
+            public void foreach(Consumer<Byte> consumer)
             {
                 synchronized(lock)
                 {
                     super.foreach(consumer);
                 }
             }
-            
+
             @Override
-            public long max()
+            public byte max()
             {
                 synchronized(lock)
                 {
@@ -374,7 +357,7 @@ public class CircularQueueLong
             }
 
             @Override
-            public long min()
+            public byte min()
             {
                 synchronized(lock)
                 {

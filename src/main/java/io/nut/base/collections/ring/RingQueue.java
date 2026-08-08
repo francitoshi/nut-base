@@ -1,24 +1,9 @@
 /*
- *  CircularQueue.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.queue;
+package io.nut.base.collections.ring;
 
 // Claude Sonnet 4.5
 
@@ -41,7 +26,7 @@ import java.util.function.Consumer;
  *
  * @param <E> the type of elements held in this queue.
  */
-public class CircularQueue<E>
+public class RingQueue<E>
 {
     private final List<E> buffer;
     private final int capacity;
@@ -50,12 +35,12 @@ public class CircularQueue<E>
     private int size;
 
     /**
-     * Constructs a new CircularQueue with the specified capacity.
+     * Constructs a new RingQueue with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
-    public CircularQueue(int capacity)
+    public RingQueue(int capacity)
     {
         if (capacity <= 0)
         {
@@ -73,7 +58,7 @@ public class CircularQueue<E>
         this.size = 0;
     }
 
-    public CircularQueue(E[] data)
+    public RingQueue(E[] data)
     {
         Objects.requireNonNull(data, "data cannot be null");
         if (data.length <= 0)
@@ -326,9 +311,9 @@ public class CircularQueue<E>
         return maxValue;
     }
     
-    public static <E> CircularQueue<E> getSynchronized(CircularQueue<E> queue)
+    public static <E> RingQueue<E> getSynchronized(RingQueue<E> queue)
     {
-        return new CircularQueue<E>(queue.capacity)
+        return new RingQueue<E>(queue.capacity)
         {
             final Object lock = new Object();
 

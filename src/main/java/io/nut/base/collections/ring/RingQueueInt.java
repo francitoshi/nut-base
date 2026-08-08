@@ -1,66 +1,51 @@
 /*
- *  CircularQueueDouble.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.queue;
+package io.nut.base.collections.ring;
 
 // Claude Sonnet 4.5
 
 import java.util.Objects;
-import java.util.function.DoubleConsumer;
+import java.util.function.IntConsumer;
 
 /**
- * A fixed-size circular queue (ring buffer) implementation for {@code double} primitives.
+ * A fixed-size circular queue (ring buffer) implementation for {@code int} primitives.
  * <p>
  * This structure operates with a fixed capacity. When elements are pushed into a full queue,
  * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
-public class CircularQueueDouble
+public class RingQueueInt
 {
-    private final double[] buffer;
+    private final int[] buffer;
     private final int capacity;
     private int head;
     private int tail;
     private int size;
 
     /**
-     * Constructs a new CircularQueueDouble with the specified capacity.
+     * Constructs a new RingQueueInt with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
-    public CircularQueueDouble(int capacity)
+    public RingQueueInt(int capacity)
     {
         if (capacity <= 0)
         {
             throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
         }
         this.capacity = capacity;
-        this.buffer = new double[capacity];
+        this.buffer = new int[capacity];
         this.head = 0;
         this.tail = 0;
         this.size = 0;
     }
-
-    public CircularQueueDouble(double[] data)
+    
+    public RingQueueInt(int[] data)
     {
         Objects.requireNonNull(data, "data cannot be null");
         if (data.length <= 0)
@@ -73,7 +58,7 @@ public class CircularQueueDouble
         this.tail = 0;
         this.size = data.length;
     }
-    
+
     /**
      * Adds a new element to the end of the queue.
      * <p>
@@ -83,9 +68,9 @@ public class CircularQueueDouble
      * @param value the element to add.
      * @return the element that was overwritten if the queue was full, otherwise 0.
      */
-    public double push(double value)
+    public int push(int value)
     {
-        double removed = 0;
+        int removed = 0;
         if (size == capacity)
         {
             removed = buffer[head];
@@ -97,10 +82,10 @@ public class CircularQueueDouble
         size++;
         return removed;
     }
-
-    public void pushAll(double[] value)
+    
+    public void pushAll(int[] value)
     {
-        for(double v : value)
+        for(int v : value)
         {
             push(v);
         }
@@ -111,13 +96,13 @@ public class CircularQueueDouble
      *
      * @return the oldest element in the queue, or 0 if the queue is empty.
      */
-    public double pop()
+    public int pop()
     {
         if (size == 0)
         {
             return 0;
         }
-        double value = buffer[head];
+        int value = buffer[head];
         head = (head + 1) % capacity;
         size--;
         return value;
@@ -128,7 +113,7 @@ public class CircularQueueDouble
      *
      * @return the oldest element in the queue, or 0 if the queue is empty.
      */
-    public double peek()
+    public int peek()
     {
         if (size == 0)
         {
@@ -145,7 +130,7 @@ public class CircularQueueDouble
      * @param n the relative index of the element to retrieve.
      * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
      */
-    public double get(int n)
+    public int get(int n)
     {
         if (n < 0 || n >= size)
         {
@@ -160,7 +145,7 @@ public class CircularQueueDouble
      *
      * @param consumer the action to perform on each element.
      */
-    public void foreach(DoubleConsumer consumer)
+    public void foreach(IntConsumer consumer)
     {
         for (int i = 0; i < size; i++)
         {
@@ -172,11 +157,11 @@ public class CircularQueueDouble
      * Returns a copy of the current queue elements as an array.
      * The array is ordered from head (oldest) to tail (newest).
      *
-     * @return a new double array containing the queue elements.
+     * @return a new int array containing the queue elements.
      */
-    public double[] array()
+    public int[] array()
     {
-        double[] result = new double[size];
+        int[] result = new int[size];
         for (int i = 0; i < size; i++)
         {
             result[i] = buffer[(head + i) % capacity];
@@ -210,20 +195,20 @@ public class CircularQueueDouble
         {
             return 0;
         }
-        return sum() / size;
+        return sum() / (double)size;
     }
 
     /**
      * Calculates the sum of all values in the queue.
      * <p>
      * Note: This method returns a standard {@code double}, so overflow may occur
-     * if the sum of elements exceeds {@code Double.MAX_VALUE}.
+     * if the sum of elements exceeds {@code Long.MAX_VALUE}.
      *
      * @return the sum of all elements.
      */
-    public double sum()
+    public long sum()
     {
-        double total = 0;
+        long total = 0;
         for (int i = 0; i < size; i++)
         {
             total += buffer[(head + i) % capacity];
@@ -236,16 +221,16 @@ public class CircularQueueDouble
      *
      * @return the smallest value, or 0 if the queue is empty.
      */
-    public double min()
+    public int min()
     {
         if (size == 0)
         {
             return 0;
         }
-        double minValue = buffer[head];
+        int minValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            double value = buffer[(head + i) % capacity];
+            int value = buffer[(head + i) % capacity];
             if (value < minValue)
             {
                 minValue = value;
@@ -259,16 +244,16 @@ public class CircularQueueDouble
      *
      * @return the largest value, or 0 if the queue is empty.
      */
-    public double max()
+    public int max()
     {
         if (size == 0)
         {
             return 0;
         }
-        double maxValue = buffer[head];
+        int maxValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            double value = buffer[(head + i) % capacity];
+            int value = buffer[(head + i) % capacity];
             if (value > maxValue)
             {
                 maxValue = value;
@@ -277,14 +262,14 @@ public class CircularQueueDouble
         return maxValue;
     }
 
-    public static CircularQueueDouble getSynchronized(CircularQueueDouble queue)
+    public static RingQueueInt getSynchronized(RingQueueInt queue)
     {
-        return new CircularQueueDouble(queue.capacity)
+        return new RingQueueInt(queue.capacity)
         {
             final Object lock = new Object();
-            
+
             @Override
-            public double push(double value)
+            public int push(int value)
             {
                 synchronized(lock)
                 {
@@ -293,7 +278,7 @@ public class CircularQueueDouble
             }
 
             @Override
-            public void pushAll(double[] value)
+            public void pushAll(int[] value)
             {
                 synchronized(lock)
                 {
@@ -302,7 +287,7 @@ public class CircularQueueDouble
             }
 
             @Override
-            public double pop()
+            public int pop()
             {
                 synchronized(lock)
                 {
@@ -311,7 +296,7 @@ public class CircularQueueDouble
             }
 
             @Override
-            public double peek()
+            public int peek()
             {
                 synchronized(lock)
                 {
@@ -320,7 +305,7 @@ public class CircularQueueDouble
             }
 
             @Override
-            public double get(int n)
+            public int get(int n)
             {
                 synchronized(lock)
                 {
@@ -347,7 +332,7 @@ public class CircularQueueDouble
             }
 
             @Override
-            public double[] array()
+            public int[] array()
             {
                 synchronized(lock)
                 {
@@ -356,16 +341,16 @@ public class CircularQueueDouble
             }
 
             @Override
-            public void foreach(DoubleConsumer consumer)
+            public void foreach(IntConsumer consumer)
             {
                 synchronized(lock)
                 {
                     super.foreach(consumer);
                 }
             }
-
+            
             @Override
-            public double max()
+            public int max()
             {
                 synchronized(lock)
                 {
@@ -374,7 +359,7 @@ public class CircularQueueDouble
             }
 
             @Override
-            public double min()
+            public int min()
             {
                 synchronized(lock)
                 {
@@ -383,7 +368,7 @@ public class CircularQueueDouble
             }
 
             @Override
-            public double sum()
+            public long sum()
             {
                 synchronized(lock)
                 {
@@ -401,5 +386,5 @@ public class CircularQueueDouble
             }
 
         };
-    }    
+    }
 }

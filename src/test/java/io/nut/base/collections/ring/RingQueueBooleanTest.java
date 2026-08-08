@@ -1,36 +1,21 @@
 /*
- *  CircularQueueBooleanTest.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.queue;
+package io.nut.base.collections.ring;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;
 
 // Claude Sonnet 4.5
-class CircularQueueBooleanTest
+class RingQueueBooleanTest
 {
     @Test
     void testPushAndPop()
     {
-        CircularQueueBoolean queue = new CircularQueueBoolean(3);
+        RingQueueBoolean queue = new RingQueueBoolean(3);
         queue.push((boolean) true);
         queue.push((boolean) false);
         assertEquals((boolean) true, queue.pop());
@@ -40,7 +25,7 @@ class CircularQueueBooleanTest
     @Test
     void testSum()
     {
-        CircularQueueBoolean queue = new CircularQueueBoolean(3);
+        RingQueueBoolean queue = new RingQueueBoolean(3);
         queue.push((boolean) true);
         queue.push((boolean) true);
         queue.push((boolean) false);
@@ -50,7 +35,7 @@ class CircularQueueBooleanTest
     @Test
     void testAverage()
     {
-        CircularQueueBoolean queue = new CircularQueueBoolean(4);
+        RingQueueBoolean queue = new RingQueueBoolean(4);
         
         assertEquals(0.00, queue.average(), 0.001);
 
@@ -79,7 +64,7 @@ class CircularQueueBooleanTest
     @Test
     void testPeek()
     {
-        CircularQueueBoolean queue = new CircularQueueBoolean(3);
+        RingQueueBoolean queue = new RingQueueBoolean(3);
         queue.push(true);
         queue.push(false);
         assertTrue(queue.peek());
@@ -91,7 +76,7 @@ class CircularQueueBooleanTest
     public void testAll()
     {
         // Test 1: Basic push and pop
-        CircularQueueBoolean queue = new CircularQueueBoolean(10);
+        RingQueueBoolean queue = new RingQueueBoolean(10);
         queue.push(true);
         queue.push(false);
         queue.push(true);
@@ -102,7 +87,7 @@ class CircularQueueBooleanTest
         assertEquals(2,queue.size());
         
         // Test 2: Array and get
-        queue = new CircularQueueBoolean(5);
+        queue = new RingQueueBoolean(5);
         queue.push(true);
         queue.push(false);
         queue.push(true);
@@ -112,7 +97,7 @@ class CircularQueueBooleanTest
         assertTrue(queue.get(2));
         
         // Test 3: push(byte[])
-        queue = new CircularQueueBoolean(20);
+        queue = new RingQueueBoolean(20);
         byte[] data = new byte[2];
         data[0] = (byte)0b10101010; // alternating pattern
         data[1] = (byte)0b11110000; // 4 zeros, 4 ones
@@ -122,7 +107,7 @@ class CircularQueueBooleanTest
         assertTrue(queue.get(1));
 
         // Test 4: peek(byte[])
-        queue = new CircularQueueBoolean(20);
+        queue = new RingQueueBoolean(20);
         queue.push(true);
         queue.push(false);
         queue.push(true);
@@ -145,7 +130,7 @@ class CircularQueueBooleanTest
         assertEquals(8, queue.size());
         
         // Test 5: pop(byte[])
-        queue = new CircularQueueBoolean(20);
+        queue = new RingQueueBoolean(20);
         for (int i = 0; i < 16; i++)
         {
             queue.push(i % 2 == 0);
@@ -157,7 +142,7 @@ class CircularQueueBooleanTest
         assertEquals(0, queue.size());
         
         // Test 6: Sum and average
-        queue = new CircularQueueBoolean(10);
+        queue = new RingQueueBoolean(10);
         queue.push(true);
         queue.push(true);
         queue.push(false);
@@ -167,21 +152,21 @@ class CircularQueueBooleanTest
         assertEquals(0.6, queue.average(), 0.001);
         
         // Test 7: Min and max
-        queue = new CircularQueueBoolean(5);
+        queue = new RingQueueBoolean(5);
         queue.push(true);
         queue.push(true);
         queue.push(true);
         assertTrue(queue.min());
         assertTrue(queue.max());
         
-        queue = new CircularQueueBoolean(5);
+        queue = new RingQueueBoolean(5);
         queue.push(false);
         queue.push(false);
         queue.push(false);
         assertFalse(queue.min());
         assertFalse(queue.max());
         
-        queue = new CircularQueueBoolean(5);
+        queue = new RingQueueBoolean(5);
         queue.push(true);
         queue.push(false);
         queue.push(true);
@@ -189,7 +174,7 @@ class CircularQueueBooleanTest
         assertTrue(queue.max());
         
         // Test 8: Circular behavior (overflow)
-        queue = new CircularQueueBoolean(3);
+        queue = new RingQueueBoolean(3);
         queue.push(true);
         queue.push(false);
         queue.push(true);
@@ -201,7 +186,7 @@ class CircularQueueBooleanTest
         
         // Test 9: Constructor with boolean array
         boolean[] initData = {true, false, true, true, false};
-        queue = new CircularQueueBoolean(initData);
+        queue = new RingQueueBoolean(initData);
         assertEquals(5, queue.size());
         
         assertTrue(queue.pop());
@@ -211,7 +196,7 @@ class CircularQueueBooleanTest
         assertFalse(queue.pop());
         
         // Test 10: foreach
-        queue = new CircularQueueBoolean(5);
+        queue = new RingQueueBoolean(5);
         queue.push(true);
         queue.push(false);
         queue.push(true);

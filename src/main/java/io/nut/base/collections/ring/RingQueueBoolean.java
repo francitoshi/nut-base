@@ -1,24 +1,9 @@
 /*
- *  CircularQueueByte.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.queue;
+package io.nut.base.collections.ring;
 
 // Claude Sonnet 4.5
 
@@ -33,7 +18,7 @@ import java.util.function.Consumer;
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
-public class CircularQueueBoolean
+public class RingQueueBoolean
 {
     private final boolean [] buffer;
     private final int capacity;
@@ -42,12 +27,12 @@ public class CircularQueueBoolean
     private int size;
 
     /**
-     * Constructs a new CircularQueueByte with the specified capacity.
+     * Constructs a new RingQueueByte with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
-    public CircularQueueBoolean(int capacity)
+    public RingQueueBoolean(int capacity)
     {
         if (capacity <= 0)
         {
@@ -60,7 +45,7 @@ public class CircularQueueBoolean
         this.size = 0;
     }
 
-    public CircularQueueBoolean(boolean[] data)
+    public RingQueueBoolean(boolean[] data)
     {
         Objects.requireNonNull(data, "data cannot be null");
         if (data.length <= 0)
@@ -392,9 +377,9 @@ public class CircularQueueBoolean
         return maxValue;
     }
 
-    public static CircularQueueBoolean getSynchronized(CircularQueueBoolean queue)
+    public static RingQueueBoolean getSynchronized(RingQueueBoolean queue)
     {
-        return new CircularQueueBoolean(queue.capacity)
+        return new RingQueueBoolean(queue.capacity)
         {
             final Object lock = new Object();
             

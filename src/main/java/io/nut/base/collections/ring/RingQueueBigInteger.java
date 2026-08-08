@@ -1,66 +1,53 @@
 /*
- *  CircularQueueFloat.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.queue;
+package io.nut.base.collections.ring;
 
 // Claude Sonnet 4.5
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * A fixed-size circular queue (ring buffer) implementation for {@code float} primitives.
+ * A fixed-size circular queue (ring buffer) implementation for {@code BigInteger} objects.
  * <p>
  * This structure operates with a fixed capacity. When elements are pushed into a full queue,
  * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
-public class CircularQueueFloat
+public class RingQueueBigInteger
 {
-    private final float[] buffer;
+    private final BigInteger[] buffer;
     private final int capacity;
     private int head;
     private int tail;
     private int size;
 
     /**
-     * Constructs a new CircularQueueFloat with the specified capacity.
+     * Constructs a new RingQueueBigInteger with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
-    public CircularQueueFloat(int capacity)
+    public RingQueueBigInteger(int capacity)
     {
         if (capacity <= 0)
         {
             throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
         }
         this.capacity = capacity;
-        this.buffer = new float[capacity];
+        this.buffer = new BigInteger[capacity];
         this.head = 0;
         this.tail = 0;
         this.size = 0;
     }
 
-    public CircularQueueFloat(float[] data)
+    public RingQueueBigInteger(BigInteger[] data)
     {
         Objects.requireNonNull(data, "data cannot be null");
         if (data.length <= 0)
@@ -73,19 +60,19 @@ public class CircularQueueFloat
         this.tail = 0;
         this.size = data.length;
     }
-    
+
     /**
-     * Adds a new element to the end of the queue.
+     * Adds a value to the end of the queue.
      * <p>
      * If the queue is currently at maximum capacity, the oldest element (at the head)
      * is overwritten/removed to accommodate the new value.
      *
      * @param value the element to add.
-     * @return the element that was overwritten if the queue was full, otherwise 0.
+     * @return the element that was overwritten if the queue was full, otherwise {@code null}.
      */
-    public float push(float value)
+    public BigInteger push(BigInteger value)
     {
-        float removed = 0;
+        BigInteger removed = null;
         if (size == capacity)
         {
             removed = buffer[head];
@@ -98,9 +85,9 @@ public class CircularQueueFloat
         return removed;
     }
 
-    public void pushAll(float[] value)
+    public void pushAll(BigInteger[] value)
     {
-        for(float v : value)
+        for(BigInteger v : value)
         {
             push(v);
         }
@@ -109,15 +96,15 @@ public class CircularQueueFloat
     /**
      * Removes and returns the element at the head of the queue.
      *
-     * @return the oldest element in the queue, or 0 if the queue is empty.
+     * @return the oldest element in the queue, or {@code null} if the queue is empty.
      */
-    public float pop()
+    public BigInteger pop()
     {
         if (size == 0)
         {
-            return 0;
+            return null;
         }
-        float value = buffer[head];
+        BigInteger value = buffer[head];
         head = (head + 1) % capacity;
         size--;
         return value;
@@ -126,13 +113,13 @@ public class CircularQueueFloat
     /**
      * Retrieves the element at the head of the queue without removing it.
      *
-     * @return the oldest element in the queue, or 0 if the queue is empty.
+     * @return the oldest element in the queue, or null if the queue is empty.
      */
-    public float peek()
+    public BigInteger peek()
     {
         if (size == 0)
         {
-            return 0;
+            return null;
         }
         return buffer[head];
     }
@@ -143,24 +130,24 @@ public class CircularQueueFloat
      * Index 0 corresponds to the head (oldest element).
      *
      * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
+     * @return the element at the specified index, or {@code null} if the index is out of bounds (n < 0 or n >= size).
      */
-    public float get(int n)
+     public BigInteger get(int n)
     {
         if (n < 0 || n >= size)
         {
-            return 0;
+            return null;
         }
         return buffer[(head + n) % capacity];
     }
-
+    
     /**
      * Performs the given action for each element in the queue.
      * Elements are processed in order from head (oldest) to tail (newest).
      *
      * @param consumer the action to perform on each element.
      */
-    public void foreach(Consumer<Float> consumer)
+    public void foreach(Consumer<BigInteger> consumer)
     {
         for (int i = 0; i < size; i++)
         {
@@ -172,11 +159,11 @@ public class CircularQueueFloat
      * Returns a copy of the current queue elements as an array.
      * The array is ordered from head (oldest) to tail (newest).
      *
-     * @return a new float array containing the queue elements.
+     * @return a new BigInteger array containing the queue elements.
      */
-    public float[] array()
+    public BigInteger[] array()
     {
-        float[] result = new float[size];
+        BigInteger[] result = new BigInteger[size];
         for (int i = 0; i < size; i++)
         {
             result[i] = buffer[(head + i) % capacity];
@@ -201,32 +188,33 @@ public class CircularQueueFloat
 
     /**
      * Calculates the arithmetic mean of the values in the queue.
+     * <p>
+     * The calculation is performed with a scale of <b>10</b> and uses
+     * {@link RoundingMode#HALF_UP} for division.
      *
-     * @return the average of the elements, or 0.0 if the queue is empty.
+     * @return the average of the elements, or {@code BigDecimal.ZERO} if the
+     * queue is empty.
      */
-    public double average()
+    public BigDecimal average()
     {
         if (size == 0)
         {
-            return 0;
+            return BigDecimal.ZERO;
         }
-        return sum() / size;
+        return new BigDecimal(sum()).divide(BigDecimal.valueOf(size));
     }
 
     /**
      * Calculates the sum of all values in the queue.
-     * <p>
-     * Note: This method returns a standard {@code double}, so overflow may occur
-     * if the sum of elements exceeds {@code Double.MAX_VALUE}.
      *
      * @return the sum of all elements.
      */
-    public double sum()
+    public BigInteger sum()
     {
-        double total = 0;
+        BigInteger total = BigInteger.ZERO;
         for (int i = 0; i < size; i++)
         {
-            total += buffer[(head + i) % capacity];
+            total = total.add(buffer[(head + i) % capacity]);
         }
         return total;
     }
@@ -234,19 +222,19 @@ public class CircularQueueFloat
     /**
      * Finds the minimum value currently in the queue.
      *
-     * @return the smallest value, or 0 if the queue is empty.
+     * @return the smallest value, or {@code null} if the queue is empty.
      */
-    public float min()
+    public BigInteger min()
     {
         if (size == 0)
         {
-            return 0;
+            return null;
         }
-        float minValue = buffer[head];
+        BigInteger minValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            float value = buffer[(head + i) % capacity];
-            if (value < minValue)
+            BigInteger value = buffer[(head + i) % capacity];
+            if (value.compareTo(minValue) < 0)
             {
                 minValue = value;
             }
@@ -257,19 +245,19 @@ public class CircularQueueFloat
     /**
      * Finds the maximum value currently in the queue.
      *
-     * @return the largest value, or 0 if the queue is empty.
+     * @return the largest value, or {@code null} if the queue is empty.
      */
-    public float max()
+    public BigInteger max()
     {
         if (size == 0)
         {
-            return 0;
+            return null;
         }
-        float maxValue = buffer[head];
+        BigInteger maxValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            float value = buffer[(head + i) % capacity];
-            if (value > maxValue)
+            BigInteger value = buffer[(head + i) % capacity];
+            if (value.compareTo(maxValue) > 0)
             {
                 maxValue = value;
             }
@@ -277,14 +265,14 @@ public class CircularQueueFloat
         return maxValue;
     }
 
-    public static CircularQueueFloat getSynchronized(CircularQueueFloat queue)
+    public static RingQueueBigInteger getSynchronized(RingQueueBigInteger queue)
     {
-        return new CircularQueueFloat(queue.capacity)
+        return new RingQueueBigInteger(queue.capacity)
         {
             final Object lock = new Object();
-
+            
             @Override
-            public float push(float value)
+            public BigInteger push(BigInteger value)
             {
                 synchronized(lock)
                 {
@@ -293,7 +281,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public void pushAll(float[] value)
+            public void pushAll(BigInteger[] value)
             {
                 synchronized(lock)
                 {
@@ -302,7 +290,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public float pop()
+            public BigInteger pop()
             {
                 synchronized(lock)
                 {
@@ -311,7 +299,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public float peek()
+            public BigInteger peek()
             {
                 synchronized(lock)
                 {
@@ -320,7 +308,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public float get(int n)
+            public BigInteger get(int n)
             {
                 synchronized(lock)
                 {
@@ -347,7 +335,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public float[] array()
+            public BigInteger[] array()
             {
                 synchronized(lock)
                 {
@@ -356,16 +344,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public void foreach(Consumer<Float> consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
-                }
-            }
-
-            @Override
-            public float max()
+            public BigInteger max()
             {
                 synchronized(lock)
                 {
@@ -374,7 +353,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public float min()
+            public BigInteger min()
             {
                 synchronized(lock)
                 {
@@ -382,8 +361,18 @@ public class CircularQueueFloat
                 }
             }
 
+
             @Override
-            public double sum()
+            public void foreach(Consumer<BigInteger> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
+            public BigInteger sum()
             {
                 synchronized(lock)
                 {
@@ -392,7 +381,7 @@ public class CircularQueueFloat
             }
 
             @Override
-            public double average()
+            public BigDecimal average()
             {
                 synchronized(lock)
                 {

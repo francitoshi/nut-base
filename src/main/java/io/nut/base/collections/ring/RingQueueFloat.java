@@ -1,24 +1,9 @@
 /*
- *  CircularQueueShort.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.queue;
+package io.nut.base.collections.ring;
 
 // Claude Sonnet 4.5
 
@@ -26,41 +11,41 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * A fixed-size circular queue (ring buffer) implementation for {@code short} primitives.
+ * A fixed-size circular queue (ring buffer) implementation for {@code float} primitives.
  * <p>
  * This structure operates with a fixed capacity. When elements are pushed into a full queue,
  * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
-public class CircularQueueShort
+public class RingQueueFloat
 {
-    private final short[] buffer;
+    private final float[] buffer;
     private final int capacity;
     private int head;
     private int tail;
     private int size;
 
     /**
-     * Constructs a new CircularQueueShort with the specified capacity.
+     * Constructs a new RingQueueFloat with the specified capacity.
      *
      * @param capacity the maximum number of elements the queue can hold.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
-    public CircularQueueShort(int capacity)
+    public RingQueueFloat(int capacity)
     {
         if (capacity <= 0)
         {
             throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
         }
         this.capacity = capacity;
-        this.buffer = new short[capacity];
+        this.buffer = new float[capacity];
         this.head = 0;
         this.tail = 0;
         this.size = 0;
     }
 
-    public CircularQueueShort(short[] data)
+    public RingQueueFloat(float[] data)
     {
         Objects.requireNonNull(data, "data cannot be null");
         if (data.length <= 0)
@@ -75,17 +60,17 @@ public class CircularQueueShort
     }
     
     /**
-     * Adds a value to the end of the queue.
+     * Adds a new element to the end of the queue.
      * <p>
-     * If the queue is currently at maximum capacity, the oldest element (at the head) 
+     * If the queue is currently at maximum capacity, the oldest element (at the head)
      * is overwritten/removed to accommodate the new value.
      *
-     * @param value the short value to add.
-     * @return the value that was overwritten if the queue was full, otherwise 0.
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise 0.
      */
-    public short push(short value)
+    public float push(float value)
     {
-        short removed = 0;
+        float removed = 0;
         if (size == capacity)
         {
             removed = buffer[head];
@@ -98,9 +83,9 @@ public class CircularQueueShort
         return removed;
     }
 
-    public void pushAll(short[] value)
+    public void pushAll(float[] value)
     {
-        for(short v : value)
+        for(float v : value)
         {
             push(v);
         }
@@ -111,13 +96,13 @@ public class CircularQueueShort
      *
      * @return the oldest element in the queue, or 0 if the queue is empty.
      */
-    public short pop()
+    public float pop()
     {
         if (size == 0)
         {
             return 0;
         }
-        short value = buffer[head];
+        float value = buffer[head];
         head = (head + 1) % capacity;
         size--;
         return value;
@@ -128,7 +113,7 @@ public class CircularQueueShort
      *
      * @return the oldest element in the queue, or 0 if the queue is empty.
      */
-    public short peek()
+    public float peek()
     {
         if (size == 0)
         {
@@ -145,7 +130,7 @@ public class CircularQueueShort
      * @param n the relative index of the element to retrieve.
      * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
      */
-    public short get(int n)
+    public float get(int n)
     {
         if (n < 0 || n >= size)
         {
@@ -155,12 +140,12 @@ public class CircularQueueShort
     }
 
     /**
-     * Performs the given action for each element in the queue. 
+     * Performs the given action for each element in the queue.
      * Elements are processed in order from head (oldest) to tail (newest).
      *
      * @param consumer the action to perform on each element.
      */
-    public void foreach(Consumer<Short> consumer)
+    public void foreach(Consumer<Float> consumer)
     {
         for (int i = 0; i < size; i++)
         {
@@ -169,14 +154,14 @@ public class CircularQueueShort
     }
 
     /**
-     * Returns a copy of the current queue elements as an array. The array is
-     * ordered from head (oldest) to tail (newest).
+     * Returns a copy of the current queue elements as an array.
+     * The array is ordered from head (oldest) to tail (newest).
      *
-     * @return a new short array containing the queue elements.
+     * @return a new float array containing the queue elements.
      */
-    public short[] array()
+    public float[] array()
     {
-        short[] result = new short[size];
+        float[] result = new float[size];
         for (int i = 0; i < size; i++)
         {
             result[i] = buffer[(head + i) % capacity];
@@ -210,20 +195,20 @@ public class CircularQueueShort
         {
             return 0;
         }
-        return (double) sum() / size;
+        return sum() / size;
     }
 
     /**
      * Calculates the sum of all values in the queue.
      * <p>
-     * Note: This method returns a standard {@code long}, so overflow may occur
-     * if the sum of elements exceeds {@code Long.MAX_VALUE}.
+     * Note: This method returns a standard {@code double}, so overflow may occur
+     * if the sum of elements exceeds {@code Double.MAX_VALUE}.
      *
      * @return the sum of all elements.
      */
-    public long sum()
+    public double sum()
     {
-        long total = 0;
+        double total = 0;
         for (int i = 0; i < size; i++)
         {
             total += buffer[(head + i) % capacity];
@@ -236,16 +221,16 @@ public class CircularQueueShort
      *
      * @return the smallest value, or 0 if the queue is empty.
      */
-    public short min()
+    public float min()
     {
         if (size == 0)
         {
             return 0;
         }
-        short minValue = buffer[head];
+        float minValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            short value = buffer[(head + i) % capacity];
+            float value = buffer[(head + i) % capacity];
             if (value < minValue)
             {
                 minValue = value;
@@ -259,16 +244,16 @@ public class CircularQueueShort
      *
      * @return the largest value, or 0 if the queue is empty.
      */
-    public short max()
+    public float max()
     {
         if (size == 0)
         {
             return 0;
         }
-        short maxValue = buffer[head];
+        float maxValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            short value = buffer[(head + i) % capacity];
+            float value = buffer[(head + i) % capacity];
             if (value > maxValue)
             {
                 maxValue = value;
@@ -277,14 +262,14 @@ public class CircularQueueShort
         return maxValue;
     }
 
-    public static CircularQueueShort getSynchronized(CircularQueueShort queue)
+    public static RingQueueFloat getSynchronized(RingQueueFloat queue)
     {
-        return new CircularQueueShort(queue.capacity)
+        return new RingQueueFloat(queue.capacity)
         {
             final Object lock = new Object();
-            
+
             @Override
-            public short push(short value)
+            public float push(float value)
             {
                 synchronized(lock)
                 {
@@ -293,7 +278,7 @@ public class CircularQueueShort
             }
 
             @Override
-            public void pushAll(short[] value)
+            public void pushAll(float[] value)
             {
                 synchronized(lock)
                 {
@@ -302,7 +287,7 @@ public class CircularQueueShort
             }
 
             @Override
-            public short pop()
+            public float pop()
             {
                 synchronized(lock)
                 {
@@ -311,16 +296,16 @@ public class CircularQueueShort
             }
 
             @Override
-            public short peek()
+            public float peek()
             {
                 synchronized(lock)
                 {
                     return super.peek();
                 }
             }
-            
+
             @Override
-            public short get(int n)
+            public float get(int n)
             {
                 synchronized(lock)
                 {
@@ -347,7 +332,7 @@ public class CircularQueueShort
             }
 
             @Override
-            public short[] array()
+            public float[] array()
             {
                 synchronized(lock)
                 {
@@ -356,7 +341,7 @@ public class CircularQueueShort
             }
 
             @Override
-            public void foreach(Consumer<Short> consumer)
+            public void foreach(Consumer<Float> consumer)
             {
                 synchronized(lock)
                 {
@@ -365,7 +350,7 @@ public class CircularQueueShort
             }
 
             @Override
-            public short max()
+            public float max()
             {
                 synchronized(lock)
                 {
@@ -374,7 +359,7 @@ public class CircularQueueShort
             }
 
             @Override
-            public short min()
+            public float min()
             {
                 synchronized(lock)
                 {
@@ -383,7 +368,7 @@ public class CircularQueueShort
             }
 
             @Override
-            public long sum()
+            public double sum()
             {
                 synchronized(lock)
                 {
