@@ -109,7 +109,7 @@ public class ScopeGuard implements AutoCloseable
      *
      * @return this, to allow method chaining
      */
-    public ScopeGuard onExit(ThrowingRunnable action)
+    public ScopeGuard defer(ThrowingRunnable action)
     {
         Objects.requireNonNull(action, "action");
         if (!closed && !dismissed)
@@ -128,6 +128,67 @@ public class ScopeGuard implements AutoCloseable
     {
         dismissed = true;
         actions.clear();
+    }
+
+    private static final class ResourceAction implements ThrowingRunnable
+    {
+        final AutoCloseable resource;
+        final ThrowingRunnable action;
+
+        ResourceAction(AutoCloseable resource, ThrowingRunnable action)
+        {
+            this.resource = resource;
+            this.action = action;
+        }
+
+        @Override
+        public void run() throws Exception
+        {
+            action.run();
+        }
+    }
+
+    /**
+     * Registers an AutoCloseable resource to be closed on scope exit.
+     * Returns the same resource that was passed in.
+     *
+     * @param resource the resource to register
+     * @param <T> the resource type
+     * @return the registered resource
+     */
+    public <T extends AutoCloseable> T use(T resource)
+    {
+        Objects.requireNonNull(resource, "resource");
+        if (!closed && !dismissed)
+        {
+            actions.push(new ResourceAction(resource, resource::close));
+        }
+        return resource;
+    }
+
+    /**
+     * Removes the given resource from the guard, preventing it from being closed.
+     *
+     * @param resource the resource to release
+     */
+    public void release(AutoCloseable resource)
+    {
+        if (resource == null || closed || dismissed)
+        {
+            return;
+        }
+        actions.removeIf(action -> action instanceof ResourceAction && ((ResourceAction) action).resource == resource);
+    }
+
+    /**
+     * Removes the given resource from the guard, preventing it from being closed.
+     * Synonym for {@link #release(AutoCloseable)}.
+     *
+     * @param resource the resource to dismiss
+     */
+    public void dismiss(AutoCloseable resource)
+    {
+        release(resource);
     }
 
     /**
@@ -206,11 +267,11 @@ public class ScopeGuard implements AutoCloseable
         }
 
         @Override
-        public ScopeGuard onExit(ThrowingRunnable action)
+        public ScopeGuard defer(ThrowingRunnable action)
         {
             synchronized (lock)
             {
-                delegate.onExit(action);
+                delegate.defer(action);
             }
             return this;
         }
@@ -221,6 +282,33 @@ public class ScopeGuard implements AutoCloseable
             synchronized (lock)
             {
                 delegate.dismiss();
+            }
+        }
+
+        @Override
+        public <T extends AutoCloseable> T use(T resource)
+        {
+            synchronized (lock)
+            {
+                return delegate.use(resource);
+            }
+        }
+
+        @Override
+        public void release(AutoCloseable resource)
+        {
+            synchronized (lock)
+            {
+                delegate.release(resource);
+            }
+        }
+
+        @Override
+        public void dismiss(AutoCloseable resource)
+        {
+            synchronized (lock)
+            {
+                delegate.dismiss(resource);
             }
         }
 

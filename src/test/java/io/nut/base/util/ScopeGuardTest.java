@@ -34,7 +34,7 @@ class ScopeGuardTest
 
         try (ScopeGuard guard = ScopeGuard.create())
         {
-            guard.onExit(counter::incrementAndGet);
+            guard.defer(counter::incrementAndGet);
         }
 
         assertEquals(1, counter.get());
@@ -46,7 +46,7 @@ class ScopeGuardTest
         AtomicInteger counter = new AtomicInteger(0);
 
         ScopeGuard guard = ScopeGuard.create();
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
 
         assertEquals(0, counter.get());
 
@@ -61,9 +61,9 @@ class ScopeGuardTest
 
         try (ScopeGuard guard = ScopeGuard.create())
         {
-            guard.onExit(() -> executionOrder.add(1));
-            guard.onExit(() -> executionOrder.add(2));
-            guard.onExit(() -> executionOrder.add(3));
+            guard.defer(() -> executionOrder.add(1));
+            guard.defer(() -> executionOrder.add(2));
+            guard.defer(() -> executionOrder.add(3));
         }
 
         assertEquals(As.list(3, 2, 1), executionOrder);
@@ -73,7 +73,7 @@ class ScopeGuardTest
     void onExitReturnsSameInstanceForChaining()
     {
         ScopeGuard guard = ScopeGuard.create();
-        ScopeGuard returned = guard.onExit(() -> {});
+        ScopeGuard returned = guard.defer(() -> {});
         assertSame(guard, returned);
     }
 
@@ -88,8 +88,8 @@ class ScopeGuardTest
 
         try (ScopeGuard guard = ScopeGuard.create())
         {
-            guard.onExit(counter::incrementAndGet);
-            guard.onExit(counter::incrementAndGet);
+            guard.defer(counter::incrementAndGet);
+            guard.defer(counter::incrementAndGet);
             guard.dismiss();
         }
 
@@ -103,7 +103,7 @@ class ScopeGuardTest
 
         ScopeGuard guard = ScopeGuard.create();
         guard.dismiss();
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
         guard.close();
 
         assertEquals(0, counter.get());
@@ -119,7 +119,7 @@ class ScopeGuardTest
         AtomicInteger counter = new AtomicInteger(0);
 
         ScopeGuard guard = ScopeGuard.create();
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
 
         guard.close();
         guard.close();
@@ -135,7 +135,7 @@ class ScopeGuardTest
 
         ScopeGuard guard = ScopeGuard.create();
         guard.close();
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
         guard.close();
 
         assertEquals(0, counter.get());
@@ -149,7 +149,7 @@ class ScopeGuardTest
     void exceptionInActionIsRethrownWrappedInRuntimeException()
     {
         ScopeGuard guard = ScopeGuard.create();
-        guard.onExit(() -> { throw new IllegalStateException("boom"); });
+        guard.defer(() -> { throw new IllegalStateException("boom"); });
 
         RuntimeException thrown = assertThrows(RuntimeException.class, guard::close);
         assertEquals(IllegalStateException.class, thrown.getCause().getClass());
@@ -162,9 +162,9 @@ class ScopeGuardTest
         AtomicInteger counter = new AtomicInteger(0);
 
         ScopeGuard guard = ScopeGuard.create();
-        guard.onExit(counter::incrementAndGet);
-        guard.onExit(() -> { throw new RuntimeException("mid-stack failure"); });
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
+        guard.defer(() -> { throw new RuntimeException("mid-stack failure"); });
+        guard.defer(counter::incrementAndGet);
 
         assertThrows(RuntimeException.class, guard::close);
 
@@ -176,8 +176,8 @@ class ScopeGuardTest
     void secondAndLaterFailuresAreAttachedAsSuppressed()
     {
         ScopeGuard guard = ScopeGuard.create();
-        guard.onExit(() -> { throw new RuntimeException("failure A"); });
-        guard.onExit(() -> { throw new RuntimeException("failure B"); });
+        guard.defer(() -> { throw new RuntimeException("failure A"); });
+        guard.defer(() -> { throw new RuntimeException("failure B"); });
 
         RuntimeException thrown = assertThrows(RuntimeException.class, guard::close);
 
@@ -194,9 +194,9 @@ class ScopeGuardTest
         AtomicInteger counter = new AtomicInteger(0);
 
         ScopeGuard guard = ScopeGuard.createSuppressing();
-        guard.onExit(counter::incrementAndGet);
-        guard.onExit(() -> { throw new RuntimeException("ignored"); });
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
+        guard.defer(() -> { throw new RuntimeException("ignored"); });
+        guard.defer(counter::incrementAndGet);
 
         guard.close(); // must not throw
 
@@ -214,8 +214,8 @@ class ScopeGuardTest
 
         try (ScopeGuard guard = ScopeGuard.create().threadSafe())
         {
-            guard.onExit(counter::incrementAndGet);
-            guard.onExit(counter::incrementAndGet);
+            guard.defer(counter::incrementAndGet);
+            guard.defer(counter::incrementAndGet);
         }
 
         assertEquals(2, counter.get());
@@ -252,7 +252,7 @@ class ScopeGuardTest
                     startLatch.await();
                     for (int i = 0; i < actionsPerThread; i++)
                     {
-                        guard.onExit(counter::incrementAndGet);
+                        guard.defer(counter::incrementAndGet);
                     }
                 }
                 catch (InterruptedException e)
@@ -282,7 +282,7 @@ class ScopeGuardTest
     {
         ScopeGuard guard = ScopeGuard.create().threadSafe();
         AtomicInteger counter = new AtomicInteger(0);
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
 
         int threadCount = 8;
         ExecutorService pool = Executors.newFixedThreadPool(threadCount);
@@ -322,11 +322,76 @@ class ScopeGuardTest
         AtomicInteger counter = new AtomicInteger(0);
 
         ScopeGuard guard = ScopeGuard.create().threadSafe();
-        guard.onExit(counter::incrementAndGet);
+        guard.defer(counter::incrementAndGet);
         guard.dismiss();
         guard.close();
 
         assertFalse(counter.get() == 1);
         assertEquals(0, counter.get());
     }
+
+    private static class TestResource implements AutoCloseable
+    {
+        int closeCount = 0;
+
+        @Override
+        public void close()
+        {
+            closeCount++;
+        }
+    }
+
+    @Test
+    void useRegistersAndClosesResource()
+    {
+        TestResource resource = new TestResource();
+        try (ScopeGuard guard = ScopeGuard.create())
+        {
+            TestResource returned = guard.use(resource);
+            assertSame(resource, returned);
+            assertEquals(0, resource.closeCount);
+        }
+        assertEquals(1, resource.closeCount);
+    }
+
+    @Test
+    void releasePreventsResourceFromClosing()
+    {
+        TestResource resource = new TestResource();
+        try (ScopeGuard guard = ScopeGuard.create())
+        {
+            guard.use(resource);
+            guard.release(resource);
+        }
+        assertEquals(0, resource.closeCount);
+    }
+
+    @Test
+    void dismissResourcePreventsResourceFromClosing()
+    {
+        TestResource resource = new TestResource();
+        try (ScopeGuard guard = ScopeGuard.create())
+        {
+            guard.use(resource);
+            guard.dismiss(resource);
+        }
+        assertEquals(0, resource.closeCount);
+    }
+
+    @Test
+    void threadSafeUseReleaseAndDismiss()
+    {
+        TestResource resource1 = new TestResource();
+        TestResource resource2 = new TestResource();
+        try (ScopeGuard guard = ScopeGuard.create().threadSafe())
+        {
+            guard.use(resource1);
+            guard.use(resource2);
+            guard.release(resource1);
+            guard.dismiss(resource2);
+        }
+        assertEquals(0, resource1.closeCount);
+        assertEquals(0, resource2.closeCount);
+    }
 }
+
