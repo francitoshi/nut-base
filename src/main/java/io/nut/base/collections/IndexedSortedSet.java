@@ -7,6 +7,7 @@ package io.nut.base.collections;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.Objects;
@@ -172,6 +173,57 @@ public class IndexedSortedSet<T> implements SortedSet<T>
         }
 
         return cache.get(index);
+    }
+
+    /**
+     * Returns the index of the first occurrence of the specified element in this set,
+     * or -1 if this set does not contain the element.
+     *
+     * @param element element to search for
+     * @return the index of the first occurrence of the specified element in this set,
+     *         or -1 if this set does not contain the element
+     */
+    @SuppressWarnings("unchecked")
+    public int indexOf(T element)
+    {
+        if (!contains(element))
+        {
+            return -1;
+        }
+
+        checkValidity();
+
+        // 1. Search in the cache using binary search (O(log K) where K is cache size)
+        int index = Collections.binarySearch(cache, element, comparator());
+        if (index >= 0)
+        {
+            return index;
+        }
+
+        // 2. If not found in cache, advance iterator and populate cache until we find it
+        if (iterator == null)
+        {
+            iterator = delegate.iterator();
+        }
+
+        Comparator<? super T> comp = comparator();
+        while (iterator.hasNext())
+        {
+            T next = iterator.next();
+            cache.add(next);
+
+            boolean eq = (comp == null)
+                ? ((Comparable<? super T>) next).compareTo(element) == 0
+                : comp.compare(next, element) == 0;
+
+            if (eq)
+            {
+                return cache.size() - 1;
+            }
+        }
+
+        // Should not be reached since contains(element) was true
+        return -1;
     }
 
     @Override
@@ -429,6 +481,15 @@ public class IndexedSortedSet<T> implements SortedSet<T>
             synchronized (mutex)
             {
                 return super.get(index);
+            }
+        }
+
+        @Override
+        public int indexOf(E element)
+        {
+            synchronized (mutex)
+            {
+                return super.indexOf(element);
             }
         }
 

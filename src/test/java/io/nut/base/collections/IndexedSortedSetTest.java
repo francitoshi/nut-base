@@ -221,5 +221,33 @@ public class IndexedSortedSetTest
         IndexedSortedSet<Integer> sub = syncSet.subSet(0, 500);
         assertTrue(sub.getClass().getName().contains("SynchronizedIndexedSortedSet"));
     }
+
+    @Test
+    public void testIndexOfMethod()
+    {
+        IndexedSortedSet<String> set = new IndexedSortedSet<>(Arrays.asList("apple", "banana", "cherry"));
+
+        // Elements are sorted: apple (0), banana (1), cherry (2)
+        assertEquals(-1, set.indexOf("pear")); // not in set
+
+        // Test finding when not cached yet
+        assertEquals(0, set.indexOf("apple")); // first element, gets cached
+        assertEquals(1, set.indexOf("banana")); // middle element
+        assertEquals(2, set.indexOf("cherry")); // last element
+
+        // Test finding when fully cached
+        assertEquals(1, set.indexOf("banana"));
+
+        // Test after invalidation
+        set.add("apricot"); // apricot goes between apple and banana: sorted is apple, apricot, banana, cherry
+        assertEquals(1, set.indexOf("apricot"));
+        assertEquals(2, set.indexOf("banana"));
+
+        // Test thread-safe version
+        IndexedSortedSet<String> syncSet = set.synchronizedView();
+        assertEquals(2, syncSet.indexOf("banana"));
+        assertEquals(-1, syncSet.indexOf("pear"));
+    }
 }
+
 
