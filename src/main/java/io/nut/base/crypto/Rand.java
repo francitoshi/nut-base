@@ -1,27 +1,13 @@
 /*
- * Rand.java
- *
- * Copyright (c) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto;
 
 import java.math.BigInteger;
-import java.security.SecureRandom;
+import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  *
@@ -29,56 +15,72 @@ import java.security.SecureRandom;
  */
 public class Rand
 {
-    private final SecureRandom secureRandom;
+    private final Random random;
 
-    public Rand(SecureRandom random)
+    public Rand(Random random)
     {
-        this.secureRandom = random;
+        this.random = random;
+    }
+
+    /**
+     * Returns a {@link Rand} backed by the {@link ThreadLocalRandom} of the
+     * current thread.
+     * <p>
+     * This method is useful for high-throughput, non-cryptographic randomness
+     * in concurrent code, since it avoids contention and the overhead of
+     * allocating a new generator per call. The returned generator must not be
+     * shared across threads, and must not be used for cryptographic purposes.
+     *
+     * @return a thread-local {@link Rand}
+     */
+    public static Rand getThreadLocalInstance()
+    {
+        return new Rand(ThreadLocalRandom.current());
     }
     
     public int nextInt()
     {
-        return secureRandom.nextInt();
+        return random.nextInt();
     }
 
     public int nextInt(int i)
     {
-        return secureRandom.nextInt(i);
+        return random.nextInt(i);
     }
 
     public long nextLong()
     {
-        return secureRandom.nextLong();
+        return random.nextLong();
     }
 
     public boolean nextBoolean()
     {
-        return secureRandom.nextBoolean();
+        return random.nextBoolean();
     }
 
     public float nextFloat()
     {
-        return secureRandom.nextFloat();
+        return random.nextFloat();
     }
 
     public double nextDouble()
     {
-        return secureRandom.nextDouble();
+        return random.nextDouble();
     }
 
     public synchronized double nextGaussian()
     {
-        return secureRandom.nextGaussian();
+        return random.nextGaussian();
     }
 
     public BigInteger nextBigInteger(int bitLength, int certainty)
     {
-        return new BigInteger(bitLength, certainty, secureRandom);
+        return new BigInteger(bitLength, certainty, random);
     }
     
     public BigInteger nextBigInteger(int numBits)
     {
-        return new BigInteger(numBits, secureRandom);
+        return new BigInteger(numBits, random);
     }
     
     public BigInteger nextBigInteger(BigInteger bound)
@@ -86,7 +88,7 @@ public class Rand
         BigInteger r;
         do 
         {
-            r = new BigInteger(bound.bitLength(), secureRandom);
+            r = new BigInteger(bound.bitLength(), random);
         } 
         while (r.compareTo(bound) >= 0);
         return r;
@@ -98,7 +100,7 @@ public class Rand
         {
             return data;
         }
-        secureRandom.nextBytes(data);
+        random.nextBytes(data);
         return data;
     }
 
@@ -110,7 +112,7 @@ public class Rand
         }
         for(int i=0;i<data.length;i++)
         {
-            data[i] = secureRandom.nextBoolean();
+            data[i] = random.nextBoolean();
         }
         return data;
     }
@@ -123,7 +125,7 @@ public class Rand
         }
         for(int i=0;i<data.length;i++)
         {
-            data[i] = secureRandom.nextInt();
+            data[i] = random.nextInt();
         }
         return data;
     }
@@ -136,7 +138,7 @@ public class Rand
         }
         for(int i=0;i<data.length;i++)
         {
-            data[i] = secureRandom.nextInt(bound);
+            data[i] = random.nextInt(bound);
         }
         return data;
     }
@@ -149,7 +151,7 @@ public class Rand
         }
         for(int i=0;i<data.length;i++)
         {
-            data[i] = secureRandom.nextLong();
+            data[i] = random.nextLong();
         }
         return data;
     }
@@ -162,7 +164,7 @@ public class Rand
         }
         for(int i=0;i<data.length;i++)
         {
-            data[i] = secureRandom.nextFloat();
+            data[i] = random.nextFloat();
         }
         return data;
     }
@@ -175,7 +177,7 @@ public class Rand
         }
         for(int i=0;i<data.length;i++)
         {
-            data[i] = secureRandom.nextDouble();
+            data[i] = random.nextDouble();
         }
         return data;
     }

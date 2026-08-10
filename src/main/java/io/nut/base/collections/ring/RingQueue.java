@@ -198,6 +198,11 @@ public class RingQueue<E>
         return size;
     }
 
+    public int getCapacity()
+    {
+        return capacity;
+    }
+
     public boolean isEmpty()
     {
         return size==0;

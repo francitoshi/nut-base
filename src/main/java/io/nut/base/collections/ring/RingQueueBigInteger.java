@@ -18,16 +18,14 @@ import java.util.function.Consumer;
  * This structure operates with a fixed capacity. When elements are pushed into a full queue,
  * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
+ * This class extends {@link RingQueue} and only adds {@code BigInteger}-specific conveniences
+ * such as {@link #sum()}, {@link #average()}, {@link #peek()} and a no-argument {@link #array()}.
+ * All the generic ring-buffer behaviour is inherited from {@link RingQueue}.
+ * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
-public class RingQueueBigInteger
+public class RingQueueBigInteger extends RingQueue<BigInteger>
 {
-    private final BigInteger[] buffer;
-    private final int capacity;
-    private int head;
-    private int tail;
-    private int size;
-
     /**
      * Constructs a new RingQueueBigInteger with the specified capacity.
      *
@@ -36,78 +34,12 @@ public class RingQueueBigInteger
      */
     public RingQueueBigInteger(int capacity)
     {
-        if (capacity <= 0)
-        {
-            throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
-        }
-        this.capacity = capacity;
-        this.buffer = new BigInteger[capacity];
-        this.head = 0;
-        this.tail = 0;
-        this.size = 0;
+        super(capacity);
     }
 
     public RingQueueBigInteger(BigInteger[] data)
     {
-        Objects.requireNonNull(data, "data cannot be null");
-        if (data.length <= 0)
-        {
-            throw new IllegalArgumentException("data cannot be empty");
-        }
-        this.capacity = data.length;
-        this.buffer = data.clone();
-        this.head = 0;
-        this.tail = 0;
-        this.size = data.length;
-    }
-
-    /**
-     * Adds a value to the end of the queue.
-     * <p>
-     * If the queue is currently at maximum capacity, the oldest element (at the head)
-     * is overwritten/removed to accommodate the new value.
-     *
-     * @param value the element to add.
-     * @return the element that was overwritten if the queue was full, otherwise {@code null}.
-     */
-    public BigInteger push(BigInteger value)
-    {
-        BigInteger removed = null;
-        if (size == capacity)
-        {
-            removed = buffer[head];
-            head = (head + 1) % capacity;
-            size--;
-        }
-        buffer[tail] = value;
-        tail = (tail + 1) % capacity;
-        size++;
-        return removed;
-    }
-
-    public void pushAll(BigInteger[] value)
-    {
-        for(BigInteger v : value)
-        {
-            push(v);
-        }
-    }
-
-    /**
-     * Removes and returns the element at the head of the queue.
-     *
-     * @return the oldest element in the queue, or {@code null} if the queue is empty.
-     */
-    public BigInteger pop()
-    {
-        if (size == 0)
-        {
-            return null;
-        }
-        BigInteger value = buffer[head];
-        head = (head + 1) % capacity;
-        size--;
-        return value;
+        super(Objects.requireNonNull(data, "data cannot be null").clone());
     }
 
     /**
@@ -117,91 +49,18 @@ public class RingQueueBigInteger
      */
     public BigInteger peek()
     {
-        if (size == 0)
-        {
-            return null;
-        }
-        return buffer[head];
-    }
-    
-    /**
-     * Retrieves the element at a specific index relative to the head of the queue.
-     * <p>
-     * Index 0 corresponds to the head (oldest element).
-     *
-     * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or {@code null} if the index is out of bounds (n < 0 or n >= size).
-     */
-     public BigInteger get(int n)
-    {
-        if (n < 0 || n >= size)
-        {
-            return null;
-        }
-        return buffer[(head + n) % capacity];
-    }
-    
-    /**
-     * Performs the given action for each element in the queue.
-     * Elements are processed in order from head (oldest) to tail (newest).
-     *
-     * @param consumer the action to perform on each element.
-     */
-    public void foreach(Consumer<BigInteger> consumer)
-    {
-        for (int i = 0; i < size; i++)
-        {
-            consumer.accept(buffer[(head + i) % capacity]);
-        }
+        return get(0);
     }
 
     /**
-     * Returns a copy of the current queue elements as an array.
-     * The array is ordered from head (oldest) to tail (newest).
+     * Returns an array containing all of the elements in this queue in proper sequence
+     * (from oldest to newest).
      *
      * @return a new BigInteger array containing the queue elements.
      */
     public BigInteger[] array()
     {
-        BigInteger[] result = new BigInteger[size];
-        for (int i = 0; i < size; i++)
-        {
-            result[i] = buffer[(head + i) % capacity];
-        }
-        return result;
-    }
-
-    /**
-     * Returns the number of elements currently in the queue.
-     *
-     * @return the current size.
-     */
-    public int size()
-    {
-        return size;
-    }
-
-    public boolean isEmpty()
-    {
-        return size==0;
-    }
-
-    /**
-     * Calculates the arithmetic mean of the values in the queue.
-     * <p>
-     * The calculation is performed with a scale of <b>10</b> and uses
-     * {@link RoundingMode#HALF_UP} for division.
-     *
-     * @return the average of the elements, or {@code BigDecimal.ZERO} if the
-     * queue is empty.
-     */
-    public BigDecimal average()
-    {
-        if (size == 0)
-        {
-            return BigDecimal.ZERO;
-        }
-        return new BigDecimal(sum()).divide(BigDecimal.valueOf(size));
+        return array(new BigInteger[size()]);
     }
 
     /**
@@ -212,65 +71,34 @@ public class RingQueueBigInteger
     public BigInteger sum()
     {
         BigInteger total = BigInteger.ZERO;
-        for (int i = 0; i < size; i++)
+        for (BigInteger value : list())
         {
-            total = total.add(buffer[(head + i) % capacity]);
+            total = total.add(value);
         }
         return total;
     }
 
     /**
-     * Finds the minimum value currently in the queue.
+     * Calculates the arithmetic mean of the values in the queue.
      *
-     * @return the smallest value, or {@code null} if the queue is empty.
+     * @return the average of the elements, or {@code BigDecimal.ZERO} if the
+     * queue is empty.
      */
-    public BigInteger min()
+    public BigDecimal average()
     {
-        if (size == 0)
+        if (isEmpty())
         {
-            return null;
+            return BigDecimal.ZERO;
         }
-        BigInteger minValue = buffer[head];
-        for (int i = 1; i < size; i++)
-        {
-            BigInteger value = buffer[(head + i) % capacity];
-            if (value.compareTo(minValue) < 0)
-            {
-                minValue = value;
-            }
-        }
-        return minValue;
-    }
-
-    /**
-     * Finds the maximum value currently in the queue.
-     *
-     * @return the largest value, or {@code null} if the queue is empty.
-     */
-    public BigInteger max()
-    {
-        if (size == 0)
-        {
-            return null;
-        }
-        BigInteger maxValue = buffer[head];
-        for (int i = 1; i < size; i++)
-        {
-            BigInteger value = buffer[(head + i) % capacity];
-            if (value.compareTo(maxValue) > 0)
-            {
-                maxValue = value;
-            }
-        }
-        return maxValue;
+        return new BigDecimal(sum()).divide(BigDecimal.valueOf(size()));
     }
 
     public static RingQueueBigInteger getSynchronized(RingQueueBigInteger queue)
     {
-        return new RingQueueBigInteger(queue.capacity)
+        return new RingQueueBigInteger(queue.getCapacity())
         {
             final Object lock = new Object();
-            
+
             @Override
             public BigInteger push(BigInteger value)
             {
@@ -344,6 +172,24 @@ public class RingQueueBigInteger
             }
 
             @Override
+            public BigInteger[] array(BigInteger[] a)
+            {
+                synchronized(lock)
+                {
+                    return super.array(a);
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<BigInteger> consumer)
+            {
+                synchronized(lock)
+                {
+                    super.foreach(consumer);
+                }
+            }
+
+            @Override
             public BigInteger max()
             {
                 synchronized(lock)
@@ -358,16 +204,6 @@ public class RingQueueBigInteger
                 synchronized(lock)
                 {
                     return super.min();
-                }
-            }
-
-
-            @Override
-            public void foreach(Consumer<BigInteger> consumer)
-            {
-                synchronized(lock)
-                {
-                    super.foreach(consumer);
                 }
             }
 
@@ -388,7 +224,6 @@ public class RingQueueBigInteger
                     return super.average();
                 }
             }
-
         };
     }
 }

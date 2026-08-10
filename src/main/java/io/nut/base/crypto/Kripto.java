@@ -199,7 +199,7 @@ public class Kripto
         Kripto kripto = new Kripto();
     }
     /**
-     * Returns a default instance of {@link Kripto} with no specific provider.
+     * Returns the default instance of {@link Kripto} with no specific provider.
      *
      * @return a new Kripto instance
      */
@@ -217,14 +217,14 @@ public class Kripto
      * Returns an instance of {@link Kripto}, optionally preferring Bouncy
      * Castle provider.
      *
-     * @param preferBouncyCastle true to prefer Bouncy Castle, false for default
-     * provider
-     * @return a new Kripto instance
+     * @param preferBouncyCastle true to prefer Bouncy Castle, false for the default instance
+     * 
+     * @return a Kripto instance
      */
     public static Kripto getInstance(boolean preferBouncyCastle)
     {
-        Kripto instance = preferBouncyCastle ? getInstanceBouncyCastle() : null;
-        return instance != null ? instance : new Kripto();
+        Kripto instance = preferBouncyCastle ? getInstanceBouncyCastle() : getInstance();
+        return instance != null ? instance : getInstance();
     }
 
     private static volatile boolean registeredBouncyCastle;
