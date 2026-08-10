@@ -1,22 +1,7 @@
 /*
- *  KeyBytes.java
- *
- *  Copyright (c) 2023-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.keyarray;
 
@@ -31,23 +16,23 @@ import java.util.Arrays;
  * 
  * @author franci
  */
-public class KeyBytes implements Comparable<KeyBytes>, Serializable
+public class ByteKey implements Comparable<ByteKey>, Serializable
 {
     
     protected final byte[] bytes;
 
-    public KeyBytes(byte[] bytes)
+    public ByteKey(byte[] bytes)
     {
         this.bytes = bytes;
     }
 
-    public KeyBytes(String bytes)
+    public ByteKey(String bytes)
     {
         this.bytes = Hex.decode(bytes);
     }
 
     @Override
-    public int compareTo(KeyBytes other)
+    public int compareTo(ByteKey other)
     {
         return Utils.compare(this.bytes, other.bytes);
     }
@@ -69,7 +54,7 @@ public class KeyBytes implements Comparable<KeyBytes>, Serializable
             return false;
         if (getClass() != obj.getClass())
             return false;
-        final KeyBytes other = (KeyBytes) obj;
+        final ByteKey other = (ByteKey) obj;
         return Arrays.equals(this.bytes, other.bytes);
     }
 
