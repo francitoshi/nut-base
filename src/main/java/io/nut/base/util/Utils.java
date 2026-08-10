@@ -863,6 +863,94 @@ public abstract class Utils
         return 0;
     }
 
+    public static int compare(char[] a, char[] b)
+    {
+        int n = Math.min(a.length, b.length);
+        for (int i = 0; i < n; i++)
+        {
+            int cmp = Character.compare(a[i], b[i]);
+            if (cmp != 0)
+            {
+                return cmp;
+            }
+        }
+        if (a.length < b.length)
+        {
+            return -1;
+        }
+        if (a.length > b.length)
+        {
+            return +1;
+        }
+        return 0;
+    }
+
+    public static int compare(short[] a, short[] b)
+    {
+        int n = Math.min(a.length, b.length);
+        for (int i = 0; i < n; i++)
+        {
+            int cmp = Short.compare(a[i], b[i]);
+            if (cmp != 0)
+            {
+                return cmp;
+            }
+        }
+        if (a.length < b.length)
+        {
+            return -1;
+        }
+        if (a.length > b.length)
+        {
+            return +1;
+        }
+        return 0;
+    }
+
+    public static int compare(float[] a, float[] b)
+    {
+        int n = Math.min(a.length, b.length);
+        for (int i = 0; i < n; i++)
+        {
+            int cmp = Float.compare(a[i], b[i]);
+            if (cmp != 0)
+            {
+                return cmp;
+            }
+        }
+        if (a.length < b.length)
+        {
+            return -1;
+        }
+        if (a.length > b.length)
+        {
+            return +1;
+        }
+        return 0;
+    }
+
+    public static int compare(boolean[] a, boolean[] b)
+    {
+        int n = Math.min(a.length, b.length);
+        for (int i = 0; i < n; i++)
+        {
+            int cmp = Boolean.compare(a[i], b[i]);
+            if (cmp != 0)
+            {
+                return cmp;
+            }
+        }
+        if (a.length < b.length)
+        {
+            return -1;
+        }
+        if (a.length > b.length)
+        {
+            return +1;
+        }
+        return 0;
+    }
+
     public static String getJavaClassPathCommon()
     {
         String[] cp = Java.JAVA_CLASS_PATH.split(File.pathSeparator);

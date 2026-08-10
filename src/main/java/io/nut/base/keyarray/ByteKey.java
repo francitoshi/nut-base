@@ -26,9 +26,9 @@ public class ByteKey implements Comparable<ByteKey>, Serializable
         this.bytes = bytes;
     }
 
-    public ByteKey(String bytes)
+    public ByteKey(String hex)
     {
-        this.bytes = Hex.decode(bytes);
+        this.bytes = Hex.decode(hex);
     }
 
     @Override

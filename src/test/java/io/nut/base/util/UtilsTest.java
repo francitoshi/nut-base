@@ -699,6 +699,142 @@ public class UtilsTest
     }
 
     /**
+     * Test of compare method, of class Utils.
+     */
+    @Test
+    public void testCompareChar()
+    {
+        char[] b0 = {};
+        char[] b1 = {'a'};
+        char[] b2 = {'b'};
+        char[] c2 = {'b'};
+        char[] b11 = {'a','a'};
+        char[] b20 = {'b','a'};
+        
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
+        //test arrays of different size
+        assertTrue(Utils.compare(b0, b1)<0);
+        assertTrue(Utils.compare(b1, b0)>0);
+        
+        assertTrue(Utils.compare(b1, b2)<0);
+        assertTrue(Utils.compare(b2, b1)>0);
+        assertTrue(Utils.compare(b2, c2)==0);
+        
+        assertTrue(Utils.compare(b11, b20)<0);
+        assertTrue(Utils.compare(b20, b11)>0);
+        
+        assertTrue(Utils.compare(b2, b11)>0);
+        assertTrue(Utils.compare(b11, b2)<0);
+    }
+
+    /**
+     * Test of compare method, of class Utils.
+     */
+    @Test
+    public void testCompareShort()
+    {
+        short[] b0 = {};
+        short[] b1 = {1};
+        short[] b2 = {2};
+        short[] c2 = {2};
+        short[] b11 = {1,1};
+        short[] b20 = {2,0};
+        
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
+        //test arrays of different size
+        assertTrue(Utils.compare(b0, b1)<0);
+        assertTrue(Utils.compare(b1, b0)>0);
+        
+        assertTrue(Utils.compare(b1, b2)<0);
+        assertTrue(Utils.compare(b2, b1)>0);
+        assertTrue(Utils.compare(b2, c2)==0);
+        
+        assertTrue(Utils.compare(b11, b20)<0);
+        assertTrue(Utils.compare(b20, b11)>0);
+        
+        assertTrue(Utils.compare(b2, b11)>0);
+        assertTrue(Utils.compare(b11, b2)<0);
+    }
+
+    /**
+     * Test of compare method, of class Utils.
+     */
+    @Test
+    public void testCompareFloat()
+    {
+        float[] b0 = {};
+        float[] b1 = {1};
+        float[] b2 = {2};
+        float[] c2 = {2};
+        float[] b11 = {1,1};
+        float[] b20 = {2,0};
+        
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
+        //test arrays of different size
+        assertTrue(Utils.compare(b0, b1)<0);
+        assertTrue(Utils.compare(b1, b0)>0);
+        
+        assertTrue(Utils.compare(b1, b2)<0);
+        assertTrue(Utils.compare(b2, b1)>0);
+        assertTrue(Utils.compare(b2, c2)==0);
+        
+        assertTrue(Utils.compare(b11, b20)<0);
+        assertTrue(Utils.compare(b20, b11)>0);
+        
+        assertTrue(Utils.compare(b2, b11)>0);
+        assertTrue(Utils.compare(b11, b2)<0);
+    }
+
+    /**
+     * Test of compare method, of class Utils.
+     */
+    @Test
+    public void testCompareBoolean()
+    {
+        boolean[] b0 = {};
+        boolean[] b1 = {false};
+        boolean[] b2 = {true};
+        boolean[] c2 = {true};
+        boolean[] b11 = {false,false};
+        boolean[] b20 = {true,false};
+        
+        //test compare with itself
+        assertTrue(Utils.compare(b0, b0)==0);
+        assertTrue(Utils.compare(b1, b1)==0);
+        assertTrue(Utils.compare(b11, b11)==0);
+        assertTrue(Utils.compare(b20, b20)==0);
+
+        //test arrays of different size
+        assertTrue(Utils.compare(b0, b1)<0);
+        assertTrue(Utils.compare(b1, b0)>0);
+        
+        assertTrue(Utils.compare(b1, b2)<0);
+        assertTrue(Utils.compare(b2, b1)>0);
+        assertTrue(Utils.compare(b2, c2)==0);
+        
+        assertTrue(Utils.compare(b11, b20)<0);
+        assertTrue(Utils.compare(b20, b11)>0);
+        
+        assertTrue(Utils.compare(b2, b11)>0);
+        assertTrue(Utils.compare(b11, b2)<0);
+    }
+
+    /**
      * Test of transpose method, of class Utils.
      */
     @Test
