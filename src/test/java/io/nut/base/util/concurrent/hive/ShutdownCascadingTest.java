@@ -116,14 +116,14 @@ class ShutdownCascadingTest
     }
 
     @Test
-    void shutdownCascadingFromBroadcastBeeShutdownsAllTargets() throws InterruptedException
+    void shutdownCascadingFromFanOutBeeShutdownsAllTargets() throws InterruptedException
     {
         PipeBee<Integer,Integer> pipe = hive.pipe(i -> i);
         RecordingBee<Integer> target1 = new RecordingBee<>(hive);
         RecordingBee<Integer> target2 = new RecordingBee<>(hive);
         RecordingBee<Integer> target3 = new RecordingBee<>(hive);
 
-        BroadcastBee<Integer> broadcast = hive.broadcast(target1, target2, target3);
+        FanOutBee<Integer> broadcast = hive.broadcast(target1, target2, target3);
         pipe.linkTo(broadcast);
 
         Hive.shutdownAndAwaitTermination(true, pipe);
@@ -136,11 +136,11 @@ class ShutdownCascadingTest
     }
 
     @Test
-    void shutdownCascadingFromBroadcastBeeDirectly() throws InterruptedException
+    void shutdownCascadingFromFanOutBeeDirectly() throws InterruptedException
     {
         RecordingBee<String> t1 = new RecordingBee<>(hive);
         RecordingBee<String> t2 = new RecordingBee<>(hive);
-        BroadcastBee<String> bc = hive.broadcast(t1, t2);
+        FanOutBee<String> bc = hive.broadcast(t1, t2);
 
         Hive.shutdownAndAwaitTermination(true, bc);
 

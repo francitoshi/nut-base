@@ -34,16 +34,16 @@ import java.util.function.Consumer;
  * <p>
  * Example:
  * <pre>{@code
- * BroadcastBee<String> bc = hive.broadcast();
+ * FanOutBee<String> bc = hive.broadcast();
  * bc.addTarget(hive.bee(s -> saveToDb(s)));
  * bc.addTarget(hive.bee(s -> publishToKafka(s)));
  * bc.send("hello");  // both targets receive "hello"
  * }</pre>
  *
- * @param <T> the type of messages this BroadcastBee receives and forwards
+ * @param <T> the type of messages this FanOutBee receives and forwards
  *            unchanged to every target
  */
-public class BroadcastBee<T> extends Bee<T>
+public class FanOutBee<T> extends Bee<T>
 {
     /**
      * The list of downstream targets. Using {@link CopyOnWriteArrayList} allows
@@ -62,14 +62,14 @@ public class BroadcastBee<T> extends Bee<T>
      * @param targets   zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(int threads, Hive hive, int queueSize, Consumer<T>... targets)
+    public FanOutBee(int threads, Hive hive, int queueSize, Consumer<T>... targets)
     {
         super(threads, hive, queueSize);
         addTargets(targets);
     }
 
     /**
-     * Constructs a BroadcastBee with the given thread count and Hive, using the
+     * Constructs a FanOutBee with the given thread count and Hive, using the
      * default queue size.
      *
      * @param threads the maximum number of concurrent worker threads
@@ -77,48 +77,48 @@ public class BroadcastBee<T> extends Bee<T>
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(int threads, Hive hive, Consumer<T>... targets)
+    public FanOutBee(int threads, Hive hive, Consumer<T>... targets)
     {
         super(threads, hive);
         addTargets(targets);
     }
 
     /**
-     * Constructs a BroadcastBee attached to the given Hive with the default
+     * Constructs a FanOutBee attached to the given Hive with the default
      * thread count and queue size.
      *
      * @param hive    the Hive thread pool, or {@code null} for synchronous mode
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(Hive hive, Consumer<T>... targets)
+    public FanOutBee(Hive hive, Consumer<T>... targets)
     {
         super(hive);
         addTargets(targets);
     }
 
     /**
-     * Constructs a standalone BroadcastBee with the given thread count but no
+     * Constructs a standalone FanOutBee with the given thread count but no
      * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
      *
      * @param threads the maximum number of concurrent worker threads
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(int threads, Consumer<T>... targets)
+    public FanOutBee(int threads, Consumer<T>... targets)
     {
         super(threads);
         addTargets(targets);
     }
 
     /**
-     * Constructs a standalone BroadcastBee with the default thread count and no
+     * Constructs a standalone FanOutBee with the default thread count and no
      * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
      *
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public BroadcastBee(Consumer<T>... targets)
+    public FanOutBee(Consumer<T>... targets)
     {
         super();
         addTargets(targets);
@@ -144,9 +144,9 @@ public class BroadcastBee<T> extends Bee<T>
      * forward.
      *
      * @param target the downstream stage to add; must not be {@code null}
-     * @return this BroadcastBee, for fluent chaining of additions
+     * @return this FanOutBee, for fluent chaining of additions
      */
-    public BroadcastBee<T> addTarget(Consumer<T> target)
+    public FanOutBee<T> addTarget(Consumer<T> target)
     {
         this.targets.add(Objects.requireNonNull(target, "target must not be null"));
         return this;
@@ -194,13 +194,13 @@ public class BroadcastBee<T> extends Bee<T>
 
     /**
      * {@inheritDoc}
-     * Overridden to return the more specific {@code BroadcastBee<T>} type for
+     * Overridden to return the more specific {@code FanOutBee<T>} type for
      * fluent chaining.
      */
     @Override
-    public BroadcastBee<T> shutdown(boolean onlyWhenEmpty)
+    public FanOutBee<T> shutdown(boolean onlyWhenEmpty)
     {
-        return (BroadcastBee<T>) super.shutdown(onlyWhenEmpty);
+        return (FanOutBee<T>) super.shutdown(onlyWhenEmpty);
     }
 
     @Override

@@ -282,7 +282,7 @@ class HivePipelineTest
         List<String> b = new CopyOnWriteArrayList<>();
 
         Bee<Integer> head = hive.pipeline((Integer i) -> "v=" + i).head();
-        BroadcastBee<String> broadcaster = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
+        FanOutBee<String> broadcaster = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
 
         PipeBee<Integer,String> pipe = (PipeBee<Integer,String>) head;
         pipe.linkTo(broadcaster);

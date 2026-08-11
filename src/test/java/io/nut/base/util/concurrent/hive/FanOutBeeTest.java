@@ -35,11 +35,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link BroadcastBee}: fan-out delivery to multiple
- * targets, dynamic target management via {@link BroadcastBee#addTarget}
- * and {@link BroadcastBee#removeTarget}, and thread-safe target mutation.
+ * Unit tests for {@link FanOutBee}: fan-out delivery to multiple
+ * targets, dynamic target management via {@link FanOutBee#addTarget}
+ * and {@link FanOutBee#removeTarget}, and thread-safe target mutation.
  */
-class BroadcastBeeTest
+class FanOutBeeTest
 {
     private Hive hive;
 
@@ -62,7 +62,7 @@ class BroadcastBeeTest
         RecordingBee<String> t1 = new RecordingBee<>();
         RecordingBee<String> t2 = new RecordingBee<>();
         RecordingBee<String> t3 = new RecordingBee<>();
-        BroadcastBee<String> bc = new BroadcastBee<>(t1, t2, t3);
+        FanOutBee<String> bc = new FanOutBee<>(t1, t2, t3);
 
         bc.accept("msg");
 
@@ -76,7 +76,7 @@ class BroadcastBeeTest
     {
         RecordingBee<Integer> t1 = new RecordingBee<>();
         RecordingBee<Integer> t2 = new RecordingBee<>();
-        BroadcastBee<Integer> bc = new BroadcastBee<>(t1, t2);
+        FanOutBee<Integer> bc = new FanOutBee<>(t1, t2);
 
         bc.accept(1);
         bc.accept(2);
@@ -91,7 +91,7 @@ class BroadcastBeeTest
     {
         RecordingBee<String> t1 = new RecordingBee<>();
         RecordingBee<String> t2 = new RecordingBee<>();
-        BroadcastBee<String> bc = new BroadcastBee<>(t1);
+        FanOutBee<String> bc = new FanOutBee<>(t1);
 
         bc.accept("before");
 
@@ -103,13 +103,13 @@ class BroadcastBeeTest
     }
 
     @Test
-    void addTargetReturnsTheBroadcastBeeForFluentChaining()
+    void addTargetReturnsTheFanOutBeeForFluentChaining()
     {
         RecordingBee<String> t1 = new RecordingBee<>();
         RecordingBee<String> t2 = new RecordingBee<>();
-        BroadcastBee<String> bc = new BroadcastBee<>();
+        FanOutBee<String> bc = new FanOutBee<>();
 
-        BroadcastBee<String> returned = bc.addTarget(t1);
+        FanOutBee<String> returned = bc.addTarget(t1);
 
         assertSame(bc, returned);
         returned.addTarget(t2);
@@ -123,7 +123,7 @@ class BroadcastBeeTest
     @Test
     void addTargetRejectsNull()
     {
-        BroadcastBee<String> bc = new BroadcastBee<>();
+        FanOutBee<String> bc = new FanOutBee<>();
         assertThrows(NullPointerException.class, () -> bc.addTarget(null));
     }
 
@@ -132,7 +132,7 @@ class BroadcastBeeTest
     {
         RecordingBee<String> t1 = new RecordingBee<>();
         RecordingBee<String> t2 = new RecordingBee<>();
-        BroadcastBee<String> bc = new BroadcastBee<>(t1, t2);
+        FanOutBee<String> bc = new FanOutBee<>(t1, t2);
 
         bc.accept("before");
         assertTrue(bc.removeTarget(t2));
@@ -147,7 +147,7 @@ class BroadcastBeeTest
     {
         RecordingBee<String> t1 = new RecordingBee<>();
         RecordingBee<String> t2 = new RecordingBee<>();
-        BroadcastBee<String> bc = new BroadcastBee<>(t1);
+        FanOutBee<String> bc = new FanOutBee<>(t1);
 
         assertFalse(bc.removeTarget(t2));
     }
@@ -157,7 +157,7 @@ class BroadcastBeeTest
     {
         RecordingBee<String> t1 = new RecordingBee<>();
         RecordingBee<String> t2 = new RecordingBee<>();
-        BroadcastBee<String> bc = new BroadcastBee<>(t1, t2);
+        FanOutBee<String> bc = new FanOutBee<>(t1, t2);
 
         List<Consumer<String>> targets = bc.getTargets();
 
@@ -166,9 +166,9 @@ class BroadcastBeeTest
     }
 
     @Test
-    void emptyBroadcastBeeWithNoTargetsStillAcceptsMessages()
+    void emptyFanOutBeeWithNoTargetsStillAcceptsMessages()
     {
-        BroadcastBee<String> bc = new BroadcastBee<>();
+        FanOutBee<String> bc = new FanOutBee<>();
         bc.accept("msg");
         // Message is silently dropped, no targets present
     }
@@ -180,7 +180,7 @@ class BroadcastBeeTest
         List<Integer> b = new CopyOnWriteArrayList<>();
         List<Integer> c = new CopyOnWriteArrayList<>();
 
-        BroadcastBee<Integer> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add), hive.bee(c::add));
+        FanOutBee<Integer> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add), hive.bee(c::add));
 
         for (int i = 0; i < 10; i++)
         {
@@ -198,7 +198,7 @@ class BroadcastBeeTest
     void constructorRejectsNullTargetVarargs()
     {
         RecordingBee<String> t1 = new RecordingBee<>();
-        assertThrows(NullPointerException.class, () -> new BroadcastBee<>(t1, null));
+        assertThrows(NullPointerException.class, () -> new FanOutBee<>(t1, null));
     }
 
     @Test
@@ -206,7 +206,7 @@ class BroadcastBeeTest
     {
         RecordingBee<String> t1 = new RecordingBee<>();
         RecordingBee<String> t2 = new RecordingBee<>();
-        BroadcastBee<String> bc = hive.broadcast(t1, t2);
+        FanOutBee<String> bc = hive.broadcast(t1, t2);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -219,7 +219,7 @@ class BroadcastBeeTest
     void hiveFactoryWithThreadsParameter()
     {
         RecordingBee<String> t1 = new RecordingBee<>();
-        BroadcastBee<String> bc = hive.broadcast(2, t1);
+        FanOutBee<String> bc = hive.broadcast(2, t1);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -231,7 +231,7 @@ class BroadcastBeeTest
     void hiveFactoryWithQueueSizeAndThreadsParameter()
     {
         RecordingBee<String> t1 = new RecordingBee<>();
-        BroadcastBee<String> bc = hive.broadcast(2, 10, t1);
+        FanOutBee<String> bc = hive.broadcast(2, 10, t1);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -250,7 +250,7 @@ class BroadcastBeeTest
         p1.linkTo(hive.bee(chain1Result::add));
         p2.linkTo(hive.bee(chain2Result::add));
 
-        BroadcastBee<Integer> bc = hive.broadcast(p1, p2);
+        FanOutBee<Integer> bc = hive.broadcast(p1, p2);
 
         bc.accept(5);
         bc.accept(10);

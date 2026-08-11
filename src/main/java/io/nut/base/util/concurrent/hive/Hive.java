@@ -55,7 +55,7 @@ import java.util.logging.Logger;
  * {@link #shutdownAndAwaitTermination(boolean, boolean, Sendable[])}) traverse
  * a chain of linked Bee stages and shut them down collectively, following
  * the links stored by {@link PipeBee}, {@link FilterBee}, {@link BatchBee},
- * and {@link BroadcastBee}.
+ * and {@link FanOutBee}.
  */
 public class Hive extends Queen implements AutoCloseable, Executor
 {
@@ -545,48 +545,48 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Creates a new {@link BroadcastBee}{@code <T>} attached to this Hive that
+     * Creates a new {@link FanOutBee}{@code <T>} attached to this Hive that
      * fans out every received message to all supplied {@code targets}. Additional
-     * targets can be added later with {@link BroadcastBee#addTarget}.
+     * targets can be added later with {@link FanOutBee#addTarget}.
      *
      * @param <T>     the message type
      * @param targets zero or more initial downstream stages
-     * @return a new BroadcastBee attached to this Hive
+     * @return a new FanOutBee attached to this Hive
      */
     @SafeVarargs
-    public final <T> BroadcastBee<T> broadcast(Consumer<T>... targets)
+    public final <T> FanOutBee<T> broadcast(Consumer<T>... targets)
     {
         return broadcast(0, 0, targets);
     }
 
     /**
-     * Creates a new {@link BroadcastBee} with the specified thread count.
+     * Creates a new {@link FanOutBee} with the specified thread count.
      *
      * @param <T>     the message type
      * @param threads the maximum number of concurrent worker threads
      * @param targets zero or more initial downstream stages
-     * @return a new BroadcastBee attached to this Hive
+     * @return a new FanOutBee attached to this Hive
      */
     @SafeVarargs
-    public final <T> BroadcastBee<T> broadcast(int threads, Consumer<T>... targets)
+    public final <T> FanOutBee<T> broadcast(int threads, Consumer<T>... targets)
     {
         return broadcast(threads, 0, targets);
     }
 
     /**
-     * Creates a new {@link BroadcastBee} with the specified thread count and
+     * Creates a new {@link FanOutBee} with the specified thread count and
      * internal queue size.
      *
      * @param <T>       the message type
      * @param threads   the maximum number of concurrent worker threads
      * @param queueSize the internal queue capacity
      * @param targets   zero or more initial downstream stages
-     * @return a new BroadcastBee attached to this Hive
+     * @return a new FanOutBee attached to this Hive
      */
     @SafeVarargs
-    public final <T> BroadcastBee<T> broadcast(int threads, int queueSize, Consumer<T>... targets)
+    public final <T> FanOutBee<T> broadcast(int threads, int queueSize, Consumer<T>... targets)
     {
-        return new BroadcastBee<>(threads, this, queueSize, targets);
+        return new FanOutBee<>(threads, this, queueSize, targets);
     }
 
     /**
@@ -823,7 +823,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /**
      * Blocks the calling thread until every stage in the given chain is idle
      * and its internal queue is empty. Stages linked via {@link PipeBee},
-     * {@link FilterBee}, {@link BatchBee}, and {@link BroadcastBee} are
+     * {@link FilterBee}, {@link BatchBee}, and {@link FanOutBee} are
      * traversed automatically; cycles are handled safely.
      *
      * @param stages the root stage(s) of the chain(s) to wait on; must not be
@@ -861,7 +861,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /**
      * Initiates a graceful shutdown on every stage in the given chain(s).
      * Stages linked via {@link PipeBee}, {@link FilterBee}, {@link BatchBee},
-     * and {@link BroadcastBee} are traversed automatically; cycles are handled
+     * and {@link FanOutBee} are traversed automatically; cycles are handled
      * safely.
      *
      * @param onlyWhenEmpty if {@code true}, each stage defers its shutdown until
@@ -903,7 +903,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      * Blocks the calling thread until every stage in the given chain(s) has
      * terminated or the timeout elapses, whichever comes first. Stages linked
      * via {@link PipeBee}, {@link FilterBee}, {@link BatchBee}, and
-     * {@link BroadcastBee} are traversed automatically; cycles are handled
+     * {@link FanOutBee} are traversed automatically; cycles are handled
      * safely.
      *
      * @param millis the maximum time to wait in total, in milliseconds
@@ -928,7 +928,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      * {@link #shutdown(boolean, Consumer[])} followed by
      * {@link #awaitTermination(int, Consumer[])} with an effectively infinite
      * timeout. Stages linked via {@link PipeBee}, {@link FilterBee},
-     * {@link BatchBee}, and {@link BroadcastBee} are traversed automatically;
+     * {@link BatchBee}, and {@link FanOutBee} are traversed automatically;
      * cycles are handled safely.
      * <p>
      * If the calling thread is interrupted while waiting, the interruption is

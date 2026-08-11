@@ -138,7 +138,7 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * {@link Consumer}{@code <R>} and returns the head of the fully-wired
      * chain. The {@code next} argument can be any {@code Sendable<R>} —
      * another pipeline's head, a {@link QueueBee}, a {@link ListBee},
-     * a {@link BroadcastBee}, and so on.
+     * a {@link FanOutBee}, and so on.
      *
      * @param next the downstream stage that will receive the final values;
      *             must not be {@code null}

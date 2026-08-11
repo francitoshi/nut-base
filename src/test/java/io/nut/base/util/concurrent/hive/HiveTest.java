@@ -204,11 +204,11 @@ class HiveTest
     }
 
     @Test
-    void broadcastFactoryCreatesAttachedBroadcastBeeWithGivenTargets()
+    void broadcastFactoryCreatesAttachedFanOutBeeWithGivenTargets()
     {
         List<String> a = new CopyOnWriteArrayList<>();
         List<String> b = new CopyOnWriteArrayList<>();
-        BroadcastBee<String> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
+        FanOutBee<String> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
 
         bc.accept("m");
 
