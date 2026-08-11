@@ -293,4 +293,39 @@ class FanInQueueTest
         bounded.add(1);
         assertEquals(2, fan.remainingCapacity());
     }
+
+    @Test
+    void testRejectsInvalidLatency()
+    {
+        assertThrows(IllegalArgumentException.class,
+            () -> new FanInQueue<Integer>(0, new LinkedBlockingQueue<>()));
+        assertThrows(IllegalArgumentException.class,
+            () -> new FanInQueue<Integer>(-5L, new LinkedBlockingQueue<>()));
+    }
+
+    @Test
+    void testDefaultLatencyIsOneSecond() throws InterruptedException
+    {
+        BlockingQueue<Integer> a = new LinkedBlockingQueue<>();
+        a.add(1);
+        FanInQueue<Integer> fan = new FanInQueue<>(a);
+
+        // uses the default latency, still reads immediately
+        assertEquals(Integer.valueOf(1), fan.poll(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    @Timeout(value = 2, unit = TimeUnit.SECONDS)
+    void testCustomLatencyBoundsTheRoundWait() throws InterruptedException
+    {
+        // latency 3 ms: rounds wait 1, 2, then 3 ms each
+        FanInQueue<Integer> fan = new FanInQueue<>(3L, new LinkedBlockingQueue<>());
+
+        long start = System.nanoTime();
+        assertNull(fan.poll(20, TimeUnit.MILLISECONDS));
+        long elapsed = System.nanoTime() - start;
+
+        assertTrue(elapsed >= TimeUnit.MILLISECONDS.toNanos(10), "elapsed=" + elapsed);
+        assertTrue(elapsed < TimeUnit.MILLISECONDS.toNanos(100), "elapsed=" + elapsed);
+    }
 }

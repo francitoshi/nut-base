@@ -35,8 +35,10 @@ import java.util.stream.Stream;
  * <p><b>Reading strategy:</b> {@link #take()} and {@link #poll(long, java.util.concurrent.TimeUnit)}
  * sweep all subscribed queues round after round. On every round each source is
  * polled waiting an incremental time: 1 ms on the first round, 2 ms on the
- * second, 3 ms on the third and so on, up to 1000 ms or up to the remaining
- * timeout of the operation that started the reading. {@link #poll()} performs a
+ * second, 3 ms on the third and so on, up to the maximum latency (1000 ms by
+ * default, configurable through the constructors that take a
+ * {@code maxLatencyMillis} argument) or up to the remaining timeout of the
+ * operation that started the reading. {@link #poll()} performs a
  * single non-blocking round and returns the first element found. To avoid
  * starving a source, every round starts at a different queue: the round number
  * (modulo the number of sources) for {@code take} and the timed {@code poll},
@@ -75,6 +77,9 @@ public class FanInQueue<E> implements BlockingQueue<E>
         }
     }
 
+    private static final long DEFAULT_MAX_LATENCY_MILLIS = 1000L;
+
+    private final long maxLatencyMillis;
     private final CopyOnWriteArrayList<Subscriber<E>> subscribers = new CopyOnWriteArrayList<>();
     private final AtomicInteger roundRobin = new AtomicInteger();
     private final ReentrantLock lock = new ReentrantLock();
@@ -88,13 +93,7 @@ public class FanInQueue<E> implements BlockingQueue<E>
     @SafeVarargs
     public FanInQueue(BlockingQueue<E>... queues)
     {
-        if (queues != null)
-        {
-            for (BlockingQueue<E> queue : queues)
-            {
-                subscribe(queue);
-            }
-        }
+        this(DEFAULT_MAX_LATENCY_MILLIS, queues);
     }
 
     /**
@@ -106,11 +105,64 @@ public class FanInQueue<E> implements BlockingQueue<E>
      */
     public FanInQueue(Collection<? extends BlockingQueue<E>> queues)
     {
+        this(DEFAULT_MAX_LATENCY_MILLIS, queues);
+    }
+
+    /**
+     * Constructs a {@code FanInQueue} with the given initial sources and the
+     * maximum latency, in milliseconds, waited before beginning the next round.
+     *
+     * <p>The per-round wait grows from 1 ms on the first round by 1 ms each
+     * round until it reaches {@code maxLatencyMillis}, which is then kept for
+     * the following rounds.
+     *
+     * @param maxLatencyMillis the maximum wait in milliseconds before starting
+     *                         the next round; must be at least 1
+     * @param queues           the source queues to subscribe initially; must not
+     *                         contain {@code null}
+     * @throws IllegalArgumentException if {@code maxLatencyMillis} is less than 1
+     */
+    @SafeVarargs
+    public FanInQueue(long maxLatencyMillis, BlockingQueue<E>... queues)
+    {
+        this.maxLatencyMillis = validateLatency(maxLatencyMillis);
+        if (queues != null)
+        {
+            for (BlockingQueue<E> queue : queues)
+            {
+                subscribe(queue);
+            }
+        }
+    }
+
+    /**
+     * Constructs a {@code FanInQueue} with the given initial sources and the
+     * maximum latency, in milliseconds, waited before beginning the next round.
+     *
+     * @param maxLatencyMillis the maximum wait in milliseconds before starting
+     *                         the next round; must be at least 1
+     * @param queues           the source queues to subscribe initially; must not
+     *                         be {@code null} nor contain {@code null}
+     * @throws NullPointerException     if {@code queues} is {@code null}
+     * @throws IllegalArgumentException if {@code maxLatencyMillis} is less than 1
+     */
+    public FanInQueue(long maxLatencyMillis, Collection<? extends BlockingQueue<E>> queues)
+    {
+        this.maxLatencyMillis = validateLatency(maxLatencyMillis);
         Objects.requireNonNull(queues, "queues must not be null");
         for (BlockingQueue<E> queue : queues)
         {
             subscribe(queue);
         }
+    }
+
+    private static long validateLatency(long maxLatencyMillis)
+    {
+        if (maxLatencyMillis < 1)
+        {
+            throw new IllegalArgumentException("maxLatencyMillis must be at least 1: " + maxLatencyMillis);
+        }
+        return maxLatencyMillis;
     }
 
     /**
@@ -338,7 +390,7 @@ public class FanInQueue<E> implements BlockingQueue<E>
                 continue;
             }
 
-            long roundWait = TimeUnit.MILLISECONDS.toNanos(Math.min(round + 1L, 1000L));
+            long roundWait = TimeUnit.MILLISECONDS.toNanos(Math.min(round + 1L, maxLatencyMillis));
             for (int i = 0; i < n; i++)
             {
                 long wait = roundWait;
