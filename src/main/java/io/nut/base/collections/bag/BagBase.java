@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.bag;
+package io.nut.base.collections.bag;
 
 import io.nut.base.equalizer.EqualsSame;
 import java.lang.reflect.Array;
