@@ -8,6 +8,7 @@ package io.nut.base.cache;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * Adaptive Replacement Cache (ARC) implementation.
@@ -57,7 +58,7 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
     }
 
     @Override
-    public V get(K key, java.util.function.Function<? super K, ? extends V> creator)
+    public V get(K key, Function<? super K, ? extends V> creator)
     {
         Node<K, V> node = map.get(key);
         long now = System.nanoTime();
