@@ -12,11 +12,11 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleSupplier;
 import java.util.function.DoubleUnaryOperator;
@@ -69,8 +69,8 @@ public class ExpEval
     private static final BigDecimal INT_MIN = BigDecimal.valueOf(Integer.MIN_VALUE);
 
     private final int decimals;
-    private final Map<String, Object> variables = new HashMap<>();
-    private final Map<String, FunctionEntry> functions = new HashMap<>();
+    private final Map<String, Object> variables = new ConcurrentHashMap<>();
+    private final Map<String, FunctionEntry> functions = new ConcurrentHashMap<>();
 
     private static final class FunctionEntry
     {
