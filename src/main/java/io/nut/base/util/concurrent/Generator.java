@@ -1,22 +1,7 @@
 /*
- *  Generator.java
- *
- *  Copyright (C) 2024-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util.concurrent;
 
@@ -26,6 +11,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -91,6 +77,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     private volatile E nextElement = null;
     private volatile boolean shutdownRequested;
     private volatile boolean terminated;
+    private volatile Thread producerThread;
     private final AtomicInteger running = new AtomicInteger();
     
     /**
@@ -131,6 +118,11 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     {
         shutdownRequested = terminated = true;
         queue.clear();
+        Thread t = producerThread;
+        if (t != null)
+        {
+            t.interrupt();
+        }
     }
    
     /**
@@ -186,7 +178,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     {
         try
         {
-            if(terminated)
+            if(terminated || Thread.currentThread().isInterrupted())
             {
                 throw new IllegalStateException("Generator is terminated");
             }
@@ -194,7 +186,8 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         }
         catch (InterruptedException ex)
         {
-            Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("Generator was interrupted", ex);
         }
     }
     
@@ -223,6 +216,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
             @Override
             public void run()
             {
+                producerThread = Thread.currentThread();
                 int value = running.getAndIncrement();
                 try
                 {
@@ -240,7 +234,10 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                         {
                             try
                             {
-                                queue.put(POISON);
+                                if (!terminated)
+                                {
+                                    queue.offer(POISON, 100, TimeUnit.MILLISECONDS);
+                                }
                             }
                             catch (InterruptedException ex)
                             {
@@ -325,6 +322,16 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     public static abstract class Safe<E> extends Generator<E>
     {
         private final Object lock = new Object();
+
+        public Safe()
+        {
+            super();
+        }
+
+        public Safe(int capacity)
+        {
+            super(capacity);
+        }
         
         @Override
         public E next()
