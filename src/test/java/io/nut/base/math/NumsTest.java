@@ -1,22 +1,7 @@
 /*
- *  NumsTest.java
- *
- *  Copyright (C) 2024-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.math;
 
@@ -1393,5 +1378,203 @@ public class NumsTest
         BigDecimal result = Nums.avg(BigDecimal.TEN, MathContext.DECIMAL128, BigDecimal.ONE, BigDecimal.TEN);
         assertEquals(BigDecimal.valueOf(5.5), result);
     }
-    
+
+    /**
+     * Test of saturatedAdd method, of class Nums.
+     */
+    @Test
+    public void testSaturatedAdd_int()
+    {
+        assertEquals(0, Nums.saturatedAdd(0, 0));
+        assertEquals(3, Nums.saturatedAdd(1, 2));
+        assertEquals(-3, Nums.saturatedAdd(-1, -2));
+        assertEquals(2, Nums.saturatedAdd(-1, 3));
+        assertEquals(-2, Nums.saturatedAdd(1, -3));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedAdd(Integer.MAX_VALUE, 1));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedAdd(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        assertEquals(Integer.MIN_VALUE, Nums.saturatedAdd(Integer.MIN_VALUE, -1));
+        assertEquals(Integer.MIN_VALUE, Nums.saturatedAdd(Integer.MIN_VALUE, Integer.MIN_VALUE));
+    }
+
+    /**
+     * Test of saturatedAdd method, of class Nums.
+     */
+    @Test
+    public void testSaturatedAdd_long()
+    {
+        assertEquals(0L, Nums.saturatedAdd(0L, 0L));
+        assertEquals(3L, Nums.saturatedAdd(1L, 2L));
+        assertEquals(-3L, Nums.saturatedAdd(-1L, -2L));
+        assertEquals(2L, Nums.saturatedAdd(-1L, 3L));
+        assertEquals(-2L, Nums.saturatedAdd(1L, -3L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedAdd(Long.MAX_VALUE, 1L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedAdd(Long.MAX_VALUE, Long.MAX_VALUE));
+        assertEquals(Long.MIN_VALUE, Nums.saturatedAdd(Long.MIN_VALUE, -1L));
+        assertEquals(Long.MIN_VALUE, Nums.saturatedAdd(Long.MIN_VALUE, Long.MIN_VALUE));
+    }
+
+    /**
+     * Test of saturatedSubtract method, of class Nums.
+     */
+    @Test
+    public void testSaturatedSubtract_int()
+    {
+        assertEquals(0, Nums.saturatedSubtract(0, 0));
+        assertEquals(3, Nums.saturatedSubtract(5, 2));
+        assertEquals(-3, Nums.saturatedSubtract(-5, -2));
+        assertEquals(-4, Nums.saturatedSubtract(-1, 3));
+        assertEquals(4, Nums.saturatedSubtract(1, -3));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedSubtract(Integer.MAX_VALUE, -1));
+        assertEquals(0, Nums.saturatedSubtract(Integer.MIN_VALUE, Integer.MIN_VALUE));
+        assertEquals(Integer.MIN_VALUE, Nums.saturatedSubtract(Integer.MIN_VALUE, 1));
+    }
+
+    /**
+     * Test of saturatedSubtract method, of class Nums.
+     */
+    @Test
+    public void testSaturatedSubtract_long()
+    {
+        assertEquals(0L, Nums.saturatedSubtract(0L, 0L));
+        assertEquals(3L, Nums.saturatedSubtract(5L, 2L));
+        assertEquals(-3L, Nums.saturatedSubtract(-5L, -2L));
+        assertEquals(-4L, Nums.saturatedSubtract(-1L, 3L));
+        assertEquals(4L, Nums.saturatedSubtract(1L, -3L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedSubtract(Long.MAX_VALUE, -1L));
+        assertEquals(0L, Nums.saturatedSubtract(Long.MIN_VALUE, Long.MIN_VALUE));
+        assertEquals(Long.MIN_VALUE, Nums.saturatedSubtract(Long.MIN_VALUE, 1L));
+    }
+
+    /**
+     * Test of saturatedMultiply method, of class Nums.
+     */
+    @Test
+    public void testSaturatedMultiply_int()
+    {
+        assertEquals(0, Nums.saturatedMultiply(0, 100));
+        assertEquals(0, Nums.saturatedMultiply(100, 0));
+        assertEquals(6, Nums.saturatedMultiply(2, 3));
+        assertEquals(-6, Nums.saturatedMultiply(-2, 3));
+        assertEquals(-6, Nums.saturatedMultiply(2, -3));
+        assertEquals(6, Nums.saturatedMultiply(-2, -3));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedMultiply(Integer.MAX_VALUE, 2));
+        assertEquals(Integer.MIN_VALUE, Nums.saturatedMultiply(Integer.MIN_VALUE, 2));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedMultiply(Integer.MIN_VALUE, -1));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedMultiply(-1, Integer.MIN_VALUE));
+        assertEquals(Integer.MIN_VALUE, Nums.saturatedMultiply(1, Integer.MIN_VALUE));
+    }
+
+    /**
+     * Test of saturatedMultiply method, of class Nums.
+     */
+    @Test
+    public void testSaturatedMultiply_long()
+    {
+        assertEquals(0L, Nums.saturatedMultiply(0L, 100L));
+        assertEquals(0L, Nums.saturatedMultiply(100L, 0L));
+        assertEquals(6L, Nums.saturatedMultiply(2L, 3L));
+        assertEquals(-6L, Nums.saturatedMultiply(-2L, 3L));
+        assertEquals(-6L, Nums.saturatedMultiply(2L, -3L));
+        assertEquals(6L, Nums.saturatedMultiply(-2L, -3L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedMultiply(Long.MAX_VALUE, 2L));
+        assertEquals(Long.MIN_VALUE, Nums.saturatedMultiply(Long.MIN_VALUE, 2L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedMultiply(Long.MIN_VALUE, -1L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedMultiply(-1L, Long.MIN_VALUE));
+        assertEquals(Long.MIN_VALUE, Nums.saturatedMultiply(1L, Long.MIN_VALUE));
+    }
+
+    /**
+     * Test of saturatedNegate method, of class Nums.
+     */
+    @Test
+    public void testSaturatedNegate_int()
+    {
+        assertEquals(0, Nums.saturatedNegate(0));
+        assertEquals(-5, Nums.saturatedNegate(5));
+        assertEquals(5, Nums.saturatedNegate(-5));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedNegate(Integer.MIN_VALUE));
+        assertEquals(-Integer.MAX_VALUE, Nums.saturatedNegate(Integer.MAX_VALUE));
+    }
+
+    /**
+     * Test of saturatedNegate method, of class Nums.
+     */
+    @Test
+    public void testSaturatedNegate_long()
+    {
+        assertEquals(0L, Nums.saturatedNegate(0L));
+        assertEquals(-5L, Nums.saturatedNegate(5L));
+        assertEquals(5L, Nums.saturatedNegate(-5L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedNegate(Long.MIN_VALUE));
+        assertEquals(-Long.MAX_VALUE, Nums.saturatedNegate(Long.MAX_VALUE));
+    }
+
+    /**
+     * Test of saturatedAbs method, of class Nums.
+     */
+    @Test
+    public void testSaturatedAbs_int()
+    {
+        assertEquals(0, Nums.saturatedAbs(0));
+        assertEquals(5, Nums.saturatedAbs(5));
+        assertEquals(5, Nums.saturatedAbs(-5));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedAbs(Integer.MIN_VALUE));
+        assertEquals(Integer.MAX_VALUE, Nums.saturatedAbs(Integer.MAX_VALUE));
+    }
+
+    /**
+     * Test of saturatedAbs method, of class Nums.
+     */
+    @Test
+    public void testSaturatedAbs_long()
+    {
+        assertEquals(0L, Nums.saturatedAbs(0L));
+        assertEquals(5L, Nums.saturatedAbs(5L));
+        assertEquals(5L, Nums.saturatedAbs(-5L));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedAbs(Long.MIN_VALUE));
+        assertEquals(Long.MAX_VALUE, Nums.saturatedAbs(Long.MAX_VALUE));
+    }
+
+    /**
+     * Test of ceilDiv method, of class Nums.
+     */
+    @Test
+    public void testCeilDiv_int()
+    {
+        assertEquals(3, Nums.ceilDiv(5, 2));
+        assertEquals(2, Nums.ceilDiv(4, 2));
+        assertEquals(1, Nums.ceilDiv(1, 2));
+        assertEquals(0, Nums.ceilDiv(0, 2));
+        assertEquals(-2, Nums.ceilDiv(-5, 2));
+        assertEquals(-2, Nums.ceilDiv(-4, 2));
+        assertEquals(-2, Nums.ceilDiv(5, -2));
+        assertEquals(-2, Nums.ceilDiv(4, -2));
+        assertEquals(3, Nums.ceilDiv(-5, -2));
+        assertEquals(2, Nums.ceilDiv(-4, -2));
+        assertEquals(Integer.MAX_VALUE, Nums.ceilDiv(Integer.MAX_VALUE, 1));
+        assertEquals(Integer.MIN_VALUE, Nums.ceilDiv(Integer.MIN_VALUE, 1));
+        assertThrows(ArithmeticException.class, () -> Nums.ceilDiv(1, 0));
+    }
+
+    /**
+     * Test of ceilDiv method, of class Nums.
+     */
+    @Test
+    public void testCeilDiv_long()
+    {
+        assertEquals(3L, Nums.ceilDiv(5L, 2L));
+        assertEquals(2L, Nums.ceilDiv(4L, 2L));
+        assertEquals(1L, Nums.ceilDiv(1L, 2L));
+        assertEquals(0L, Nums.ceilDiv(0L, 2L));
+        assertEquals(-2L, Nums.ceilDiv(-5L, 2L));
+        assertEquals(-2L, Nums.ceilDiv(-4L, 2L));
+        assertEquals(-2L, Nums.ceilDiv(5L, -2L));
+        assertEquals(-2L, Nums.ceilDiv(4L, -2L));
+        assertEquals(3L, Nums.ceilDiv(-5L, -2L));
+        assertEquals(2L, Nums.ceilDiv(-4L, -2L));
+        assertEquals(Long.MAX_VALUE, Nums.ceilDiv(Long.MAX_VALUE, 1L));
+        assertEquals(Long.MIN_VALUE, Nums.ceilDiv(Long.MIN_VALUE, 1L));
+        assertThrows(ArithmeticException.class, () -> Nums.ceilDiv(1L, 0L));
+    }
+
 }
