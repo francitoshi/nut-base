@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.channel;
 
+import io.nut.base.math.Nums;
 import java.util.Objects;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
@@ -102,7 +103,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
     public boolean close(long timeout, TimeUnit unit) throws InterruptedException
     {
         long timeoutNanos = unit.toNanos(timeout);
-        long deadline = System.nanoTime() + timeoutNanos;
+        long deadline = Nums.saturatedAdd(System.nanoTime(), timeoutNanos);
 
         synchronized (lock)
         {

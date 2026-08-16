@@ -1895,5 +1895,175 @@ public class Nums
         }
         return a;
     }
+
+    public static int saturatedAdd(int a, int b)
+    {
+        int r = a + b;
+
+        if (b > 0 && r < a)
+        {
+            return Integer.MAX_VALUE;
+        }
+        if (b < 0 && r > a)
+        {
+            return Integer.MIN_VALUE;
+        }
+
+        return r;
+    }
+
+    public static long saturatedAdd(long a, long b)
+    {
+        long r = a + b;
+
+        if (b > 0 && r < a)
+        {
+            return Long.MAX_VALUE;
+        }
+        if (b < 0 && r > a)
+        {
+            return Long.MIN_VALUE;
+        }
+
+        return r;
+    }
+
+    public static int saturatedSubtract(int a, int b)
+    {
+        int r = a - b;
+
+        if (b < 0 && r < a)
+        {
+            return Integer.MAX_VALUE;
+        }
+        if (b > 0 && r > a)
+        {
+            return Integer.MIN_VALUE;
+        }
+
+        return r;
+    }
+
+    public static long saturatedSubtract(long a, long b)
+    {
+        long r = a - b;
+
+        if (b < 0 && r < a)
+        {
+            return Long.MAX_VALUE;
+        }
+        if (b > 0 && r > a)
+        {
+            return Long.MIN_VALUE;
+        }
+
+        return r;
+    }
+    public static int saturatedMultiply(int a, int b)
+    {
+        if (a == 0 || b == 0)
+        {
+            return 0;
+        }
+
+        if (a == -1 && b == Integer.MIN_VALUE)
+        {
+            return Integer.MAX_VALUE;
+        }
+        if (b == -1 && a == Integer.MIN_VALUE)
+        {
+            return Integer.MAX_VALUE;
+        }
+
+        int r = a * b;
+
+        if (r / b != a)
+        {
+            return ((a ^ b) < 0) ? Integer.MIN_VALUE : Integer.MAX_VALUE;
+        }
+
+        return r;
+    }
     
+    public static long saturatedMultiply(long a, long b)
+    {
+        if (a == 0 || b == 0)
+        {
+            return 0;
+        }
+
+        if (a == -1 && b == Long.MIN_VALUE)
+        {
+            return Long.MAX_VALUE;
+        }
+        if (b == -1 && a == Long.MIN_VALUE)
+        {
+            return Long.MAX_VALUE;
+        }
+
+        long r = a * b;
+
+        if (r / b != a)
+        {
+            return ((a ^ b) < 0) ? Long.MIN_VALUE : Long.MAX_VALUE;
+        }
+
+        return r;
+    }    
+    
+    public static int saturatedNegate(int a)
+    {
+        return a == Integer.MIN_VALUE ? Integer.MAX_VALUE : -a;
+    }
+
+    public static int saturatedAbs(int a)
+    {
+        return a == Integer.MIN_VALUE ? Integer.MAX_VALUE : Math.abs(a);
+    }
+
+    public static int ceilDiv(int a, int b)
+    {
+        if (b == 0)
+        {
+            throw new ArithmeticException("/ by zero");
+        }
+
+        int q = a / b;
+        int r = a % b;
+
+        if (r != 0 && ((a ^ b) >= 0))
+        {
+            q++;
+        }
+
+        return q;
+    }
+
+    public static long saturatedNegate(long a)
+    {
+        return a == Long.MIN_VALUE ? Long.MAX_VALUE : -a;
+    }
+
+    public static long saturatedAbs(long a)
+    {
+        return a == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(a);
+    }
+
+    public static long ceilDiv(long a, long b)
+    {
+        if (b == 0)
+        {
+            throw new ArithmeticException("/ by zero");
+        }
+
+        long q = a / b;
+        long r = a % b;
+
+        if (r != 0 && ((a ^ b) >= 0))
+        {
+            q++;
+        }
+
+        return q;
+    }    
 }

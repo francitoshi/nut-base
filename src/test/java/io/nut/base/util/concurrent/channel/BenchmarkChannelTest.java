@@ -7,6 +7,7 @@ package io.nut.base.util.concurrent.channel;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -34,7 +35,7 @@ public class BenchmarkChannelTest
         Channel<Object> newChannel();
     }
 
-    private static ChannelFactory factory(String name, Channel<Object> channel)
+    private static ChannelFactory factory(String name, Supplier<Channel<Object>> supplier)
     {
         return new ChannelFactory()
         {
@@ -47,7 +48,7 @@ public class BenchmarkChannelTest
             @Override
             public Channel<Object> newChannel()
             {
-                return channel;
+                return supplier.get();
             }
         };
     }
@@ -63,12 +64,12 @@ public class BenchmarkChannelTest
         };
 
         ChannelFactory[] impls = {
-            factory("Unbuffered", Channel.unbuffered()),
-            factory("Buffered", Channel.buffered(BUFFER_CAPACITY)),
-            factory("Unlimited", Channel.unlimited()),
-            factory("CloseableUnbuffered", Channel.closeableUnbuffered()),
-            factory("CloseableBuffered", Channel.closeableBuffered(BUFFER_CAPACITY)),
-            factory("CloseableUnlimited", Channel.closeableUnlimited())
+            factory("Unbuffered", Channel::unbuffered),
+            factory("Buffered", () -> Channel.buffered(BUFFER_CAPACITY)),
+            factory("Unlimited", Channel::unlimited),
+            factory("CloseableUnbuffered", Channel::closeableUnbuffered),
+            factory("CloseableBuffered", () -> Channel.closeableBuffered(BUFFER_CAPACITY)),
+            factory("CloseableUnlimited", Channel::closeableUnlimited)
         };
 
         // JIT warm-up for every implementation

@@ -13,10 +13,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
 {
-    // Identity sentinel, not equality: it doesn't need to be parameterized
-    // with E nor associated with any value. It is only compared with == below,
-    // so even E itself couldn't "collide" with it even if it were Object,
-    // because nobody outside this class holds the reference.
     private static final Object POISON = new Object();
 
     private final AtomicInteger gets = new AtomicInteger();
@@ -61,11 +57,6 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     {
         if (closed)
         {
-            // The channel is closed, but items already queued before the
-            // close() call must still be delivered: close() guarantees no
-            // put() remains in transit once it returns, so at this point the
-            // queue only holds leftover real values and/or stray POISON
-            // sentinels. Drain it non-blockingly instead of discarding it.
             return drainAfterClose();
         }
 
@@ -89,8 +80,20 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     @SuppressWarnings("unchecked")
     private E drainAfterClose()
     {
-        Object item = queue.poll();
-        return (item == null || item == POISON) ? null : (E) item;
+        while (true)
+        {
+            Object item = queue.poll();
+            if (item != null)
+            {
+                return (item == POISON) ? null : (E) item;
+            }
+
+            if (rwLock.getReadLockCount() == 0)
+            {
+                return null;
+            }
+            Thread.yield();
+        }
     }
 
     public boolean close(long timeout, TimeUnit unit) throws InterruptedException
@@ -99,39 +102,18 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         {
             closed = true;
 
-            // We acquire the writeLock only as a barrier: it confirms that no
-            // put() is in the middle of the critical section at this instant.
-            // We release it right away: there is no need to hold it, because
-            // any put() that resumes after this barrier will re-check `closed`
-            // already inside the readLock and throw IllegalStateException on
-            // its own. If we did not release it, a put() that was suspended
-            // right before requesting the readLock (racing with this close())
-            // would block forever on a non-interruptible lock().
-            //
-            // The barrier must be acquired AFTER closed=true is set: only then
-            // are poisons guaranteed to be enqueued after every real value
-            // already committed, since no put() can enqueue past this point.
             boolean acquired = rwLock.writeLock().tryLock(timeout, unit);
             if (acquired)
             {
                 rwLock.writeLock().unlock();
             }
-            // true  -> confirmed that no put() remains in transit (no losses)
-            // false -> timeout expired; a put() may still be blocked.
-            // Note: closed stays true regardless, so new put()s are already
-            // rejected. A later call to close() will retry this barrier and
-            // the poisoning loop below; it is idempotent (harmless/cheap) once
-            // no more gets() are pending, and honestly keeps returning false
-            // while the barrier still cannot be acquired.
             if (!acquired)
             {
                 return false;
             }
 
-            // The queue has no bounded capacity, so put(POISON) never blocks
-            // for lack of room: a single enqueue per pending get() is enough
-            // to unblock them all.
-            while (gets.get() > 0)
+            int count = gets.get();
+            for (int i = 0; i < count; i++)
             {
                 queue.put(POISON);
             }
@@ -145,7 +127,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     {
         try
         {
-            return close(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+            return close(Long.MAX_VALUE/2, TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
         {
@@ -153,6 +135,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             return false;
         }
     }
+
     @Override
     public boolean isClosed()
     {
