@@ -1896,6 +1896,13 @@ public class Nums
         return a;
     }
 
+    /**
+     * Returns the sum of a and b, saturating at Integer.MAX_VALUE or Integer.MIN_VALUE on overflow.
+     *
+     * @param a the first addend.
+     * @param b the second addend.
+     * @return the sum of a and b, or Integer.MAX_VALUE if the result overflows, or Integer.MIN_VALUE if it underflows.
+     */
     public static int saturatedAdd(int a, int b)
     {
         int r = a + b;
@@ -1912,6 +1919,13 @@ public class Nums
         return r;
     }
 
+    /**
+     * Returns the sum of a and b, saturating at Long.MAX_VALUE or Long.MIN_VALUE on overflow.
+     *
+     * @param a the first addend.
+     * @param b the second addend.
+     * @return the sum of a and b, or Long.MAX_VALUE if the result overflows, or Long.MIN_VALUE if it underflows.
+     */
     public static long saturatedAdd(long a, long b)
     {
         long r = a + b;
@@ -1928,6 +1942,13 @@ public class Nums
         return r;
     }
 
+    /**
+     * Returns the difference of a and b, saturating at Integer.MAX_VALUE or Integer.MIN_VALUE on overflow.
+     *
+     * @param a the minuend.
+     * @param b the subtrahend.
+     * @return the difference of a and b, or Integer.MAX_VALUE if the result overflows, or Integer.MIN_VALUE if it underflows.
+     */
     public static int saturatedSubtract(int a, int b)
     {
         int r = a - b;
@@ -1944,6 +1965,13 @@ public class Nums
         return r;
     }
 
+    /**
+     * Returns the difference of a and b, saturating at Long.MAX_VALUE or Long.MIN_VALUE on overflow.
+     *
+     * @param a the minuend.
+     * @param b the subtrahend.
+     * @return the difference of a and b, or Long.MAX_VALUE if the result overflows, or Long.MIN_VALUE if it underflows.
+     */
     public static long saturatedSubtract(long a, long b)
     {
         long r = a - b;
@@ -1959,6 +1987,13 @@ public class Nums
 
         return r;
     }
+    /**
+     * Returns the product of a and b, saturating at Integer.MAX_VALUE or Integer.MIN_VALUE on overflow.
+     *
+     * @param a the first factor.
+     * @param b the second factor.
+     * @return the product of a and b, or Integer.MAX_VALUE if the result overflows, or Integer.MIN_VALUE if it underflows.
+     */
     public static int saturatedMultiply(int a, int b)
     {
         if (a == 0 || b == 0)
@@ -1985,6 +2020,13 @@ public class Nums
         return r;
     }
     
+    /**
+     * Returns the product of a and b, saturating at Long.MAX_VALUE or Long.MIN_VALUE on overflow.
+     *
+     * @param a the first factor.
+     * @param b the second factor.
+     * @return the product of a and b, or Long.MAX_VALUE if the result overflows, or Long.MIN_VALUE if it underflows.
+     */
     public static long saturatedMultiply(long a, long b)
     {
         if (a == 0 || b == 0)
@@ -2011,16 +2053,36 @@ public class Nums
         return r;
     }    
     
+    /**
+     * Returns the negation of a, saturating at Integer.MAX_VALUE if a is Integer.MIN_VALUE.
+     *
+     * @param a the value to negate.
+     * @return the negation of a, or Integer.MAX_VALUE if a is Integer.MIN_VALUE.
+     */
     public static int saturatedNegate(int a)
     {
         return a == Integer.MIN_VALUE ? Integer.MAX_VALUE : -a;
     }
 
+    /**
+     * Returns the absolute value of a, saturating at Integer.MAX_VALUE if a is Integer.MIN_VALUE.
+     *
+     * @param a the value.
+     * @return the absolute value of a, or Integer.MAX_VALUE if a is Integer.MIN_VALUE.
+     */
     public static int saturatedAbs(int a)
     {
         return a == Integer.MIN_VALUE ? Integer.MAX_VALUE : Math.abs(a);
     }
 
+    /**
+     * Returns the smallest integer value that is greater than or equal to the result of a / b.
+     *
+     * @param a the dividend.
+     * @param b the divisor.
+     * @return the ceiling of the division of a by b.
+     * @throws ArithmeticException if b is zero.
+     */
     public static int ceilDiv(int a, int b)
     {
         if (b == 0)
@@ -2039,16 +2101,36 @@ public class Nums
         return q;
     }
 
+    /**
+     * Returns the negation of a, saturating at Long.MAX_VALUE if a is Long.MIN_VALUE.
+     *
+     * @param a the value to negate.
+     * @return the negation of a, or Long.MAX_VALUE if a is Long.MIN_VALUE.
+     */
     public static long saturatedNegate(long a)
     {
         return a == Long.MIN_VALUE ? Long.MAX_VALUE : -a;
     }
 
+    /**
+     * Returns the absolute value of a, saturating at Long.MAX_VALUE if a is Long.MIN_VALUE.
+     *
+     * @param a the value.
+     * @return the absolute value of a, or Long.MAX_VALUE if a is Long.MIN_VALUE.
+     */
     public static long saturatedAbs(long a)
     {
         return a == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(a);
     }
 
+    /**
+     * Returns the smallest integer value that is greater than or equal to the result of a / b.
+     *
+     * @param a the dividend.
+     * @param b the divisor.
+     * @return the ceiling of the division of a by b.
+     * @throws ArithmeticException if b is zero.
+     */
     public static long ceilDiv(long a, long b)
     {
         if (b == 0)
