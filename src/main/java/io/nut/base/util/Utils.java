@@ -63,23 +63,7 @@ import java.util.zip.CRC32;
  * @author franci
  */
 public abstract class Utils
-{
-    public static final long NANOS_PER_MILLIS = 1_000_000L;
-    public static final long NANOS_PER_SECOND = 1_000_000_000L;
-
-    // shorthand for some units of time
-    public static final long SECOND_MILLIS = 1000L;
-    public static final long MINUTE_MILLIS = 60 * SECOND_MILLIS;
-    public static final long HOUR_MILLIS = 60 * MINUTE_MILLIS;
-    public static final long DAY_MILLIS = 24 * HOUR_MILLIS;
-    public static final long WEEK_MILLIS = 7 * DAY_MILLIS;
-
-    public static final long SECOND_NANOS = 1000 * NANOS_PER_MILLIS;
-    public static final long MINUTE_NANOS = 60 * SECOND_NANOS;
-    public static final long HOUR_NANOS = 60 * MINUTE_NANOS;
-    public static final long DAY_NANOS = 24 * HOUR_NANOS;
-    public static final long WEEK_NANOS = 7 * DAY_NANOS;   
-    
+{    
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**

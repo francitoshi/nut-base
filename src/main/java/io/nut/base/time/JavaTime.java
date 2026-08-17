@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2020-2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2020-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.time;
 
@@ -64,6 +51,22 @@ import java.util.regex.Pattern;
  */
 public class JavaTime
 {
+    public static final long NANOS_PER_MILLIS = 1_000_000L;
+    public static final long NANOS_PER_SECOND = 1_000_000_000L;
+
+    // shorthand for some units of time
+    public static final long SECOND_MILLIS = 1000L;
+    public static final long MINUTE_MILLIS = 60 * SECOND_MILLIS;
+    public static final long HOUR_MILLIS = 60 * MINUTE_MILLIS;
+    public static final long DAY_MILLIS = 24 * HOUR_MILLIS;
+    public static final long WEEK_MILLIS = 7 * DAY_MILLIS;
+
+    public static final long SECOND_NANOS = 1000 * NANOS_PER_MILLIS;
+    public static final long MINUTE_NANOS = 60 * SECOND_NANOS;
+    public static final long HOUR_NANOS = 60 * MINUTE_NANOS;
+    public static final long DAY_NANOS = 24 * HOUR_NANOS;
+    public static final long WEEK_NANOS = 7 * DAY_NANOS;   
+    
     // -----------------------------------------------------------------------
     // Time-zone constants
     // -----------------------------------------------------------------------
