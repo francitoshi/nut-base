@@ -8,11 +8,13 @@ package io.nut.base.util.concurrent;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.Iterator;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -21,101 +23,166 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Supplier;
 
 /**
- * Task executor that tells apart three kinds of work:
- * <ul>
- *   <li><b>CPU-bound</b> work, submitted via {@link #cpu(Runnable)} / {@link #cpu(Supplier)}</li>
- *   <li><b>I/O-bound</b> work, submitted via {@link #io(Runnable)} / {@link #io(Supplier)}</li>
- *   <li><b>Network-bound</b> work, submitted via {@link #net(Runnable)} / {@link #net(Supplier)}</li>
- * </ul>
+ * Task executor that distributes work across N ordered tiers of slots.
  *
- * <p>I/O and network tasks spend most of their time blocked, not consuming CPU, so it's safe to
- * run more of them concurrently than CPU-bound tasks without oversubscribing the CPU. The three
- * limits are nested, not independent:
+ * <p>Each tier {@code i} owns a pool of {@code limits[i]} slots. A task submitted to tier
+ * {@code i} may occupy either one of tier {@code i}'s own slots or an idle slot from any lower
+ * tier {@code j < i}. Consequently, at any instant the total number of running tasks of tiers
+ * {@code 0..k} never exceeds the sum of the first {@code k+1} limits, for every prefix {@code k}:
  * <pre>
- *   running(cpu)                               &lt;= cpu
- *   running(cpu) + running(io)                 &lt;= cpu + io
- *   running(cpu) + running(io) + running(net)  &lt;= cpu + io + net
+ *   running(0)                        &lt;= limits[0]
+ *   running(0) + running(1)           &lt;= limits[0] + limits[1]
+ *   ...
+ *   running(0) + ... + running(k)     &lt;= limits[0] + ... + limits[k]
  * </pre>
  *
- * <p>In practice this means a CPU task is guaranteed at least {@code cpu} slots; an I/O task can
- * use a slot that CPU tasks are not currently using (as long as the combined cpu+io usage stays
- * under {@code cpu+io}); and a network task can use any slot left over after cpu and io usage, up
- * to the grand total {@code cpu+io+net}.
+ * <p>In practice a tier-0 task is guaranteed at least {@code limits[0]} slots; a tier-1 task can
+ * use a slot that tier-0 tasks are not currently using (as long as the combined usage stays under
+ * {@code limits[0]+limits[1]}); and so on up to the highest tier, which may use any slot left over
+ * after all lower tiers, up to the grand total.
  *
  * <p>Submitting a task never blocks the caller. If there's no free slot for the task's tier right
- * now, the task is appended to a single internal FIFO queue shared by all three tiers. Whenever a
- * slot frees up, the whole queue is scanned front-to-back and every waiting task that now fits is
+ * now, the task is appended to a single internal FIFO queue shared by all tiers. Whenever a slot
+ * frees up, the whole queue is scanned front-to-back and every waiting task that now fits is
  * started, regardless of tier. This means older tasks get priority over newer ones, but a tier is
- * never starved just because another tier keeps producing work: a net task queued before a batch
- * of cpu tasks gets its chance to run as soon as there's total capacity for it, even while cpu
- * tasks behind it in the queue are still waiting on the cpu-only limit.
+ * never starved just because another tier keeps producing work: a higher-tier task queued before a
+ * batch of lower-tier tasks gets its chance to run as soon as there's total capacity for it, even
+ * while lower-tier tasks behind it in the queue are still waiting on their own limit.
  *
  * <p>Thread-safe. Not reusable after {@link #shutdown()}.
  */
 public class TieredExecutor
 {
 
-    private enum Tier { CPU, IO, NET }
-
-    private final int cpuLimit;
-    private final int ioLimit;
-    private final int netLimit;
-
+    private final int[] limits;
+    private final int[] prefixLimits;
+    private final int[] running;
     private final ExecutorService pool;
-    private final ReentrantLock lock = new ReentrantLock();
 
-    private int cpuRunning = 0;
-    private int ioRunning = 0;
-    private int netRunning = 0;
+    private final ReentrantLock lock = new ReentrantLock();
 
     private final Deque<QueuedTask<?>> queue = new ArrayDeque<>();
 
     private volatile boolean shutdown = false;
 
     /**
-     * @param cpu max number of concurrently running cpu() tasks
-     * @param io  extra slots available to io() tasks (cpu+io tasks together never exceed cpu+io)
-     * @param net extra slots available to net() tasks (all tasks together never exceed cpu+io+net)
+     * @param limits max number of concurrently running tasks per tier, from the lowest tier
+     *               (index 0) to the highest; must not be null, must not be empty, each value
+     *               must be &gt;= 0 and the sum must be &gt; 0
      */
-    public TieredExecutor(int cpu, int io, int net)
+    public TieredExecutor(int... limits)
     {
-        if (cpu < 0 || io < 0 || net < 0)
+        if (limits == null)
         {
-            throw new IllegalArgumentException("cpu, io and net must be >= 0");
+            throw new NullPointerException("limits must not be null");
         }
-        if (cpu + io + net <= 0)
+        if (limits.length == 0)
         {
-            throw new IllegalArgumentException("cpu + io + net must be > 0");
+            throw new IllegalArgumentException("at least one level is required");
         }
-        this.cpuLimit = cpu;
-        this.ioLimit = io;
-        this.netLimit = net;
+        int total = 0;
+        for (int limit : limits)
+        {
+            if (limit < 0)
+            {
+                throw new IllegalArgumentException("limits must be >= 0: " + limit);
+            }
+            total += limit;
+        }
+        if (total <= 0)
+        {
+            throw new IllegalArgumentException("the sum of limits must be > 0");
+        }
+        this.limits = limits.clone();
+        this.prefixLimits = new int[limits.length];
+        int sum = 0;
+        for (int i = 0; i < limits.length; i++)
+        {
+            sum += limits[i];
+            prefixLimits[i] = sum;
+        }
+        this.running = new int[limits.length];
         // The pool only ever runs tasks that already own a reserved slot (see tryStart), so it
         // never needs more threads than the grand total.
-        this.pool = Executors.newFixedThreadPool(cpu + io + net, new TieredThreadFactory());
+        this.pool = Executors.newFixedThreadPool(total, new TieredThreadFactory());
     }
 
     // ---------------------------------------------------------------- public API
 
-    public Future<Void> cpu(Runnable task) { return submit(Tier.CPU, toSupplier(task)); }
-    public <T> Future<T> cpu(Supplier<T> task) { return submit(Tier.CPU, task); }
+    public Future<Void> submit(int level, Runnable task)
+    {
+        return submit(level, toSupplier(task));
+    }
 
-    public Future<Void> io(Runnable task) { return submit(Tier.IO, toSupplier(task)); }
-    public <T> Future<T> io(Supplier<T> task) { return submit(Tier.IO, task); }
+    public <T> Future<T> submit(int level, Supplier<T> task)
+    {
+        checkLevel(level);
+        QueuedTask<T> queued = new QueuedTask<>(level, task);
+        lock.lock();
+        try
+        {
+            if (shutdown)
+            {
+                throw new IllegalStateException("TieredExecutor is shut down");
+            }
+            if (!tryStart(queued))
+            {
+                queue.addLast(queued);
+            }
+        }
+        finally
+        {
+            lock.unlock();
+        }
+        return queued.future;
+    }
 
-    public Future<Void> net(Runnable task) { return submit(Tier.NET, toSupplier(task)); }
-    public <T> Future<T> net(Supplier<T> task) { return submit(Tier.NET, task); }
+    /**
+     * Number of tasks currently running at the given level.
+     *
+     * @param level the level index, from 0 (lowest) to {@code levelCount()-1} (highest)
+     * @return the number of running tasks of that level
+     * @throws ArrayIndexOutOfBoundsException if level is out of range
+     */
+    public int active(int level)
+    {
+        checkLevel(level);
+        lock.lock();
+        try
+        {
+            return running[level];
+        }
+        finally
+        {
+            lock.unlock();
+        }
+    }
 
-    /** Number of cpu-tier tasks currently running. */
-    public int activeCpu() { lock.lock(); try { return cpuRunning; } finally { lock.unlock(); } }
+    /**
+     * Number of levels of this executor.
+     *
+     * @return the number of levels
+     */
+    public int levelCount()
+    {
+        return limits.length;
+    }
 
-    /** Number of io-tier tasks currently running. */
-    public int activeIo() { lock.lock(); try { return ioRunning; } finally { lock.unlock(); } }
+    /**
+     * Returns a copy of the per-level slot limits.
+     *
+     * @return the per-level limits
+     */
+    public int[] getLimits()
+    {
+        return limits.clone();
+    }
 
-    /** Number of net-tier tasks currently running. */
-    public int activeNet() { lock.lock(); try { return netRunning; } finally { lock.unlock(); } }
-
-    /** Number of tasks waiting for a free slot, across all tiers. */
+    /**
+     * Number of tasks waiting for a free slot, across all levels.
+     *
+     * @return the number of queued tasks
+     */
     public int pending()
     {
         lock.lock();
@@ -129,95 +196,94 @@ public class TieredExecutor
         }
     }
 
-    /** Stops accepting new tasks; the underlying pool shuts down once running tasks finish. */
+    /**
+     * Stops accepting new tasks; the underlying pool shuts down once running tasks finish.
+     *
+     * <p>Any task still waiting in the internal queue at the time of this call is never started;
+     * its {@link Future} is completed exceptionally with a {@link CancellationException} instead.
+     * Tasks that are already running are left to finish normally.
+     */
     public void shutdown()
     {
-        shutdown = true;
-        pool.shutdown();
-    }
-
-    // ---------------------------------------------------------------- internals
-
-    private static Supplier<Void> toSupplier(Runnable task)
-    {
-        return () -> { task.run(); return null; };
-    }
-
-    private <T> Future<T> submit(Tier tier, Supplier<T> task)
-    {
-        if (shutdown)
-        {
-            throw new IllegalStateException("TieredExecutor is shut down");
-        }
-        QueuedTask<T> queued = new QueuedTask<>(tier, task);
         lock.lock();
         try
         {
-            if (!tryStart(queued))
+            shutdown = true;
+            QueuedTask<?> queuedTask;
+            while ((queuedTask = queue.pollFirst()) != null)
             {
-                queue.addLast(queued);
+                queuedTask.future.completeExceptionally(
+                        new CancellationException("TieredExecutor was shut down while task was queued"));
             }
         }
         finally
         {
             lock.unlock();
         }
-        return queued.future;
+        pool.shutdown();
     }
 
-    /** Must hold {@link #lock}. If capacity allows, reserves the slot and hands the task to the pool. */
-    private boolean tryStart(QueuedTask<?> task)
+    // ---------------------------------------------------------------- internals
+
+    private void checkLevel(int level)
     {
-        if (!fits(task.tier))
+        if (level < 0 || level >= limits.length)
+        {
+            throw new ArrayIndexOutOfBoundsException("level out of range: " + level);
+        }
+    }
+
+    private static Supplier<Void> toSupplier(Runnable task)
+    {
+        return () -> { task.run(); return null; };
+    }
+
+    /** Must hold {@link #lock}. Whether a task of the given level fits within every prefix limit. */
+    private boolean fits(int level)
+    {
+        int used = 0;
+        for (int j = 0; j <= level; j++)
+        {
+            used += running[j];
+        }
+        if (used + 1 > prefixLimits[level])
         {
             return false;
         }
-        reserve(task.tier);
-        pool.execute(() -> run(task));
+        for (int j = level + 1; j < running.length; j++)
+        {
+            used += running[j];
+            if (used + 1 > prefixLimits[j])
+            {
+                return false;
+            }
+        }
         return true;
     }
 
-    /** Must hold {@link #lock}. */
-    private boolean fits(Tier tier)
+    /**
+     * Must hold {@link #lock}. If capacity allows, reserves the slot and hands the task to the pool.
+     */
+    private boolean tryStart(QueuedTask<?> task)
     {
-        int cpuIoLimit = cpuLimit + ioLimit;
-        int total = cpuIoLimit + netLimit;
-        switch (tier)
+        if (!fits(task.level))
         {
-            case CPU:
-                return cpuRunning < cpuLimit
-                        && (cpuRunning + ioRunning) < cpuIoLimit
-                        && (cpuRunning + ioRunning + netRunning) < total;
-            case IO:
-                return (cpuRunning + ioRunning) < cpuIoLimit
-                        && (cpuRunning + ioRunning + netRunning) < total;
-            case NET:
-                return (cpuRunning + ioRunning + netRunning) < total;
-            default:
-                throw new AssertionError(tier);
+            return false;
         }
-    }
-
-    /** Must hold {@link #lock}. */
-    private void reserve(Tier tier)
-    {
-        switch (tier)
+        running[task.level]++;
+        try
         {
-            case CPU: cpuRunning++; break;
-            case IO:  ioRunning++;  break;
-            case NET: netRunning++; break;
+            pool.execute(() -> run(task));
         }
-    }
-
-    /** Must hold {@link #lock}. */
-    private void release(Tier tier)
-    {
-        switch (tier)
+        catch (RejectedExecutionException e)
         {
-            case CPU: cpuRunning--; break;
-            case IO:  ioRunning--;  break;
-            case NET: netRunning--; break;
+            // Defensive fallback: should not happen in practice, since shutdown() drains the
+            // queue and submit() rejects new tasks while holding the same lock used here, but
+            // if it ever does, don't leak the reserved slot or leave the future unresolved.
+            running[task.level]--;
+            task.future.completeExceptionally(e);
         }
+        return true;
     }
 
     private <T> void run(QueuedTask<T> task)
@@ -236,7 +302,7 @@ public class TieredExecutor
             lock.lock();
             try
             {
-                release(task.tier);
+                running[task.level]--;
                 dispatchQueued();
             }
             finally
@@ -266,13 +332,13 @@ public class TieredExecutor
 
     private static final class QueuedTask<T>
     {
-        final Tier tier;
+        final int level;
         final Supplier<T> task;
         final SettableFuture<T> future = new SettableFuture<>();
 
-        QueuedTask(Tier tier, Supplier<T> task)
+        QueuedTask(int level, Supplier<T> task)
         {
-            this.tier = tier;
+            this.level = level;
             this.task = task;
         }
     }
@@ -320,7 +386,8 @@ public class TieredExecutor
         @Override public boolean isDone() { return done; }
 
         @Override
-        public T get() throws InterruptedException, ExecutionException {
+        public T get() throws InterruptedException, ExecutionException 
+        {
             latch.await();
             return getResultOrThrow();
         }
