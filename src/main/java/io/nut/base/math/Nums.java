@@ -184,6 +184,10 @@ public class Nums
     public static BigDecimal sum(BigDecimal defaultValue, BigDecimal... values)
     {
         BigDecimal ret = BigDecimal.ZERO;
+        if (values == null)
+        {
+            return ret;
+        }
         for (BigDecimal v : values)
         {
             if (v != null)
@@ -1968,6 +1972,188 @@ public class Nums
             }
         }
         return new double[]{min, max};
+    }
+
+    /**
+     * Returns whether the given value is strictly greater than zero.
+     *
+     * @param n the value to test.
+     * @return true if n is positive.
+     */
+    public static boolean isPositive(BigInteger n)
+    {
+        return n.compareTo(BigInteger.ZERO) > 0;
+    }
+
+    /**
+     * Returns whether the given value is strictly greater than zero.
+     *
+     * @param n the value to test.
+     * @return true if n is positive.
+     */
+    public static boolean isPositive(BigDecimal n)
+    {
+        return n.compareTo(BigDecimal.ZERO) > 0;
+    }
+
+    /**
+     * Returns whether the given value is greater than or equal to zero.
+     *
+     * @param n the value to test.
+     * @return true if n is positive or zero.
+     */
+    public static boolean isPositiveOrZero(BigInteger n)
+    {
+        return n.compareTo(BigInteger.ZERO) >= 0;
+    }
+
+    /**
+     * Returns whether the given value is greater than or equal to zero.
+     *
+     * @param n the value to test.
+     * @return true if n is positive or zero.
+     */
+    public static boolean isPositiveOrZero(BigDecimal n)
+    {
+        return n.compareTo(BigDecimal.ZERO) >= 0;
+    }
+
+    /**
+     * Returns whether the given value is strictly less than zero.
+     *
+     * @param n the value to test.
+     * @return true if n is negative.
+     */
+    public static boolean isNegative(BigInteger n)
+    {
+        return n.compareTo(BigInteger.ZERO) < 0;
+    }
+
+    /**
+     * Returns whether the given value is strictly less than zero.
+     *
+     * @param n the value to test.
+     * @return true if n is negative.
+     */
+    public static boolean isNegative(BigDecimal n)
+    {
+        return n.compareTo(BigDecimal.ZERO) < 0;
+    }
+
+    /**
+     * Returns whether the given value is less than or equal to zero.
+     *
+     * @param n the value to test.
+     * @return true if n is negative or zero.
+     */
+    public static boolean isNegativeOrZero(BigInteger n)
+    {
+        return n.compareTo(BigInteger.ZERO) <= 0;
+    }
+
+    /**
+     * Returns whether the given value is less than or equal to zero.
+     *
+     * @param n the value to test.
+     * @return true if n is negative or zero.
+     */
+    public static boolean isNegativeOrZero(BigDecimal n)
+    {
+        return n.compareTo(BigDecimal.ZERO) <= 0;
+    }
+
+    /**
+     * Returns whether the given value is equal to zero.
+     *
+     * @param n the value to test.
+     * @return true if n is zero.
+     */
+    public static boolean isZero(BigDecimal n)
+    {
+        return n.compareTo(BigDecimal.ZERO) == 0;
+    }
+
+    /**
+     * Returns whether the given value is zero within the given tolerance.
+     *
+     * @param n the value to test.
+     * @param delta the maximum absolute value considered to be zero.
+     * @return true if |n| <= |delta|.
+     */
+    public static boolean isZero(BigDecimal n, BigDecimal delta)
+    {
+        return n.abs().compareTo(delta.abs()) <= 0;
+    }
+
+    /**
+     * Returns whether the given value is null or equal to zero.
+     *
+     * @param n the value to test.
+     * @return true if n is null or zero.
+     */
+    public static boolean isNullOrZero(BigDecimal n)
+    {
+        return n == null || isZero(n);
+    }
+
+    /**
+     * Returns whether the given value is null or zero within the given tolerance.
+     *
+     * @param n the value to test.
+     * @param delta the maximum absolute value considered to be zero.
+     * @return true if n is null or |n| <= |delta|.
+     */
+    public static boolean isNullOrZero(BigDecimal n, BigDecimal delta)
+    {
+        return n == null || isZero(n, delta);
+    }
+
+    /**
+     * Returns the sum of all the given values, skipping null values.
+     *
+     * @param values the values to add.
+     * @return the sum of the values.
+     */
+    public static BigInteger sum(BigInteger... values)
+    {
+        BigInteger s = BigInteger.ZERO;
+        if (values == null)
+        {
+            return s;
+        }
+        for (BigInteger v : values)
+        {
+            if (v != null)
+            {
+                s = s.add(v);
+            }
+        }
+        return s;
+    }
+
+    /**
+     * Returns the sum of all the given values using the given MathContext,
+     * skipping null values.
+     *
+     * @param mc the MathContext to use.
+     * @param values the values to add.
+     * @return the sum of the values.
+     */
+    public static BigDecimal sum(MathContext mc, BigDecimal... values)
+    {
+        BigDecimal s = BigDecimal.ZERO;
+        if (values == null)
+        {
+            return s;
+        }
+        for (BigDecimal v : values)
+        {
+            if (v != null)
+            {
+                s = s.add(v, mc);
+            }
+        }
+        return s;
     }
 
     /**

@@ -907,6 +907,200 @@ public class NumsTest
     }
 
     /**
+     * Test of isPositive method, of class Nums.
+     */
+    @Test
+    public void testIsPositive_BigInteger()
+    {
+        assertTrue(Nums.isPositive(BigInteger.ONE));
+        assertTrue(Nums.isPositive(BigInteger.TEN));
+        assertFalse(Nums.isPositive(BigInteger.ZERO));
+        assertFalse(Nums.isPositive(BigInteger.valueOf(-1)));
+    }
+
+    /**
+     * Test of isPositive method, of class Nums.
+     */
+    @Test
+    public void testIsPositive_BigDecimal()
+    {
+        assertTrue(Nums.isPositive(BigDecimal.ONE));
+        assertTrue(Nums.isPositive(BigDecimal.TEN));
+        assertFalse(Nums.isPositive(BigDecimal.ZERO));
+        assertFalse(Nums.isPositive(BigDecimal.valueOf(-1)));
+    }
+
+    /**
+     * Test of isPositiveOrZero method, of class Nums.
+     */
+    @Test
+    public void testIsPositiveOrZero_BigInteger()
+    {
+        assertTrue(Nums.isPositiveOrZero(BigInteger.ONE));
+        assertTrue(Nums.isPositiveOrZero(BigInteger.TEN));
+        assertTrue(Nums.isPositiveOrZero(BigInteger.ZERO));
+        assertFalse(Nums.isPositiveOrZero(BigInteger.valueOf(-1)));
+    }
+
+    /**
+     * Test of isPositiveOrZero method, of class Nums.
+     */
+    @Test
+    public void testIsPositiveOrZero_BigDecimal()
+    {
+        assertTrue(Nums.isPositiveOrZero(BigDecimal.ONE));
+        assertTrue(Nums.isPositiveOrZero(BigDecimal.TEN));
+        assertTrue(Nums.isPositiveOrZero(BigDecimal.ZERO));
+        assertFalse(Nums.isPositiveOrZero(BigDecimal.valueOf(-1)));
+    }
+
+    /**
+     * Test of isNegative method, of class Nums.
+     */
+    @Test
+    public void testIsNegative_BigInteger()
+    {
+        assertTrue(Nums.isNegative(BigInteger.valueOf(-1)));
+        assertTrue(Nums.isNegative(BigInteger.valueOf(-10)));
+        assertFalse(Nums.isNegative(BigInteger.ZERO));
+        assertFalse(Nums.isNegative(BigInteger.ONE));
+    }
+
+    /**
+     * Test of isNegative method, of class Nums.
+     */
+    @Test
+    public void testIsNegative_BigDecimal()
+    {
+        assertTrue(Nums.isNegative(BigDecimal.valueOf(-1)));
+        assertTrue(Nums.isNegative(BigDecimal.valueOf(-10)));
+        assertFalse(Nums.isNegative(BigDecimal.ZERO));
+        assertFalse(Nums.isNegative(BigDecimal.ONE));
+    }
+
+    /**
+     * Test of isNegativeOrZero method, of class Nums.
+     */
+    @Test
+    public void testIsNegativeOrZero_BigInteger()
+    {
+        assertTrue(Nums.isNegativeOrZero(BigInteger.valueOf(-1)));
+        assertTrue(Nums.isNegativeOrZero(BigInteger.valueOf(-10)));
+        assertTrue(Nums.isNegativeOrZero(BigInteger.ZERO));
+        assertFalse(Nums.isNegativeOrZero(BigInteger.ONE));
+    }
+
+    /**
+     * Test of isNegativeOrZero method, of class Nums.
+     */
+    @Test
+    public void testIsNegativeOrZero_BigDecimal()
+    {
+        assertTrue(Nums.isNegativeOrZero(BigDecimal.valueOf(-1)));
+        assertTrue(Nums.isNegativeOrZero(BigDecimal.valueOf(-10)));
+        assertTrue(Nums.isNegativeOrZero(BigDecimal.ZERO));
+        assertFalse(Nums.isNegativeOrZero(BigDecimal.ONE));
+    }
+
+    /**
+     * Test of isZero method, of class Nums.
+     */
+    @Test
+    public void testIsZero_BigDecimal()
+    {
+        assertFalse(Nums.isZero(BigDecimal.valueOf(-1)));
+        assertTrue(Nums.isZero(BigDecimal.ZERO));
+        assertFalse(Nums.isZero(BigDecimal.ONE));
+    }
+
+    /**
+     * Test of isZero method, of class Nums.
+     */
+    @Test
+    public void testIsZero_BigDecimal_BigDecimal()
+    {
+        BigDecimal delta = new BigDecimal("0.002");
+        assertFalse(Nums.isZero(BigDecimal.valueOf(-1), delta));
+        assertTrue(Nums.isZero(BigDecimal.ZERO, delta));
+        assertFalse(Nums.isZero(BigDecimal.ONE, delta));
+
+        assertFalse(Nums.isZero(new BigDecimal(0.003), delta));
+        assertTrue(Nums.isZero(new BigDecimal(0.001), delta));
+        assertTrue(Nums.isZero(new BigDecimal(-0.001), delta));
+        assertFalse(Nums.isZero(new BigDecimal(-0.003), delta));
+    }
+
+    /**
+     * Test of isNullOrZero method, of class Nums.
+     */
+    @Test
+    public void testIsNullOrZero_BigDecimal()
+    {
+        assertFalse(Nums.isNullOrZero(BigDecimal.valueOf(-1)));
+        assertFalse(Nums.isNullOrZero(BigDecimal.valueOf(-1)));
+        assertTrue(Nums.isNullOrZero(BigDecimal.ZERO));
+        assertFalse(Nums.isNullOrZero(BigDecimal.ONE));
+    }
+
+    /**
+     * Test of isNullOrZero method, of class Nums.
+     */
+    @Test
+    public void testIsNullOrZero_BigDecimal_BigDecimal()
+    {
+        BigDecimal delta = new BigDecimal("0.002");
+        assertFalse(Nums.isNullOrZero(BigDecimal.valueOf(-1), delta));
+        assertTrue(Nums.isNullOrZero(BigDecimal.ZERO, delta));
+        assertFalse(Nums.isNullOrZero(BigDecimal.ONE, delta));
+
+        assertFalse(Nums.isNullOrZero(new BigDecimal(0.003), delta));
+        assertTrue(Nums.isNullOrZero(new BigDecimal(0.001), delta));
+        assertTrue(Nums.isNullOrZero(new BigDecimal(-0.001), delta));
+        assertFalse(Nums.isNullOrZero(new BigDecimal(-0.003), delta));
+    }
+
+    /**
+     * Test of sum method of class Nums, with BigInteger.
+     */
+    @Test
+    public void testSum_BigIntegerArr()
+    {
+        assertEquals(BigInteger.ZERO, Nums.sum(BigInteger.ZERO));
+        assertEquals(BigInteger.ZERO, Nums.sum(BigInteger.ZERO, BigInteger.ZERO));
+        assertEquals(BigInteger.ONE, Nums.sum(BigInteger.ONE, BigInteger.ZERO));
+        assertEquals(BigInteger.valueOf(3), Nums.sum(BigInteger.ONE, BigInteger.valueOf(2)));
+        assertEquals(BigInteger.valueOf(6), Nums.sum(BigInteger.ONE, BigInteger.valueOf(2), BigInteger.valueOf(3)));
+        assertEquals(BigInteger.valueOf(6), Nums.sum(BigInteger.ONE, BigInteger.valueOf(2), BigInteger.valueOf(3), null));
+    }
+
+    /**
+     * Test of sum method of class Nums, with a default value for null elements.
+     */
+    @Test
+    public void testSum_BigDecimal_defaultValue()
+    {
+        assertEquals(BigDecimal.ZERO, Nums.sum(BigDecimal.ZERO));
+        assertEquals(BigDecimal.ZERO, Nums.sum(BigDecimal.ONE));
+        assertEquals(BigDecimal.ZERO, Nums.sum(BigDecimal.ZERO, (BigDecimal[]) null));
+        assertEquals(BigDecimal.ONE, Nums.sum(BigDecimal.ONE, (BigDecimal) null));
+        assertEquals(BigDecimal.ONE, Nums.sum(BigDecimal.ZERO, BigDecimal.ONE));
+        assertEquals(BigDecimal.valueOf(3), Nums.sum(BigDecimal.ONE, (BigDecimal) null, BigDecimal.valueOf(2)));
+        assertEquals(BigDecimal.valueOf(6), Nums.sum(BigDecimal.ONE, BigDecimal.valueOf(2), BigDecimal.valueOf(3), null));
+    }
+
+    /**
+     * Test of sum method with MathContext, of class Nums.
+     */
+    @Test
+    public void testSum_MathContext()
+    {
+        assertEquals(BigDecimal.ZERO, Nums.sum(MathContext.DECIMAL32));
+        assertEquals(BigDecimal.ONE, Nums.sum(MathContext.DECIMAL32, BigDecimal.ONE, BigDecimal.ZERO));
+        assertEquals(new BigDecimal("0.3333333"), Nums.sum(MathContext.DECIMAL32, BigDecimal.ZERO, new BigDecimal("0.33333333")));
+        assertEquals(BigDecimal.valueOf(6), Nums.sum(MathContext.DECIMAL32, BigDecimal.ONE, BigDecimal.valueOf(2), BigDecimal.valueOf(3), null));
+    }
+
+    /**
      * Test of minOf method, of class Nums.
      */
     @Test
@@ -1015,7 +1209,7 @@ public class NumsTest
     @Test
     public void testSum()
     {
-        assertEquals(0, Nums.sum());
+        assertEquals(0, Nums.sum(0));
         assertEquals(0, Nums.sum(0));
         assertEquals(1, Nums.sum(0,1));
         assertEquals(3, Nums.sum(0,1,2));
