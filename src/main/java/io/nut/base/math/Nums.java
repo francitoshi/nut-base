@@ -5,7 +5,6 @@
  */
 package io.nut.base.math;
 
-import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
@@ -1393,6 +1392,14 @@ public class Nums
         return 1L << pow;
     }
 
+    /**
+     * Returns the greatest common divisor of all the given values.
+     * <p>
+     * The result is always non-negative.
+     *
+     * @param values the values whose gcd is to be computed.
+     * @return the positive gcd of the given values, or 0 if no values are given.
+     */
     public static int gcd(int ... values)
     {
         if (values == null || values.length == 0)
@@ -1404,14 +1411,31 @@ public class Nums
         {
             result = gcd(result, values[i]);
         }
-        return result;
+        return Math.abs(result);
     }
 
+    /**
+     * Returns the least common multiple of a and b, always non-negative.
+     * <p>
+     * Note that lcm(0, 0) is 0, and that the result may overflow (wrap
+     * around) if it does not fit in an int.
+     *
+     * @param a the first value.
+     * @param b the second value.
+     * @return the positive lcm of a and b.
+     */
     public static int lcm(int a, int b)
     {
-//        return (a*b)/gcd(a,b);
-        return (a / gcd(a,b)) * b;
+        return Math.abs((a / gcd(a,b)) * b);
     }
+    /**
+     * Returns the least common multiple of all the given values.
+     * <p>
+     * The result is always non-negative.
+     *
+     * @param values the values whose lcm is to be computed.
+     * @return the positive lcm of the given values, or 0 if no values are given.
+     */
     public static int lcm(int ... values)
     {
         if (values == null || values.length == 0)
@@ -1423,7 +1447,7 @@ public class Nums
         {
             result = lcm(result, values[i]);
         }
-        return result;
+        return Math.abs(result);
     }   
     
     static final double[] log_cache=new double[256];
@@ -1484,20 +1508,27 @@ public class Nums
         return count;
     }
 
-    public static double maxDouble(double... values) 
+    /**
+     * Returns the maximum value among the given values.
+     *
+     * @param values the values whose maximum is to be computed.
+     * @return the maximum value, or 0 if null or no values are given.
+     */
+    public static double maxOf(double... values) 
     {
         if (values == null || values.length == 0)
         {
             return 0.0;
         }
-        double max = values[0];
-        for (int i = 1; i < values.length; i++)
-        {
-            max = Math.max(max, values[i]);
-        }
-        return max;
+        return max(values);
     }
-    public static float maxFloat(float... values) 
+    /**
+     * Returns the maximum value among the given values.
+     *
+     * @param values the values whose maximum is to be computed.
+     * @return the maximum value, or 0 if null or no values are given.
+     */
+    public static float maxOf(float... values) 
     {
         if (values == null || values.length == 0)
         {
@@ -1510,46 +1541,41 @@ public class Nums
         }
         return max;
     }
-    public static int maxInteger(int... values)
+    /**
+     * Returns the maximum value among the given values.
+     *
+     * @param values the values whose maximum is to be computed.
+     * @return the maximum value, or 0 if null or no values are given.
+     */
+    public static int maxOf(int... values)
     {
         if (values == null || values.length == 0)
         {
             return 0;
         }
-        int max = values[0];
-        for (int i = 1; i < values.length; i++)
-        {
-            max = Math.max(max, values[i]);
-        }
-        return max;
+        return max(values);
     }
-    public static long	maxLong(long... values) 
+    /**
+     * Returns the maximum value among the given values.
+     *
+     * @param values the values whose maximum is to be computed.
+     * @return the maximum value, or 0 if no values are given.
+     */
+    public static long maxOf(long... values) 
     {
         if (values == null || values.length == 0)
         {
             return 0L;
         }
-        long max = values[0];
-        for (int i = 1; i < values.length; i++)
-        {
-            max = Math.max(max, values[i]);
-        }
-        return max;
+        return max(values);
     }
-    public static double minDouble(double... values) 
-    {
-        if (values == null || values.length == 0)
-        {
-            return 0.0;
-        }
-        double min = values[0];
-        for (int i = 1; i < values.length; i++)
-        {
-            min = Math.min(min, values[i]);
-        }
-        return min;
-    }
-    public static float minFloat(float... values) 
+    /**
+     * Returns the minimum value among the given values.
+     *
+     * @param values the values whose minimum is to be computed.
+     * @return the minimum value, or 0 if null or no values are given.
+     */
+    public static float minOf(float... values) 
     {
         if (values == null || values.length == 0)
         {
@@ -1562,23 +1588,458 @@ public class Nums
         }
         return min;
     }
-    public static int minInteger(int... values) 
+    /**
+     * Returns the minimum value among the given elements, or null if none are given.
+     * <p>
+     * Null elements are skipped.
+     *
+     * @param t the values whose minimum is to be computed.
+     * @return the minimum value, or null if t is empty or contains only nulls.
+     */
+    public static <T extends Comparable<T>> T min(T... t)
     {
-        if (values == null || values.length == 0)
+        T m = null;
+        if (t.length > 0)
+        {
+            for (int i = 0; i < t.length; i++)
+            {
+                T item = t[i];
+                if (m == null || (item != null && item.compareTo(m) < 0))
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
+    /**
+     * Returns the minimum value in the given array.
+     *
+     * @param d the array whose minimum is to be computed.
+     * @return the minimum value, or 0 if the array is empty.
+     */
+    public static int min(int[] d)
+    {
+        int m = 0;
+        if (d.length > 0)
+        {
+            m = d[0];
+            for (int i = 1; i < d.length; i++)
+            {
+                int item = d[i];
+                if (item < m)
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
+    /**
+     * Returns the minimum value in the given array.
+     *
+     * @param d the array whose minimum is to be computed.
+     * @return the minimum value, or 0 if the array is empty.
+     */
+    public static long min(long[] d)
+    {
+        long m = 0;
+        if (d.length > 0)
+        {
+            m = d[0];
+            for (int i = 1; i < d.length; i++)
+            {
+                long item = d[i];
+                if (item < m)
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
+    /**
+     * Returns the minimum value in the given array.
+     *
+     * @param d the array whose minimum is to be computed.
+     * @return the minimum value, or 0 if the array is empty.
+     */
+    public static double min(double[] d)
+    {
+        double m = 0;
+        if (d.length > 0)
+        {
+            m = d[0];
+            for (int i = 1; i < d.length; i++)
+            {
+                double item = d[i];
+                if (item < m)
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
+    /**
+     * Returns the maximum value in the given array.
+     *
+     * @param d the array whose maximum is to be computed.
+     * @return the maximum value, or 0 if the array is empty.
+     */
+    public static int max(int[] d)
+    {
+        int m = 0;
+        if (d.length > 0)
+        {
+            m = d[0];
+            for (int i = 1; i < d.length; i++)
+            {
+                int item = d[i];
+                if (item > m)
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
+    /**
+     * Returns the maximum value in the given array.
+     *
+     * @param d the array whose maximum is to be computed.
+     * @return the maximum value, or 0 if the array is empty.
+     */
+    public static long max(long[] d)
+    {
+        long m = 0;
+        if (d.length > 0)
+        {
+            m = d[0];
+            for (int i = 1; i < d.length; i++)
+            {
+                long item = d[i];
+                if (item > m)
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
+    /**
+     * Returns the maximum value in the given array.
+     *
+     * @param d the array whose maximum is to be computed.
+     * @return the maximum value, or 0 if the array is empty.
+     */
+    public static double max(double[] d)
+    {
+        double m = 0;
+        if (d.length > 0)
+        {
+            m = d[0];
+            for (int i = 1; i < d.length; i++)
+            {
+                double item = d[i];
+                if (item > m)
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given byte array.
+     *
+     * @param d the byte array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static byte[] minMax(byte[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new byte[]{0, 0};
+        }
+        byte min = d[0];
+        byte max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            byte val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new byte[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given short array.
+     *
+     * @param d the short array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static short[] minMax(short[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new short[]{0, 0};
+        }
+        short min = d[0];
+        short max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            short val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new short[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given char array.
+     *
+     * @param d the char array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static char[] minMax(char[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new char[]{0, 0};
+        }
+        char min = d[0];
+        char max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            char val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new char[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given int array.
+     *
+     * @param d the int array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0, 0}.
+     */
+    public static int[] minMax(int[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new int[]{0, 0};
+        }
+        int min = d[0];
+        int max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            int val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new int[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given long array.
+     *
+     * @param d the long array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0L, 0L}.
+     */
+    public static long[] minMax(long[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new long[]{0L, 0L};
+        }
+        long min = d[0];
+        long max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            long val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new long[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given float array.
+     *
+     * @param d the float array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0.0f, 0.0f}.
+     */
+    public static float[] minMax(float[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new float[]{0.0f, 0.0f};
+        }
+        float min = d[0];
+        float max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            float val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new float[]{min, max};
+    }
+
+    /**
+     * Finds the minimum and maximum values in the given double array.
+     *
+     * @param d the double array
+     * @return a two-element array containing the minimum and maximum values, or null if the input array is null.
+     *         If the array is empty, returns {0.0, 0.0}.
+     */
+    public static double[] minMax(double[] d)
+    {
+        if (d == null)
+        {
+            return null;
+        }
+        if (d.length == 0)
+        {
+            return new double[]{0.0, 0.0};
+        }
+        double min = d[0];
+        double max = d[0];
+        for (int i = 1; i < d.length; i++)
+        {
+            double val = d[i];
+            if (val < min)
+            {
+                min = val;
+            }
+            else if (val > max)
+            {
+                max = val;
+            }
+        }
+        return new double[]{min, max};
+    }
+
+    /**
+     * Returns the minimum value among the given values.
+     *
+     * @param d the values whose minimum is to be computed.
+     * @return the minimum value, or 0 if null or no values are given.
+     */
+    public static int minOf(int... d)
+    {
+        if (d == null || d.length == 0)
         {
             return 0;
         }
-        int min = values[0];
-        for (int i = 1; i < values.length; i++)
-        {
-            min = Math.min(min, values[i]);
-        }
-        return min;
+        return min(d);
     }
-    public static long	minLong(long... items) 
+
+    /**
+     * Returns the minimum value among the given values.
+     *
+     * @param d the values whose minimum is to be computed.
+     * @return the minimum value, or 0 if null or no values are given.
+     */
+    public static long minOf(long... d)
     {
-        return Utils.min(items);
+        if (d == null || d.length == 0)
+        {
+            return 0L;
+        }
+        return min(d);
     }
+
+    /**
+     * Returns the minimum value among the given values.
+     *
+     * @param d the values whose minimum is to be computed.
+     * @return the minimum value, or 0 if null or no values are given.
+     */
+    public static double minOf(double... d)
+    {
+        if (d == null || d.length == 0)
+        {
+            return 0.0;
+        }
+        return min(d);
+    }
+
     //borrowed from http://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2
     public static boolean isPow2(int i)
     {
@@ -1656,6 +2117,14 @@ public class Nums
         }
     }
         
+    /**
+     * Returns the greatest common divisor of all the given values.
+     * <p>
+     * The result is always non-negative.
+     *
+     * @param values the values whose gcd is to be computed.
+     * @return the positive gcd of the given values, or 0 if no values are given.
+     */
     public static long gcd(long ... values)
     {
         if (values == null || values.length == 0)
@@ -1667,13 +2136,30 @@ public class Nums
         {
             result = gcd(result, values[i]);
         }
-        return result;
+        return Math.abs(result);
     }
+    /**
+     * Returns the greatest common divisor of a and b.
+     * <p>
+     * The result is always non-negative.
+     *
+     * @param a the first value.
+     * @param b the second value.
+     * @return the positive gcd of a and b.
+     */
     public static BigInteger gcd(BigInteger a, BigInteger b)
     {
         return a.gcd(b);
     }
 
+    /**
+     * Returns the greatest common divisor of all the given values.
+     * <p>
+     * The result is always non-negative.
+     *
+     * @param values the values whose gcd is to be computed.
+     * @return the positive gcd of the given values, or 0 if no values are given.
+     */
     public static BigInteger gcd(BigInteger... values)
     {
         if (values == null || values.length == 0)
@@ -1685,13 +2171,31 @@ public class Nums
         {
             result = gcd(result, values[i]);
         }
-        return result;
+        return result.abs();
     }
 
+    /**
+     * Returns the least common multiple of a and b, always non-negative.
+     * <p>
+     * Note that lcm(0, 0) is 0, and that the result may overflow (wrap
+     * around) if it does not fit in a long.
+     *
+     * @param a the first value.
+     * @param b the second value.
+     * @return the positive lcm of a and b.
+     */
     public static long lcm(long a, long b)
     {
-        return (a*b)/gcd(a,b);
+        return Math.abs((a / gcd(a,b)) * b);
     }
+    /**
+     * Returns the least common multiple of all the given values.
+     * <p>
+     * The result is always non-negative.
+     *
+     * @param values the values whose lcm is to be computed.
+     * @return the positive lcm of the given values, or 0 if no values are given.
+     */
     public static long lcm(long ... values)
     {
         if (values == null || values.length == 0)
@@ -1703,13 +2207,28 @@ public class Nums
         {
             result = lcm(result, values[i]);
         }
-        return result;
+        return Math.abs(result);
     }
+    /**
+     * Returns the least common multiple of a and b, always non-negative.
+     *
+     * @param a the first value.
+     * @param b the second value.
+     * @return the positive lcm of a and b.
+     */
     public static BigInteger lcm(BigInteger a, BigInteger b)
     {
-        return a.multiply(b).divide(gcd(a, b));
+        return a.multiply(b).divide(gcd(a, b)).abs();
     }
 
+    /**
+     * Returns the least common multiple of all the given values.
+     * <p>
+     * The result is always non-negative.
+     *
+     * @param values the values whose lcm is to be computed.
+     * @return the positive lcm of the given values, or 0 if no values are given.
+     */
     public static BigInteger lcm(BigInteger... values)
     {
         if (values == null || values.length == 0)
@@ -1721,7 +2240,7 @@ public class Nums
         {
             result = lcm(result, values[i]);
         }
-        return result;
+        return result.abs();
     }
 
     public static int fibonacci(long[] seq)
@@ -1874,8 +2393,21 @@ public class Nums
         }
     }    
     
+    /**
+     * Returns the greatest common divisor of a and b, always non-negative.
+     * <p>
+     * Note that gcd(0, 0) is 0, and that the result can only remain negative
+     * when the true gcd is Integer.MIN_VALUE in absolute value, which does not
+     * fit in an int (e.g. gcd(Integer.MIN_VALUE, 0)).
+     *
+     * @param a the first value.
+     * @param b the second value.
+     * @return the positive gcd of |a| and |b|.
+     */
     public static int gcd(int a, int b)
     {
+        a = Math.abs(a);
+        b = Math.abs(b);
         while (b != 0)
         {
             int temp = b;
@@ -1885,8 +2417,21 @@ public class Nums
         return a;
     }
     
+    /**
+     * Returns the greatest common divisor of a and b, always non-negative.
+     * <p>
+     * Note that gcd(0, 0) is 0, and that the result can only remain negative
+     * when the true gcd is Long.MIN_VALUE in absolute value, which does not
+     * fit in a long (e.g. gcd(Long.MIN_VALUE, 0)).
+     *
+     * @param a the first value.
+     * @param b the second value.
+     * @return the positive gcd of |a| and |b|.
+     */
     public static long gcd(long a, long b)
     {
+        a = Math.abs(a);
+        b = Math.abs(b);
         while (b != 0)
         {
             long temp = b;

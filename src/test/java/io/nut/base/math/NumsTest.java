@@ -57,8 +57,7 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
-import java.util.List;
-import java.util.Random;
+import java.util.Date;
 import javax.crypto.NoSuchPaddingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
@@ -527,6 +526,42 @@ public class NumsTest
     }
 
     /**
+     * Test of gcd method with negative numbers, of class FastMath.
+     */
+    @Test
+    public void testGcd_negative()
+    {
+        assertEquals(2, Nums.gcd(-4, 6));
+        assertEquals(2, Nums.gcd(4, -6));
+        assertEquals(2, Nums.gcd(-4, -6));
+        assertEquals(3, Nums.gcd(-6, -9));
+        assertEquals(12, Nums.gcd(-24, 36));
+        assertEquals(5, Nums.gcd(0, -5));
+        assertEquals(1, Nums.gcd(-7, 3));
+        assertEquals(2, Nums.gcd(-2, 0));
+        assertEquals(2, Nums.gcd(-4, -6, 8));
+        assertEquals(2, Nums.gcd(4, -6, -8));
+    }
+
+    /**
+     * Test of gcd method with negative long numbers, of class FastMath.
+     */
+    @Test
+    public void testGcd_long_negative()
+    {
+        assertEquals(2L, Nums.gcd(-4L, 6L));
+        assertEquals(2L, Nums.gcd(4L, -6L));
+        assertEquals(2L, Nums.gcd(-4L, -6L));
+        assertEquals(3L, Nums.gcd(-6L, -9L));
+        assertEquals(12L, Nums.gcd(-24L, 36L));
+        assertEquals(5L, Nums.gcd(0L, -5L));
+        assertEquals(1L, Nums.gcd(-7L, 3L));
+        assertEquals(2L, Nums.gcd(-2L, 0L));
+        assertEquals(2L, Nums.gcd(-4L, -6L, 8L));
+        assertEquals(2L, Nums.gcd(4L, -6L, -8L));
+    }
+
+    /**
      * Test of lcm method, of class FastMath.
      */
     @Test
@@ -558,6 +593,136 @@ public class NumsTest
         assertEquals(36, Nums.lcm(6,9,12));
         assertEquals(24, Nums.lcm(4,8,12));
         assertEquals(1155, Nums.lcm(3, 5, 7, 11));
+    }
+
+    /**
+     * Test of lcm method with negative numbers, of class FastMath.
+     */
+    @Test
+    public void testLcm_negative()
+    {
+        assertEquals(12, Nums.lcm(-4, 6));
+        assertEquals(12, Nums.lcm(4, -6));
+        assertEquals(12, Nums.lcm(-4, -6));
+        assertEquals(18, Nums.lcm(-6, -9));
+        assertEquals(72, Nums.lcm(-24, 36));
+        assertEquals(5, Nums.lcm(-1, -5));
+        assertEquals(21, Nums.lcm(-7, 3));
+        assertEquals(0, Nums.lcm(-2, 0));
+        assertEquals(24, Nums.lcm(-4, -6, 8));
+        assertEquals(24, Nums.lcm(4, -6, -8));
+        assertEquals(6, Nums.lcm(-6));
+        assertEquals(12L, Nums.lcm(-4L, 6L));
+        assertEquals(12L, Nums.lcm(4L, -6L));
+        assertEquals(12L, Nums.lcm(-4L, -6L));
+        assertEquals(18L, Nums.lcm(-6L, -9L));
+        assertEquals(72L, Nums.lcm(-24L, 36L));
+        assertEquals(5L, Nums.lcm(-1L, -5L));
+        assertEquals(21L, Nums.lcm(-7L, 3L));
+        assertEquals(0L, Nums.lcm(-2L, 0L));
+        assertEquals(24L, Nums.lcm(-4L, -6L, 8L));
+        assertEquals(24L, Nums.lcm(4L, -6L, -8L));
+        assertEquals(6L, Nums.lcm(-6L));
+        assertEquals(BigInteger.valueOf(12), Nums.lcm(BigInteger.valueOf(-4), BigInteger.valueOf(6)));
+        assertEquals(BigInteger.valueOf(12), Nums.lcm(BigInteger.valueOf(-4), BigInteger.valueOf(-6)));
+        assertEquals(BigInteger.valueOf(72), Nums.lcm(BigInteger.valueOf(-24), BigInteger.valueOf(36)));
+        assertEquals(BigInteger.valueOf(6), Nums.lcm(BigInteger.valueOf(-6)));
+    }
+
+    /**
+     * Test of minOf method, of class Nums.
+     */
+    @Test
+    public void testMinOf_intArr()
+    {
+        assertEquals(0, Nums.minOf());
+        assertEquals(1, Nums.minOf(1));
+        assertEquals(1, Nums.minOf(2,1));
+        assertEquals(1, Nums.minOf(3,2,1));
+        assertEquals(1, Nums.minOf(3,2,1,4));
+    }
+
+    /**
+     * Test of minOf method, of class Nums.
+     */
+    @Test
+    public void testMinOf_longArr()
+    {
+        assertEquals(1L, Nums.minOf(1L));
+        assertEquals(1L, Nums.minOf(2L,1L));
+        assertEquals(1L, Nums.minOf(3L,2L,1L));
+        assertEquals(1L, Nums.minOf(3L,2L,1L,4L));
+    }
+
+    /**
+     * Test of minOf method, of class Nums.
+     */
+    @Test
+    public void testMinOf_doubleArr()
+    {
+        assertEquals(0.0, Nums.minOf(), 0.0);
+        assertEquals(1.0, Nums.minOf(1.0), 0.0);
+        assertEquals(1.0, Nums.minOf(2.0, 1.0), 0.0);
+        assertEquals(1.0, Nums.minOf(3.0, 2.0, 1.0), 0.0);
+        assertEquals(1.0, Nums.minOf(3.0, 2.0, 1.0, 4.0), 0.0);
+    }
+
+    /**
+     * Test of min method, of class Nums.
+     */
+    @Test
+    public void testMin()
+    {
+        {
+            long t0 = System.currentTimeMillis();
+            long t1 = t0+60_000;
+            long t2 = t1+60_000;
+            long t3 = t2+60_000;
+            Date a = new Date(t0);
+            Date a2 = new Date(t0);
+            Date b = new Date(t1);
+            Date c = new Date(t2);
+            Date d = new Date(t3);
+
+            assertNull(Nums.min());
+
+            assertEquals(a, Nums.min(a));
+
+            assertEquals(a, Nums.min(a, a2));
+            assertEquals(a, Nums.min(a, b));
+            assertEquals(a, Nums.min(b, a));
+
+            assertEquals(a, Nums.min(a, b, c));
+            assertEquals(a, Nums.min(b, c, a));
+            assertEquals(a, Nums.min(c, b, a));
+
+            assertEquals(a, Nums.min(a, b, c, d));
+            assertEquals(a, Nums.min(b, c, a, d));
+            assertEquals(a, Nums.min(d, c, b, a));
+        }
+        {
+            Long a = 0L;
+            Long a2 = 0L;
+            Long b = 1L;
+            Long c = 2L;
+            Long d = 3L;
+
+            assertNull(Nums.min());
+
+            assertEquals(a, Nums.min(a));
+
+            assertEquals(a, Nums.min(a, a2));
+            assertEquals(a, Nums.min(a, b));
+            assertEquals(a, Nums.min(b, a));
+
+            assertEquals(a, Nums.min(a, b, c));
+            assertEquals(a, Nums.min(b, c, a));
+            assertEquals(a, Nums.min(c, b, a));
+
+            assertEquals(a, Nums.min(a, b, c, d));
+            assertEquals(a, Nums.min(b, c, a, d));
+            assertEquals(a, Nums.min(d, c, b, a));
+        }
     }
 
     /**
@@ -616,99 +781,213 @@ public class NumsTest
     }
 
     /**
-     * Test of maxDouble method, of class FastMath.
+     * Test of maxOf method, of class Nums.
      */
     @Test
-    public void testMaxDouble()
+    public void testMaxOf_doubleArr()
     {
-        assertEquals(2d, Nums.maxDouble(1d, 2d), 0.0d);
-        assertEquals(3d, Nums.maxDouble(1d, 2d, 3d), 0.0d);
-        assertEquals(3d, Nums.maxDouble(3d, 2d, 1d), 0.0d);
-        assertEquals(9d, Nums.maxDouble(9d, 8d, 7d, 6d, 5d), 0.0d);
+        assertEquals(2d, Nums.maxOf(1d, 2d), 0.0d);
+        assertEquals(3d, Nums.maxOf(1d, 2d, 3d), 0.0d);
+        assertEquals(3d, Nums.maxOf(3d, 2d, 1d), 0.0d);
+        assertEquals(9d, Nums.maxOf(9d, 8d, 7d, 6d, 5d), 0.0d);
+        assertEquals(0d, Nums.maxOf(), 0.0d);
     }
 
     /**
-     * Test of maxFloat method, of class FastMath.
+     * Test of maxOf method, of class Nums.
      */
     @Test
-    public void testMaxFloat()
+    public void testMaxOf_floatArr()
     {
-        assertEquals(2f, Nums.maxFloat(1f, 2f), 0.0f);
-        assertEquals(3f, Nums.maxFloat(1f, 2f, 3f), 0.0f);
-        assertEquals(3f, Nums.maxFloat(3f, 2f, 1f), 0.0f);
-        assertEquals(9f, Nums.maxFloat(9f, 8f, 7f, 6f, 5f), 0.0f);
+        assertEquals(2f, Nums.maxOf(1f, 2f), 0.0f);
+        assertEquals(3f, Nums.maxOf(1f, 2f, 3f), 0.0f);
+        assertEquals(3f, Nums.maxOf(3f, 2f, 1f), 0.0f);
+        assertEquals(9f, Nums.maxOf(9f, 8f, 7f, 6f, 5f), 0.0f);
+        assertEquals(0f, Nums.maxOf(), 0.0f);
     }
 
     /**
-     * Test of maxInteger method, of class FastMath.
+     * Test of maxOf method, of class Nums.
      */
     @Test
-    public void testMaxInteger()
+    public void testMaxOf_intArr()
     {
-        assertEquals(2, Nums.maxInteger(1, 2));
-        assertEquals(3, Nums.maxInteger(1, 2, 3));
-        assertEquals(3, Nums.maxInteger(3, 2, 1));
-        assertEquals(9, Nums.maxInteger(9, 8, 7, 6, 5));
+        assertEquals(2, Nums.maxOf(1, 2));
+        assertEquals(3, Nums.maxOf(1, 2, 3));
+        assertEquals(3, Nums.maxOf(3, 2, 1));
+        assertEquals(9, Nums.maxOf(9, 8, 7, 6, 5));
+        assertEquals(0, Nums.maxOf());
     }
 
     /**
-     * Test of maxLong method, of class FastMath.
+     * Test of maxOf method, of class Nums.
      */
     @Test
-    public void testMaxLong()
+    public void testMaxOf_longArr()
     {
-        assertEquals(2L, Nums.maxLong(1L, 2L));
-        assertEquals(3L, Nums.maxLong(1L, 2L, 3L));
-        assertEquals(3L, Nums.maxLong(3L, 2L, 1L));
-        assertEquals(9L, Nums.maxLong(9L, 8L, 7L, 6L, 5L));
+        assertEquals(2L, Nums.maxOf(1L, 2L));
+        assertEquals(3L, Nums.maxOf(1L, 2L, 3L));
+        assertEquals(3L, Nums.maxOf(3L, 2L, 1L));
+        assertEquals(9L, Nums.maxOf(9L, 8L, 7L, 6L, 5L));
     }
 
     /**
-     * Test of minDouble method, of class FastMath.
+     * Test of max method with arrays, of class Nums.
      */
     @Test
-    public void testMinDouble()
+    public void testMax_intArr()
     {
-        assertEquals(1d, Nums.minDouble(1d, 2d), 0.0d);
-        assertEquals(1d, Nums.minDouble(1d, 2d, 3d), 0.0d);
-        assertEquals(1d, Nums.minDouble(3d, 2d, 1d), 0.0d);
-        assertEquals(5d, Nums.minDouble(9d, 8d, 7d, 6d, 5d), 0.0d);
+        assertEquals(0, Nums.max(new int[]{}));
+        assertEquals(5, Nums.max(new int[]{5}));
+        assertEquals(2, Nums.max(new int[]{1, 2}));
+        assertEquals(9, Nums.max(new int[]{9, 8, 7, 6, 5}));
     }
 
     /**
-     * Test of minFloat method, of class FastMath.
+     * Test of max method with arrays, of class Nums.
      */
     @Test
-    public void testMinFloat()
+    public void testMax_longArr()
     {
-        assertEquals(1f, Nums.minFloat(1f, 2f), 0.0f);
-        assertEquals(1f, Nums.minFloat(1f, 2f, 3f), 0.0f);
-        assertEquals(1f, Nums.minFloat(3f, 2f, 1f), 0.0f);
-        assertEquals(5f, Nums.minFloat(9f, 8f, 7f, 6f, 5f), 0.0f);
+        assertEquals(0L, Nums.max(new long[]{}));
+        assertEquals(5L, Nums.max(new long[]{5L}));
+        assertEquals(2L, Nums.max(new long[]{1L, 2L}));
+        assertEquals(9L, Nums.max(new long[]{9L, 8L, 7L, 6L, 5L}));
     }
 
     /**
-     * Test of minInt method, of class FastMath.
+     * Test of max method with arrays, of class Nums.
      */
     @Test
-    public void testMinInteger()
+    public void testMax_doubleArr()
     {
-        assertEquals(1, Nums.minInteger(1, 2));
-        assertEquals(1, Nums.minInteger(1, 2, 3));
-        assertEquals(1, Nums.minInteger(3, 2, 1));
-        assertEquals(5, Nums.minInteger(9, 8, 7, 6, 5));
+        assertEquals(0.0, Nums.max(new double[]{}), 0.0);
+        assertEquals(5.0, Nums.max(new double[]{5.0}), 0.0);
+        assertEquals(2.0, Nums.max(new double[]{1.0, 2.0}), 0.0);
+        assertEquals(9.0, Nums.max(new double[]{9.0, 8.0, 7.0, 6.0, 5.0}), 0.0);
     }
 
     /**
-     * Test of minLong method, of class FastMath.
+     * Test of minMax method, of class Nums.
+     */
+    @Test
+    public void testMinMax_byte()
+    {
+        assertNull(Nums.minMax((byte[]) null));
+        assertArrayEquals(new byte[]{0, 0}, Nums.minMax(new byte[]{}));
+        assertArrayEquals(new byte[]{5, 5}, Nums.minMax(new byte[]{5}));
+        assertArrayEquals(new byte[]{2, 8}, Nums.minMax(new byte[]{2, 8}));
+        assertArrayEquals(new byte[]{2, 8}, Nums.minMax(new byte[]{8, 2}));
+        assertArrayEquals(new byte[]{-5, 10}, Nums.minMax(new byte[]{3, 10, -5, 0, 7}));
+    }
+
+    /**
+     * Test of minMax method, of class Nums.
+     */
+    @Test
+    public void testMinMax_short()
+    {
+        assertNull(Nums.minMax((short[]) null));
+        assertArrayEquals(new short[]{0, 0}, Nums.minMax(new short[]{}));
+        assertArrayEquals(new short[]{5, 5}, Nums.minMax(new short[]{5}));
+        assertArrayEquals(new short[]{2, 8}, Nums.minMax(new short[]{2, 8}));
+        assertArrayEquals(new short[]{2, 8}, Nums.minMax(new short[]{8, 2}));
+        assertArrayEquals(new short[]{-5, 10}, Nums.minMax(new short[]{3, 10, -5, 0, 7}));
+    }
+
+    /**
+     * Test of minMax method, of class Nums.
+     */
+    @Test
+    public void testMinMax_char()
+    {
+        assertNull(Nums.minMax((char[]) null));
+        assertArrayEquals(new char[]{0, 0}, Nums.minMax(new char[]{}));
+        assertArrayEquals(new char[]{'a', 'a'}, Nums.minMax(new char[]{'a'}));
+        assertArrayEquals(new char[]{'a', 'z'}, Nums.minMax(new char[]{'a', 'z'}));
+        assertArrayEquals(new char[]{'a', 'z'}, Nums.minMax(new char[]{'z', 'a'}));
+        assertArrayEquals(new char[]{'b', 'y'}, Nums.minMax(new char[]{'m', 'y', 'b', 'd', 's'}));
+    }
+
+    /**
+     * Test of minMax method, of class Nums.
+     */
+    @Test
+    public void testMinMax_int()
+    {
+        assertNull(Nums.minMax((int[]) null));
+        assertArrayEquals(new int[]{0, 0}, Nums.minMax(new int[]{}));
+        assertArrayEquals(new int[]{5, 5}, Nums.minMax(new int[]{5}));
+        assertArrayEquals(new int[]{2, 8}, Nums.minMax(new int[]{2, 8}));
+        assertArrayEquals(new int[]{2, 8}, Nums.minMax(new int[]{8, 2}));
+        assertArrayEquals(new int[]{-5, 10}, Nums.minMax(new int[]{3, 10, -5, 0, 7}));
+    }
+
+    /**
+     * Test of minMax method, of class Nums.
+     */
+    @Test
+    public void testMinMax_long()
+    {
+        assertNull(Nums.minMax((long[]) null));
+        assertArrayEquals(new long[]{0L, 0L}, Nums.minMax(new long[]{}));
+        assertArrayEquals(new long[]{5L, 5L}, Nums.minMax(new long[]{5L}));
+        assertArrayEquals(new long[]{2L, 8L}, Nums.minMax(new long[]{2L, 8L}));
+        assertArrayEquals(new long[]{2L, 8L}, Nums.minMax(new long[]{8L, 2L}));
+        assertArrayEquals(new long[]{-5L, 10L}, Nums.minMax(new long[]{3L, 10L, -5L, 0L, 7L}));
+    }
+
+    /**
+     * Test of minMax method, of class Nums.
+     */
+    @Test
+    public void testMinMax_float()
+    {
+        assertNull(Nums.minMax((float[]) null));
+        assertArrayEquals(new float[]{0.0f, 0.0f}, Nums.minMax(new float[]{}), 0.0f);
+        assertArrayEquals(new float[]{5.0f, 5.0f}, Nums.minMax(new float[]{5.0f}), 0.0f);
+        assertArrayEquals(new float[]{2.0f, 8.0f}, Nums.minMax(new float[]{2.0f, 8.0f}), 0.0f);
+        assertArrayEquals(new float[]{2.0f, 8.0f}, Nums.minMax(new float[]{8.0f, 2.0f}), 0.0f);
+        assertArrayEquals(new float[]{-5.0f, 10.0f}, Nums.minMax(new float[]{3.0f, 10.0f, -5.0f, 0.0f, 7.0f}), 0.0f);
+    }
+
+    /**
+     * Test of minMax method, of class Nums.
+     */
+    @Test
+    public void testMinMax_double()
+    {
+        assertNull(Nums.minMax((double[]) null));
+        assertArrayEquals(new double[]{0.0, 0.0}, Nums.minMax(new double[]{}), 0.0);
+        assertArrayEquals(new double[]{5.0, 5.0}, Nums.minMax(new double[]{5.0}), 0.0);
+        assertArrayEquals(new double[]{2.0, 8.0}, Nums.minMax(new double[]{2.0, 8.0}), 0.0);
+        assertArrayEquals(new double[]{2.0, 8.0}, Nums.minMax(new double[]{8.0, 2.0}), 0.0);
+        assertArrayEquals(new double[]{-5.0, 10.0}, Nums.minMax(new double[]{3.0, 10.0, -5.0, 0.0, 7.0}), 0.0);
+    }
+
+    /**
+     * Test of minOf method, of class Nums.
+     */
+    @Test
+    public void testMinOf_floatArr()
+    {
+        assertEquals(1f, Nums.minOf(1f, 2f), 0.0f);
+        assertEquals(1f, Nums.minOf(1f, 2f, 3f), 0.0f);
+        assertEquals(1f, Nums.minOf(3f, 2f, 1f), 0.0f);
+        assertEquals(5f, Nums.minOf(9f, 8f, 7f, 6f, 5f), 0.0f);
+        assertEquals(0f, Nums.minOf(), 0.0f);
+    }
+
+    /**
+     * Test of minOf method, of class Nums.
      */
     @Test
     public void testMinLong()
     {
-        assertEquals(1L, Nums.minLong(1L, 2L));
-        assertEquals(1L, Nums.minLong(1L, 2L, 3L));
-        assertEquals(1L, Nums.minLong(3L, 2L, 1L));
-        assertEquals(5L, Nums.minLong(9L, 8L, 7L, 6L, 5L));
+        assertEquals(1L, Nums.minOf(1L, 2L));
+        assertEquals(1L, Nums.minOf(1L, 2L, 3L));
+        assertEquals(1L, Nums.minOf(3L, 2L, 1L));
+        assertEquals(5L, Nums.minOf(9L, 8L, 7L, 6L, 5L));
     }
     
     /**
