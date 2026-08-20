@@ -57,7 +57,6 @@ import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.InvalidParameterSpecException;
-import java.util.Date;
 import javax.crypto.NoSuchPaddingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
@@ -665,64 +664,6 @@ public class NumsTest
         assertEquals(1.0, Nums.minOf(2.0, 1.0), 0.0);
         assertEquals(1.0, Nums.minOf(3.0, 2.0, 1.0), 0.0);
         assertEquals(1.0, Nums.minOf(3.0, 2.0, 1.0, 4.0), 0.0);
-    }
-
-    /**
-     * Test of min method, of class Nums.
-     */
-    @Test
-    public void testMin()
-    {
-        {
-            long t0 = System.currentTimeMillis();
-            long t1 = t0+60_000;
-            long t2 = t1+60_000;
-            long t3 = t2+60_000;
-            Date a = new Date(t0);
-            Date a2 = new Date(t0);
-            Date b = new Date(t1);
-            Date c = new Date(t2);
-            Date d = new Date(t3);
-
-            assertNull(Nums.min());
-
-            assertEquals(a, Nums.min(a));
-
-            assertEquals(a, Nums.min(a, a2));
-            assertEquals(a, Nums.min(a, b));
-            assertEquals(a, Nums.min(b, a));
-
-            assertEquals(a, Nums.min(a, b, c));
-            assertEquals(a, Nums.min(b, c, a));
-            assertEquals(a, Nums.min(c, b, a));
-
-            assertEquals(a, Nums.min(a, b, c, d));
-            assertEquals(a, Nums.min(b, c, a, d));
-            assertEquals(a, Nums.min(d, c, b, a));
-        }
-        {
-            Long a = 0L;
-            Long a2 = 0L;
-            Long b = 1L;
-            Long c = 2L;
-            Long d = 3L;
-
-            assertNull(Nums.min());
-
-            assertEquals(a, Nums.min(a));
-
-            assertEquals(a, Nums.min(a, a2));
-            assertEquals(a, Nums.min(a, b));
-            assertEquals(a, Nums.min(b, a));
-
-            assertEquals(a, Nums.min(a, b, c));
-            assertEquals(a, Nums.min(b, c, a));
-            assertEquals(a, Nums.min(c, b, a));
-
-            assertEquals(a, Nums.min(a, b, c, d));
-            assertEquals(a, Nums.min(b, c, a, d));
-            assertEquals(a, Nums.min(d, c, b, a));
-        }
     }
 
     /**

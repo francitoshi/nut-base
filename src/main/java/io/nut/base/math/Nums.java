@@ -1589,31 +1589,6 @@ public class Nums
         return min;
     }
     /**
-     * Returns the minimum value among the given elements, or null if none are given.
-     * <p>
-     * Null elements are skipped.
-     *
-     * @param t the values whose minimum is to be computed.
-     * @return the minimum value, or null if t is empty or contains only nulls.
-     */
-    public static <T extends Comparable<T>> T min(T... t)
-    {
-        T m = null;
-        if (t.length > 0)
-        {
-            for (int i = 0; i < t.length; i++)
-            {
-                T item = t[i];
-                if (m == null || (item != null && item.compareTo(m) < 0))
-                {
-                    m = item;
-                }
-            }
-        }
-        return m;
-    }
-
-    /**
      * Returns the minimum value in the given array.
      *
      * @param d the array whose minimum is to be computed.

@@ -6,7 +6,6 @@
 package io.nut.base.util;
 
 import io.nut.base.compat.ByteBufferCompat;
-import io.nut.base.math.Nums;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
@@ -1202,6 +1201,31 @@ public abstract class Utils
         return rc;
     }    
     
+    /**
+     * Returns the minimum value among the given elements, or null if none are given.
+     * <p>
+     * Null elements are skipped.
+     *
+     * @param t the values whose minimum is to be computed.
+     * @return the minimum value, or null if t is empty or contains only nulls.
+     */
+    public static <T extends Comparable<T>> T min(T... t)
+    {
+        T m = null;
+        if (t.length > 0)
+        {
+            for (int i = 0; i < t.length; i++)
+            {
+                T item = t[i];
+                if (m == null || (item != null && item.compareTo(m) < 0))
+                {
+                    m = item;
+                }
+            }
+        }
+        return m;
+    }
+
     public static <T extends Comparable<T>> T max(T... t)
     {
         T m = null;
@@ -1487,7 +1511,7 @@ public abstract class Utils
 
         value = value.multiply(deviation);
         value = value.add(mean);
-        value = Nums.min(value, max);
+        value = Utils.min(value, max);
         value = Utils.max(value, min);
 
         return value;
