@@ -1,27 +1,13 @@
 /*
- * Morse.java
- *
- * Copyright (c) 2013-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2013-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.signal;
 
 import io.nut.base.math.Nums;
 import io.nut.base.collections.ring.RingQueueInt;
+import io.nut.base.util.Empty;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.util.ArrayList;
@@ -463,7 +449,7 @@ public class Morse
         for(String item : PROSIGNS)
         {
             char[] letters = item.toCharArray();
-            byte[] units = new byte[0];
+            byte[] units = Empty.BYTES;
             StringBuilder code = new StringBuilder();
             for(int i=0;i<letters.length;i++)
             {
@@ -489,9 +475,9 @@ public class Morse
         }
         this.maxUnits = maxUnits;
         this.maxTerms = maxTerms;
-        this.allowedLetters = letterList.toArray(new String[0]);
-        this.allowedProsigns = prosignList.toArray(new String[0]);
-        this.allowedItems = itemList.toArray(new String[0]);
+        this.allowedLetters = letterList.toArray(Empty.STRINGS);
+        this.allowedProsigns = prosignList.toArray(Empty.STRINGS);
+        this.allowedItems = itemList.toArray(Empty.STRINGS);
     }
     
     /**
@@ -600,7 +586,7 @@ public class Morse
                 }
                 else
                 {
-                    units[i][j] = new byte[0];
+                    units[i][j] = Empty.BYTES;
                 }
             }            
         }
@@ -691,7 +677,7 @@ public class Morse
     {
         if (patterns == null || patterns.length == 0)
         {
-            return new int[0];
+            return Empty.INTS;
         }
 
         List<Integer> out = new ArrayList<>();
@@ -997,6 +983,6 @@ public class Morse
         {
             return this.allowedProsigns.clone();
         }
-        return new String[0];
+        return Empty.STRINGS;
     }
 }

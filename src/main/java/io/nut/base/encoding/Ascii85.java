@@ -1,25 +1,11 @@
 /*
- *  Ascii85.java
- *
- *  Copyright (C) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.encoding;
 
+import io.nut.base.util.Empty;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
@@ -57,7 +43,7 @@ public class Ascii85
         }
         if (data.length == 0)
         {
-            return new char[0];
+            return Empty.CHARS;
         }
 
         // Calculate the maximum possible size for the output buffer.
@@ -155,14 +141,14 @@ public class Ascii85
         }
         if (encodedData.length == 0)
         {
-            return new byte[0];
+            return Empty.BYTES;
         }
 
         // Filter out whitespace to be lenient with input.
         char[] cleanData = filterWhitespace(encodedData);
         if (cleanData.length == 0)
         {
-            return new byte[0];
+            return Empty.BYTES;
         }
 
         // We use ByteArrayOutputStream to build the output byte array

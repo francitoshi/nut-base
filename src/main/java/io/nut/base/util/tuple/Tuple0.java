@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.tuple;
 
+import io.nut.base.util.Empty;
 import java.util.Collections;
 import java.util.List;
 
@@ -42,7 +43,7 @@ public final class Tuple0 implements Tuple, Comparable<Tuple0>
     @Override
     public Object[] toArray()
     {
-        return new Object[0];
+        return Empty.OBJECTS;
     }
 
     @Override

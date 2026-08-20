@@ -10,6 +10,7 @@ import io.nut.base.io.VerboseLineReader;
 import io.nut.base.util.Args;
 import io.nut.base.util.BashEscaper;
 import io.nut.base.util.Byter;
+import io.nut.base.util.Empty;
 import io.nut.base.util.Strings;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -1255,7 +1256,7 @@ public class GPG
          */
         public String[] getRecipients()
         {
-            return recipients.toArray(new String[0]);
+            return recipients.toArray(Empty.STRINGS);
         }
 
         /**
@@ -1539,7 +1540,7 @@ public class GPG
             }
         }
 
-        return recipients.toArray(new String[0]);
+        return recipients.toArray(Empty.STRINGS);
     }
     
     

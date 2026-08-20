@@ -4,6 +4,7 @@ package io.nut.base.encoding;
     from Drongo library in SparrowWallet
 */
 
+import io.nut.base.util.Empty;
 import java.nio.charset.StandardCharsets;
 
 public class Base43
@@ -78,7 +79,7 @@ public class Base43
     {
         if (input.isEmpty())
         {
-            return new byte[0];
+            return Empty.BYTES;
         }
 
         final byte[] input43 = new byte[input.length()];

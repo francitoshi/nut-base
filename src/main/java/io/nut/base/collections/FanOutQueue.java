@@ -5,6 +5,7 @@
  */
 package io.nut.base.collections;
 
+import io.nut.base.util.Empty;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -562,7 +563,7 @@ public class FanOutQueue<E> implements BlockingQueue<E>
     @Override
     public Object[] toArray()
     {
-        return new Object[0];
+        return Empty.OBJECTS;
     }
 
     /**

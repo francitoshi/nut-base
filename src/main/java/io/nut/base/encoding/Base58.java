@@ -19,6 +19,7 @@ package io.nut.base.encoding;
 
 import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto;
+import io.nut.base.util.Empty;
 import java.math.BigInteger;
 import java.util.Arrays;
 
@@ -147,7 +148,7 @@ public class Base58
     {
         if (input.length() == 0)
         {
-            return new byte[0];
+            return Empty.BYTES;
         }
         // Convert the base58-encoded ASCII chars to a base58 byte sequence (base58 digits).
         byte[] input58 = new byte[input.length()];

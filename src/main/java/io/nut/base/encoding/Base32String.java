@@ -16,6 +16,7 @@
 
 package io.nut.base.encoding;
 
+import io.nut.base.util.Empty;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -55,7 +56,7 @@ public class Base32String {
     // Canonicalize to all upper case
     encoded = encoded.toUpperCase(Locale.US);
     if (encoded.length() == 0) {
-      return new byte[0];
+      return Empty.BYTES;
     }
     int encodedLength = encoded.length();
     int outLength = encodedLength * SHIFT / 8;
