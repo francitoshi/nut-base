@@ -5,6 +5,8 @@
  */
 package io.nut.base.util.concurrent.channel;
 
+import io.nut.base.util.tuple.Tuple2;
+
 /**
  * Abstract base class for thread-safe communication channels between
  * producers and consumers.
@@ -34,7 +36,7 @@ package io.nut.base.util.concurrent.channel;
  * String msg = ch.get();   // "hello"
  * }</pre>
  */
-public abstract class Channel<E> implements ChannelWriter<E>, ChannelReader<E>
+public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
 {
 
     /**
@@ -145,4 +147,50 @@ public abstract class Channel<E> implements ChannelWriter<E>, ChannelReader<E>
         return new CloseableUnlimitedChannel<>();
     }
 
+    /**
+     * Indicates whether this channel is bidirectional, i.e. elements sent with
+     * {@link ChannelWriter#put} are not read back with {@link ChannelReader#get}
+     * but delivered to another peer that in turn sends the elements obtained
+     * through its own {@code get()}.
+     *
+     * @return {@code true} if the channel is duplex, {@code false} otherwise
+     */
+    public boolean isDuplex()
+    {
+        return false;
+    }
+
+    /**
+     * Creates a duplex channel where write and read operations are disconnected.
+     * Writes are forwarded to the {@code out} writer, and reads are retrieved from the {@code in} reader.
+     *
+     * @param in  the channel reader to delegate reads to
+     * @param out the channel writer to delegate writes to
+     * @param <T> the type of elements read
+     * @return a duplex channel delegating to {@code out} and {@code in}
+     */
+    public static <T> DuplexChannel<T> duplex(ChannelReader<T> in, ChannelWriter<T> out)
+    {
+        return new DuplexChannel<>(in, out);
+    }
+
+    /**
+     * Creates a pair of cross-connected duplex channels: elements put into the
+     * first channel are read from the second, and vice versa.
+     *
+     * @param a  one end of the connection
+     * @param b  the other end of the connection
+     * @param <T> the type of elements exchanged
+     * @return a pair of duplex channels, each reading what the other writes
+     */
+    public static <T> Tuple2<DuplexChannel<T>, DuplexChannel<T>> duplexPair(Channel<T> a, Channel<T> b)
+    {
+        if (a.isDuplex() || b.isDuplex())
+        {
+            throw new IllegalArgumentException("duplex channels cannot be connected as peers");
+        }
+        return new Tuple2<>(new DuplexChannel<>(a, b), new DuplexChannel<>(b, a));
+    }
+
 }
+
