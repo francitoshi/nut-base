@@ -36,8 +36,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  *   have the same estimated frequency, the candidate is admitted with a
  *   small probability instead of never, so the main cache doesn't freeze
  *   around stale entries once the sketch saturates.</li>
- *   <li><b>Thread-safety:</b> public operations are synchronized on the
- *   cache's own monitor. This is a single coarse-grained lock, not
+ *   <li><b>Thread-safety:</b> public operations are synchronized on a
+ *   private lock object. This is a single coarse-grained lock, not
  *   Caffeine's striped/asynchronous design, so it trades some throughput
  *   under contention for straightforward correctness.</li>
  * </ul>
@@ -48,7 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 {
-
+    private final Object lock = new Object();
+    
     private final int capacity;
     private final long ttlNanos;
 
@@ -138,170 +139,179 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     }
 
     @Override
-    public synchronized V get(K key, java.util.function.Function<? super K, ? extends V> creator)
+    public V get(K key, java.util.function.Function<? super K, ? extends V> creator)
     {
-        // Record access
-        sketch.increment(key);
-        adaptRequests++;
-        if(statistics) countAttempts.incrementAndGet();
-
-        long now = System.nanoTime();
-
-        // Try window cache first
-        AbstractCache.Item<V> windowItem = windowCache.get(key);
-        if (windowItem != null)
+        synchronized (lock)
         {
-            if (windowItem.isExpired(now))
+            // Record access
+            sketch.increment(key);
+            adaptRequests++;
+            if(statistics) countAttempts.incrementAndGet();
+
+            long now = System.nanoTime();
+
+            // Try window cache first
+            AbstractCache.Item<V> windowItem = windowCache.get(key);
+            if (windowItem != null)
             {
-                windowCache.remove(key);
+                if (windowItem.isExpired(now))
+                {
+                    windowCache.remove(key);
+                }
+                else
+                {
+                    adaptHits++;
+                    if(statistics) countWindowHits.incrementAndGet();
+                    maybeAdapt();
+                    return windowItem.v;
+                }
             }
-            else
+
+            // Try main cache
+            AbstractCache.Item<V> mainItem = mainCache.get(key);
+            if (mainItem != null)
             {
-                adaptHits++;
-                if(statistics) countWindowHits.incrementAndGet();
+                if (mainItem.isExpired(now))
+                {
+                    mainCache.remove(key);
+                }
+                else
+                {
+                    adaptHits++;
+                    if(statistics) countMainHits.incrementAndGet();
+                    maybeAdapt();
+                    return mainItem.v;
+                }
+            }
+
+            if (creator == null)
+            {
                 maybeAdapt();
-                return windowItem.v;
+                return null;
             }
-        }
 
-        // Try main cache
-        AbstractCache.Item<V> mainItem = mainCache.get(key);
-        if (mainItem != null)
-        {
-            if (mainItem.isExpired(now))
-            {
-                mainCache.remove(key);
-            }
-            else
-            {
-                adaptHits++;
-                if(statistics) countMainHits.incrementAndGet();
-                maybeAdapt();
-                return mainItem.v;
-            }
-        }
+            // Miss - calculate and insert
+            V value = creator.apply(key);
+            long exp = calculateExpiration(now, ttlNanos);
+            AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
 
-        if (creator == null)
-        {
-            maybeAdapt();
-            return null;
-        }
-
-        // Miss - calculate and insert
-        V value = creator.apply(key);
-        long exp = calculateExpiration(now, ttlNanos);
-        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
-
-        // New item - try admission to window
-        if (windowCache.size() < windowSize)
-        {
-            windowCache.put(key, item);
-        }
-        else
-        {
-            // Window is full - evict from window and try admission to main
-            Map.Entry<K, AbstractCache.Item<V>> evicted = windowCache.evict();
-            windowCache.put(key, item);
-
-            // Check if the evicted item is expired!
-            if (evicted.getValue() != null && !evicted.getValue().isExpired(now))
-            {
-                // Admit to main if frequency is good and not expired
-                tryAdmitToMain(evicted.getKey(), evicted.getValue());
-            }
-        }
-
-        maybeAdapt();
-        return value;
-    }
-
-    @Override
-    public synchronized boolean containsKey(K key)
-    {
-        long now = System.nanoTime();
-
-        // Try window cache first
-        AbstractCache.Item<V> windowItem = windowCache.get(key);
-        if (windowItem != null)
-        {
-            if (windowItem.isExpired(now))
-            {
-                windowCache.remove(key);
-                return false;
-            }
-            return true;
-        }
-
-        // Try main cache
-        AbstractCache.Item<V> mainItem = mainCache.peek(key);
-        if (mainItem != null)
-        {
-            if (mainItem.isExpired(now))
-            {
-                mainCache.remove(key);
-                return false;
-            }
-            return true;
-        }
-
-        return false;
-    }
-
-    @Override
-    public synchronized void put(K key, V value)
-    {
-        sketch.increment(key);
-
-        long now = System.nanoTime();
-        long exp = calculateExpiration(now, ttlNanos);
-        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
-
-        // Check if already exists in window cache
-        if (windowCache.contains(key))
-        {
-            AbstractCache.Item<V> existing = windowCache.get(key);
-            if (existing != null && existing.isExpired(now))
-            {
-                windowCache.remove(key);
-            }
-            else
+            // New item - try admission to window
+            if (windowCache.size() < windowSize)
             {
                 windowCache.put(key, item);
-                return;
-            }
-        }
-
-        // Check if already exists in main cache
-        if (mainCache.contains(key))
-        {
-            AbstractCache.Item<V> existing = mainCache.peek(key);
-            if (existing != null && existing.isExpired(now))
-            {
-                mainCache.remove(key);
             }
             else
             {
-                mainCache.put(key, item);
-                return;
+                // Window is full - evict from window and try admission to main
+                Map.Entry<K, AbstractCache.Item<V>> evicted = windowCache.evict();
+                windowCache.put(key, item);
+
+                // Check if the evicted item is expired!
+                if (evicted.getValue() != null && !evicted.getValue().isExpired(now))
+                {
+                    // Admit to main if frequency is good and not expired
+                    tryAdmitToMain(evicted.getKey(), evicted.getValue());
+                }
             }
-        }
 
-        // New item - try admission to window
-        if (windowCache.size() < windowSize)
-        {
-            windowCache.put(key, item);
+            maybeAdapt();
+            return value;
         }
-        else
-        {
-            // Window is full - evict from window and try admission to main
-            Map.Entry<K, AbstractCache.Item<V>> evicted = windowCache.evict();
-            windowCache.put(key, item);
+    }
 
-            // Check if the evicted item is expired!
-            if (evicted.getValue() != null && !evicted.getValue().isExpired(now))
+    @Override
+    public boolean containsKey(K key)
+    {
+        synchronized (lock)
+        {
+            long now = System.nanoTime();
+
+            // Try window cache first
+            AbstractCache.Item<V> windowItem = windowCache.get(key);
+            if (windowItem != null)
             {
-                // Admit to main if frequency is good and not expired
-                tryAdmitToMain(evicted.getKey(), evicted.getValue());
+                if (windowItem.isExpired(now))
+                {
+                    windowCache.remove(key);
+                    return false;
+                }
+                return true;
+            }
+
+            // Try main cache
+            AbstractCache.Item<V> mainItem = mainCache.peek(key);
+            if (mainItem != null)
+            {
+                if (mainItem.isExpired(now))
+                {
+                    mainCache.remove(key);
+                    return false;
+                }
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    @Override
+    public void put(K key, V value)
+    {
+        synchronized (lock)
+        {
+            sketch.increment(key);
+
+            long now = System.nanoTime();
+            long exp = calculateExpiration(now, ttlNanos);
+            AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
+
+            // Check if already exists in window cache
+            if (windowCache.contains(key))
+            {
+                AbstractCache.Item<V> existing = windowCache.get(key);
+                if (existing != null && existing.isExpired(now))
+                {
+                    windowCache.remove(key);
+                }
+                else
+                {
+                    windowCache.put(key, item);
+                    return;
+                }
+            }
+
+            // Check if already exists in main cache
+            if (mainCache.contains(key))
+            {
+                AbstractCache.Item<V> existing = mainCache.peek(key);
+                if (existing != null && existing.isExpired(now))
+                {
+                    mainCache.remove(key);
+                }
+                else
+                {
+                    mainCache.put(key, item);
+                    return;
+                }
+            }
+
+            // New item - try admission to window
+            if (windowCache.size() < windowSize)
+            {
+                windowCache.put(key, item);
+            }
+            else
+            {
+                // Window is full - evict from window and try admission to main
+                Map.Entry<K, AbstractCache.Item<V>> evicted = windowCache.evict();
+                windowCache.put(key, item);
+
+                // Check if the evicted item is expired!
+                if (evicted.getValue() != null && !evicted.getValue().isExpired(now))
+                {
+                    // Admit to main if frequency is good and not expired
+                    tryAdmitToMain(evicted.getKey(), evicted.getValue());
+                }
             }
         }
     }
@@ -468,42 +478,60 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     }
 
     /** Current window cache capacity (exposed mainly for tests/diagnostics). */
-    public synchronized int getWindowSize()
+    public int getWindowSize()
     {
-        return windowSize;
+        synchronized (lock)
+        {
+            return windowSize;
+        }
     }
 
     /** Current main cache capacity (exposed mainly for tests/diagnostics). */
-    public synchronized int getMainSize()
+    public int getMainSize()
     {
-        return mainSize;
+        synchronized (lock)
+        {
+            return mainSize;
+        }
     }
 
     @Override
-    public synchronized int size()
+    public int size()
     {
-        return windowCache.size() + mainCache.size();
+        synchronized (lock)
+        {
+            return windowCache.size() + mainCache.size();
+        }
     }
 
     @Override
-    public synchronized boolean isEmpty()
+    public boolean isEmpty()
     {
-        return windowCache.isEmpty() && mainCache.isEmpty();
+        synchronized (lock)
+        {
+            return windowCache.isEmpty() && mainCache.isEmpty();
+        }
     }
 
     @Override
-    public synchronized void clear()
+    public void clear()
     {
-        windowCache.clear();
-        mainCache.clear();
+        synchronized (lock)
+        {
+            windowCache.clear();
+            mainCache.clear();
+        }
     }
 
     @Override
-    public synchronized void purgeExpired()
+    public void purgeExpired()
     {
         long now = System.nanoTime();
-        windowCache.purgeExpired(now);
-        mainCache.purgeExpired(now);
+        synchronized (lock)
+        {
+            windowCache.purgeExpired(now);
+            mainCache.purgeExpired(now);
+        }
     }
     
     
