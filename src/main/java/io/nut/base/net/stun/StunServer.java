@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.net.stun;
 
@@ -100,6 +87,7 @@ public final class StunServer {
 
     // ── State ─────────────────────────────────────────────────────────────────
 
+    private final Object         lock         = new Object();
     private final int            port;
     private final int            workerThreads;
     private volatile boolean     running;
@@ -112,7 +100,8 @@ public final class StunServer {
     /**
      * Creates a server on {@link #DEFAULT_PORT} with a single worker thread.
      */
-    public StunServer() {
+    public StunServer()
+    {
         this(DEFAULT_PORT, 1);
     }
 
@@ -121,7 +110,8 @@ public final class StunServer {
      *
      * @param port UDP port to listen on (1–65535)
      */
-    public StunServer(int port) {
+    public StunServer(int port)
+    {
         this(port, 1);
     }
 
@@ -134,14 +124,17 @@ public final class StunServer {
      * @param port          UDP port to listen on (1–65535)
      * @param workerThreads number of worker threads for response dispatch (≥ 1)
      */
-    public StunServer(int port, int workerThreads) {
-        if (port < 1 || port > 65535) {
+    public StunServer(int port, int workerThreads)
+    {
+        if (port < 1 || port > 65535)
+        {
             throw new IllegalArgumentException("Port must be between 1 and 65535, got: " + port);
         }
-        if (workerThreads < 1) {
+        if (workerThreads < 1)
+        {
             throw new IllegalArgumentException("workerThreads must be >= 1, got: " + workerThreads);
         }
-        this.port          = port;
+        this.port = port;
         this.workerThreads = workerThreads;
     }
 
@@ -154,43 +147,58 @@ public final class StunServer {
      * @throws IOException          if the socket cannot be bound
      * @throws IllegalStateException if already running
      */
-    public synchronized void start() throws IOException {
-        if (running) throw new IllegalStateException("Server is already running");
+    public void start() throws IOException
+    {
+        synchronized (lock)
+        {
+            if (running)
+            {
+                throw new IllegalStateException("Server is already running");
+            }
 
-        socket  = new DatagramSocket(port);
-        running = true;
-        workers = Executors.newFixedThreadPool(workerThreads, r -> {
-            Thread t = new Thread(r, "stun-worker");
-            t.setDaemon(true);
-            return t;
-        });
+            socket = new DatagramSocket(port);
+            running = true;
+            workers = Executors.newFixedThreadPool(workerThreads, r ->
+            {
+                Thread t = new Thread(r, "stun-worker");
+                t.setDaemon(true);
+                return t;
+            });
 
-        listenerThread = new Thread(this::listenLoop, "stun-listener");
-        listenerThread.setDaemon(true);
-        listenerThread.start();
+            listenerThread = new Thread(this::listenLoop, "stun-listener");
+            listenerThread.setDaemon(true);
+            listenerThread.start();
 
-        LOG.info("STUN server listening on UDP port " + port
-                + " (" + workerThreads + " worker(s))");
+            LOG.info("STUN server listening on UDP port " + port + " (" + workerThreads + " worker(s))");
+        }
     }
 
     /**
      * Stops the server gracefully, closing the socket and waiting for in-flight
      * responses to complete (up to 5 seconds).
      */
-    public synchronized void stop() {
-        if (!running) return;
-        running = false;
-        socket.close();       // interrupts the blocking receive() in listenLoop
-        workers.shutdown();
-        try {
-            if (!workers.awaitTermination(5, TimeUnit.SECONDS)) {
-                workers.shutdownNow();
+    public void stop() 
+    {
+        synchronized (lock)
+        {
+            if (!running) return;
+            running = false;
+            socket.close();       // interrupts the blocking receive() in listenLoop
+            workers.shutdown();
+            try
+            {
+                if (!workers.awaitTermination(5, TimeUnit.SECONDS))
+                {
+                    workers.shutdownNow();
+                }
             }
-        } catch (InterruptedException e) {
-            workers.shutdownNow();
-            Thread.currentThread().interrupt();
+            catch (InterruptedException e)
+            {
+                workers.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            LOG.info("STUN server stopped");
         }
-        LOG.info("STUN server stopped");
     }
 
     /** Returns {@code true} if the server is currently running. */
@@ -201,19 +209,25 @@ public final class StunServer {
 
     // ── Listener loop ─────────────────────────────────────────────────────────
 
-    private void listenLoop() {
+    private void listenLoop()
+    {
         byte[] buf = new byte[RECV_BUFFER_SIZE];
-        while (running) {
+        while (running)
+        {
             DatagramPacket packet = new DatagramPacket(buf, buf.length);
-            try {
+            try
+            {
                 socket.receive(packet);
                 // Copy only the received bytes so the worker has its own buffer
-                byte[] data   = Arrays.copyOf(packet.getData(), packet.getLength());
+                byte[] data = Arrays.copyOf(packet.getData(), packet.getLength());
                 InetAddress clientAddr = packet.getAddress();
-                int         clientPort = packet.getPort();
+                int clientPort = packet.getPort();
                 workers.submit(() -> handleRequest(data, clientAddr, clientPort));
-            } catch (IOException e) {
-                if (running) {
+            }
+            catch (IOException e)
+            {
+                if (running)
+                {
                     LOG.log(Level.WARNING, "Error receiving datagram", e);
                 }
                 // If !running, the socket was closed intentionally — exit quietly
@@ -229,15 +243,21 @@ public final class StunServer {
      *
      * <p>Package-private for unit testing.
      */
-    void handleRequest(byte[] data, InetAddress clientAddr, int clientPort) {
-        try {
+    void handleRequest(byte[] data, InetAddress clientAddr, int clientPort)
+    {
+        try
+        {
             byte[] response = buildResponse(data, clientAddr, clientPort);
             DatagramPacket out = new DatagramPacket(response, response.length, clientAddr, clientPort);
             socket.send(out);
-        } catch (InvalidStunMessageException e) {
+        }
+        catch (InvalidStunMessageException e)
+        {
             LOG.fine("Invalid STUN message from " + clientAddr + ":" + clientPort + " — " + e.getMessage());
             // RFC 5389: silently discard unknown/malformed messages
-        } catch (IOException e) {
+        }
+        catch (IOException e)
+        {
             LOG.log(Level.WARNING, "Failed to send response to " + clientAddr + ":" + clientPort, e);
         }
     }
@@ -259,14 +279,14 @@ public final class StunServer {
      * @return serialized Binding Response ready to send
      * @throws InvalidStunMessageException if the request is malformed or not a Binding Request
      */
-    static byte[] buildResponse(byte[] request, InetAddress clientAddr, int clientPort)
-            throws InvalidStunMessageException {
+    static byte[] buildResponse(byte[] request, InetAddress clientAddr, int clientPort) throws InvalidStunMessageException
+    {
 
         validateRequest(request);
 
         byte[] transactionId = extractTransactionId(request);
-        byte[] xorAttr       = buildXorMappedAddress(clientAddr, clientPort);
-        byte[] mapAttr       = buildMappedAddress(clientAddr, clientPort);
+        byte[] xorAttr = buildXorMappedAddress(clientAddr, clientPort);
+        byte[] mapAttr = buildMappedAddress(clientAddr, clientPort);
 
         int totalAttrLen = xorAttr.length + mapAttr.length;
 
@@ -297,10 +317,11 @@ public final class StunServer {
      * +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
      * </pre>
      */
-    static byte[] buildXorMappedAddress(InetAddress addr, int port) {
-        byte[] ip         = addr.getAddress();          // 4 bytes for IPv4
+    static byte[] buildXorMappedAddress(InetAddress addr, int port)
+    {
+        byte[] ip = addr.getAddress();          // 4 bytes for IPv4
         byte[] cookieBytes = ByteBuffer.allocate(4).putInt(MAGIC_COOKIE).array();
-        int    xorPort    = port ^ (MAGIC_COOKIE >>> 16);
+        int xorPort = port ^ (MAGIC_COOKIE >>> 16);
 
         ByteBuffer buf = ByteBuffer.allocate(4 + 8);   // TLV header (4) + value (8)
         buf.putShort(ATTR_XOR_MAPPED_ADDRESS);
@@ -309,7 +330,10 @@ public final class StunServer {
         buf.put(FAMILY_IPV4);
         buf.put((byte) ((xorPort >> 8) & 0xFF));
         buf.put((byte) (xorPort & 0xFF));
-        for (int i = 0; i < 4; i++) buf.put((byte) (ip[i] ^ cookieBytes[i]));
+        for (int i = 0; i < 4; i++)
+        {
+            buf.put((byte) (ip[i] ^ cookieBytes[i]));
+        }
         return buf.array();
     }
 
@@ -337,55 +361,62 @@ public final class StunServer {
      *
      * @throws InvalidStunMessageException on any structural violation
      */
-    static void validateRequest(byte[] data) throws InvalidStunMessageException {
-        if (data == null || data.length < HEADER_LENGTH) {
-            throw new InvalidStunMessageException(
-                "Message too short: " + (data == null ? "null" : data.length) + " bytes");
+    static void validateRequest(byte[] data) throws InvalidStunMessageException
+    {
+        if (data == null || data.length < HEADER_LENGTH)
+        {
+            throw new InvalidStunMessageException("Message too short: " + (data == null ? "null" : data.length) + " bytes");
         }
 
         ByteBuffer buf = ByteBuffer.wrap(data);
 
         // RFC 5389 §6: the two most-significant bits of the message type MUST be 0
         int firstByte = buf.get(0) & 0xFF;
-        if ((firstByte & 0xC0) != 0) {
-            throw new InvalidStunMessageException(
-                String.format("Top two bits of message type must be 0, got: 0x%02X", firstByte));
+        if ((firstByte & 0xC0) != 0)
+        {
+            throw new InvalidStunMessageException(String.format("Top two bits of message type must be 0, got: 0x%02X", firstByte));
         }
 
         short msgType = buf.getShort();
-        if (msgType != MSG_TYPE_BINDING_REQUEST) {
-            throw new InvalidStunMessageException(
-                String.format("Unsupported message type: 0x%04X", msgType & 0xFFFF));
+        if (msgType != MSG_TYPE_BINDING_REQUEST)
+        {
+            throw new InvalidStunMessageException(String.format("Unsupported message type: 0x%04X", msgType & 0xFFFF));
         }
 
         int declaredLength = buf.getShort() & 0xFFFF;
-        if (data.length < HEADER_LENGTH + declaredLength) {
-            throw new InvalidStunMessageException(
-                "Payload shorter than declared length: " + data.length
-                + " < " + (HEADER_LENGTH + declaredLength));
+        if (data.length < HEADER_LENGTH + declaredLength)
+        {
+            throw new InvalidStunMessageException("Payload shorter than declared length: " + data.length+ " < " + (HEADER_LENGTH + declaredLength));
         }
 
         int cookie = buf.getInt();
-        if (cookie != MAGIC_COOKIE) {
-            throw new InvalidStunMessageException(
-                String.format("Invalid magic cookie: 0x%08X", cookie));
+        if (cookie != MAGIC_COOKIE)
+        {
+            throw new InvalidStunMessageException(String.format("Invalid magic cookie: 0x%08X", cookie));
         }
     }
 
-    /** Extracts the 12-byte transaction ID from a validated STUN header. */
-    static byte[] extractTransactionId(byte[] data) {
+    /**
+     * Extracts the 12-byte transaction ID from a validated STUN header.
+     */
+    static byte[] extractTransactionId(byte[] data)
+    {
         byte[] txId = new byte[TRANSACTION_ID_LENGTH];
         System.arraycopy(data, 8, txId, 0, TRANSACTION_ID_LENGTH);
         return txId;
     }
 
     // ── Exception type ────────────────────────────────────────────────────────
-
     /**
-     * Thrown when a received datagram is not a valid STUN Binding Request.
-     * RFC 5389 mandates silent discard for unknown/malformed messages.
+     * Thrown when a received datagram is not a valid STUN Binding Request. RFC
+     * 5389 mandates silent discard for unknown/malformed messages.
      */
-    static final class InvalidStunMessageException extends Exception {
-        InvalidStunMessageException(String message) { super(message); }
+    static final class InvalidStunMessageException extends Exception
+    {
+
+        InvalidStunMessageException(String message)
+        {
+            super(message);
+        }
     }
 }

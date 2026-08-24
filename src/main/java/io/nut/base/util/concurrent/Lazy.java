@@ -1,22 +1,7 @@
 /*
- *  Lazy.java
- *
- *  Copyright (C) 2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util.concurrent;
 
@@ -128,6 +113,8 @@ public final class Lazy<T> implements Supplier<T>
     // ------------------------------------------------------------------ //
     // State
     // ------------------------------------------------------------------ //
+
+    private final Object lock = new Object();
 
     /**
      * Holds either {@link #UNSET} or the real value (including {@code null}).
@@ -352,16 +339,19 @@ public final class Lazy<T> implements Supplier<T>
      * @return {@code this}, for chaining
      * @throws IllegalStateException if called on a permanent instance
      */
-    public synchronized Lazy<T> invalidate()
+    public Lazy<T> invalidate()
     {
-        if (!isEphemeral())
+        synchronized (lock)
         {
-            throw new IllegalStateException(
-                    "invalidate() is not supported in permanent mode: " +
-                    "the value is guaranteed to be computed exactly once.");
+            if (!isEphemeral())
+            {
+                throw new IllegalStateException(
+                        "invalidate() is not supported in permanent mode: " +
+                        "the value is guaranteed to be computed exactly once.");
+            }
+            lastComputedAt.set(NEVER);
+            return this;
         }
-        lastComputedAt.set(NEVER);
-        return this;
     }
 
     // ------------------------------------------------------------------ //
@@ -441,7 +431,7 @@ public final class Lazy<T> implements Supplier<T>
     @SuppressWarnings("unchecked")
     private T initializePermanent()
     {
-        synchronized (this)
+        synchronized (lock)
         {
             Object current = ref.get();
             if (current != UNSET)
@@ -476,7 +466,7 @@ public final class Lazy<T> implements Supplier<T>
     @SuppressWarnings("unchecked")
     private T refreshEphemeral()
     {
-        synchronized (this)
+        synchronized (lock)
         {
             // Re-check: another thread may have already refreshed
             if (!isExpiredEphemeral())
