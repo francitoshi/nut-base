@@ -878,6 +878,19 @@ public class JavaTime
     }
 
     /**
+     * Returns a {@link ZonedDateTime} at the last instant of the same day
+     * as {@code dateTime} (i.e. 23:59:59.999999999), preserving the original
+     * zone. This is the opposite of {@link #atStartOfDay}.
+     *
+     * @param dateTime the source date-time; must not be {@code null}
+     * @return a {@link ZonedDateTime} at the end of the same day
+     */
+    public static ZonedDateTime atEndOfDay(ZonedDateTime dateTime)
+    {
+        return ZonedDateTime.of(dateTime.toLocalDate().plusDays(1).atStartOfDay().minusNanos(1), dateTime.getZone());
+    }
+
+    /**
      * Returns the last day of the ISO week (Sunday) containing {@code date}.
      *
      * @param date the reference date; must not be {@code null}
