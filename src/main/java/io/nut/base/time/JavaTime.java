@@ -867,14 +867,28 @@ public class JavaTime
     }
 
     /**
-     * Returns the first day of the ISO week (Monday) containing {@code date}.
+     * Returns a {@link LocalDateTime} at midnight (00:00:00) of the same date
+     * as {@code dateTime}, preserving the local date-time.
      *
-     * @param date the reference date; must not be {@code null}
-     * @return the Monday that starts the week containing {@code date}
+     * @param dateTime the source date-time; must not be {@code null}
+     * @return a {@link LocalDateTime} at the start of the same day
      */
-    public static LocalDate atStartOfWeek(LocalDate date)
+    public static LocalDateTime atStartOfDay(LocalDateTime dateTime)
     {
-        return date.minusDays(date.getDayOfWeek().getValue() - 1);
+        return dateTime.toLocalDate().atStartOfDay();
+    }
+
+    /**
+     * Returns a {@link LocalDateTime} at the last instant of the same day
+     * as {@code dateTime} (i.e. 23:59:59.999999999), preserving the local
+     * date-time. This is the opposite of {@link #atStartOfDay}.
+     *
+     * @param dateTime the source date-time; must not be {@code null}
+     * @return a {@link LocalDateTime} at the end of the same day
+     */
+    public static LocalDateTime atEndOfDay(LocalDateTime dateTime)
+    {
+        return dateTime.toLocalDate().plusDays(1).atStartOfDay().minusNanos(1);
     }
 
     /**
@@ -888,6 +902,17 @@ public class JavaTime
     public static ZonedDateTime atEndOfDay(ZonedDateTime dateTime)
     {
         return ZonedDateTime.of(dateTime.toLocalDate().plusDays(1).atStartOfDay().minusNanos(1), dateTime.getZone());
+    }
+
+    /**
+     * Returns the first day of the ISO week (Monday) containing {@code date}.
+     *
+     * @param date the reference date; must not be {@code null}
+     * @return the Monday that starts the week containing {@code date}
+     */
+    public static LocalDate atStartOfWeek(LocalDate date)
+    {
+        return date.minusDays(date.getDayOfWeek().getValue() - 1);
     }
 
     /**

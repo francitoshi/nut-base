@@ -758,6 +758,27 @@ public class JavaTimeTest
             }
         }
 
+        {
+            LocalDateTime startUTC = LocalDateTime.of(2020, 1, 1, 0, 0, 0, 0);
+
+            for (int i = 0; i < 25; i++)
+            {
+                LocalDateTime itemUTC = startUTC.plusMinutes(i * 59);
+                LocalDateTime resultUTC = JavaTime.atEndOfDay(itemUTC);
+                assertEquals(startUTC.plusDays(1).minusNanos(1), resultUTC);
+            }
+        }
+        {
+            LocalDateTime startNY = LocalDateTime.of(2020, 1, 1, 0, 0, 0, 0);
+
+            for (int i = 0; i < 25; i++)
+            {
+                LocalDateTime itemNY = startNY.plusMinutes(i * 59);
+                LocalDateTime resultNY = JavaTime.atEndOfDay(itemNY);
+                assertEquals(startNY.plusDays(1).minusNanos(1), resultNY);
+            }
+        }
+
     }
 
     /**
@@ -954,4 +975,19 @@ public class JavaTimeTest
     {
         assertThrows(DateTimeParseException.class, () -> JavaTime.parseZonedDateTime("not-a-date", JavaTime.UTC));
     }    
+
+    /**
+     * Test of atEndOfDay method, of class JavaTime using LocalDateTime.
+     */
+    @Test
+    public void testAtEndOfDayLocalDateTime()
+    {
+        LocalDateTime start = LocalDateTime.of(2020, 6, 15, 12, 30, 45);
+        LocalDateTime result = JavaTime.atEndOfDay(start);
+        assertEquals("2020-06-15T23:59:59.999999999", result.toString());
+        start = LocalDateTime.of(2020, 1, 1, 0, 0);
+        result = JavaTime.atEndOfDay(start);
+        assertEquals("2020-01-01T23:59:59.999999999", result.toString());
+    }
+
 }
