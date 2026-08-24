@@ -51,6 +51,9 @@ wrapper
 test 
 {
     useJUnitPlatform()
+    {
+        excludeTags 'slow','integration','benchmark'
+    }
 
     afterTest 
     { 

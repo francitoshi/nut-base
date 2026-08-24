@@ -28,6 +28,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
@@ -253,6 +254,7 @@ public class GPGTest
      * Test of refreshKeys method, of class GPG.
      */
     @Test
+    @Tag("integration")
     public void testRefreshKeys() throws Exception
     {
         GPG instance = new GPG();

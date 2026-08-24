@@ -46,6 +46,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Order;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.Timeout;
@@ -374,6 +375,7 @@ public class TorTest
     // =========================================================================
 
     @Nested
+    @Tag("integration")
     @DisplayName("Integration – live Tor proxy (127.0.0.1, port from TOR_PROXY_PORT)")
     @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     class IntegrationTests
@@ -517,8 +519,8 @@ public class TorTest
     // =========================================================================
 
     @Nested
+    @Tag("integration")
     @DisplayName("Managed mode – embedded or system Tor binary")
-    @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
     class ManagedModeTests
     {
         private Tor tor;
@@ -526,8 +528,7 @@ public class TorTest
         @BeforeEach
         void setup()
         {
-            assumeTrue(torBinaryAvailable(),
-                "Skipping managed-mode tests: no bundled or system Tor binary found");
+            assumeTrue(torBinaryAvailable(), "Skipping managed-mode tests: no bundled or system Tor binary found");
             tor = Tor.managed();
         }
 
