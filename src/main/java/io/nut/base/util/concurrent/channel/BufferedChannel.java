@@ -7,6 +7,7 @@ package io.nut.base.util.concurrent.channel;
 
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Channel with a fixed-capacity buffer without closing: it lives as long as
@@ -39,8 +40,21 @@ public final class BufferedChannel<E> extends Channel<E>
     }
 
     @Override
+    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        return queue.offer(value, timeout, unit);
+    }
+
+    @Override
     public E get() throws InterruptedException
     {
         return queue.take();
+    }
+
+    @Override
+    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    {
+        return queue.poll(timeout, unit);
     }
 }

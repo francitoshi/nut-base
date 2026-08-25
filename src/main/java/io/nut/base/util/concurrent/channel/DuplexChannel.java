@@ -6,6 +6,7 @@
 package io.nut.base.util.concurrent.channel;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A duplex channel where write and read operations are disconnected.
@@ -31,9 +32,21 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     }
 
     @Override
+    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    {
+        return out.put(value, timeout, unit);
+    }
+
+    @Override
     public E get() throws InterruptedException
     {
         return in.get();
+    }
+
+    @Override
+    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    {
+        return in.get(timeout, unit);
     }
 
     @Override

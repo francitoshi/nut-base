@@ -51,6 +51,37 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         }
     }
 
+    @Override
+    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    {
+        Objects.requireNonNull(value, "value must not be null");
+
+        if (closed)
+        {
+            return false;
+        }
+
+        rwLock.readLock().lock();
+        try
+        {
+            if (closed)
+            {
+                return false;
+            }
+
+            if (timeout == 0)
+            {
+                return queue.offer(value);
+            }
+
+            return queue.offer(value, timeout, unit);
+        }
+        finally
+        {
+            rwLock.readLock().unlock();
+        }
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public E get() throws InterruptedException
@@ -75,6 +106,59 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         {
             gets.decrementAndGet();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    {
+        if (closed)
+        {
+            return drainAfterClosePoll();
+        }
+
+        if (timeout == 0)
+        {
+            Object item = queue.poll();
+            if (item == null || item == POISON)
+            {
+                return null;
+            }
+            return (E) item;
+        }
+
+        gets.incrementAndGet();
+        try
+        {
+            if (closed)
+            {
+                return drainAfterClosePoll();
+            }
+
+            Object item = queue.poll(timeout, unit);
+            if (item == null || item == POISON)
+            {
+                return null;
+            }
+            return (E) item;
+        }
+        finally
+        {
+            gets.decrementAndGet();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private E drainAfterClosePoll()
+    {
+        Object item = queue.poll();
+        if (item == null || item == POISON)
+        {
+            return null;
+        }
+        @SuppressWarnings("unchecked")
+        E result = (E) item;
+        return result;
     }
 
     @SuppressWarnings("unchecked")

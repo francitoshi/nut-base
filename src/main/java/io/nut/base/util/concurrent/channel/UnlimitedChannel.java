@@ -7,6 +7,7 @@ package io.nut.base.util.concurrent.channel;
 
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Unbounded and non-closeable channel: it lives as long as the JVM lives (or
@@ -30,8 +31,21 @@ public final class UnlimitedChannel<E> extends Channel<E>
     }
 
     @Override
+    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        return queue.offer(value, timeout, unit);
+    }
+
+    @Override
     public E get() throws InterruptedException
     {
         return queue.take();
+    }
+
+    @Override
+    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    {
+        return queue.poll(timeout, unit);
     }
 }

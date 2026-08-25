@@ -5,7 +5,11 @@
  */
 package io.nut.base.util.concurrent.channel;
 
+import java.util.concurrent.TimeUnit;
+
 public interface ChannelWriter<E>
 {
     public void put(E value) throws InterruptedException;
+
+    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException;
 }
