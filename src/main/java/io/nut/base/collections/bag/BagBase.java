@@ -31,14 +31,20 @@ public class BagBase<E> extends Bag<E>
     public BagBase(boolean skipSame)
     {
         this.data = new HashMap<>();
-        this.set = skipSame ? new HashSet() : null;
+        this.set = skipSame ? new HashSet<>() : null;
     }
     public BagBase(Comparator<E> comparator, boolean skipSame)
     {
         this.data = new TreeMap<>(comparator);
-        this.set = skipSame ? new HashSet() : null;
+        this.set = skipSame ? new HashSet<>() : null;
     }
     
+    @SuppressWarnings("unchecked")
+    private E[] newArray(Class<?> clazz, int size)
+    {
+        return (E[]) Array.newInstance(clazz, size);
+    }
+
     @Override
     public boolean add(E e)
     {
@@ -62,8 +68,7 @@ public class BagBase<E> extends Bag<E>
         {
             return null;
         }
-        E[] arr = (E[]) Array.newInstance(list.get(0).getClass(), list.size());
-        return list.toArray(arr);
+        return list.toArray(newArray(list.get(0).getClass(), list.size()));
     }
 
     @Override
@@ -106,7 +111,7 @@ public class BagBase<E> extends Bag<E>
         ArrayList<E[]> items = new ArrayList<>();
         for( List<E> list : this.data.values())
         {
-            E[] sublist = list.toArray((E[]) Array.newInstance(list.get(0).getClass(), list.size()));
+            E[] sublist = list.toArray(newArray(list.get(0).getClass(), list.size()));
             items.add(sublist);
         }
         return items.toArray(dst);
