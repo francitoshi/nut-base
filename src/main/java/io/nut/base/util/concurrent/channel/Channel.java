@@ -148,6 +148,26 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
     }
 
     /**
+     * Conflated channel: only the latest value is retained. Equivalent to
+     * Kotlin's {@code Channel(CONFLATED)}. When a producer puts a new value
+     * before the previous one is consumed, the old value is silently
+     * overwritten. Ideal for signal / state-update patterns.
+     *
+     * @param <T> the element type
+     * @return a conflated channel
+     */
+    public static <T> Channel<T> conflated()
+    {
+        return new ConflatedChannel<>();
+    }
+
+    /** Closeable variant of {@link #conflated()}. */
+    public static <T> CloseableChannel<T> closeableConflated()
+    {
+        return new CloseableConflatedChannel<>();
+    }
+
+    /**
      * Indicates whether this channel is bidirectional, i.e. elements sent with
      * {@link ChannelWriter#put} are not read back with {@link ChannelReader#get}
      * but delivered to another peer that in turn sends the elements obtained
