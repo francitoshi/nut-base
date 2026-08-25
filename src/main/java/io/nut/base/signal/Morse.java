@@ -469,7 +469,7 @@ public class Morse
                 throw new RuntimeException("Prosign collision"+letter.letter+" > "+collision.letter);
             }
             maxUnits = Math.max(maxUnits, (int)(Nums.sum(units)+units.length));
-            maxTerms = Math.max(maxTerms, (int)units.length); 
+            maxTerms = Math.max(maxTerms, units.length); 
             prosignList.add(letter.letter);
             itemList.add(letter.letter);
         }

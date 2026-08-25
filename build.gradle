@@ -70,7 +70,7 @@ test
 
 }
 
-publishing 
+publishing
 {
     publications 
     {
@@ -82,4 +82,9 @@ publishing
             from components.java
         }
     }
+}
+
+tasks.withType(JavaCompile)
+{
+//    options.compilerArgs += ['-Xlint']
 }
