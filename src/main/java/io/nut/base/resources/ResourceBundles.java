@@ -1,22 +1,7 @@
 /*
- * ResourceBundles.java
- *
- *  Copyright (c) 2014-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2014-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.resources;
 
@@ -73,7 +58,7 @@ public class ResourceBundles
      * @return the resolved {@link ResourceBundle}
      * @see #getBundle(String, Locale...)
      */
-    public static ResourceBundle getBundle(Class clss, Locale... locales)
+    public static <T> ResourceBundle getBundle(Class<T> clss, Locale... locales)
     {
         return getBundle(clss.getName(), locales);
     }
@@ -110,7 +95,7 @@ public class ResourceBundles
      * @return the resolved {@link ResourceBundle}
      * @see #getBundleStrict(String, Locale...)
      */
-    public static ResourceBundle getBundleStrict(Class clss, Locale... locales)
+    public static <T> ResourceBundle getBundleStrict(Class<T> clss, Locale... locales)
     {
         return getBundleStrict(clss.getName(), locales);
     }
@@ -123,7 +108,7 @@ public class ResourceBundles
      * @param defaultValue the value to return if the resource is not found or an error occurs
      * @return the resource content as a string, or {@code defaultValue} on failure
      */
-    public static String getResourceAsString(Class clss, String name, String defaultValue)
+    public static <T> String getResourceAsString(Class<T> clss, String name, String defaultValue)
     {
         try
         {
@@ -144,17 +129,17 @@ public class ResourceBundles
      * @param name the name/path of the resource
      * @return the resource content as a string, or {@code null} if it doesn't exist
      */
-    public static String getResourceAsString(Class clss, String name)
+    public static <T> String getResourceAsString(Class<T> clss, String name)
     {
         return getResourceAsString(clss, name, null);
     }
     
-    public static String getResourceAsString(Class clss, String name, ResourceBundle bundle, String defaultValue)
+    public static <T> String getResourceAsString(Class<T> clss, String name, ResourceBundle bundle, String defaultValue)
     {
         String name2 = bundle.getString(name);
         return getResourceAsString(clss, name2, defaultValue);
     }
-    public static String getResourceAsStringIndirect(Class clss, String name, ResourceBundle bundle)
+    public static <T> String getResourceAsStringIndirect(Class<T> clss, String name, ResourceBundle bundle)
     {
         return getResourceAsString(clss, name, bundle, null);
     }

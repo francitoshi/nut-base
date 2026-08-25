@@ -69,7 +69,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
      * Sentinel object placed in the queue to signal that the generator has
      * finished producing elements.
      */
-    static final Item POISON = new Item(null);
+    final Item<E> poison = new Item<>(null);
     
     public final int capacity;
     private final String tag;
@@ -206,7 +206,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
 
     /**
      * Spawns the background thread that executes the {@link #run()} method.
-     * Automatically appends the {@link #POISON} pill when the run method
+     * Automatically appends the {@link #poison} pill when the run method
      * completes to signal the end of the stream.
      */
     private void executeRunnable()
@@ -236,7 +236,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                             {
                                 if (!terminated)
                                 {
-                                    queue.offer(POISON, 100, TimeUnit.MILLISECONDS);
+                                    queue.offer(poison, 100, TimeUnit.MILLISECONDS);
                                 }
                             }
                             catch (InterruptedException ex)
@@ -278,7 +278,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
             
             Item<E> item = this.queue.take();
 
-            if(POISON.equals(item))
+            if(poison.equals(item))
             {
                 shutdownRequested = terminated = true;
                 return false;
