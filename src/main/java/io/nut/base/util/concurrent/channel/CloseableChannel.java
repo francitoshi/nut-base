@@ -7,5 +7,9 @@ package io.nut.base.util.concurrent.channel;
 
 public abstract class CloseableChannel<E> extends Channel<E> implements ChannelWriter<E>, ChannelReader<E>, ChannelCloser
 {
-
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public abstract void join() throws InterruptedException;
 }

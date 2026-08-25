@@ -9,4 +9,11 @@ public interface ChannelCloser
 {
     public boolean close();
     public boolean isClosed();
+    /**
+     * Blocks the current thread until the channel is closed.
+     * If the channel is already closed, this method returns immediately.
+     *
+     * @throws InterruptedException if the current thread is interrupted while waiting
+     */
+    public void join() throws InterruptedException;
 }

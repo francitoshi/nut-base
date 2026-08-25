@@ -162,4 +162,19 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
     {
         return closed;
     }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void join() throws InterruptedException
+    {
+        synchronized (lock)
+        {
+            while (!closed)
+            {
+                lock.wait();
+            }
+        }
+    }
 }

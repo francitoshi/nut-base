@@ -101,6 +101,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         synchronized (closeLock)
         {
             closed = true;
+            closeLock.notifyAll();
 
             boolean acquired = rwLock.writeLock().tryLock(timeout, unit);
             if (acquired)
@@ -140,5 +141,20 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     public boolean isClosed()
     {
         return closed;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public void join() throws InterruptedException
+    {
+        synchronized (closeLock)
+        {
+            while (!closed)
+            {
+                closeLock.wait();
+            }
+        }
     }
 }
