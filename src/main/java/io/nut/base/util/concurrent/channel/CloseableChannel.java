@@ -5,8 +5,17 @@
  */
 package io.nut.base.util.concurrent.channel;
 
-public abstract class CloseableChannel<E> extends Channel<E> implements ChannelWriter<E>, ChannelReader<E>, ChannelCloser
+public abstract class CloseableChannel<E> extends Channel<E> implements ChannelReader<E>, ChannelWriter<E>, ChannelCloser
 {
+    /**
+     * {@inheritDoc}
+     */
+    public abstract boolean close();
+    /**
+     * {@inheritDoc}
+     */
+    public abstract boolean isClosed();
+    
     /**
      * {@inheritDoc}
      */
