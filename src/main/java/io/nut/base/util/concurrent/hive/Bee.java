@@ -61,6 +61,9 @@ public abstract class Bee<M> implements Consumer<M>
     /** Default internal queue capacity when none is specified. */
     private static final int QUEUE_SIZE = Short.MAX_VALUE;
 
+    /** Shared logger for all Bee instances, avoiding per-call Logger lookups. */
+    private static final Logger LOG = Logger.getLogger(Bee.class.getName());
+
     private final Object lock = new Object();
     private volatile int status = RUNNING;
 
@@ -259,7 +262,7 @@ public abstract class Bee<M> implements Consumer<M>
             this.ex = ex;
             if(allowLogger)
             {
-                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.send()", ex);
+                LOG.log(Level.SEVERE, "Bee.send()", ex);
             }
             exception(ex);
         }
@@ -294,7 +297,7 @@ public abstract class Bee<M> implements Consumer<M>
                         Bee.this.ex = ex;
                         if(allowLogger)
                         {
-                            Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.receiveTask.run()", ex);
+                            LOG.log(Level.SEVERE, "Bee.receiveTask.run()", ex);
                         }
                         exception(ex);
                     }
@@ -377,7 +380,7 @@ public abstract class Bee<M> implements Consumer<M>
                 Bee.this.ex = ex;
                 if (allowLogger)
                 {
-                    Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.shutdownTask.run()", ex);
+                    LOG.log(Level.SEVERE, "Bee.shutdownTask.run()", ex);
                 }
                 exception(ex);
             }
@@ -408,7 +411,7 @@ public abstract class Bee<M> implements Consumer<M>
             }
             catch (InterruptedException ex)
             {
-                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, null, ex);
+                LOG.log(Level.SEVERE, null, ex);
             }
         }
         return this;
@@ -508,7 +511,7 @@ public abstract class Bee<M> implements Consumer<M>
             Bee.this.ex = ex;
             if(allowLogger)
             {
-                Logger.getLogger(Bee.class.getName()).log(Level.SEVERE, "Bee.awaitTermination()", ex);
+                LOG.log(Level.SEVERE, "Bee.awaitTermination()", ex);
             }
             exception(ex);
             return false;
