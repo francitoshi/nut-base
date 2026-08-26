@@ -167,6 +167,40 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
         return new CloseableConflatedChannel<>();
     }
 
+    // -----------------------------------------------------------------------
+    // Fan-out
+    // -----------------------------------------------------------------------
+
+    /**
+     * Creates a {@link FanoutChannel} that broadcasts every
+     * {@link ChannelWriter#put} to all supplied targets.
+     *
+     * @param <T>      the element type
+     * @param channels the downstream destinations; must not be {@code null}
+     * @return a new fan-out channel
+     */
+    @SafeVarargs
+    public static <T> FanoutChannel<T> fanout(ChannelWriter<T>... channels)
+    {
+        return new FanoutChannel<>(channels);
+    }
+
+    /**
+     * Creates a {@link CloseableFanoutChannel} that broadcasts every
+     * {@link ChannelWriter#put} to all supplied targets and can be closed
+     * to propagate end-of-data to closeable targets.
+     *
+     * @param <T>      the element type
+     * @param channels the downstream destinations; must not be {@code null}
+     * @return a new closeable fan-out channel
+     * @see CloseableFanoutChannel
+     */
+    @SafeVarargs
+    public static <T> CloseableFanoutChannel<T> closeableFanout(ChannelWriter<T>... channels)
+    {
+        return new CloseableFanoutChannel<>(channels);
+    }
+
     /**
      * Indicates whether this channel is bidirectional, i.e. elements sent with
      * {@link ChannelWriter#put} are not read back with {@link ChannelReader#get}
