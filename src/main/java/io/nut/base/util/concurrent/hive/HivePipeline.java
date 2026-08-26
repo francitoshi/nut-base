@@ -196,17 +196,10 @@ public final class HivePipeline<T,R> implements Consumer<T>
     
     public boolean awaitTermination(int millis)
     {
-        try
-        { 
-            long nanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
-            boolean h = head.awaitTerminationUntilNanos(nanos);
-            boolean t = tail.awaitTerminationUntilNanos(nanos);
-            return h && t;
-        }        
-        catch (InterruptedException ex)
-        {
-            return false;
-        }
+        long nanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+        boolean h = head.awaitTerminationUntilNanos(nanos);
+        boolean t = tail.awaitTerminationUntilNanos(nanos);
+        return h && t;
     }
     
 }
