@@ -10,9 +10,11 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
 /**
@@ -36,11 +38,15 @@ import java.util.function.Consumer;
  * <p>
  * The next stage is wired with {@link #linkTo}. Because the output type differs
  * from the input type ({@code List<T>} vs {@code T}), the next stage must be a
- * {@code Sendable<List<T>>}.
+ * {@link Consumer}{@code <List<T>>}.
  * <p>
- * <strong>Thread safety:</strong> the internal batch is guarded by
- * {@code batchLock}, so concurrent calls to {@link #receive(Object)},
- * {@link #flush()}, and {@link #pending()} are all safe.
+ * <strong>Thread safety:</strong> the internal batch and the reordering buffer
+ * are guarded by {@code batchLock}, so concurrent calls to
+ * {@link #receive(Object)}, {@link #flush()}, and {@link #pending()} are all
+ * safe. When this Bee runs with an attached Hive, several workers may process
+ * messages concurrently; messages are still assembled into each batch in
+ * acceptance order, so the emitted batches keep their input order regardless
+ * of the processing order.
  *
  * @param <T> the type of individual messages accumulated into batches
  */
@@ -49,6 +55,17 @@ public class BatchBee<T> extends Bee<T>
     private final int maxSize;
     private final Object batchLock = new Object();
     private List<T> batch;
+
+    /**
+     * 1-based sequence of the next message expected in the current batch (see
+     * {@link Bee#receive(Object, long)}). When actual arrival order differs
+     * from acceptance order, late-arriving messages wait in
+     * {@link #buffered} until their predecessors show up.
+     */
+    private final AtomicLong expectedSeq = new AtomicLong(1);
+
+    /** Out-of-order arrivals keyed by their acceptance sequence. */
+    private final TreeMap<Long, T> buffered = new TreeMap<>();
 
     /**
      * The next stage in the chain that will receive each completed batch.
@@ -73,9 +90,9 @@ public class BatchBee<T> extends Bee<T>
      *                       pass {@code 0} to disable periodic flushing
      * @throws IllegalArgumentException if {@code maxSize <= 0}
      */
-    public BatchBee(int threads, Hive hive, int queueSize, int maxSize, long maxWaitMillis)
+    public BatchBee(Hive hive, int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
-        super(threads, hive, queueSize);
+        super(hive, threads, queueSize);
         if (maxSize <= 0)
         {
             throw new IllegalArgumentException("maxSize <= 0");
@@ -102,9 +119,9 @@ public class BatchBee<T> extends Bee<T>
      * @param maxSize       the number of messages that trigger an immediate flush
      * @param maxWaitMillis the maximum interval between flushes (0 = disabled)
      */
-    public BatchBee(int threads, Hive hive, int maxSize, long maxWaitMillis)
+    public BatchBee(Hive hive, int threads, int maxSize, long maxWaitMillis)
     {
-        this(threads, hive, 0, maxSize, maxWaitMillis);
+        this(hive, threads, 0, maxSize, maxWaitMillis);
     }
 
     /**
@@ -117,7 +134,7 @@ public class BatchBee<T> extends Bee<T>
      */
     public BatchBee(Hive hive, int maxSize, long maxWaitMillis)
     {
-        this(0, hive, 0, maxSize, maxWaitMillis);
+        this(hive, 1, 0, maxSize, maxWaitMillis);
     }
 
     /**
@@ -130,7 +147,7 @@ public class BatchBee<T> extends Bee<T>
      */
     public BatchBee(int threads, int maxSize, long maxWaitMillis)
     {
-        this(threads, null, 0, maxSize, maxWaitMillis);
+        this(null, threads, 0, maxSize, maxWaitMillis);
     }
 
     /**
@@ -142,7 +159,7 @@ public class BatchBee<T> extends Bee<T>
      */
     public BatchBee(int maxSize, long maxWaitMillis)
     {
-        this(0, null, 0, maxSize, maxWaitMillis);
+        this(null, 0, 0, maxSize, maxWaitMillis);
     }
 
     /**
@@ -168,7 +185,7 @@ public class BatchBee<T> extends Bee<T>
      * }</pre>
      *
      * @param <S>  the concrete type of the next stage (must extend
-     *             {@code Sendable<List<T>>})
+     *             {@link Consumer}{@code <List<T>>})
      * @param next the stage that will receive completed batches; must not be
      *             {@code null}
      * @return {@code next}, typed as {@code S}, enabling fluent chaining
@@ -181,14 +198,57 @@ public class BatchBee<T> extends Bee<T>
 
     /**
      * Returns the next stage in the chain, or {@code null} if none has been
-     * linked yet. Used by {@link Hive#shutdown(Sendable, boolean, boolean)}
-     * to traverse the chain.
+     * linked yet.
      *
      * @return the linked next stage, or {@code null}
      */
     protected Consumer<List<T>> getNext()
     {
         return next;
+    }
+
+    /**
+     * Adds {@code m} to the pending batch, using its acceptance sequence so
+     * that batches are assembled in acceptance order even when {@code receive}
+     * is invoked concurrently. If the batch has reached {@code maxSize} after
+     * the addition, the batch is atomically swapped for a new empty one and
+     * returned so the caller can forward it.
+     *
+     * @param m the message to accumulate
+     * @param seq the 1-based acceptance position of {@code m}
+     * @return the completed batch to forward, or {@code null}
+     */
+    private List<T> addInOrder(T m, long seq)
+    {
+        synchronized (batchLock)
+        {
+            if (seq == expectedSeq.get())
+            {
+                batch.add(m);
+                expectedSeq.incrementAndGet();
+                while (true)
+                {
+                    T next = buffered.remove(expectedSeq.get());
+                    if (next == null)
+                    {
+                        break;
+                    }
+                    batch.add(next);
+                    expectedSeq.incrementAndGet();
+                }
+                if (batch.size() >= maxSize)
+                {
+                    List<T> full = batch;
+                    batch = new ArrayList<>(maxSize);
+                    return full;
+                }
+            }
+            else if (seq > expectedSeq.get())
+            {
+                buffered.put(seq, m);
+            }
+            return null;
+        }
     }
 
     /**
@@ -201,16 +261,25 @@ public class BatchBee<T> extends Bee<T>
     @Override
     protected void receive(T m)
     {
-        List<T> full = null;
-        synchronized (batchLock)
+        List<T> full = addInOrder(m, expectedSeq.get());
+        if (full != null)
         {
-            batch.add(m);
-            if (batch.size() >= maxSize)
-            {
-                full = batch;
-                batch = new ArrayList<>(maxSize);
-            }
+            forward(full);
         }
+    }
+
+    /**
+     * Adds {@code m} to the pending batch, honoring its acceptance order so
+     * that batches are assembled in input order even when processed in
+     * parallel by several workers.
+     *
+     * @param m   the message to accumulate
+     * @param seq the 1-based acceptance position of {@code m}
+     */
+    @Override
+    protected void receive(T m, long seq)
+    {
+        List<T> full = addInOrder(m, seq);
         if (full != null)
         {
             forward(full);

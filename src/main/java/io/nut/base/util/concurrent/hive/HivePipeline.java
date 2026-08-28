@@ -26,14 +26,14 @@ import java.util.function.Function;
  *                         .then(i -> "value=" + i)
  *                         .then(String::toUpperCase)
  *                         .sink(System.out::println);
- * head.send(21);  // prints "VALUE=42"
+ * head.accept(21);  // prints "VALUE=42"
  * }</pre>
  * Each {@link #then(Function)} call appends one more {@link PipeBee} stage to
  * the chain and returns a new {@code HivePipeline} view with the same head but
  * an updated "current output type", so further {@code then}/{@link #sink}/
  * {@link #to} calls are type-checked against it. The chain is not ready for
- * {@link #send(Object)} until it is closed with {@link #sink(Consumer)} or
- * {@link #to(Sendable)}.
+ * {@link #accept(Object)} until it is closed with {@link #sink(Consumer)} or
+ * {@link #to(Consumer)}.
  *
  * @param <T> the type of message accepted by the first stage of the chain (the head)
  * @param <R> the type currently produced by the last stage added so far (the tail)
@@ -49,7 +49,7 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * {@link #then} to build successive views of the same chain.
      *
      * @param hive the Hive to which all stages in this chain are attached
-     * @param head the first stage; messages are sent to it via {@link #send}
+     * @param head the first stage; messages are sent to it via {@link #accept}
      * @param tail the last stage added so far; new stages are linked to it
      */
     HivePipeline(Hive hive, Bee<T> head, PipeBee<?,R> tail)
@@ -124,7 +124,7 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * @param consumer the terminal action applied to each fully-transformed
      *                 value; must not be {@code null}
      * @return the head {@link Bee}{@code <T>} of the chain — the entry point
-     *         for {@link Consumer#send} and {@link Bee#shutdown}
+     *         for {@link Consumer#accept} and {@link Bee#shutdown}
      */
     public Bee<T> sink(Consumer<R> consumer)
     {
@@ -136,9 +136,9 @@ public final class HivePipeline<T,R> implements Consumer<T>
     /**
      * Closes the chain by linking it to an already-built
      * {@link Consumer}{@code <R>} and returns the head of the fully-wired
-     * chain. The {@code next} argument can be any {@code Sendable<R>} —
-     * another pipeline's head, a {@link QueueBee}, a {@link ListBee},
-     * a {@link FanOutBee}, and so on.
+     * chain. The {@code next} argument can be any {@link Consumer}{@code <R>} —
+     * another pipeline's head, a {@link Bee} created directly via
+     * {@code hive.bee(...)}, a {@link FanOutBee}, and so on.
      *
      * @param next the downstream stage that will receive the final values;
      *             must not be {@code null}
@@ -152,7 +152,7 @@ public final class HivePipeline<T,R> implements Consumer<T>
 
     /**
      * Returns the head {@link Bee}{@code <T>} of the chain built so far — the
-     * same instance that {@link #send(Object)} delegates to. The head can be
+     * same instance that {@link #accept(Object)} delegates to. The head can be
      * used to initiate shutdown of the whole chain via {@link Bee#shutdown()}.
      *
      * @return the head Bee of the chain
@@ -166,7 +166,7 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * Sends a message into the head of the chain.
      * <p>
      * Note that messages sent before the chain has been fully wired (i.e.
-     * before {@link #sink(Consumer)} or {@link #to(Sendable)} is called) will
+     * before {@link #sink(Consumer)} or {@link #to(Consumer)} is called) will
      * reach the last-built stage but go no further, since that stage is not yet
      * linked to a downstream consumer. Finish building the chain before sending.
      *

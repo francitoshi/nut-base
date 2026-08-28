@@ -18,11 +18,10 @@ import java.util.function.Function;
  * {@code PipeBee} follows the <em>Continuation-Passing Style</em> (CPS)
  * pattern: {@link #receive(Object)} never returns the transformed value to its
  * caller. Instead, it applies the configured {@link Function}{@code <T,R>} and
- * immediately calls {@link Consumer#send send()} on the linked {@code next}
+ * immediately calls {@link Consumer#accept accept()} on the linked {@code next}
  * stage. The next stage can be another {@code PipeBee<R,S>} (which keeps
- * transforming), a plain {@link Bee}{@code <R>} (which consumes the value),
- * or any other {@link Consumer}{@code <R>} (such as a {@link QueueBee} or a
- * {@link ListBee}).
+ * transforming), or any other {@link Consumer}{@code <R>} (such as a plain
+ * {@code Bee<R>} that consumes the value).
  * <p>
  * Stages are wired together with {@link #linkTo}, which returns the next stage
  * so calls can be chained:
@@ -30,7 +29,7 @@ import java.util.function.Function;
  * PipeBee<Integer, String> fmt  = hive.pipe(i -> "item " + i);
  * Bee<String>              sink = hive.bee(System.out::println);
  * fmt.linkTo(sink);
- * fmt.send(42);  // prints "item 42"
+ * fmt.accept(42);  // prints "item 42"
  * }</pre>
  * For long chains it is more convenient to use {@link Hive#pipeline}, which
  * wires stages automatically via {@link HivePipeline#then}.
@@ -62,24 +61,10 @@ public class PipeBee<T,R> extends Bee<T>
      * @param function  the transformation applied to each message; must not be
      *                  {@code null}
      */
-    public PipeBee(int threads, Hive hive, int queueSize, Function<T,R> function)
+    public PipeBee(Hive hive, int threads, int queueSize, Function<T,R> function)
     {
-        super(threads, hive, queueSize);
+        super(hive, threads, queueSize);
         this.function = Objects.requireNonNull(function, "function must not be null");
-    }
-
-    /**
-     * Constructs a PipeBee with the given thread count and Hive, using the
-     * default queue size.
-     *
-     * @param threads  the maximum number of concurrent worker threads
-     * @param hive     the Hive thread pool, or {@code null} for synchronous mode
-     * @param function the transformation applied to each message; must not be
-     *                 {@code null}
-     */
-    public PipeBee(int threads, Hive hive, Function<T,R> function)
-    {
-        this(threads, hive, 0, function);
     }
 
     /**
@@ -92,7 +77,7 @@ public class PipeBee<T,R> extends Bee<T>
      */
     public PipeBee(Hive hive, Function<T,R> function)
     {
-        this(0, hive, 0, function);
+        this(hive, 1, 0, function);
     }
 
     /**
@@ -103,9 +88,9 @@ public class PipeBee<T,R> extends Bee<T>
      * @param function the transformation applied to each message; must not be
      *                 {@code null}
      */
-    public PipeBee(int threads, Function<T,R> function)
+    public PipeBee(int threads, int queueSize, Function<T,R> function)
     {
-        this(threads, null, 0, function);
+        this(null, threads, queueSize, function);
     }
 
     /**
@@ -117,7 +102,7 @@ public class PipeBee<T,R> extends Bee<T>
      */
     public PipeBee(Function<T,R> function)
     {
-        this(0, null, 0, function);
+        this(null, 0, 0, function);
     }
 
     /**
@@ -129,7 +114,7 @@ public class PipeBee<T,R> extends Bee<T>
      * }</pre>
      *
      * @param <S>  the concrete type of the next stage (must extend
-     *             {@code Sendable<R>})
+     *             {@link Consumer}{@code <R>})
      * @param next the stage that will receive the transformed values; must not
      *             be {@code null}
      * @return {@code next}, typed as {@code S}, enabling fluent chaining
@@ -142,8 +127,7 @@ public class PipeBee<T,R> extends Bee<T>
 
     /**
      * Returns the next stage in the chain, or {@code null} if none has been
-     * linked yet. Used by {@link Hive#shutdown(Sendable, boolean, boolean)}
-     * to traverse the chain.
+     * linked yet.
      *
      * @return the linked next stage, or {@code null}
      */

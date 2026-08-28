@@ -135,7 +135,7 @@ class BeeTest
     @Test
     void shutdownOnlyWhenEmptyWaitsForPendingMessagesBeforeTerminating()
     {
-        RecordingBee<Integer> bee = new RecordingBee<>(2, hive);
+        RecordingBee<Integer> bee = new RecordingBee<>(hive, 1, 2);
         for (int i = 0; i < 50; i++)
         {
             bee.accept(i);
@@ -166,8 +166,8 @@ class BeeTest
     @Test
     void invalidConstructorArgumentsThrow()
     {
-        assertThrows(IllegalArgumentException.class, () -> new RecordingBee<String>(-1, hive));
-        assertThrows(IllegalArgumentException.class, () -> new RecordingBee<String>(1, hive, -1));
+        assertThrows(IllegalArgumentException.class, () -> new RecordingBee<String>(hive, -1, 1));
+        assertThrows(IllegalArgumentException.class, () -> new RecordingBee<String>(hive, 1, -1));
     }
 
     @Test
@@ -198,8 +198,10 @@ class BeeTest
     {
         RecordingBee<String> bee = new RecordingBee<>(hive);
         bee.dryLogger();
-        bee.withAction(m -> {
-            if ("fail".equals(m)) {
+        bee.withAction(m -> 
+        {
+            if ("fail".equals(m)) 
+            {
                 throw new RuntimeException("fail");
             }
         });

@@ -18,8 +18,9 @@ import java.util.function.Predicate;
  * Like {@link PipeBee}, {@code FilterBee} follows the
  * <em>Continuation-Passing Style</em> (CPS) pattern: {@link #receive(Object)}
  * tests the message against the predicate and, only if the test passes, calls
- * {@link Consumer#send send()} on the linked {@code next} stage. The message
- * type is never changed, so {@code next} must be a {@code Sendable<T>}.
+ * {@link Consumer#accept accept()} on the linked {@code next} stage. The
+ * message type is never changed, so {@code next} must be a
+ * {@link Consumer}{@code <T>}.
  * <p>
  * Stages are wired together with {@link #linkTo}, which returns the next stage
  * for fluent chaining:
@@ -27,7 +28,7 @@ import java.util.function.Predicate;
  * FilterBee<Integer> evens  = hive.filter(i -> i % 2 == 0);
  * Bee<Integer>       sink   = hive.bee(System.out::println);
  * evens.linkTo(sink);
- * for (int i = 0; i < 10; i++) evens.send(i);  // prints 0, 2, 4, 6, 8
+ * for (int i = 0; i < 10; i++) evens.accept(i);  // prints 0, 2, 4, 6, 8
  * }</pre>
  * <p>
  * If {@code next} has not been set when a message passes the predicate, that
@@ -56,23 +57,10 @@ public class FilterBee<T> extends Bee<T>
      * @param queueSize the internal queue capacity (0 = default)
      * @param predicate the test applied to each message; must not be {@code null}
      */
-    public FilterBee(int threads, Hive hive, int queueSize, Predicate<T> predicate)
+    public FilterBee(Hive hive, int threads, int queueSize, Predicate<T> predicate)
     {
-        super(threads, hive, queueSize);
+        super(hive, threads, queueSize);
         this.predicate = Objects.requireNonNull(predicate, "predicate must not be null");
-    }
-
-    /**
-     * Constructs a FilterBee with the given thread count and Hive, using the
-     * default queue size.
-     *
-     * @param threads   the maximum number of concurrent worker threads
-     * @param hive      the Hive thread pool, or {@code null} for synchronous mode
-     * @param predicate the test applied to each message; must not be {@code null}
-     */
-    public FilterBee(int threads, Hive hive, Predicate<T> predicate)
-    {
-        this(threads, hive, 0, predicate);
     }
 
     /**
@@ -84,7 +72,7 @@ public class FilterBee<T> extends Bee<T>
      */
     public FilterBee(Hive hive, Predicate<T> predicate)
     {
-        this(0, hive, 0, predicate);
+        this(hive, 0, 0, predicate);
     }
 
     /**
@@ -94,9 +82,9 @@ public class FilterBee<T> extends Bee<T>
      * @param threads   the maximum number of concurrent worker threads
      * @param predicate the test applied to each message; must not be {@code null}
      */
-    public FilterBee(int threads, Predicate<T> predicate)
+    public FilterBee(int threads, int queueSize, Predicate<T> predicate)
     {
-        this(threads, null, 0, predicate);
+        this(null, threads, queueSize, predicate);
     }
 
     /**
@@ -107,7 +95,7 @@ public class FilterBee<T> extends Bee<T>
      */
     public FilterBee(Predicate<T> predicate)
     {
-        this(0, null, 0, predicate);
+        this(null, 0, 0, predicate);
     }
 
     /**
@@ -119,7 +107,7 @@ public class FilterBee<T> extends Bee<T>
      * }</pre>
      *
      * @param <S>  the concrete type of the next stage (must extend
-     *             {@code Sendable<T>})
+     *             {@link Consumer}{@code <T>})
      * @param next the stage that will receive the passing messages; must not be
      *             {@code null}
      * @return {@code next}, typed as {@code S}, enabling fluent chaining
@@ -132,8 +120,7 @@ public class FilterBee<T> extends Bee<T>
 
     /**
      * Returns the next stage in the chain, or {@code null} if none has been
-     * linked yet. Used by {@link Hive#shutdown(Sendable, boolean, boolean)}
-     * to traverse the chain.
+     * linked yet.
      *
      * @return the linked next stage, or {@code null}
      */

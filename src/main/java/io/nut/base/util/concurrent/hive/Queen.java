@@ -35,7 +35,7 @@ import java.util.concurrent.Phaser;
  *
  * <table border="1">
  *   <tr><th></th><th>void</th><th>Future&lt;U&gt;</th></tr>
- *   <tr><td>fire &amp; forget</td><td>{@link #run}</td><td>{@link #submit(Runnable)} / {@link #submit(Supplier)}</td></tr>
+ *   <tr><td>fire &amp; forget</td><td>{@link #execute}</td><td>{@link #submit(Runnable)} / {@link #submit(Supplier)}</td></tr>
  *   <tr><td>guaranteed start</td><td>{@link #spawn}</td><td>—</td></tr>
  *   <tr><td>parallel + blocking</td><td>{@link #forEach}</td><td>—</td></tr>
  * </table>
@@ -310,7 +310,7 @@ public class Queen implements AutoCloseable, Executor
     }    
     /**
      * Submits {@code task} to the thread pool for fire-and-forget execution.
-     * Implements {@link Executor}; prefer {@link #run} for direct use.
+     * Implements {@link Executor}.
      *
      * @param task the task to execute; must not be {@code null}
      */

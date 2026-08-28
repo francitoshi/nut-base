@@ -5,12 +5,14 @@
  */
 package io.nut.base.util.concurrent.hive;
 
-import io.nut.base.util.concurrent.channel.CloseableUnlimitedChannel;
+import io.nut.base.util.concurrent.channel.Channel;
+import io.nut.base.util.concurrent.channel.CloseableChannel;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Objects;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -18,24 +20,25 @@ import java.util.logging.Logger;
 /**
  * The fundamental building block of the Hive concurrency framework.
  * A {@code Bee<M>} is an asynchronous message-processing stage: it accepts
- * messages via {@link #accept(Object)}, queues them internally via a
- * {@link CloseableUnlimitedChannel}, and dispatches them to
- * {@link #receive(Object)} on worker threads supplied by an attached
+ * messages via {@link #accept(Object)}, buffers them in a
+ * {@link CloseableChannel}, and dispatches them to
+ * {@link #receive(Object)} on a worker thread supplied by an attached
  * {@link Hive}.
  * <p>
  * When no {@link Hive} is attached, {@link #accept(Object)} executes
  * {@link #receive(Object)} synchronously in the calling thread.
  * <p>
- * <strong>Lifecycle</strong>: a Bee starts in the {@code RUNNING} state.
- * Calling {@link #close()} closes the internal channel, which causes all
- * active workers to finish processing and then exit. After the channel is
- * closed and drained, {@link #terminate()} is called. Callers can block on
- * completion with {@link #awaitTermination(int)}.
+ * <strong>Worker model</strong>: when a Hive is attached, up to {@code threads}
+ * workers may run concurrently so that the Bee can process messages in
+ * parallel: every accepted message can start one worker, up to the configured
+ * maximum. Each worker drains every buffered message and then returns to the
+ * pool, so the Hive's threads are never held while the Bee is idle.
  * <p>
- * <strong>Concurrency</strong>: at most one worker is submitted per
- * {@link #accept(Object)} call when no worker is active. Each worker loops
- * on the internal channel, processing messages until the channel is closed
- * and empty.
+ * <strong>Lifecycle</strong>: a Bee starts active. {@link #shutdown()} (or
+ * {@link #shutdown(boolean)}) closes the internal channel; messages buffered
+ * before the close are still delivered. Once the channel is drained and every
+ * worker has returned, {@link #terminate()} is invoked and the Bee is
+ * terminated. {@link #awaitTermination(int)} blocks until that point.
  *
  * @param <M> the type of messages this Bee processes
  */
@@ -45,14 +48,38 @@ public abstract class Bee<M> implements Consumer<M>
 
     private static final int DEFAULT_QUEUE_SIZE = Short.MAX_VALUE;
 
-    private final CloseableUnlimitedChannel<M> channel;
-    private final Object lock = new Object();
-    private final AtomicInteger activeWorkers = new AtomicInteger();
-    private final AtomicInteger pendingCount = new AtomicInteger();
+    private final CloseableChannel<M> channel;
 
+    /** Maximum number of concurrently running workers. */
+    private final int threads;
+
+    // All lifecycle / scheduling decisions are made under this monitor.
+    private final Object lock = new Object();
+
+    /** Messages accepted but not yet received. */
+    private final AtomicInteger pending = new AtomicInteger();
+
+    /**
+     * Monotonic position assigned to messages as they are pulled from the
+     * channel, so subclasses that care about arrival order (e.g. classes that
+     * re-assemble ordered output from parallel workers) can reconstruct it:
+     * the channel is FIFO, so the {@code k}-th successful pull corresponds to
+     * the {@code k}-th accepted message.
+     */
+    private final AtomicLong sequenceCounter = new AtomicLong();
+
+    /** Workers currently running (submitted to the Hive pool but not yet done). */
+    private final AtomicInteger activeWorkers = new AtomicInteger();
+
+    /** {@code true} once the internal channel has been closed. */
     private volatile boolean closed;
-    private volatile boolean shutdownWhenEmpty;
-    private volatile boolean terminated;
+
+    /** {@code true} when {@link #shutdown(boolean)} was asked to close only once idle. */
+    private boolean shutdownWhenEmpty;
+
+    /** {@code true} after {@link #terminate()} has run. */
+    private boolean terminated;
+
     private volatile boolean allowLogger = true;
     private volatile Executor hive;
     private volatile Exception ex;
@@ -61,7 +88,15 @@ public abstract class Bee<M> implements Consumer<M>
     // Constructors
     // -------------------------------------------------------------------------
 
-    public Bee(int threads, Hive hive, int queueSize)
+    /**
+     * @param threads   the maximum number of concurrent worker threads;
+     *                  {@code 0} uses the number of available CPU cores
+     * @param hive      the Hive thread pool, or {@code null} for synchronous mode
+     * @param queueSize buffer capacity of the internal channel; {@code <= 0}
+     *                  means unbounded
+     * @throws IllegalArgumentException if {@code threads < 0} or {@code queueSize < 0}
+     */
+    public Bee(Hive hive, int threads, int queueSize)
     {
         if (threads < 0)
         {
@@ -72,27 +107,25 @@ public abstract class Bee<M> implements Consumer<M>
             throw new IllegalArgumentException("queueSize < 0");
         }
         this.hive = hive;
-        this.channel = new CloseableUnlimitedChannel<>();
-    }
-
-    public Bee(int threads, Hive hive)
-    {
-        this(threads, hive, DEFAULT_QUEUE_SIZE);
+        this.threads = threads == 0 ? Queen.CORES : threads;
+        this.channel = queueSize > 0
+                ? Channel.closeableBuffered(queueSize)
+                : Channel.closeableUnlimited();
     }
 
     public Bee(Hive hive)
     {
-        this(0, hive, DEFAULT_QUEUE_SIZE);
+        this(hive, 0, DEFAULT_QUEUE_SIZE);
     }
 
-    public Bee(int threads)
+    public Bee(int threads, int queueSize)
     {
-        this(threads, null, DEFAULT_QUEUE_SIZE);
+        this(null, threads, queueSize);
     }
 
     public Bee()
     {
-        this(0, null, DEFAULT_QUEUE_SIZE);
+        this(null, 0, DEFAULT_QUEUE_SIZE);
     }
 
     // -------------------------------------------------------------------------
@@ -120,17 +153,34 @@ public abstract class Bee<M> implements Consumer<M>
     // -------------------------------------------------------------------------
 
     /**
-     * Called by the worker thread for each message dequeued from the internal
-     * channel. Subclasses must implement the actual message-processing logic.
+     * Called once for each message delivered to this Bee. Must be implemented
+     * by subclasses.
      *
      * @param m the message to process
      */
     protected abstract void receive(M m);
 
     /**
-     * Called once after the channel is closed and fully drained, as the final
-     * step of the shutdown sequence. Subclasses may override to release
-     * resources.
+     * Ordered variant of {@link #receive(Object)}: {@code seq} is the
+     * acceptance position of the message (1-based, in {@link #accept} order)
+     * supplied by this Bee when running with an attached Hive. The default
+     * implementation ignores the sequence and delegates to
+     * {@link #receive(Object)}; subclasses that must preserve arrival order
+     * (such as {@code BatchBee}) can override this to reassemble ordered
+     * output even when {@code receive} is invoked concurrently by several
+     * workers.
+     *
+     * @param m   the message to process
+     * @param seq the 1-based acceptance position of {@code m}
+     */
+    protected void receive(M m, long seq)
+    {
+        receive(m);
+    }
+
+    /**
+     * Called once after the channel is closed and drained, as the final step
+     * of the shutdown sequence. Subclasses may override to release resources.
      */
     protected void terminate()
     {
@@ -138,7 +188,9 @@ public abstract class Bee<M> implements Consumer<M>
 
     /**
      * Called whenever an unhandled exception escapes from {@link #receive(Object)}
-     * or from a lifecycle hook.
+     * or from a lifecycle hook. The exception is also stored in
+     * {@link #getException()} and, unless suppressed by {@link #dryLogger()},
+     * logged at {@code SEVERE} level.
      *
      * @param ex the exception that was thrown
      */
@@ -150,7 +202,6 @@ public abstract class Bee<M> implements Consumer<M>
      * Sends a message to this Bee for processing.
      *
      * @param message the message to deliver
-     * @throws IllegalStateException if this Bee has been closed
      */
     @Override
     public void accept(M message)
@@ -162,28 +213,39 @@ public abstract class Bee<M> implements Consumer<M>
                 throw new IllegalStateException("closed");
             }
 
-            if (hive != null)
-            {
-                pendingCount.incrementAndGet();
-                channel.put(message);
-                if (activeWorkers.get() == 0)
-                {
-                    submitWorker();
-                }
-            }
-            else
+            Executor h = hive;
+            if (h == null)
             {
                 receive(message);
+                return;
+            }
+
+            synchronized (lock)
+            {
+                boolean queued = false;
+                pending.incrementAndGet();
+                try
+                {
+                    channel.put(message);
+                    queued = true;
+                }
+                finally
+                {
+                    if (!queued)
+                    {
+                        pending.decrementAndGet();
+                    }
+                }
+
+                if (queued && activeWorkers.get() < threads)
+                {
+                    startWorker();
+                }
             }
         }
         catch (Exception ex)
         {
-            this.ex = ex;
-            if (allowLogger)
-            {
-                LOG.log(Level.SEVERE, "Bee.accept()", ex);
-            }
-            exception(ex);
+            handleException(ex);
         }
     }
 
@@ -191,100 +253,159 @@ public abstract class Bee<M> implements Consumer<M>
     // Worker
     // -------------------------------------------------------------------------
 
-    private void submitWorker()
+    /**
+     * Submits a worker to the Hive pool. Must be called while holding
+     * {@link #lock}; the worker is counted as active before the submission so
+     * that at most {@link #threads} workers run concurrently.
+     */
+    private void startWorker()
     {
         activeWorkers.incrementAndGet();
-        hive.execute(this::workerLoop);
+        try
+        {
+            Executor h = hive;
+            if (h != null)
+            {
+                h.execute(this::workerLoop);
+            }
+            else
+            {
+                activeWorkers.decrementAndGet();
+            }
+        }
+        catch (Exception ex)
+        {
+            activeWorkers.decrementAndGet();
+            throw ex;
+        }
     }
 
+    /**
+     * Drains every available message into {@link #receive(Object)}, returns to
+     * the pool, and hands the scheduling decision back to {@link #workerDone()}.
+     */
     private void workerLoop()
     {
         try
         {
+            drain();
+        }
+        finally
+        {
+            workerDone();
+        }
+    }
+
+    /**
+     * Processes every message currently buffered in the channel, one at a time.
+     * The channel is closed (drain-only) during shutdown, so an explicit call
+     * here guarantees that buffered messages are received even if no worker
+     * could be submitted to the pool.
+     */
+    private void drain()
+    {
+        try
+        {
             M m;
-            while ((m = channel.get(0, java.util.concurrent.TimeUnit.SECONDS)) != null)
+            while ((m = channel.get(0, TimeUnit.MILLISECONDS)) != null)
             {
-                pendingCount.decrementAndGet();
+                pending.decrementAndGet();
+                long seq = sequenceCounter.incrementAndGet();
                 try
                 {
-                    receive(m);
+                    receive(m, seq);
                 }
                 catch (Exception ex)
                 {
-                    this.ex = ex;
-                    if (allowLogger)
-                    {
-                        LOG.log(Level.SEVERE, "Bee.receive()", ex);
-                    }
-                    exception(ex);
+                    handleException(ex);
                 }
             }
         }
         catch (InterruptedException ex)
         {
             Thread.currentThread().interrupt();
-            this.ex = ex;
-            if (allowLogger)
-            {
-                LOG.log(Level.SEVERE, "Bee.worker interrupted", ex);
-            }
-            exception(ex);
+            handleException(ex);
         }
-        finally
+    }
+
+    /**
+     * Runs when a worker returns: the last worker either terminates the Bee
+     * (when closed), closes it (when shutdown was requested once idle), or
+     * drains inline if more work arrived while no worker was left. Must be
+     * race-free: it runs under {@link #lock} and every producer uses the same
+     * lock to decide whether to start a worker.
+     */
+    private void workerDone()
+    {
+        activeWorkers.decrementAndGet();
+
+        synchronized (lock)
         {
-            activeWorkers.decrementAndGet();
-            synchronized (lock)
+            if (closed)
             {
-                if (shutdownWhenEmpty && !closed && pendingCount.get() <= 0 && activeWorkers.get() == 0)
+                if (activeWorkers.get() == 0)
                 {
-                    closed = true;
-                    channel.close();
+                    drain();
                     doTerminate();
                 }
-                else if (closed && activeWorkers.get() == 0)
-                {
-                    doTerminate();
-                }
-                else if (!closed && !channel.isClosed() && pendingCount.get() > 0 && activeWorkers.get() == 0)
-                {
-                    try
-                    {
-                        submitWorker();
-                    }
-                    catch (Exception ignored) {}
-                }
-                lock.notifyAll();
             }
+            else
+            {
+                while (pending.get() > 0 && activeWorkers.get() == 0)
+                {
+                    drain();
+                }
+                if (closed)
+                {
+                    drain();
+                    doTerminate();
+                }
+                else if (shutdownWhenEmpty && isIdle())
+                {
+                    closeNow();
+                }
+            }
+            lock.notifyAll();
+        }
+    }
+
+    private void closeNow()
+    {
+        closed = true;
+        channel.close();
+        if (activeWorkers.get() == 0)
+        {
+            drain();
+            doTerminate();
         }
     }
 
     private void doTerminate()
     {
-        synchronized (lock)
+        if (terminated)
         {
-            if (terminated)
-            {
-                return;
-            }
-            terminated = true;
-            try
-            {
-                terminate();
-            }
-            catch (Exception ex)
-            {
-                this.ex = ex;
-                if (allowLogger)
-                {
-                    LOG.log(Level.SEVERE, "Bee.terminate()", ex);
-                }
-                exception(ex);
-            }
-            finally
-            {
-                lock.notifyAll();
-            }
+            return;
         }
+        terminated = true;
+        try
+        {
+            terminate();
+        }
+        catch (Exception ex)
+        {
+            handleException(ex);
+        }
+        lock.notifyAll();
+    }
+
+    private void handleException(Exception ex)
+    {
+        this.ex = ex;
+        if (allowLogger)
+        {
+            LOG.log(Level.SEVERE, "Bee", ex);
+        }
+        exception(ex);
     }
 
     // -------------------------------------------------------------------------
@@ -292,14 +413,14 @@ public abstract class Bee<M> implements Consumer<M>
     // -------------------------------------------------------------------------
 
     /**
-     * Returns the number of messages currently in the internal channel waiting
-     * to be processed, plus the number of active worker threads.
+     * Returns the number of messages accepted but not yet received, plus the
+     * number of active worker threads.
      *
      * @return approximate pending work count
      */
     public int getPendingCount()
     {
-        return pendingCount.get() + activeWorkers.get();
+        return pending.get() + activeWorkers.get();
     }
 
     /**
@@ -308,7 +429,7 @@ public abstract class Bee<M> implements Consumer<M>
      */
     public boolean isIdle()
     {
-        return pendingCount.get() <= 0 && activeWorkers.get() == 0;
+        return pending.get() <= 0 && activeWorkers.get() == 0;
     }
 
     /**
@@ -324,7 +445,7 @@ public abstract class Bee<M> implements Consumer<M>
             {
                 while (!isIdle())
                 {
-                    lock.wait(100);
+                    lock.wait();
                 }
             }
             catch (InterruptedException ex)
@@ -336,8 +457,8 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Closes the internal channel, causing active workers to finish and exit.
-     * No new messages can be accepted after this call.
+     * Closes the internal channel, causing workers to finish and exit. No new
+     * messages can be accepted after this call.
      *
      * @return this Bee, for fluent chaining
      */
@@ -347,8 +468,8 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Initiates shutdown. If {@code onlyWhenEmpty}, the channel is closed
-     * only once all pending messages have been processed.
+     * Initiates shutdown. If {@code onlyWhenEmpty}, the channel is closed only
+     * once all pending messages have been processed.
      *
      * @param onlyWhenEmpty if {@code true}, defers close until idle
      * @return this Bee, for fluent chaining
@@ -357,52 +478,25 @@ public abstract class Bee<M> implements Consumer<M>
     {
         synchronized (lock)
         {
-            if (closed)
+            if (!closed && !terminated)
             {
-                return this;
-            }
-
-            if (onlyWhenEmpty)
-            {
-                if (isIdle())
+                if (onlyWhenEmpty)
                 {
-                    closed = true;
-                    channel.close();
-                    if (activeWorkers.get() == 0)
+                    if (isIdle())
                     {
-                        Executor h = hive;
-                        if (h != null)
-                        {
-                            h.execute(this::doTerminate);
-                        }
-                        else
-                        {
-                            doTerminate();
-                        }
+                        closeNow();
+                    }
+                    else
+                    {
+                        shutdownWhenEmpty = true;
                     }
                 }
                 else
                 {
-                    shutdownWhenEmpty = true;
+                    closeNow();
                 }
             }
-            else
-            {
-                closed = true;
-                channel.close();
-                if (activeWorkers.get() == 0)
-                {
-                    Executor h = hive;
-                    if (h != null)
-                    {
-                        h.execute(this::doTerminate);
-                    }
-                    else
-                    {
-                        doTerminate();
-                    }
-                }
-            }
+            lock.notifyAll();
         }
         return this;
     }
@@ -431,14 +525,15 @@ public abstract class Bee<M> implements Consumer<M>
      */
     public boolean awaitTermination(int millis)
     {
-        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(millis);
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
         return awaitTerminationUntilNanos(deadline);
     }
 
     /**
-     * Blocks until the Bee is terminated or the deadline elapses.
+     * Blocks until the Bee is terminated or the absolute deadline (in
+     * nanoseconds) is reached.
      *
-     * @param untilNanos the absolute deadline in nanoseconds
+     * @param untilNanos the absolute deadline
      * @return {@code true} if terminated within the deadline
      */
     public boolean awaitTerminationUntilNanos(long untilNanos)
@@ -459,12 +554,7 @@ public abstract class Bee<M> implements Consumer<M>
                 catch (InterruptedException ex)
                 {
                     Thread.currentThread().interrupt();
-                    this.ex = ex;
-                    if (allowLogger)
-                    {
-                        LOG.log(Level.SEVERE, "Bee.awaitTermination()", ex);
-                    }
-                    exception(ex);
+                    handleException(ex);
                     return false;
                 }
             }

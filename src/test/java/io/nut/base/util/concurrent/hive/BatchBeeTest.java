@@ -1,20 +1,7 @@
 /*
- * Copyright (c) 2026 francitoshi@gmail.com
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util.concurrent.hive;
 
@@ -278,22 +265,6 @@ class BatchBeeTest
 
         assertEquals(1, batches.size());
         assertEquals(Arrays.asList("a", "b"), batches.get(0));
-    }
-
-    @Test
-    void hiveBatchFactoryWithThreadsParameter() throws InterruptedException
-    {
-        List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = hive.batch(2, 3, 0L);
-        batch.linkTo(m -> batches.add(m));
-
-        batch.accept(1);
-        batch.accept(2);
-        batch.accept(3);
-
-        Hive.shutdownAndAwaitTermination(true, batch);
-
-        assertEquals(1, batches.size());
     }
 
     @Test

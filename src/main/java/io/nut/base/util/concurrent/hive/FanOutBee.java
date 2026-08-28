@@ -18,26 +18,27 @@ import java.util.function.Consumer;
  * parallel.
  * <p>
  * Each message delivered to {@link #receive(Object)} is forwarded — unchanged
- * and in order — to every registered {@code Sendable<T>} target by calling
- * {@link Consumer#send send()} on each of them in turn. Because the targets are
- * invoked from the same worker thread, the fan-out itself is sequential; true
- * parallelism is achieved when each target is backed by its own Hive worker.
+ * and in order — to every registered {@link Consumer}{@code <T>} target by
+ * calling {@link Consumer#accept accept()} on each of them in turn. Because the
+ * targets are invoked from the same worker thread, the fan-out itself is
+ * sequential; true parallelism is achieved when each target is backed by its
+ * own Hive worker.
  * <p>
  * Targets can be supplied at construction time and/or added or removed later
- * with {@link #addTarget(Sendable)} / {@link #removeTarget(Sendable)}. The
+ * with {@link #addTarget(Consumer)} / {@link #removeTarget(Consumer)}. The
  * target list is backed by a {@link CopyOnWriteArrayList}, making concurrent
  * mutation safe without blocking message delivery.
  * <p>
  * <strong>Fan-in</strong> (the inverse pattern, merging several sources into
  * one consumer) needs no dedicated class: any number of producers can simply
- * call {@link Consumer#send send()} on the same downstream {@link Bee}.
+ * call {@link Consumer#accept accept()} on the same downstream {@link Bee}.
  * <p>
  * Example:
  * <pre>{@code
  * FanOutBee<String> bc = hive.broadcast();
  * bc.addTarget(hive.bee(s -> saveToDb(s)));
  * bc.addTarget(hive.bee(s -> publishToKafka(s)));
- * bc.send("hello");  // both targets receive "hello"
+ * bc.accept("hello");  // both targets receive "hello"
  * }</pre>
  *
  * @param <T> the type of messages this FanOutBee receives and forwards
@@ -62,24 +63,9 @@ public class FanOutBee<T> extends Bee<T>
      * @param targets   zero or more initial downstream stages
      */
     @SafeVarargs
-    public FanOutBee(int threads, Hive hive, int queueSize, Consumer<T>... targets)
+    public FanOutBee(Hive hive, int threads, int queueSize, Consumer<T>... targets)
     {
-        super(threads, hive, queueSize);
-        addTargets(targets);
-    }
-
-    /**
-     * Constructs a FanOutBee with the given thread count and Hive, using the
-     * default queue size.
-     *
-     * @param threads the maximum number of concurrent worker threads
-     * @param hive    the Hive thread pool, or {@code null} for synchronous mode
-     * @param targets zero or more initial downstream stages
-     */
-    @SafeVarargs
-    public FanOutBee(int threads, Hive hive, Consumer<T>... targets)
-    {
-        super(threads, hive);
+        super(hive, threads, queueSize);
         addTargets(targets);
     }
 
@@ -105,9 +91,9 @@ public class FanOutBee<T> extends Bee<T>
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public FanOutBee(int threads, Consumer<T>... targets)
+    public FanOutBee(int threads, int queueSize, Consumer<T>... targets)
     {
-        super(threads);
+        super(threads, queueSize);
         addTargets(targets);
     }
 
@@ -177,7 +163,7 @@ public class FanOutBee<T> extends Bee<T>
 
     /**
      * Forwards {@code m} to every registered target by calling
-     * {@link Consumer#send send(m)} on each in turn. Targets added or removed
+     * {@link Consumer#accept accept(m)} on each in turn. Targets added or removed
      * concurrently during this call are handled safely by the underlying
      * {@link CopyOnWriteArrayList}.
      *

@@ -30,8 +30,8 @@ import java.util.logging.Logger;
  * are created with the factory methods ({@link #bee}, {@link #pipe},
  * {@link #filter}, {@link #batch}, {@link #queue}, {@link #list},
  * {@link #set}, {@link #broadcast}, {@link #pipeline}) and automatically
- * receive a reference to this Hive, so every {@link Bee#send} call dispatches
- * work to the same underlying thread pool.
+ * receive a reference to this Hive, so every {@link Bee#accept(Object)} call
+ * dispatches work to the same underlying thread pool.
  * <p>
  * <strong>Typical usage:</strong>
  * <pre>{@code
@@ -40,8 +40,8 @@ import java.util.logging.Logger;
  *     PipeBee<Integer, String> formatter = hive.pipe(i -> "item " + i);
  *     formatter.linkTo(printer);
  *
- *     for (int i = 0; i < 100; i++) formatter.send(i);
- *     Hive.shutdownAndAwaitTermination(true, false, formatter);
+ *     for (int i = 0; i < 100; i++) formatter.accept(i);
+ *     Hive.shutdownAndAwaitTermination(true, formatter);
  * }
  * }</pre>
  * <p>
@@ -50,9 +50,9 @@ import java.util.logging.Logger;
  * implements {@link Executor}, so it can be passed anywhere a plain
  * {@code Executor} is accepted.
  * <p>
- * Static helper methods ({@link #shutdown(Sendable, boolean, boolean)},
- * {@link #awaitTermination(Sendable, boolean, int)},
- * {@link #shutdownAndAwaitTermination(boolean, boolean, Sendable[])}) traverse
+ * Static helper methods ({@link #shutdown(boolean, Consumer[])},
+ * {@link #awaitTermination(int, Consumer[])},
+ * {@link #shutdownAndAwaitTermination(boolean, Consumer[])}) traverse
  * a chain of linked Bee stages and shut them down collectively, following
  * the links stored by {@link PipeBee}, {@link FilterBee}, {@link BatchBee},
  * and {@link FanOutBee}.
@@ -266,7 +266,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T,R> PipeBee<T,R> pipe(int threads, int queueSize, Function<T,R> function)
     {
-        return new PipeBee<>(threads, this, queueSize, function);
+        return new PipeBee<>(this, threads, queueSize, function);
     }
 
     /**
@@ -313,7 +313,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public <T> Bee<T> bee(int threads, int queueSize, Consumer<T> consumer)
     {
         Objects.requireNonNull(consumer, "consumer must not be null");
-        return new Bee<T>(threads, this, queueSize)
+        return new Bee<T>(this, threads, queueSize)
         {
             @Override
             protected void receive(T m)
@@ -337,20 +337,6 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Creates a new terminal {@link Bee} with the specified thread count whose
-     * {@link Bee#receive receive()} puts every message into {@code queue}.
-     *
-     * @param <E>     the element type
-     * @param threads the maximum number of concurrent worker threads
-     * @param queue   the delegate queue; must not be {@code null}
-     * @return a new Bee attached to this Hive
-     */
-    public <E> Bee<E> queue(int threads, BlockingQueue<E> queue)
-    {
-        return queue(threads, 0, queue);
-    }
-
-    /**
      * Creates a new terminal {@link Bee} with the specified thread count and
      * internal queue size whose {@link Bee#receive receive()} puts every
      * message into {@code queue}.
@@ -364,7 +350,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public <E> Bee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
         Objects.requireNonNull(queue, "queue must not be null");
-        return new Bee<E>(threads, this, queueSize)
+        return new Bee<E>(this, threads, queueSize)
         {
             @Override
             protected void receive(E m)
@@ -437,7 +423,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public <E> Bee<E> list(int threads, int queueSize, List<E> list)
     {
         Objects.requireNonNull(list, "list must not be null");
-        return new Bee<E>(threads, this, queueSize)
+        return new Bee<E>(this, threads, queueSize)
         {
             @Override
             protected void receive(E m)
@@ -491,7 +477,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public <T> Bee<T> set(int threads, int queueSize, Set<T> set)
     {
         Objects.requireNonNull(set, "set must not be null");
-        return new Bee<T>(threads, this, queueSize)
+        return new Bee<T>(this, threads, queueSize)
         {
             @Override
             protected void receive(T m)
@@ -541,7 +527,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> FilterBee<T> filter(int threads, int queueSize, Predicate<T> predicate)
     {
-        return new FilterBee<>(threads, this, queueSize, predicate);
+        return new FilterBee<>(this, threads, queueSize, predicate);
     }
 
     /**
@@ -586,7 +572,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     @SafeVarargs
     public final <T> FanOutBee<T> broadcast(int threads, int queueSize, Consumer<T>... targets)
     {
-        return new FanOutBee<>(threads, this, queueSize, targets);
+        return new FanOutBee<>(this, threads, queueSize, targets);
     }
 
     /**
@@ -667,20 +653,6 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Creates a new {@link BatchBee} with the specified thread count.
-     *
-     * @param <T>           the type of individual messages
-     * @param threads       the maximum number of concurrent worker threads
-     * @param maxSize       the batch size that triggers an immediate flush
-     * @param maxWaitMillis the maximum time between flushes, in milliseconds
-     * @return a new BatchBee attached to this Hive
-     */
-    public <T> BatchBee<T> batch(int threads, int maxSize, long maxWaitMillis)
-    {
-        return batch(threads, 0, maxSize, maxWaitMillis);
-    }
-
-    /**
      * Creates a new {@link BatchBee} with the specified thread count and
      * internal queue size.
      *
@@ -693,7 +665,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> BatchBee<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
-        return new BatchBee<>(threads, this, queueSize, maxSize, maxWaitMillis);
+        return new BatchBee<>(this, threads, queueSize, maxSize, maxWaitMillis);
     }
     
     /**
@@ -850,7 +822,17 @@ public class Hive extends Queen implements AutoCloseable, Executor
         if (stage instanceof Bee)
         {
             Bee<?> bee = (Bee<?>) stage;
-            bee.shutdown(onlyWhenEmpty);
+
+            if (onlyWhenEmpty)
+            {
+                bee.shutdown(true);
+                bee.awaitTermination(Integer.MAX_VALUE);
+            }
+            else
+            {
+                bee.shutdown(false);
+            }
+
             for (Consumer<?> target : bee.getLinkedTargets())
             {
                 shutdown(set, onlyWhenEmpty, target);
