@@ -10,6 +10,7 @@ import io.nut.base.util.concurrent.channel.CloseableChannel;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -52,6 +53,17 @@ public abstract class Bee<M> implements Consumer<M>
 
     /** Maximum number of concurrently running workers. */
     private final int threads;
+
+    /**
+     * Permits one worker per free concurrent slot. A worker acquires a permit
+     * (atomically, so no {@link #lock} is needed) before starting and holds it
+     * for its whole {@link #workerLoop()}, releasing it only once it has
+     * drained everything and is about to return. This provides a reliable
+     * bound on the number of concurrently running workers, unlike the previous
+     * {@code activeWorkers.get() < threads} check that could be bypassed while
+     * a worker was draining inline inside {@link #workerDone()}.
+     */
+    private final Semaphore workerSlots;
 
     // All lifecycle / scheduling decisions are made under this monitor.
     private final Object lock = new Object();
@@ -108,6 +120,7 @@ public abstract class Bee<M> implements Consumer<M>
         }
         this.hive = hive;
         this.threads = threads == 0 ? Queen.CORES : threads;
+        this.workerSlots = new Semaphore(this.threads);
         this.channel = queueSize > 0
                 ? Channel.closeableBuffered(queueSize)
                 : Channel.closeableUnlimited();
@@ -213,33 +226,50 @@ public abstract class Bee<M> implements Consumer<M>
                 throw new IllegalStateException("closed");
             }
 
-            Executor h = hive;
-            if (h == null)
+            if (hive == null)
             {
                 receive(message);
                 return;
             }
 
-            synchronized (lock)
+            // Enqueue without holding the lock: channel.put may block on a full
+            // bounded queue, and holding the lock here would deadlock with the
+            // workers that need the same lock to drain the queue.
+            pending.incrementAndGet();
+            boolean queued = false;
+            try
             {
-                boolean queued = false;
-                pending.incrementAndGet();
-                try
+                channel.put(message);
+                queued = true;
+            }
+            finally
+            {
+                if (!queued)
                 {
-                    channel.put(message);
-                    queued = true;
+                    pending.decrementAndGet();
                 }
-                finally
-                {
-                    if (!queued)
-                    {
-                        pending.decrementAndGet();
-                    }
-                }
+            }
 
-                if (queued && activeWorkers.get() < threads)
+            if (queued)
+            {
+                // The short critical section guarantees that a worker that is
+                // about to release its slot will not abandon a message we have
+                // just enqueued: the release and this tryAcquire both happen
+                // under the lock, so a slot freed here is always observed.
+                synchronized (lock)
                 {
-                    startWorker();
+                    if (workerSlots.tryAcquire())
+                    {
+                        try
+                        {
+                            startWorker();
+                        }
+                        catch (Exception ex)
+                        {
+                            workerSlots.release();
+                            throw ex;
+                        }
+                    }
                 }
             }
         }
@@ -254,9 +284,10 @@ public abstract class Bee<M> implements Consumer<M>
     // -------------------------------------------------------------------------
 
     /**
-     * Submits a worker to the Hive pool. Must be called while holding
-     * {@link #lock}; the worker is counted as active before the submission so
-     * that at most {@link #threads} workers run concurrently.
+     * Submits a worker to the Hive pool. Must be called only after a worker
+     * permit has been acquired from {@link #workerSlots}; the worker keeps the
+     * permit for its entire {@link #workerLoop()}. If the submission fails (or
+     * there is no Hive to submit to), the permit is returned.
      */
     private void startWorker()
     {
@@ -271,11 +302,13 @@ public abstract class Bee<M> implements Consumer<M>
             else
             {
                 activeWorkers.decrementAndGet();
+                workerSlots.release();
             }
         }
         catch (Exception ex)
         {
             activeWorkers.decrementAndGet();
+            workerSlots.release();
             throw ex;
         }
     }
@@ -283,6 +316,10 @@ public abstract class Bee<M> implements Consumer<M>
     /**
      * Drains every available message into {@link #receive(Object)}, returns to
      * the pool, and hands the scheduling decision back to {@link #workerDone()}.
+     * The worker permit acquired from {@link #workerSlots} is kept for the whole
+     * call and released by {@link #workerDone()} once the worker truly returns,
+     * so the configured {@code threads} limit is respected even while draining
+     * inline.
      */
     private void workerLoop()
     {
@@ -329,11 +366,12 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Runs when a worker returns: the last worker either terminates the Bee
-     * (when closed), closes it (when shutdown was requested once idle), or
-     * drains inline if more work arrived while no worker was left. Must be
-     * race-free: it runs under {@link #lock} and every producer uses the same
-     * lock to decide whether to start a worker.
+     * Runs when a worker returns: drains anything that arrived while it was
+     * processing, closes or terminates the Bee when required, and finally hands
+     * back its worker permit. Must be race-free: the permit is released under
+     * {@link #lock}, matching the {@code tryAcquire} in {@link #accept(Object)},
+     * so a worker that frees a slot is never missed by a producer that has just
+     * enqueued a message.
      */
     private void workerDone()
     {
@@ -343,28 +381,32 @@ public abstract class Bee<M> implements Consumer<M>
         {
             if (closed)
             {
-                if (activeWorkers.get() == 0)
+                while (pending.get() > 0)
                 {
                     drain();
-                    doTerminate();
                 }
+                doTerminate();
             }
             else
             {
-                while (pending.get() > 0 && activeWorkers.get() == 0)
+                // Drains every message that is pending, including any enqueued
+                // while this worker was already processing: the worker keeps its
+                // permit for the whole loop, so a second worker is not started
+                // for the same slot.
+                while (pending.get() > 0)
                 {
                     drain();
                 }
                 if (closed)
                 {
-                    drain();
                     doTerminate();
                 }
-                else if (shutdownWhenEmpty && isIdle())
+                else if (shutdownWhenEmpty)
                 {
                     closeNow();
                 }
             }
+            workerSlots.release();
             lock.notifyAll();
         }
     }
