@@ -7,6 +7,7 @@ package io.nut.base.util.concurrent.channel;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -114,15 +115,8 @@ public class CloseableBufferedChannelTest
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                result.set(channel.get());
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
@@ -142,16 +136,20 @@ public class CloseableBufferedChannelTest
         channel.put(1);
 
         CountDownLatch entered = new CountDownLatch(1);
+        AtomicBoolean putReturned = new AtomicBoolean(false);
+        AtomicReference<Throwable> putError = new AtomicReference<>();
+
         Thread producer = new Thread(() ->
         {
             try
             {
                 entered.countDown();
                 channel.put(2);
+                putReturned.set(true);
             }
-            catch (InterruptedException ex)
+            catch (Throwable t2)
             {
-                Thread.currentThread().interrupt();
+                putError.set(t2);
             }
         });
         producer.start();
@@ -161,8 +159,13 @@ public class CloseableBufferedChannelTest
         assertFalse(channel.close(100, TimeUnit.MILLISECONDS));
         assertTrue(channel.isClosed());
 
+        // The channel is now closed, so the resumed put (after the interrupt)
+        // cannot complete: it gives up with IllegalStateException.
         producer.interrupt();
         producer.join(5000);
+        assertFalse(putReturned.get());
+        assertTrue(putError.get() instanceof IllegalStateException);
+        assertTrue(channel.isInterrupted());
     }
 
     @Test

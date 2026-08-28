@@ -47,12 +47,8 @@ public class ChannelConflatedTest
 
             Thread consumer = new Thread(() ->
             {
-                try
-                {
-                    started.countDown();
-                    result.set(ch.get());
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                started.countDown();
+                result.set(ch.get());
             });
             consumer.start();
             assertTrue(started.await(5, TimeUnit.SECONDS));
@@ -230,12 +226,8 @@ public class ChannelConflatedTest
 
             Thread consumer = new Thread(() ->
             {
-                try
-                {
-                    started.countDown();
-                    result.set(ch.get());
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                started.countDown();
+                result.set(ch.get());
             });
             consumer.start();
             assertTrue(started.await(5, TimeUnit.SECONDS));
@@ -393,12 +385,8 @@ public class ChannelConflatedTest
 
             Thread consumer = new Thread(() ->
             {
-                try
-                {
-                    started.countDown();
-                    result.set(ch.get());
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                started.countDown();
+                result.set(ch.get());
             });
             consumer.start();
             assertTrue(started.await(5, TimeUnit.SECONDS));
@@ -419,12 +407,8 @@ public class ChannelConflatedTest
 
             Thread consumer = new Thread(() ->
             {
-                try
-                {
-                    started.countDown();
-                    result.set(ch.get(5, TimeUnit.SECONDS));
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                started.countDown();
+                result.set(ch.get(5, TimeUnit.SECONDS));
             });
             consumer.start();
             assertTrue(started.await(5, TimeUnit.SECONDS));

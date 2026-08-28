@@ -22,14 +22,7 @@ public class DuplexChannelTest
         // Test writing delegates to outChan
         Thread writer = new Thread(() -> 
         {
-            try
-            {
-                duplex.put("hello");
-            }
-            catch (InterruptedException e)
-            {
-                Thread.currentThread().interrupt();
-            }
+            duplex.put("hello");
         });
         writer.start();
 
@@ -40,14 +33,7 @@ public class DuplexChannelTest
         // Test reading delegates to inChan
         Thread reader = new Thread(() -> 
         {
-            try
-            {
-                inChan.put("world");
-            }
-            catch (InterruptedException e)
-            {
-                Thread.currentThread().interrupt();
-            }
+            inChan.put("world");
         });
         reader.start();
 

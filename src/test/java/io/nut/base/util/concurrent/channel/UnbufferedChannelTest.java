@@ -22,14 +22,7 @@ public class UnbufferedChannelTest
         UnbufferedChannel<String> channel = new UnbufferedChannel<>();
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                channel.put("a");
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            channel.put("a");
         });
         producer.start();
         assertEquals("a", channel.get());
@@ -44,16 +37,9 @@ public class UnbufferedChannelTest
         final int n = 1000;
         Thread producer = new Thread(() ->
         {
-            try
+            for (int i = 0; i < n; i++)
             {
-                for (int i = 0; i < n; i++)
-                {
-                    channel.put(i);
-                }
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
+                channel.put(i);
             }
         });
         producer.start();
@@ -75,16 +61,9 @@ public class UnbufferedChannelTest
 
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.put(1);
-                putReturned.set(true);
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            channel.put(1);
+            putReturned.set(true);
         });
         producer.start();
 
@@ -106,15 +85,8 @@ public class UnbufferedChannelTest
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                result.set(channel.get());
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
@@ -135,61 +107,62 @@ public class UnbufferedChannelTest
     }
 
     @Test
-    public void testPutInterrupted() throws Exception
+    public void testPutInterrupted_marksInterruptedAndResumes() throws Exception
     {
         UnbufferedChannel<Integer> channel = new UnbufferedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
-        AtomicBoolean interrupted = new AtomicBoolean(false);
+        AtomicBoolean putReturned = new AtomicBoolean(false);
 
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.put(1);
-            }
-            catch (InterruptedException ex)
-            {
-                interrupted.set(true);
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            channel.put(1);
+            putReturned.set(true);
         });
         producer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         producer.interrupt();
+        Thread.sleep(200);
+
+        // The channel recorded the interruption request, but the rendezvous
+        // put did NOT abort: it resumed and kept blocking until a get takes it.
+        assertTrue(channel.isInterrupted());
+        assertFalse(putReturned.get(), "put must resume and stay blocked after interrupt");
+
+        assertEquals(1, channel.get());
         producer.join(5000);
-        assertTrue(interrupted.get());
+        assertTrue(putReturned.get());
     }
 
     @Test
-    public void testGetInterrupted() throws Exception
+    public void testGetInterrupted_marksInterruptedAndResumes() throws Exception
     {
         UnbufferedChannel<Integer> channel = new UnbufferedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
-        AtomicBoolean interrupted = new AtomicBoolean(false);
+        AtomicReference<Object> result = new AtomicReference<>(MISSING);
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.get();
-            }
-            catch (InterruptedException ex)
-            {
-                interrupted.set(true);
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
+        Thread.sleep(200);
+
+        // The channel recorded the interruption request, but the rendezvous
+        // get did NOT abort: it resumed and kept blocking until a put arrives.
+        assertTrue(channel.isInterrupted());
+        assertSame(MISSING, result.get(), "get must resume and stay blocked after interrupt");
+
+        channel.put(42);
         consumer.join(5000);
-        assertTrue(interrupted.get());
+        assertEquals(42, result.get());
     }
 
     @Test

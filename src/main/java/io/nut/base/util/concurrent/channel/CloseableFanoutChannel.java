@@ -63,12 +63,10 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
      * After this channel has been closed, throws {@link IllegalStateException}.
      *
      * @param value the value to broadcast
-     * @throws InterruptedException if the current thread is interrupted
-     *         while writing to any target
      * @throws IllegalStateException if this fan-out has been closed
      */
     @Override
-    public void put(E value) throws InterruptedException
+    public void put(E value)
     {
         rwLock.readLock().lock();
         try
@@ -95,10 +93,9 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
      * @param unit    the time unit of the timeout
      * @return {@code true} if the value was written to all targets;
      *         {@code false} otherwise
-     * @throws InterruptedException if the current thread is interrupted
      */
     @Override
-    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    public boolean put(E value, long timeout, TimeUnit unit)
     {
         rwLock.readLock().lock();
         try

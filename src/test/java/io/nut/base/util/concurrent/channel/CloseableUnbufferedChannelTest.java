@@ -7,6 +7,7 @@ package io.nut.base.util.concurrent.channel;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -21,14 +22,7 @@ public class CloseableUnbufferedChannelTest
         CloseableUnbufferedChannel<String> channel = new CloseableUnbufferedChannel<>();
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                channel.put("a");
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            channel.put("a");
         });
         producer.start();
         assertEquals("a", channel.get());
@@ -43,16 +37,9 @@ public class CloseableUnbufferedChannelTest
         final int n = 1000;
         Thread producer = new Thread(() ->
         {
-            try
+            for (int i = 0; i < n; i++)
             {
-                for (int i = 0; i < n; i++)
-                {
-                    channel.put(i);
-                }
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
+                channel.put(i);
             }
         });
         producer.start();
@@ -111,14 +98,7 @@ public class CloseableUnbufferedChannelTest
         CloseableUnbufferedChannel<Integer> channel = new CloseableUnbufferedChannel<>();
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                channel.put(1);
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            channel.put(1);
         });
         producer.start();
         assertEquals(1, channel.get());
@@ -133,14 +113,7 @@ public class CloseableUnbufferedChannelTest
         CloseableUnbufferedChannel<Integer> channel = new CloseableUnbufferedChannel<>();
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                channel.put(1);
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            channel.put(1);
         });
         producer.start();
         assertEquals(1, channel.get());
@@ -157,15 +130,8 @@ public class CloseableUnbufferedChannelTest
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                result.set(channel.get());
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
@@ -183,6 +149,8 @@ public class CloseableUnbufferedChannelTest
     {
         CloseableUnbufferedChannel<Integer> channel = new CloseableUnbufferedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
+        AtomicBoolean putReturned = new AtomicBoolean(false);
+        AtomicReference<Throwable> putError = new AtomicReference<>();
 
         Thread producer = new Thread(() ->
         {
@@ -190,10 +158,11 @@ public class CloseableUnbufferedChannelTest
             {
                 entered.countDown();
                 channel.put(1);
+                putReturned.set(true);
             }
-            catch (InterruptedException ex)
+            catch (Throwable t2)
             {
-                Thread.currentThread().interrupt();
+                putError.set(t2);
             }
         });
         producer.start();
@@ -203,8 +172,13 @@ public class CloseableUnbufferedChannelTest
         assertFalse(channel.close(100, TimeUnit.MILLISECONDS));
         assertTrue(channel.isClosed());
 
+        // The channel is now closed, so the resumed put (after the interrupt)
+        // cannot complete: it gives up with IllegalStateException.
         producer.interrupt();
         producer.join(5000);
+        assertFalse(putReturned.get());
+        assertTrue(putError.get() instanceof IllegalStateException);
+        assertTrue(channel.isInterrupted());
     }
 
     @Test

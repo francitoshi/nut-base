@@ -41,6 +41,24 @@ public class FanoutChannel<E> implements ChannelWriter<E>
 {
     final CopyOnWriteArrayList<ChannelWriter<E>> targets = new CopyOnWriteArrayList<>();
 
+    private volatile boolean interrupted;
+
+    /**
+     * Returns whether an {@link InterruptedException} has ever been raised by
+     * a {@link #put} while broadcasting to one of the registered targets.
+     *
+     * @return {@code true} if at least one broadcast was interrupted
+     */
+    public boolean isInterrupted()
+    {
+        return interrupted;
+    }
+
+    final void markInterrupted()
+    {
+        interrupted = true;
+    }
+
     /**
      * Creates a fan-out channel with the given initial destinations.
      *
@@ -91,11 +109,9 @@ public class FanoutChannel<E> implements ChannelWriter<E>
      *
      * @param value the value to broadcast; may be {@code null} if the
      *              targets accept {@code null} elements
-     * @throws InterruptedException if the current thread is interrupted
-     *         while writing to any target
      */
     @Override
-    public void put(E value) throws InterruptedException
+    public void put(E value)
     {
         for (ChannelWriter<E> target : targets)
         {
@@ -113,10 +129,9 @@ public class FanoutChannel<E> implements ChannelWriter<E>
      * @param unit    the time unit of the timeout
      * @return {@code true} if the value was written to all targets;
      *         {@code false} otherwise
-     * @throws InterruptedException if the current thread is interrupted
      */
     @Override
-    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    public boolean put(E value, long timeout, TimeUnit unit)
     {
         for (ChannelWriter<E> target : targets)
         {

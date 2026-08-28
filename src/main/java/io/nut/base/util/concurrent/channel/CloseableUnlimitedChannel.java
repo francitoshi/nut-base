@@ -26,91 +26,169 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     private final Object closeLock = new Object();
 
     @Override
-    public void put(E value) throws InterruptedException
+    public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
 
-        if (closed)
-        {
-            throw new IllegalStateException("closed");
-        }
-
-        rwLock.readLock().lock();
-        try
+        boolean wasInterrupted = false;
+        while (true)
         {
             if (closed)
             {
+                if (wasInterrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
                 throw new IllegalStateException("closed");
             }
 
-            queue.put(value);
-        }
-        finally
-        {
-            rwLock.readLock().unlock();
+            rwLock.readLock().lock();
+            try
+            {
+                if (closed)
+                {
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    throw new IllegalStateException("closed");
+                }
+
+                try
+                {
+                    queue.put(value);
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return;
+                }
+                catch (InterruptedException ex)
+                {
+                    markInterrupted();
+                    wasInterrupted = true;
+                }
+            }
+            finally
+            {
+                rwLock.readLock().unlock();
+            }
         }
     }
 
     @Override
-    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
 
-        if (closed)
-        {
-            return false;
-        }
-
-        rwLock.readLock().lock();
-        try
+        boolean wasInterrupted = false;
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        while (true)
         {
             if (closed)
             {
+                if (wasInterrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
                 return false;
             }
 
-            if (timeout == 0)
+            rwLock.readLock().lock();
+            try
             {
-                return queue.offer(value);
-            }
+                if (closed)
+                {
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return false;
+                }
 
-            return queue.offer(value, timeout, unit);
-        }
-        finally
-        {
-            rwLock.readLock().unlock();
+                try
+                {
+                    boolean result;
+                    if (timeout == 0)
+                    {
+                        result = queue.offer(value);
+                    }
+                    else
+                    {
+                        result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                    }
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return result;
+                }
+                catch (InterruptedException ex)
+                {
+                    markInterrupted();
+                    wasInterrupted = true;
+                }
+            }
+            finally
+            {
+                rwLock.readLock().unlock();
+            }
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public E get() throws InterruptedException
+    public E get()
     {
-        if (closed)
-        {
-            return drainAfterClose();
-        }
-
-        gets.incrementAndGet();
-        try
+        boolean wasInterrupted = false;
+        while (true)
         {
             if (closed)
             {
+                if (wasInterrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
                 return drainAfterClose();
             }
 
-            Object item = queue.take();
-            return item == POISON ? null : (E) item;
-        }
-        finally
-        {
-            gets.decrementAndGet();
+            gets.incrementAndGet();
+            try
+            {
+                if (closed)
+                {
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return drainAfterClose();
+                }
+
+                try
+                {
+                    Object item = queue.take();
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return item == POISON ? null : (E) item;
+                }
+                catch (InterruptedException ex)
+                {
+                    markInterrupted();
+                    wasInterrupted = true;
+                }
+            }
+            finally
+            {
+                gets.decrementAndGet();
+            }
         }
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    public E get(long timeout, TimeUnit unit)
     {
         if (closed)
         {
@@ -119,32 +197,57 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
 
         if (timeout == 0)
         {
-            Object item = queue.poll();
-            if (item == null || item == POISON)
-            {
-                return null;
-            }
-            return (E) item;
+            return drainAfterClosePoll();
         }
 
-        gets.incrementAndGet();
-        try
+        boolean wasInterrupted = false;
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        while (true)
         {
             if (closed)
             {
+                if (wasInterrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
                 return drainAfterClosePoll();
             }
 
-            Object item = queue.poll(timeout, unit);
-            if (item == null || item == POISON)
+            gets.incrementAndGet();
+            try
             {
-                return null;
+                if (closed)
+                {
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return drainAfterClosePoll();
+                }
+
+                try
+                {
+                    Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    if (item == null || item == POISON)
+                    {
+                        return null;
+                    }
+                    return (E) item;
+                }
+                catch (InterruptedException ex)
+                {
+                    markInterrupted();
+                    wasInterrupted = true;
+                }
             }
-            return (E) item;
-        }
-        finally
-        {
-            gets.decrementAndGet();
+            finally
+            {
+                gets.decrementAndGet();
+            }
         }
     }
 

@@ -70,15 +70,8 @@ public class UnlimitedChannelTest
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                result.set(channel.get());
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
@@ -92,32 +85,32 @@ public class UnlimitedChannelTest
     }
 
     @Test
-    public void testGetInterruptedWhenEmpty() throws Exception
+    public void testGetInterruptedWhenEmpty_marksInterruptedAndResumes() throws Exception
     {
         UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
-        AtomicBoolean interrupted = new AtomicBoolean(false);
+        AtomicReference<Object> result = new AtomicReference<>(MISSING);
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.get();
-            }
-            catch (InterruptedException ex)
-            {
-                interrupted.set(true);
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
+        Thread.sleep(200);
+
+        // The channel recorded the interruption request, but the get did NOT
+        // abort: it resumed and kept blocking until a value is available.
+        assertTrue(channel.isInterrupted());
+        assertSame(MISSING, result.get(), "get must resume and stay blocked after interrupt");
+
+        channel.put(42);
         consumer.join(5000);
-        assertTrue(interrupted.get());
+        assertEquals(42, result.get());
     }
 
     @Test

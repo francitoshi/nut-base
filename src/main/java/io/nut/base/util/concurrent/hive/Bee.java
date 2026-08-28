@@ -341,27 +341,19 @@ public abstract class Bee<M> implements Consumer<M>
      */
     private void drain()
     {
-        try
+        M m;
+        while ((m = channel.get(0, TimeUnit.MILLISECONDS)) != null)
         {
-            M m;
-            while ((m = channel.get(0, TimeUnit.MILLISECONDS)) != null)
+            pending.decrementAndGet();
+            long seq = sequenceCounter.incrementAndGet();
+            try
             {
-                pending.decrementAndGet();
-                long seq = sequenceCounter.incrementAndGet();
-                try
-                {
-                    receive(m, seq);
-                }
-                catch (Exception ex)
-                {
-                    handleException(ex);
-                }
+                receive(m, seq);
             }
-        }
-        catch (InterruptedException ex)
-        {
-            Thread.currentThread().interrupt();
-            handleException(ex);
+            catch (Exception ex)
+            {
+                handleException(ex);
+            }
         }
     }
 

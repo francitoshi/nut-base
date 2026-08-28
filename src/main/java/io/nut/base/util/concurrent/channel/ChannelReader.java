@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 public interface ChannelReader<E>
 {
-    public E get() throws InterruptedException;
+    public E get();
 
-    public E get(long timeout, TimeUnit unit) throws InterruptedException;
+    public E get(long timeout, TimeUnit unit);
 }

@@ -58,16 +58,9 @@ class CloseableUnbufferedChannelCloseTest
         AtomicBoolean putReturned = new AtomicBoolean(false);
         Future<?> blockedPut = executor.submit(() ->
         {
-            try
-            {
-                putStarted.countDown();
-                channel.put("handshake"); // blocks until a get() takes it
-                putReturned.set(true);
-            }
-            catch (InterruptedException ignored)
-            {
-                Thread.currentThread().interrupt();
-            }
+            putStarted.countDown();
+            channel.put("handshake"); // blocks until a get() takes it
+            putReturned.set(true);
         });
 
         assertTrue(putStarted.await(2, TimeUnit.SECONDS), "put() thread did not start in time");

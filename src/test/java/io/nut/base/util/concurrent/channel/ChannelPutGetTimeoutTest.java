@@ -32,12 +32,8 @@ public class ChannelPutGetTimeoutTest
             CountDownLatch producerReady = new CountDownLatch(1);
             Thread producer = new Thread(() ->
             {
-                try
-                {
-                    producerReady.countDown();
-                    ch.put(42);
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                producerReady.countDown();
+                ch.put(42);
             });
             producer.start();
             assertTrue(producerReady.await(5, TimeUnit.SECONDS));
@@ -63,12 +59,8 @@ public class ChannelPutGetTimeoutTest
             CountDownLatch producerReady = new CountDownLatch(1);
             Thread producer = new Thread(() ->
             {
-                try
-                {
-                    producerReady.countDown();
-                    ch.put(7);
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                producerReady.countDown();
+                ch.put(7);
             });
             producer.start();
             assertTrue(producerReady.await(5, TimeUnit.SECONDS));
@@ -84,12 +76,8 @@ public class ChannelPutGetTimeoutTest
             CountDownLatch consumerReady = new CountDownLatch(1);
             Thread consumer = new Thread(() ->
             {
-                try
-                {
-                    consumerReady.countDown();
-                    ch.get();
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                consumerReady.countDown();
+                ch.get();
             });
             consumer.start();
             assertTrue(consumerReady.await(5, TimeUnit.SECONDS));
@@ -119,12 +107,8 @@ public class ChannelPutGetTimeoutTest
             CountDownLatch consumerReady = new CountDownLatch(1);
             Thread consumer = new Thread(() ->
             {
-                try
-                {
-                    consumerReady.countDown();
-                    ch.get();
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                consumerReady.countDown();
+                ch.get();
             });
             consumer.start();
             assertTrue(consumerReady.await(5, TimeUnit.SECONDS));
@@ -439,12 +423,8 @@ public class ChannelPutGetTimeoutTest
             CountDownLatch producerReady = new CountDownLatch(1);
             Thread producer = new Thread(() ->
             {
-                try
-                {
-                    producerReady.countDown();
-                    ch.put(42);
-                }
-                catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                producerReady.countDown();
+                ch.put(42);
             });
             producer.start();
             assertTrue(producerReady.await(5, TimeUnit.SECONDS));

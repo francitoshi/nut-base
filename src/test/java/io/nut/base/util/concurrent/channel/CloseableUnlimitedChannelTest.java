@@ -109,15 +109,8 @@ public class CloseableUnlimitedChannelTest
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                result.set(channel.get());
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
@@ -131,32 +124,33 @@ public class CloseableUnlimitedChannelTest
     }
 
     @Test
-    public void testGetInterruptedWhenEmpty() throws Exception
+    public void testGetInterruptedWhenEmpty_marksInterruptedAndResumes() throws Exception
     {
         CloseableUnlimitedChannel<Integer> channel = new CloseableUnlimitedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
-        AtomicBoolean interrupted = new AtomicBoolean(false);
+        AtomicReference<Object> result = new AtomicReference<>(MISSING);
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.get();
-            }
-            catch (InterruptedException ex)
-            {
-                interrupted.set(true);
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
+        Thread.sleep(200);
+
+        // The channel recorded the interruption request, but the get did NOT
+        // abort: it resumed and stayed blocked (channel not closed yet).
+        assertTrue(channel.isInterrupted());
+        assertSame(MISSING, result.get());
+
+        // Closing lets the resumed get finish draining and return null.
+        assertTrue(channel.close());
         consumer.join(5000);
-        assertTrue(interrupted.get());
+        assertNull(result.get());
     }
 
     @Test

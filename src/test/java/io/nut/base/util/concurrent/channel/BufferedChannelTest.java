@@ -62,16 +62,9 @@ public class BufferedChannelTest
         AtomicBoolean putReturned = new AtomicBoolean(false);
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.put(2);
-                putReturned.set(true);
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            channel.put(2);
+            putReturned.set(true);
         });
         producer.start();
 
@@ -94,15 +87,8 @@ public class BufferedChannelTest
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                result.set(channel.get());
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
@@ -116,62 +102,65 @@ public class BufferedChannelTest
     }
 
     @Test
-    public void testPutInterruptedWhenFull() throws Exception
+    public void testPutInterruptedWhenFull_marksInterruptedAndResumes() throws Exception
     {
         BufferedChannel<Integer> channel = new BufferedChannel<>(1);
         channel.put(1);
 
         CountDownLatch entered = new CountDownLatch(1);
-        AtomicBoolean interrupted = new AtomicBoolean(false);
+        AtomicBoolean putReturned = new AtomicBoolean(false);
         Thread producer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.put(2);
-            }
-            catch (InterruptedException ex)
-            {
-                interrupted.set(true);
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            channel.put(2);
+            putReturned.set(true);
         });
         producer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         producer.interrupt();
+        Thread.sleep(200);
+
+        // The channel recorded the interruption request, but the put did NOT
+        // abort: it resumed and kept blocking until there is room.
+        assertTrue(channel.isInterrupted());
+        assertFalse(putReturned.get(), "put must resume and stay blocked after interrupt");
+
+        // Freeing space lets the resumed put complete normally.
+        assertEquals(1, channel.get());
         producer.join(5000);
-        assertTrue(interrupted.get());
+        assertTrue(putReturned.get());
+        assertEquals(2, channel.get());
     }
 
     @Test
-    public void testGetInterruptedWhenEmpty() throws Exception
+    public void testGetInterruptedWhenEmpty_marksInterruptedAndResumes() throws Exception
     {
         BufferedChannel<Integer> channel = new BufferedChannel<>(4);
         CountDownLatch entered = new CountDownLatch(1);
-        AtomicBoolean interrupted = new AtomicBoolean(false);
+        AtomicReference<Object> result = new AtomicReference<>(MISSING);
 
         Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.get();
-            }
-            catch (InterruptedException ex)
-            {
-                interrupted.set(true);
-                Thread.currentThread().interrupt();
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
         consumer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
+        Thread.sleep(200);
+
+        // The channel recorded the interruption request, but the get did NOT
+        // abort: it resumed and kept blocking until a value is available.
+        assertTrue(channel.isInterrupted());
+        assertSame(MISSING, result.get(), "get must resume and stay blocked after interrupt");
+
+        channel.put(42);
         consumer.join(5000);
-        assertTrue(interrupted.get());
+        assertEquals(42, result.get());
     }
 
     @Test

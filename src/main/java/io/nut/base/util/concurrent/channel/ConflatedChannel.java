@@ -36,63 +36,120 @@ public final class ConflatedChannel<E> extends Channel<E>
     private boolean hasValue;
 
     @Override
-    public void put(E value) throws InterruptedException
+    public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        lock.lockInterruptibly();
-        try
+        boolean wasInterrupted = false;
+        while (true)
         {
-            this.value = value;
-            this.hasValue = true;
-            notEmpty.signal();
-        }
-        finally
-        {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
-    {
-        Objects.requireNonNull(value, "value must not be null");
-        lock.lockInterruptibly();
-        try
-        {
-            this.value = value;
-            this.hasValue = true;
-            notEmpty.signal();
-            return true;
-        }
-        finally
-        {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public E get() throws InterruptedException
-    {
-        lock.lockInterruptibly();
-        try
-        {
-            while (!hasValue)
+            try
             {
-                notEmpty.await();
+                lock.lockInterruptibly();
+                try
+                {
+                    this.value = value;
+                    this.hasValue = true;
+                    notEmpty.signal();
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return;
+                }
+                finally
+                {
+                    lock.unlock();
+                }
             }
-            E result = value;
-            value = null;
-            hasValue = false;
-            return result;
-        }
-        finally
-        {
-            lock.unlock();
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
         }
     }
 
     @Override
-    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    public boolean put(E value, long timeout, TimeUnit unit)
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        boolean wasInterrupted = false;
+        while (true)
+        {
+            try
+            {
+                lock.lockInterruptibly();
+                try
+                {
+                    this.value = value;
+                    this.hasValue = true;
+                    notEmpty.signal();
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return true;
+                }
+                finally
+                {
+                    lock.unlock();
+                }
+            }
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
+        }
+    }
+
+    @Override
+    public E get()
+    {
+        boolean wasInterrupted = false;
+        while (true)
+        {
+            try
+            {
+                lock.lockInterruptibly();
+                try
+                {
+                    while (!hasValue)
+                    {
+                        try
+                        {
+                            notEmpty.await();
+                        }
+                        catch (InterruptedException ex)
+                        {
+                            markInterrupted();
+                            wasInterrupted = true;
+                        }
+                    }
+                    E result = value;
+                    value = null;
+                    hasValue = false;
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return result;
+                }
+                finally
+                {
+                    lock.unlock();
+                }
+            }
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
+        }
+    }
+
+    @Override
+    public E get(long timeout, TimeUnit unit)
     {
         if (timeout == 0)
         {
@@ -114,27 +171,56 @@ public final class ConflatedChannel<E> extends Channel<E>
             }
         }
 
+        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
-        lock.lockInterruptibly();
-        try
+        while (true)
         {
-            while (!hasValue)
+            try
             {
-                long remaining = deadline - System.nanoTime();
-                if (remaining <= 0)
+                lock.lockInterruptibly();
+                try
                 {
-                    return null;
+                    while (!hasValue)
+                    {
+                        long remaining = deadline - System.nanoTime();
+                        if (remaining <= 0)
+                        {
+                            if (wasInterrupted)
+                            {
+                                Thread.currentThread().interrupt();
+                            }
+                            return null;
+                        }
+                        try
+                        {
+                            notEmpty.await(remaining, TimeUnit.NANOSECONDS);
+                        }
+                        catch (InterruptedException ex)
+                        {
+                            markInterrupted();
+                            wasInterrupted = true;
+                            continue;
+                        }
+                    }
+                    E result = value;
+                    value = null;
+                    hasValue = false;
+                    if (wasInterrupted)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                    return result;
                 }
-                notEmpty.await(remaining, TimeUnit.NANOSECONDS);
+                finally
+                {
+                    lock.unlock();
+                }
             }
-            E result = value;
-            value = null;
-            hasValue = false;
-            return result;
-        }
-        finally
-        {
-            lock.unlock();
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
         }
     }
 }

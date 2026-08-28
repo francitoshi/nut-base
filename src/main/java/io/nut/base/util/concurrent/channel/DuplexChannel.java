@@ -26,25 +26,25 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     }
 
     @Override
-    public void put(E value) throws InterruptedException
+    public void put(E value)
     {
         out.put(value);
     }
 
     @Override
-    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    public boolean put(E value, long timeout, TimeUnit unit)
     {
         return out.put(value, timeout, unit);
     }
 
     @Override
-    public E get() throws InterruptedException
+    public E get()
     {
         return in.get();
     }
 
     @Override
-    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    public E get(long timeout, TimeUnit unit)
     {
         return in.get(timeout, unit);
     }

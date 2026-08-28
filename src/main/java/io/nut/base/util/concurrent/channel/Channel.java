@@ -38,6 +38,24 @@ import io.nut.base.util.tuple.Tuple2;
  */
 public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
 {
+    private volatile boolean interrupted;
+
+    /**
+     * Returns whether an {@link InterruptedException} has ever been raised in
+     * this channel (by any {@link ChannelReader#get} or {@link ChannelWriter#put}).
+     * Once {@code true}, it stays {@code true} for the lifetime of the channel.
+     *
+     * @return {@code true} if at least one operation was interrupted
+     */
+    public boolean isInterrupted()
+    {
+        return interrupted;
+    }
+
+    final void markInterrupted()
+    {
+        interrupted = true;
+    }
 
     /**
      * Creates the appropriate channel according to the given capacity:

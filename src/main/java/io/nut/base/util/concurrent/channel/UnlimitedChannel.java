@@ -24,28 +24,98 @@ public final class UnlimitedChannel<E> extends Channel<E>
     private final LinkedBlockingQueue<E> queue = new LinkedBlockingQueue<>();
 
     @Override
-    public void put(E value) throws InterruptedException
+    public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        queue.put(value);
+        boolean wasInterrupted = false;
+        while (true)
+        {
+            try
+            {
+                queue.put(value);
+                break;
+            }
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
+        }
+        if (wasInterrupted)
+        {
+            Thread.currentThread().interrupt();
+        }
     }
 
     @Override
-    public boolean put(E value, long timeout, TimeUnit unit) throws InterruptedException
+    public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        return queue.offer(value, timeout, unit);
+        boolean wasInterrupted = false;
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        while (true)
+        {
+            try
+            {
+                boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                if (wasInterrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
+                return result;
+            }
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
+        }
     }
 
     @Override
-    public E get() throws InterruptedException
+    public E get()
     {
-        return queue.take();
+        boolean wasInterrupted = false;
+        while (true)
+        {
+            try
+            {
+                E result = queue.take();
+                if (wasInterrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
+                return result;
+            }
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
+        }
     }
 
     @Override
-    public E get(long timeout, TimeUnit unit) throws InterruptedException
+    public E get(long timeout, TimeUnit unit)
     {
-        return queue.poll(timeout, unit);
+        boolean wasInterrupted = false;
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        while (true)
+        {
+            try
+            {
+                E result = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                if (wasInterrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
+                return result;
+            }
+            catch (InterruptedException ex)
+            {
+                markInterrupted();
+                wasInterrupted = true;
+            }
+        }
     }
 }

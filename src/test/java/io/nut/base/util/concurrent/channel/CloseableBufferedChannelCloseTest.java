@@ -63,16 +63,9 @@ class CloseableBufferedChannelCloseTest
         AtomicBoolean putReturned = new AtomicBoolean(false);
         Future<?> blockedPut = executor.submit(() ->
         {
-            try
-            {
-                putStarted.countDown();
-                channel.put("second"); // blocks until "first" is taken
-                putReturned.set(true);
-            }
-            catch (InterruptedException ignored)
-            {
-                Thread.currentThread().interrupt();
-            }
+            putStarted.countDown();
+            channel.put("second"); // blocks until "first" is taken
+            putReturned.set(true);
         });
 
         // Make sure the blocking put() has actually entered the queue.put()
