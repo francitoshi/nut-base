@@ -23,6 +23,10 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     {
         this.in = Objects.requireNonNull(in, "in must not be null");
         this.out = Objects.requireNonNull(out, "out must not be null");
+        if(in==out)
+        {
+            throw new IllegalArgumentException("in and out must be different objects");
+        }
     }
 
     @Override

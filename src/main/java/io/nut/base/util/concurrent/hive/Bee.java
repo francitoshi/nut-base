@@ -121,9 +121,7 @@ public abstract class Bee<M> implements Consumer<M>
         this.hive = hive;
         this.threads = threads == 0 ? Queen.CORES : threads;
         this.workerSlots = new Semaphore(this.threads);
-        this.channel = queueSize > 0
-                ? Channel.closeableBuffered(queueSize)
-                : Channel.closeableUnlimited();
+        this.channel = queueSize > 0 ? Channel.closeableBuffered(queueSize) : Channel.closeableBuffered(Queen.CORES);
     }
 
     public Bee(Hive hive)
@@ -364,42 +362,70 @@ public abstract class Bee<M> implements Consumer<M>
      * {@link #lock}, matching the {@code tryAcquire} in {@link #accept(Object)},
      * so a worker that frees a slot is never missed by a producer that has just
      * enqueued a message.
+     * <p>
+     * The drain runs deliberately <em>outside</em> the lock: {@link #receive(Object)}
+     * may forward messages to other Bees and block on their full channels, and
+     * holding this Bee's lock across such a block would park every other worker
+     * and producer of this Bee on that lock, stalling the whole Hive once the
+     * pool is exhausted.
      */
     private void workerDone()
     {
         activeWorkers.decrementAndGet();
 
-        synchronized (lock)
+        while (true)
         {
-            if (closed)
+            // Drains every message that is pending while still holding this
+            // worker's permit, without the lock. A producer that enqueues while
+            // the drain is running cannot acquire the permit (see accept), so it
+            // does not start a worker; the loop below only exits once pending is
+            // zero under the lock, guaranteeing those messages are not abandoned.
+            while (pending.get() > 0)
             {
-                while (pending.get() > 0)
-                {
-                    drain();
-                }
-                doTerminate();
+                drain();
             }
-            else
+
+            boolean close = false;
+            synchronized (lock)
             {
-                // Drains every message that is pending, including any enqueued
-                // while this worker was already processing: the worker keeps its
-                // permit for the whole loop, so a second worker is not started
-                // for the same slot.
-                while (pending.get() > 0)
+                if (pending.get() > 0)
                 {
-                    drain();
+                    // A message arrived between the drain and the lock: keep the
+                    // permit and drain again.
+                    continue;
                 }
                 if (closed)
                 {
                     doTerminate();
+                    workerSlots.release();
+                    lock.notifyAll();
+                    return;
                 }
-                else if (shutdownWhenEmpty)
+                if (shutdownWhenEmpty)
                 {
-                    closeNow();
+                    close = true;
+                }
+                else
+                {
+                    workerSlots.release();
+                    lock.notifyAll();
+                    return;
                 }
             }
-            workerSlots.release();
-            lock.notifyAll();
+
+            // Closes on behalf of an empty-when-shutdown request. Runs outside
+            // the lock because closeNow may drain, and drain's receive may block
+            // forwarding to a full downstream Bee.
+            if (close)
+            {
+                closeNow();
+                synchronized (lock)
+                {
+                    workerSlots.release();
+                    lock.notifyAll();
+                    return;
+                }
+            }
         }
     }
 
@@ -416,20 +442,25 @@ public abstract class Bee<M> implements Consumer<M>
 
     private void doTerminate()
     {
-        if (terminated)
+        // Now reachable without holding the lock (workerDone closes outside
+        // the lock), so the once-only guarantee is enforced here.
+        synchronized (lock)
         {
-            return;
+            if (terminated)
+            {
+                return;
+            }
+            terminated = true;
+            try
+            {
+                terminate();
+            }
+            catch (Exception ex)
+            {
+                handleException(ex);
+            }
+            lock.notifyAll();
         }
-        terminated = true;
-        try
-        {
-            terminate();
-        }
-        catch (Exception ex)
-        {
-            handleException(ex);
-        }
-        lock.notifyAll();
     }
 
     private void handleException(Exception ex)

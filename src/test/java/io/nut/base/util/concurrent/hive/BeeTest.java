@@ -10,6 +10,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,6 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit tests for {@link Bee}: direct (hive-less) message delivery,
@@ -215,5 +220,92 @@ class BeeTest
         assertTrue(bee.received.contains("first"));
         assertTrue(bee.received.contains("fail"));
         assertTrue(bee.received.contains("last"));
+    }
+
+    @Test
+    @Timeout(240)
+//    @Disabled
+    void simpleCascadeBees() throws InterruptedException
+    {
+        System.out.println("beesCascadeForwarding(20,1,1)");
+        beesCascadeForwarding(20,20,20);
+        System.out.println("-----------------");
+    }
+    
+    
+    @Test
+    @Timeout(240)
+    @Disabled
+    void twentyBeesCascadeForwardingCountsProcessedAndElapsed() throws InterruptedException
+    {
+        System.out.println("beesCascadeForwarding(20,1,1)");
+        beesCascadeForwarding(20,1,1);
+        System.out.println("-----------------");
+                
+        int bees = 20;
+        
+        for(int msgCount=1;msgCount<Character.MAX_VALUE;msgCount = msgCount<<8+255)
+        {
+            for(int queueSize=1;queueSize<Byte.MAX_VALUE;queueSize*=4)
+            {
+                long t0 = System.nanoTime();
+                long count = beesCascadeForwarding(bees, queueSize, msgCount);
+                long t1 = System.nanoTime();
+                long ms = TimeUnit.NANOSECONDS.toMillis(t1-t0);
+                System.out.printf("%d ms %d msg\n", ms, count);
+            }
+        }
+        
+    }
+    static long beesCascadeForwarding(int beesCount, int queueSize, long maxSends) throws InterruptedException
+    {
+        System.out.println("beesCascadeForwarding("+beesCount+","+queueSize+","+maxSends+")");
+
+        AtomicLong processed = new AtomicLong();
+        Hive bigHive = Hive.hive(100);
+        try
+        {
+            Bee<Long>[] bees = new Bee[beesCount];
+            for (int i = 0; i < beesCount; i++)
+            {
+                final int index = i;
+                bees[index] = new Bee<Long>(bigHive, index + 1, queueSize)
+                {
+                    @Override
+                    protected void receive(Long m)
+                    {
+                        processed.incrementAndGet();
+                        // every bee forwards the message to the next two, except the last ones
+                        if (index + 1 < bees.length)
+                        {
+                            bees[index + 1].accept(m);
+                        }
+                        if (index + 2 < bees.length)
+                        {
+                            bees[index + 2].accept(m);
+                        }
+                    }
+                }.dryLogger();
+            }
+
+            long start = System.nanoTime();
+            long sent = 0;
+            while (sent < maxSends)
+            {
+                bees[0].accept(sent++);
+            }
+
+            Consumer<?>[] stages = bees;
+            Hive.shutdownAndAwaitTermination(true, stages);
+
+            long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+            assertTrue(processed.get() > 0);
+        }
+        finally
+        {
+            bigHive.shutdown();
+            bigHive.awaitTermination(2000);
+        }
+        return processed.get();
     }
 }
