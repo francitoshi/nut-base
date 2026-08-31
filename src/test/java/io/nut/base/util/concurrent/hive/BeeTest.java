@@ -244,7 +244,12 @@ class BeeTest
                 
         int bees = 20;
         
-        for(int msgCount=1;msgCount<Character.MAX_VALUE;msgCount = msgCount<<8+255)
+        // Sweep message counts (powers of two) and queue sizes, verifying the
+        // exact fan-out total on every iteration. Note the shift must not be
+        // wedged into the expression (1 << (8+255) wraps to a 7-bit shift and
+        // yields an unreachable ~290M-receive workload): the sweep is bounded
+        // by Character.MAX_VALUE as written.
+        for(int msgCount=1;msgCount<Character.MAX_VALUE;msgCount <<= 8)
         {
             for(int queueSize=1;queueSize<Byte.MAX_VALUE;queueSize*=4)
             {
@@ -262,7 +267,13 @@ class BeeTest
         System.out.println("beesCascadeForwarding("+beesCount+","+queueSize+","+maxSends+")");
 
         AtomicLong processed = new AtomicLong();
-        Hive bigHive = Hive.hive(100);
+        // A zero-capacity task queue: a LinkedBlockingQueue would let worker tasks
+        // park behind forwarders that are blocked on a full downstream channel,
+        // and a parked worker cannot drain that channel, deadlocking the cascade
+        // once every pool thread is held by a blocked forwarder. This is the same
+        // configuration the Queen's default constructor uses to avoid that
+        // deadlock (see Queen#Queen(int)).
+        Hive bigHive = Hive.hive(100, 100, 0, 10000, false);
         try
         {
             Bee<Long>[] bees = new Bee[beesCount];
@@ -293,13 +304,26 @@ class BeeTest
             while (sent < maxSends)
             {
                 bees[0].accept(sent++);
+                if(sent%10==0)
+                {
+                    System.out.println("sent="+sent+" processed="+processed.get());
+                }
             }
 
             Consumer<?>[] stages = bees;
             Hive.shutdownAndAwaitTermination(true, stages);
 
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
-            assertTrue(processed.get() > 0);
+            // Every bee forwards each received message to the next two bees, so a
+            // single root message reaches fanOut(beesCount) receivers. The count
+            // must be exact: any message dropped by a shutdown racing an in-flight
+            // forward would fall short of this total.
+            long expected = fanOut(beesCount) * maxSends;
+            if (processed.get() != expected)
+            {
+                System.out.println("MISMATCH processed=" + processed.get() + " expected=" + expected);
+            }
+            assertEquals(expected, processed.get());
         }
         finally
         {
@@ -307,5 +331,23 @@ class BeeTest
             bigHive.awaitTermination(2000);
         }
         return processed.get();
+    }
+
+    /**
+     * Number of {@code receive()} invocations a single forwarded message
+     * reaches in a chain of {@code n} bees where every bee forwards to the
+     * next two (the last two bees only count their own receive). Computed
+     * with {@code t[n-1]=1, t[n-2]=2, t[i]=1+t[i+1]+t[i+2]}.
+     */
+    static long fanOut(int n)
+    {
+        long[] total = new long[n + 2];
+        total[n - 1] = 1;
+        total[n - 2] = 2;
+        for (int i = n - 3; i >= 0; i--)
+        {
+            total[i] = 1 + total[i + 1] + total[i + 2];
+        }
+        return total[0];
     }
 }

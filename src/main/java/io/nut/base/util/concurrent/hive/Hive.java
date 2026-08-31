@@ -128,7 +128,9 @@ public class Hive extends Queen implements AutoCloseable, Executor
 
     /**
      * Constructs a Hive with a symmetric pool of {@code corePoolSize} threads,
-     * a bounded queue of the same size, and the default keep-alive time.
+     * a zero-capacity task queue (so saturated tasks run in the caller under
+     * the {@link ThreadPoolExecutor.CallerRunsPolicy CallerRunsPolicy} instead
+     * of waiting in the queue), and the default keep-alive time.
      *
      * @param corePoolSize the number of threads and queue slots
      */

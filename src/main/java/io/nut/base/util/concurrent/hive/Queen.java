@@ -17,6 +17,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -157,7 +158,13 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen(int corePoolSize)
     {
-        this(corePoolSize, corePoolSize, corePoolSize, KEEP_ALIVE_MILLIS, false);
+        // A zero-capacity task queue (SynchronousQueue) combined with the
+        // CallerRunsPolicy keeps the pool from ever parking work behind a
+        // saturated pool: submitted tasks run in the calling thread instead of
+        // waiting in the queue for a thread that may never be freed. This is
+        // what keeps Bee pipelines alive when forwarding stages saturate the
+        // pool with blocking channel puts.
+        this(corePoolSize, corePoolSize, 0, KEEP_ALIVE_MILLIS, false);
     }
 
     /**
@@ -165,7 +172,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen()
     {
-        this(CORES, CORES, CORES, KEEP_ALIVE_MILLIS, false);
+        this(CORES, CORES, 0, KEEP_ALIVE_MILLIS, false);
     }
 
     // -------------------------------------------------------------------------
@@ -219,9 +226,12 @@ public class Queen implements AutoCloseable, Executor
     // -------------------------------------------------------------------------
 
     /**
-     * Wraps {@code task} with active-count tracking if tracking is enabled,
-     * or returns it unchanged if tracking is disabled. Also registers the
-     * task lifecycle within the execution phaser.
+     * Wraps {@code task} with the execution phaser, registering a party when
+     * the task starts running and arriving/deregistering on completion. Used
+     * by {@link #spawn(Runnable)}, which already blocks until the task is
+     * running. All other execution paths pre-register in the submitting thread
+     * and use {@link #tracked(Runnable)} instead, so that queued tasks are
+     * visible to {@link #waitForIdle()} too.
      *
      * @param task the original task; must not be {@code null}
      * @return the task, wrapped or not
@@ -235,7 +245,9 @@ public class Queen implements AutoCloseable, Executor
         
         return () ->
         {
-            // We register the arrival of a new task in the Phaser immediately
+            // Registers the task in the Phaser when it starts running, leaving
+            // it to the callers that pre-register on submission to manage the
+            // matching deregistration.
             phaser.register();
             try
             {
@@ -243,7 +255,36 @@ public class Queen implements AutoCloseable, Executor
             }
             finally
             {
-                // Upon completion, the task arrives and is unloaded from the Phaser
+                phaser.arriveAndDeregister();
+            }
+        };
+    }
+    
+    /**
+     * Wraps {@code task} so that exactly one {@code arriveAndDeregister} is
+     * issued on the execution phaser when the task completes, without
+     * registering anything. The matching {@code register()} is performed by
+     * the submitter <em>before</em> handing the task to the pool, so that
+     * queued-but-not-yet-started tasks are still visible to
+     * {@link #waitForIdle()}.
+     *
+     * @param task the already-registered task; must not be {@code null}
+     * @return the wrapped task, or {@code task} unchanged if tracking is disabled
+     */
+    private Runnable tracked(Runnable task)
+    {
+        if(phaser==null)
+        {
+            return task;
+        }
+        return () ->
+        {
+            try
+            {
+                task.run();
+            }
+            finally
+            {
                 phaser.arriveAndDeregister();
             }
         };
@@ -318,7 +359,27 @@ public class Queen implements AutoCloseable, Executor
     public void execute(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
-        this.threadPoolExecutor.execute(wrap(task));
+        if(phaser==null)
+        {
+            this.threadPoolExecutor.execute(task);
+            return;
+        }
+        // Register before handing the task to the pool: a task that is merely
+        // queued (waiting for a free pool thread) is already "active" from the
+        // point of view of waitForIdle()/isIdle(). Registering inside the task
+        // (as this class once did) let waitForIdle() return while worker tasks
+        // sat in the pool queue, so a subsequent shutdown raced in-flight
+        // forwards and silently dropped messages.
+        phaser.register();
+        try
+        {
+            this.threadPoolExecutor.execute(tracked(task));
+        }
+        catch (RuntimeException ex)
+        {
+            phaser.arriveAndDeregister();
+            throw ex;
+        }
     }
 
     /**
@@ -331,7 +392,35 @@ public class Queen implements AutoCloseable, Executor
     public Future<Void> submit(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
-        return CompletableFuture.runAsync(wrap(task), this.threadPoolExecutor);
+        if(phaser==null)
+        {
+            return CompletableFuture.runAsync(task, this.threadPoolExecutor);
+        }
+        // Pre-register like execute(Runnable) so queued tasks are visible to
+        // waitForIdle(). If the pool never runs the task (rejection), the
+        // whenComplete callback deregisters the pre-registered party exactly
+        // once; otherwise the task's own finally does.
+        phaser.register();
+        AtomicBoolean arrived = new AtomicBoolean();
+        Runnable registeredTask = () ->
+        {
+            try
+            {
+                task.run();
+            }
+            finally
+            {
+                arrived.set(true);
+                phaser.arriveAndDeregister();
+            }
+        };
+        return CompletableFuture.runAsync(registeredTask, this.threadPoolExecutor).whenComplete((v, ex) ->
+        {
+            if (arrived.compareAndSet(false, true))
+            {
+                phaser.arriveAndDeregister();
+            }
+        });
     }
 
     /**
@@ -345,23 +434,33 @@ public class Queen implements AutoCloseable, Executor
     public <U> Future<U> submit(Supplier<U> supplier)
     {
         Objects.requireNonNull(supplier, "supplier must not be null");
-        // wrap via Runnable adapter so tracking applies uniformly
         if (phaser == null)
         {
             return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
         }
-        return CompletableFuture.supplyAsync(() ->
+        // Pre-register on submission; see submit(Runnable) for the
+        // deregistration guarantee.
+        phaser.register();
+        AtomicBoolean arrived = new AtomicBoolean();
+        Supplier<U> registeredSupplier = () ->
         {
-            phaser.register();
             try
             {
                 return supplier.get();
             }
             finally
             {
+                arrived.set(true);
                 phaser.arriveAndDeregister();
             }
-        }, this.threadPoolExecutor);
+        };
+        return CompletableFuture.supplyAsync(registeredSupplier, this.threadPoolExecutor).whenComplete((v, ex) ->
+        {
+            if (arrived.compareAndSet(false, true))
+            {
+                phaser.arriveAndDeregister();
+            }
+        });
     }
 
     /**

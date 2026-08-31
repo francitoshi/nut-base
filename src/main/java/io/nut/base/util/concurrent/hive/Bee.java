@@ -371,8 +371,6 @@ public abstract class Bee<M> implements Consumer<M>
      */
     private void workerDone()
     {
-        activeWorkers.decrementAndGet();
-
         while (true)
         {
             // Drains every message that is pending while still holding this
@@ -394,9 +392,20 @@ public abstract class Bee<M> implements Consumer<M>
                     // permit and drain again.
                     continue;
                 }
+                // Count the worker out only now, when it truly stops running. A
+                // worker that is still looping (draining, forwarding to other
+                // bees) must keep isIdle() from reporting this bee idle:
+                // otherwise shutdown(true) could close the bee and terminate it
+                // while a worker was still delivering downstream, silently
+                // dropping those messages. Terminating also races in-flight
+                // forwards being cut off at the next stage.
+                boolean last = activeWorkers.decrementAndGet() == 0;
                 if (closed)
                 {
-                    doTerminate();
+                    if (last)
+                    {
+                        doTerminate();
+                    }
                     workerSlots.release();
                     lock.notifyAll();
                     return;
