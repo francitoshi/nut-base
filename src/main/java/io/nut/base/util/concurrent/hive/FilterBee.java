@@ -95,7 +95,7 @@ public class FilterBee<T> extends Bee<T>
      */
     public FilterBee(Predicate<T> predicate)
     {
-        this(null, 0, 0, predicate);
+        this(null, 1, 0, predicate);
     }
 
     /**

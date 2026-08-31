@@ -238,7 +238,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T,R> PipeBee<T,R> pipe(Function<T,R> function)
     {
-        return pipe(0, 0, function);
+        return pipe(1, 0, function);
     }
 
     /**
@@ -284,7 +284,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> Bee<T> bee(Consumer<T> consumer)
     {
-        return bee(0, 0, consumer);
+        return bee(1, 0, consumer);
     }
 
     /**
@@ -335,7 +335,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <E> Bee<E> queue(BlockingQueue<E> queue)
     {
-        return queue(0, 0, queue);
+        return queue(1, 0, queue);
     }
 
     /**
@@ -393,7 +393,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <E> Bee<E> list(List<E> list)
     {
-        return list(0, 0, list);
+        return list(1, 0, list);
     }
 
     /**
@@ -448,7 +448,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> Bee<T> set(Set<T> set)
     {
-        return set(0, 0, set);
+        return set(1, 0, set);
     }
 
     /**
@@ -501,7 +501,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> FilterBee<T> filter(Predicate<T> predicate)
     {
-        return filter(0, 0, predicate);
+        return filter(1, 0, predicate);
     }
 
     /**
@@ -544,7 +544,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
     @SafeVarargs
     public final <T> FanOutBee<T> broadcast(Consumer<T>... targets)
     {
-        return broadcast(0, 0, targets);
+        return broadcast(1, 0, targets);
     }
 
     /**
@@ -596,7 +596,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T,R> HivePipeline<T,R> pipeline(Function<T,R> first)
     {
-        return pipeline(0, 0, first);
+        return pipeline(1, 0, first);
     }
 
     /**
@@ -651,7 +651,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public <T> BatchBee<T> batch(int maxSize, long maxWaitMillis)
     {
-        return batch(0, 0, maxSize, maxWaitMillis);
+        return batch(1, 0, maxSize, maxWaitMillis);
     }
 
     /**

@@ -163,22 +163,25 @@ class FanOutBeeTest
     @Test
     void hiveBackedBroadcastDeliversConcurrently() throws InterruptedException
     {
-        List<Integer> a = new CopyOnWriteArrayList<>();
-        List<Integer> b = new CopyOnWriteArrayList<>();
-        List<Integer> c = new CopyOnWriteArrayList<>();
-
-        FanOutBee<Integer> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add), hive.bee(c::add));
-
-        for (int i = 0; i < 10; i++)
+        for(int th=0;th<2;th++)
         {
-            bc.accept(i);
-        }
-        
-        bc.waitForIdle().shutdown(true).awaitTermination(100);
+            List<Integer> a = new CopyOnWriteArrayList<>();
+            List<Integer> b = new CopyOnWriteArrayList<>();
+            List<Integer> c = new CopyOnWriteArrayList<>();
 
-        assertEquals(10, a.size());
-        assertEquals(10, b.size());
-        assertEquals(10, c.size());
+            FanOutBee<Integer> bc = hive.broadcast(th, hive.bee(th, a::add), hive.bee(th, b::add), hive.bee(th, c::add));
+
+            for (int i = 0; i < 10; i++)
+            {
+                bc.accept(i);
+            }
+
+            bc.waitForIdle().shutdown(true).awaitTermination(100);
+
+            assertEquals(10, a.size());
+            assertEquals(10, b.size());
+            assertEquals(10, c.size());
+        }
     }
 
     @Test

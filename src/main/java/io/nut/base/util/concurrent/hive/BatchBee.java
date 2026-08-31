@@ -159,7 +159,7 @@ public class BatchBee<T> extends Bee<T>
      */
     public BatchBee(int maxSize, long maxWaitMillis)
     {
-        this(null, 0, 0, maxSize, maxWaitMillis);
+        this(null, 1, 0, maxSize, maxWaitMillis);
     }
 
     /**

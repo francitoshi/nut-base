@@ -102,7 +102,7 @@ public class PipeBee<T,R> extends Bee<T>
      */
     public PipeBee(Function<T,R> function)
     {
-        this(null, 0, 0, function);
+        this(null, 1, 0, function);
     }
 
     /**

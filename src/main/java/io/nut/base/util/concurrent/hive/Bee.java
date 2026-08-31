@@ -26,14 +26,16 @@ import java.util.logging.Logger;
  * {@link #receive(Object)} on a worker thread supplied by an attached
  * {@link Hive}.
  * <p>
- * When no {@link Hive} is attached, {@link #accept(Object)} executes
+ * When no {@link Hive} is attached, or when constructed with
+ * {@code threads == 0}, {@link #accept(Object)} executes
  * {@link #receive(Object)} synchronously in the calling thread.
  * <p>
- * <strong>Worker model</strong>: when a Hive is attached, up to {@code threads}
- * workers may run concurrently so that the Bee can process messages in
- * parallel: every accepted message can start one worker, up to the configured
- * maximum. Each worker drains every buffered message and then returns to the
- * pool, so the Hive's threads are never held while the Bee is idle.
+ * <strong>Worker model</strong>: when a Hive is attached and {@code threads > 0},
+ * up to {@code threads} workers may run concurrently so that the Bee can
+ * process messages in parallel: every accepted message can start one worker, up
+ * to the configured maximum. Each worker drains every buffered message and then
+ * returns to the pool, so the Hive's threads are never held while the Bee is
+ * idle.
  * <p>
  * <strong>Lifecycle</strong>: a Bee starts active. {@link #shutdown()} (or
  * {@link #shutdown(boolean)}) closes the internal channel; messages buffered
@@ -53,6 +55,13 @@ public abstract class Bee<M> implements Consumer<M>
 
     /** Maximum number of concurrently running workers. */
     private final int threads;
+
+    /**
+     * When {@code true}, {@link #accept(Object)} invokes {@link #receive(Object)}
+     * directly in the calling thread, bypassing the internal channel and worker
+     * pool entirely. Set when the constructor receives {@code threads == 0}.
+     */
+    private final boolean synchronous;
 
     /**
      * Permits one worker per free concurrent slot. A worker acquires a permit
@@ -102,10 +111,11 @@ public abstract class Bee<M> implements Consumer<M>
 
     /**
      * @param threads   the maximum number of concurrent worker threads;
-     *                  {@code 0} uses the number of available CPU cores
+     *                  {@code 0} enables synchronous mode (no channel, no
+     *                  workers; {@link #accept} calls {@link #receive} directly)
      * @param hive      the Hive thread pool, or {@code null} for synchronous mode
      * @param queueSize buffer capacity of the internal channel; {@code <= 0}
-     *                  means unbounded
+     *                  means unbounded; ignored when {@code threads == 0}
      * @throws IllegalArgumentException if {@code threads < 0} or {@code queueSize < 0}
      */
     public Bee(Hive hive, int threads, int queueSize)
@@ -119,14 +129,24 @@ public abstract class Bee<M> implements Consumer<M>
             throw new IllegalArgumentException("queueSize < 0");
         }
         this.hive = hive;
-        this.threads = threads == 0 ? Queen.CORES : threads;
-        this.workerSlots = new Semaphore(this.threads);
-        this.channel = queueSize > 0 ? Channel.closeableBuffered(queueSize) : Channel.closeableBuffered(Queen.CORES);
+        this.synchronous = threads == 0;
+        if (this.synchronous)
+        {
+            this.threads = 0;
+            this.workerSlots = null;
+            this.channel = null;
+        }
+        else
+        {
+            this.threads = threads;
+            this.workerSlots = new Semaphore(this.threads);
+            this.channel = queueSize > 0 ? Channel.closeableBuffered(queueSize) : Channel.closeableBuffered(Queen.CORES);
+        }
     }
 
     public Bee(Hive hive)
     {
-        this(hive, 0, DEFAULT_QUEUE_SIZE);
+        this(hive, 1, DEFAULT_QUEUE_SIZE);
     }
 
     public Bee(int threads, int queueSize)
@@ -136,7 +156,7 @@ public abstract class Bee<M> implements Consumer<M>
 
     public Bee()
     {
-        this(null, 0, DEFAULT_QUEUE_SIZE);
+        this(null, 1, DEFAULT_QUEUE_SIZE);
     }
 
     // -------------------------------------------------------------------------
@@ -224,7 +244,7 @@ public abstract class Bee<M> implements Consumer<M>
                 throw new IllegalStateException("closed");
             }
 
-            if (hive == null)
+            if (hive == null || synchronous)
             {
                 receive(message);
                 return;
@@ -441,6 +461,11 @@ public abstract class Bee<M> implements Consumer<M>
     private void closeNow()
     {
         closed = true;
+        if (synchronous)
+        {
+            doTerminate();
+            return;
+        }
         channel.close();
         if (activeWorkers.get() == 0)
         {

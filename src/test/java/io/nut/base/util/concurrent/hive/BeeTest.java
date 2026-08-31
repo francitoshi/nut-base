@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
@@ -166,6 +167,20 @@ class BeeTest
         assertEquals(2, bee.received.size());
         assertTrue(bee.received.contains("direct"));
         assertTrue(bee.received.contains("via-hive"));
+    }
+
+    @Test
+    void zeroThreadsWithHiveProcessesSynchronously()
+    {
+        RecordingBee<String> bee = new RecordingBee<>(hive, 0, 0);
+
+        bee.accept("hello");
+        bee.accept("world");
+
+        // Zero threads means synchronous mode: messages are received immediately
+        // in the calling thread, even though a Hive is attached.
+        assertEquals(Arrays.asList("hello", "world"), bee.received);
+        assertEquals(0, bee.getPendingCount());
     }
 
     @Test
