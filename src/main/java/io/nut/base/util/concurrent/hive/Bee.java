@@ -179,6 +179,23 @@ public abstract class Bee<M> implements Consumer<M>
         this.hive = hive;
     }
 
+    /**
+     * Returns whether this Bee runs synchronously: either it was constructed
+     * with {@code threads == 0}, no Hive is attached, or the attached Hive is
+     * itself synchronous (constructed with
+     * {@code corePoolSize == 0 && rushPoolSize == 0}).
+     *
+     * @return {@code true} if {@link #accept} runs {@link #receive} directly
+     */
+    private boolean isSynchronous()
+    {
+        if (synchronous || hive == null)
+        {
+            return true;
+        }
+        return hive instanceof Queen && ((Queen) hive).isSynchronous();
+    }
+
     // -------------------------------------------------------------------------
     // Message API
     // -------------------------------------------------------------------------
@@ -244,7 +261,7 @@ public abstract class Bee<M> implements Consumer<M>
                 throw new IllegalStateException("closed");
             }
 
-            if (hive == null || synchronous)
+            if (isSynchronous())
             {
                 receive(message);
                 return;

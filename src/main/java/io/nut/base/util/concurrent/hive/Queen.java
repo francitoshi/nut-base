@@ -78,6 +78,19 @@ public class Queen implements AutoCloseable, Executor
     private final ThreadPoolExecutor threadPoolExecutor;
 
     private final Phaser phaser;
+
+    /**
+     * When {@code true}, all {@code execute}/{@code submit}/{@code spawn}/
+     * {@code forEach} invocations run the task synchronously in the calling
+     * thread, and there is no backing thread pool. Enabled when the pool is
+     * constructed with {@code corePoolSize == 0 && rushPoolSize == 0}.
+     */
+    private final boolean synchronous;
+
+    /**
+     * Tracks the shutdown state in synchronous mode (there is no backing pool).
+     */
+    private volatile boolean shutdown;
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
@@ -92,6 +105,7 @@ public class Queen implements AutoCloseable, Executor
     protected Queen(ThreadPoolExecutor threadPoolExecutor)
     {
         this.threadPoolExecutor = threadPoolExecutor;
+        this.synchronous = false;
         this.phaser = new Phaser(1);
     }
 
@@ -110,6 +124,13 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
+        this.synchronous = corePoolSize == 0 && rushPoolSize == 0;
+        if (this.synchronous)
+        {
+            this.threadPoolExecutor = null;
+            this.phaser = null;
+            return;
+        }
         BlockingQueue<Runnable> queue = queueCapacity == 0
                 ? new SynchronousQueue<>()
                 : new LinkedBlockingQueue<>(queueCapacity);
@@ -222,6 +243,23 @@ public class Queen implements AutoCloseable, Executor
     }
 
     // -------------------------------------------------------------------------
+    // Configuration
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns {@code true} if this Queen was constructed with
+     * {@code corePoolSize == 0 && rushPoolSize == 0}, in which case every
+     * execution method runs tasks synchronously in the calling thread and no
+     * backing pool exists.
+     *
+     * @return {@code true} if tasks run synchronously
+     */
+    public boolean isSynchronous()
+    {
+        return synchronous;
+    }
+
+    // -------------------------------------------------------------------------
     // Execution API
     // -------------------------------------------------------------------------
 
@@ -322,6 +360,10 @@ public class Queen implements AutoCloseable, Executor
     {
         // getActiveCount() already subtracts the permanent owner party,
         // so == 0 means no tasks are registered.
+        if (synchronous)
+        {
+            return true;
+        }
         return phaser != null ? getActiveCount() == 0 : threadPoolExecutor.getActiveCount() == 0;
     }
 
@@ -359,6 +401,11 @@ public class Queen implements AutoCloseable, Executor
     public void execute(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
+        if (synchronous)
+        {
+            task.run();
+            return;
+        }
         if(phaser==null)
         {
             this.threadPoolExecutor.execute(task);
@@ -392,6 +439,11 @@ public class Queen implements AutoCloseable, Executor
     public Future<Void> submit(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
+        if (synchronous)
+        {
+            task.run();
+            return CompletableFuture.completedFuture(null);
+        }
         if(phaser==null)
         {
             return CompletableFuture.runAsync(task, this.threadPoolExecutor);
@@ -434,6 +486,10 @@ public class Queen implements AutoCloseable, Executor
     public <U> Future<U> submit(Supplier<U> supplier)
     {
         Objects.requireNonNull(supplier, "supplier must not be null");
+        if (synchronous)
+        {
+            return CompletableFuture.completedFuture(supplier.get());
+        }
         if (phaser == null)
         {
             return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
@@ -473,6 +529,12 @@ public class Queen implements AutoCloseable, Executor
     public Queen spawn(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
+
+        if (synchronous)
+        {
+            task.run();
+            return this;
+        }
 
         final CountDownLatch ready = new CountDownLatch(1);
 
@@ -514,6 +576,15 @@ public class Queen implements AutoCloseable, Executor
     {
         Objects.requireNonNull(iterable, "iterable must not be null");
         Objects.requireNonNull(consumer, "consumer must not be null");
+
+        if (synchronous)
+        {
+            for (T item : iterable)
+            {
+                consumer.accept(item);
+            }
+            return;
+        }
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         iterable.forEach(item -> futures.add(CompletableFuture.runAsync( () -> consumer.accept(item), this.threadPoolExecutor)));
@@ -563,7 +634,14 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen shutdown()
     {
-        this.threadPoolExecutor.shutdown();
+        if (synchronous)
+        {
+            this.shutdown = true;
+        }
+        else
+        {
+            this.threadPoolExecutor.shutdown();
+        }
         return this;
     }
 
@@ -572,7 +650,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public boolean isShutdown()
     {
-        return threadPoolExecutor.isShutdown();
+        return synchronous ? shutdown : threadPoolExecutor.isShutdown();
     }
 
     /**
@@ -580,7 +658,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public boolean isTerminated()
     {
-        return threadPoolExecutor.isTerminated();
+        return synchronous ? shutdown : threadPoolExecutor.isTerminated();
     }
 
     /**
@@ -593,7 +671,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public boolean awaitTermination(int millis) throws InterruptedException
     {
-        return threadPoolExecutor.awaitTermination(millis, TimeUnit.MILLISECONDS);
+        return synchronous ? true : threadPoolExecutor.awaitTermination(millis, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -603,7 +681,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public int getCorePoolSize()
     {
-        return threadPoolExecutor.getCorePoolSize();
+        return synchronous ? 0 : threadPoolExecutor.getCorePoolSize();
     }
 
     /**
@@ -613,7 +691,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public int getMaximumPoolSize()
     {
-        return threadPoolExecutor.getMaximumPoolSize();
+        return synchronous ? 0 : threadPoolExecutor.getMaximumPoolSize();
     }
 
     /**
@@ -623,7 +701,10 @@ public class Queen implements AutoCloseable, Executor
      */
     public void setCorePoolSize(int cps)
     {
-        threadPoolExecutor.setCorePoolSize(cps);
+        if (!synchronous)
+        {
+            threadPoolExecutor.setCorePoolSize(cps);
+        }
     }
 
     /**
@@ -633,7 +714,10 @@ public class Queen implements AutoCloseable, Executor
      */
     public void setMaximumPoolSize(int mps)
     {
-        threadPoolExecutor.setMaximumPoolSize(mps);
+        if (!synchronous)
+        {
+            threadPoolExecutor.setMaximumPoolSize(mps);
+        }
     }
 
     /**

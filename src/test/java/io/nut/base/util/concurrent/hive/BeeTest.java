@@ -184,6 +184,48 @@ class BeeTest
     }
 
     @Test
+    void synchronousHiveProcessesSynchronouslyEvenWithPositiveThreads()
+    {
+        // A Hive sized 0x0 runs synchronously; a Bee attached to it must too,
+        // regardless of its own (positive) thread count.
+        Hive syncHive = Hive.hive(0);
+        try
+        {
+            assertTrue(syncHive.isSynchronous());
+
+            RecordingBee<String> bee = new RecordingBee<>(syncHive, 4, 0);
+            bee.accept("hello");
+            bee.accept("world");
+
+            assertEquals(Arrays.asList("hello", "world"), bee.received);
+            assertEquals(0, bee.getPendingCount());
+        }
+        finally
+        {
+            syncHive.shutdown();
+        }
+    }
+
+    @Test
+    void attachSynchronousHiveAfterConstructionActivatesSynchronousMode()
+    {
+        RecordingBee<String> bee = new RecordingBee<>(hive); // async hive first
+        Hive syncHive = Hive.hive(0);
+        try
+        {
+            bee.setHive(syncHive);
+            bee.accept("hello");
+
+            assertEquals(Collections.singletonList("hello"), bee.received);
+            assertEquals(0, bee.getPendingCount());
+        }
+        finally
+        {
+            syncHive.shutdown();
+        }
+    }
+
+    @Test
     void invalidConstructorArgumentsThrow()
     {
         assertThrows(IllegalArgumentException.class, () -> new RecordingBee<String>(hive, -1, 1));
