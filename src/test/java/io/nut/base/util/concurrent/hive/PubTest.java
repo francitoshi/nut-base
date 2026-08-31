@@ -321,18 +321,24 @@ class PubTest
     }
 
     /**
-     * Bee.sub works after a Hive is attached via setHive().
+     * Bee.sub works when constructed with a Hive.
      */
     @Test
-    void beeSub_afterSetHive_works()
+    void beeSub_withHive_works()
     {
         List<String> sink = new ArrayList<>();
-        Bee<String> bee = syncBee(sink);    // no Hive initially
+        Bee<String> bee = new Bee<String>(hive)
+        {
+            @Override
+            protected void receive(String m)
+            {
+                sink.add(m);
+            }
+        };
 
-        bee.setHive(hive);                  // attach Hive later
-        bee.sub("late-attach");
+        bee.sub("with-hive");
 
-        hive.<String>pub("late-attach").accept("ok");
+        hive.<String>pub("with-hive").accept("ok");
         bee.waitForIdle();
        
         assertEquals(Collections.singletonList("ok"), sink);

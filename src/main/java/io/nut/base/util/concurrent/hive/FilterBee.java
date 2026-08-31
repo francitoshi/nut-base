@@ -77,7 +77,7 @@ public class FilterBee<T> extends Bee<T>
 
     /**
      * Constructs a standalone FilterBee with the given thread count but no
-     * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param threads   the maximum number of concurrent worker threads
      * @param predicate the test applied to each message; must not be {@code null}
@@ -89,7 +89,7 @@ public class FilterBee<T> extends Bee<T>
 
     /**
      * Constructs a standalone FilterBee with the default thread count and no
-     * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param predicate the test applied to each message; must not be {@code null}
      */

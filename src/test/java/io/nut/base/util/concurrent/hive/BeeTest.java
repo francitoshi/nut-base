@@ -154,22 +154,6 @@ class BeeTest
     }
 
     @Test
-    void setHiveAttachesHiveAfterConstructionForLaterSends()
-    {
-        RecordingBee<String> bee = new RecordingBee<>(); // no hive yet
-        bee.accept("direct"); // processed synchronously, no hive involved
-
-        bee.setHive(hive);
-        bee.accept("via-hive");
-
-        bee.shutdown().awaitTermination(1);
-
-        assertEquals(2, bee.received.size());
-        assertTrue(bee.received.contains("direct"));
-        assertTrue(bee.received.contains("via-hive"));
-    }
-
-    @Test
     void zeroThreadsWithHiveProcessesSynchronously()
     {
         RecordingBee<String> bee = new RecordingBee<>(hive, 0, 0);
@@ -198,25 +182,6 @@ class BeeTest
             bee.accept("world");
 
             assertEquals(Arrays.asList("hello", "world"), bee.received);
-            assertEquals(0, bee.getPendingCount());
-        }
-        finally
-        {
-            syncHive.shutdown();
-        }
-    }
-
-    @Test
-    void attachSynchronousHiveAfterConstructionActivatesSynchronousMode()
-    {
-        RecordingBee<String> bee = new RecordingBee<>(hive); // async hive first
-        Hive syncHive = Hive.hive(0);
-        try
-        {
-            bee.setHive(syncHive);
-            bee.accept("hello");
-
-            assertEquals(Collections.singletonList("hello"), bee.received);
             assertEquals(0, bee.getPendingCount());
         }
         finally

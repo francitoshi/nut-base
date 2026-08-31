@@ -12,6 +12,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -59,6 +60,9 @@ import java.util.logging.Logger;
  */
 public class Hive extends Queen implements AutoCloseable, Executor
 {
+
+    /** Active non-synchronous Bees attached to this Hive, for coordinated tasks. */
+    private final List<Bee<?>> bees = new CopyOnWriteArrayList<>();
 
     /**
      * Protected constructor used by {@link ProxyHive} and subclasses that
@@ -208,22 +212,37 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }   
     
     /**
-     * Attaches one or more pre-built Bee stages to this Hive, so that messages
-     * sent to them are processed on this Hive's thread pool. Useful when a Bee
-     * was created without a Hive (e.g. via {@code new BatchBee(...)}) and
-     * needs to be wired in later.
+     * Registers a non-synchronous Bee attached to this Hive so its lifecycle
+     * can be tracked. Called by {@link Bee} on construction.
      *
-     * @param bees the Bee stages to attach; must not be {@code null}
-     * @return this Hive, for fluent chaining
+     * @param bee the Bee to register
      */
-    public Hive add(Bee<?>... bees)
+    void registerBee(Bee<?> bee)
     {
-        Objects.requireNonNull(bees, "bees must not be null");
-        for (Bee<?> item : bees)
-        {
-            item.setHive(this);
-        }
-        return this;
+        bees.add(bee);
+    }
+
+    /**
+     * Removes a Bee from this Hive's tracking list. Called by {@link Bee} when
+     * it terminates (on shutdown).
+     *
+     * @param bee the Bee to remove
+     */
+    void unregisterBee(Bee<?> bee)
+    {
+        bees.remove(bee);
+    }
+
+    /**
+     * Returns the list of active non-synchronous Bees attached to this Hive.
+     * Bees are removed from this list once they terminate (on shutdown), and
+     * synchronous Bees (constructed with {@code threads == 0}) are never added.
+     *
+     * @return the list of active Bees attached to this Hive
+     */
+    public List<Bee<?>> bees()
+    {
+        return bees;
     }
 
     /**

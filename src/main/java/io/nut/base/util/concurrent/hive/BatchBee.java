@@ -139,7 +139,7 @@ public class BatchBee<T> extends Bee<T>
 
     /**
      * Constructs a standalone BatchBee with the given thread count but no Hive.
-     * A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param threads       the maximum number of concurrent worker threads
      * @param maxSize       the number of messages that trigger an immediate flush
@@ -152,7 +152,7 @@ public class BatchBee<T> extends Bee<T>
 
     /**
      * Constructs a standalone BatchBee with the default thread count and no
-     * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param maxSize       the number of messages that trigger an immediate flush
      * @param maxWaitMillis the maximum interval between flushes (0 = disabled)

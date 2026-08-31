@@ -102,7 +102,7 @@ public abstract class Bee<M> implements Consumer<M>
     private boolean terminated;
 
     private volatile boolean allowLogger = true;
-    private volatile Executor hive;
+    private final Executor hive;
     private volatile Exception ex;
 
     // -------------------------------------------------------------------------
@@ -141,6 +141,20 @@ public abstract class Bee<M> implements Consumer<M>
             this.threads = threads;
             this.workerSlots = new Semaphore(this.threads);
             this.channel = queueSize > 0 ? Channel.closeableBuffered(queueSize) : Channel.closeableBuffered(Queen.CORES);
+            registerHive();
+        }
+    }
+
+    /**
+     * Registers this (non-synchronous) Bee into the {@link Hive} it is attached
+     * to, so the Hive can track all its active stages. Bees without an attached
+     * Hive (or constructed with {@code threads == 0}) are not registered.
+     */
+    private void registerHive()
+    {
+        if (hive instanceof Hive)
+        {
+            ((Hive) hive).registerBee(this);
         }
     }
 
@@ -174,9 +188,9 @@ public abstract class Bee<M> implements Consumer<M>
         return ex;
     }
 
-    public void setHive(Hive hive)
+    public Executor getHive()
     {
-        this.hive = hive;
+        return hive;
     }
 
     /**
@@ -502,6 +516,7 @@ public abstract class Bee<M> implements Consumer<M>
                 return;
             }
             terminated = true;
+            unregisterFromHive();
             try
             {
                 terminate();
@@ -511,6 +526,18 @@ public abstract class Bee<M> implements Consumer<M>
                 handleException(ex);
             }
             lock.notifyAll();
+        }
+    }
+
+    /**
+     * Removes this Bee from the {@link Hive} instance list it was registered
+     * in, if any.
+     */
+    private void unregisterFromHive()
+    {
+        if (hive instanceof Hive)
+        {
+            ((Hive) hive).unregisterBee(this);
         }
     }
 

@@ -101,12 +101,6 @@ public class ProxyHive extends Hive implements AutoCloseable
 
 
     @Override
-    public Hive add(Bee<?>... bees)
-    {
-        return hive.add(bees);
-    }
-
-    @Override
     public <T, R> PipeBee<T, R> pipe(int threads, int queueSize, Function<T, R> function)
     {
         return hive.pipe(threads, queueSize, function);

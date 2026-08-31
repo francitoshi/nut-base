@@ -99,29 +99,6 @@ class HiveTest
     }
 
     @Test
-    void addAttachesHiveToMultipleBeesAtOnceAndReturnsThis() throws InterruptedException
-    {
-        RecordingBee<Integer> b1 = new RecordingBee<>();
-        RecordingBee<Integer> b2 = new RecordingBee<>();
-
-        Hive returned = hive.add(b1, b2);
-        assertSame(hive, returned);
-
-        b1.accept(1);
-        b2.accept(2);
-        Hive.shutdownAndAwaitTermination(true, b1, b2);
-
-        assertEquals(Collections.singletonList(1), b1.received);
-        assertEquals(Collections.singletonList(2), b2.received);
-    }
-
-    @Test
-    void addRejectsNullArray()
-    {
-        assertThrows(NullPointerException.class, () -> hive.add((Bee<?>[]) null));
-    }
-
-    @Test
     void pipeFactoryCreatesAttachedTransformingStage() throws InterruptedException
     {
         List<String> sink = new CopyOnWriteArrayList<>();
@@ -275,6 +252,26 @@ class HiveTest
         assertTrue(bee.isTerminated());
         assertEquals(2, bee.received.size());
         assertTrue(hive.isTerminated());
+    }
+
+    @Test
+    void beesListTracksActiveNonSynchronousBeesAndRemovesOnShutdown()
+    {
+        RecordingBee<Integer> async1 = new RecordingBee<>(hive);
+        RecordingBee<Integer> async2 = new RecordingBee<>(hive);
+        RecordingBee<Integer> sync = new RecordingBee<>(hive, 0, 0);
+
+        assertTrue(hive.bees().contains(async1));
+        assertTrue(hive.bees().contains(async2));
+        assertFalse(hive.bees().contains(sync));
+
+        async1.shutdown().awaitTermination(50);
+
+        assertFalse(hive.bees().contains(async1));
+        assertTrue(hive.bees().contains(async2));
+
+        async2.shutdown().awaitTermination(50);
+        assertFalse(hive.bees().contains(async2));
     }
 
     @Test

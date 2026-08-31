@@ -82,7 +82,7 @@ public class PipeBee<T,R> extends Bee<T>
 
     /**
      * Constructs a standalone PipeBee with the given thread count but no Hive.
-     * A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param threads  the maximum number of concurrent worker threads
      * @param function the transformation applied to each message; must not be
@@ -95,7 +95,7 @@ public class PipeBee<T,R> extends Bee<T>
 
     /**
      * Constructs a standalone PipeBee with the default thread count and no
-     * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param function the transformation applied to each message; must not be
      *                 {@code null}

@@ -85,7 +85,7 @@ public class FanOutBee<T> extends Bee<T>
 
     /**
      * Constructs a standalone FanOutBee with the given thread count but no
-     * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param threads the maximum number of concurrent worker threads
      * @param targets zero or more initial downstream stages
@@ -99,7 +99,7 @@ public class FanOutBee<T> extends Bee<T>
 
     /**
      * Constructs a standalone FanOutBee with the default thread count and no
-     * Hive. A Hive can be attached later with {@link Bee#setHive(Hive)}.
+     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param targets zero or more initial downstream stages
      */
