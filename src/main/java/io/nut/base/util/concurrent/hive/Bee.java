@@ -31,11 +31,14 @@ import java.util.logging.Logger;
  * {@link #receive(Object)} synchronously in the calling thread.
  * <p>
  * <strong>Worker model</strong>: when a Hive is attached and {@code threads > 0},
- * up to {@code threads} workers may run concurrently so that the Bee can
- * process messages in parallel: every accepted message can start one worker, up
- * to the configured maximum. Each worker drains every buffered message and then
- * returns to the pool, so the Hive's threads are never held while the Bee is
- * idle.
+ * the first accepted message starts a single <em>permanent</em> worker that
+ * stays alive for the entire lifetime of the Bee, blocking on the internal
+ * channel waiting for new messages and processing them as they arrive; it only
+ * exits when the Bee is shut down. With {@code threads == 1} that is the only
+ * worker. With {@code threads > 1}, additional temporary "rush" workers are
+ * started as messages arrive (up to the configured maximum) and return to the
+ * pool whenever there is nothing left to drain, so the Bee can process
+ * messages in parallel.
  * <p>
  * <strong>Lifecycle</strong>: a Bee starts active. {@link #shutdown()} (or
  * {@link #shutdown(boolean)}) closes the internal channel; messages buffered
@@ -51,6 +54,15 @@ public abstract class Bee<M> implements Consumer<M>
 
     private static final int DEFAULT_QUEUE_SIZE = Short.MAX_VALUE;
 
+    /**
+     * How long the permanent worker waits for the next message before giving
+     * its thread back to the pool. Bounded so that an idle permanent worker
+     * never holds a pool thread forever (which would saturate the pool and
+     * deadlock bounded pipelines under the pool's CallerRuns policy); a
+     * subsequent {@link #accept(Object)} re-submits it cheaply.
+     */
+    private static final long PERMANENT_WAIT_MILLIS = 400;
+
     private final CloseableChannel<M> channel;
 
     /** Maximum number of concurrently running workers. */
@@ -64,13 +76,12 @@ public abstract class Bee<M> implements Consumer<M>
     private final boolean synchronous;
 
     /**
-     * Permits one worker per free concurrent slot. A worker acquires a permit
-     * (atomically, so no {@link #lock} is needed) before starting and holds it
-     * for its whole {@link #workerLoop()}, releasing it only once it has
-     * drained everything and is about to return. This provides a reliable
-     * bound on the number of concurrently running workers, unlike the previous
-     * {@code activeWorkers.get() < threads} check that could be bypassed while
-     * a worker was draining inline inside {@link #workerDone()}.
+     * Permits one worker per free concurrent slot. The permanent worker holds
+     * one permit for the whole lifetime of the Bee (re-acquiring it each time
+     * it goes back to blocking), and temporary "rush" workers acquire a permit
+     * (atomically, so no {@link #lock} is needed) before starting and hold it
+     * until they have drained everything and are about to return. This provides
+     * a reliable bound on the number of concurrently running workers.
      */
     private final Semaphore workerSlots;
 
@@ -91,6 +102,16 @@ public abstract class Bee<M> implements Consumer<M>
 
     /** Workers currently running (submitted to the Hive pool but not yet done). */
     private final AtomicInteger activeWorkers = new AtomicInteger();
+
+    /**
+     * Temporary ("rush") workers currently running, for {@code threads > 1}.
+     * The permanent worker is not counted here, so a Bee waiting for new
+     * messages on its permanent worker can still report itself idle.
+     */
+    private final AtomicInteger rushWorkers = new AtomicInteger();
+
+    /** {@code true} once the permanent worker has been started (threads >= 1). */
+    private boolean permanentWorkerStarted;
 
     /** {@code true} once the internal channel has been closed. */
     private volatile boolean closed;
@@ -301,10 +322,15 @@ public abstract class Bee<M> implements Consumer<M>
 
             if (queued)
             {
+                // Start the permanent worker on the first message. It holds one
+                // worker permit for the whole lifetime of the Bee.
+                initPermanentWorker();
                 // The short critical section guarantees that a worker that is
                 // about to release its slot will not abandon a message we have
                 // just enqueued: the release and this tryAcquire both happen
-                // under the lock, so a slot freed here is always observed.
+                // under the lock, so a slot freed here is always observed. When
+                // threads > 1, additional temporary "rush" workers may be
+                // started here to process in parallel.
                 synchronized (lock)
                 {
                     if (workerSlots.tryAcquire())
@@ -335,12 +361,14 @@ public abstract class Bee<M> implements Consumer<M>
     /**
      * Submits a worker to the Hive pool. Must be called only after a worker
      * permit has been acquired from {@link #workerSlots}; the worker keeps the
-     * permit for its entire {@link #workerLoop()}. If the submission fails (or
-     * there is no Hive to submit to), the permit is returned.
+     * permit for its entire {@link #workerLoop()} (or {@link #permanentWorkerLoop()}).
+     * If the submission fails (or there is no Hive to submit to), the permit is
+     * returned.
      */
     private void startWorker()
     {
         activeWorkers.incrementAndGet();
+        rushWorkers.incrementAndGet();
         try
         {
             Executor h = hive;
@@ -351,13 +379,66 @@ public abstract class Bee<M> implements Consumer<M>
             else
             {
                 activeWorkers.decrementAndGet();
+                rushWorkers.decrementAndGet();
                 workerSlots.release();
             }
         }
         catch (Exception ex)
         {
             activeWorkers.decrementAndGet();
+            rushWorkers.decrementAndGet();
             workerSlots.release();
+            throw ex;
+        }
+    }
+
+    /**
+     * Starts the single permanent worker for this Bee, if it has not been
+     * started yet. The permanent worker is started lazily on the first accepted
+     * message, holds one worker permit for the lifetime of the Bee while it is
+     * active, and waits up to {@link #PERMANENT_WAIT_MILLIS} for new messages
+     * between bursts so it is not destroyed and recreated per message; once the
+     * Bee has been idle for that window it yields its thread back to the pool
+     * (a later {@link #accept(Object)} re-submits it). Used when
+     * {@code threads >= 1}; the {@code threads == 1} case has only this
+     * permanent worker, while {@code threads > 1} adds temporary "rush" workers
+     * on top of it.
+     * <p>
+     * The task is submitted to the Hive pool <em>outside</em> the {@link #lock}:
+     * {@link Executor#execute} can block (e.g. under the pool's CallerRunsPolicy
+     * when the pool is saturated) and the permanent worker waits for messages,
+     * so running it while holding the lock would deadlock every other thread that
+     * needs the lock (they would wait on the lock never released by the caller
+     * that is hijacked to drain).
+     */
+    private void initPermanentWorker()
+    {
+        synchronized (lock)
+        {
+            if (permanentWorkerStarted || closed || terminated)
+            {
+                return;
+            }
+            permanentWorkerStarted = true;
+            if (!workerSlots.tryAcquire())
+            {
+                permanentWorkerStarted = false;
+                return;
+            }
+            activeWorkers.incrementAndGet();
+        }
+        try
+        {
+            hive.execute(this::permanentWorkerLoop);
+        }
+        catch (Exception ex)
+        {
+            synchronized (lock)
+            {
+                permanentWorkerStarted = false;
+                activeWorkers.decrementAndGet();
+                workerSlots.release();
+            }
             throw ex;
         }
     }
@@ -378,7 +459,25 @@ public abstract class Bee<M> implements Consumer<M>
         }
         finally
         {
-            workerDone();
+            workerDone(false);
+        }
+    }
+
+    /**
+     * The permanent worker loop: keeps a thread alive across bursts of messages,
+     * waiting up to {@link #PERMANENT_WAIT_MILLIS} for new work, and processing
+     * messages as they arrive. It yields its thread back to the pool once the
+     * Bee has been idle for the wait window and only truly exits on shutdown.
+     */
+    private void permanentWorkerLoop()
+    {
+        try
+        {
+            drainBlocking();
+        }
+        finally
+        {
+            workerDone(true);
         }
     }
 
@@ -407,6 +506,32 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
+     * Waits up to {@link #PERMANENT_WAIT_MILLIS} for a message, processing every
+     * message that arrives, and returns when the channel has been quiet (or
+     * closed) for that long. Used by the permanent worker: it keeps a thread
+     * alive across bursts of messages (avoiding per-message thread churn) but
+     * yields the thread once the Bee has been idle for the wait window, so it
+     * never blocks a pool thread indefinitely.
+     */
+    private void drainBlocking()
+    {
+        M m;
+        while ((m = channel.get(PERMANENT_WAIT_MILLIS, TimeUnit.MILLISECONDS)) != null)
+        {
+            pending.decrementAndGet();
+            long seq = sequenceCounter.incrementAndGet();
+            try
+            {
+                receive(m, seq);
+            }
+            catch (Exception ex)
+            {
+                handleException(ex);
+            }
+        }
+    }
+
+    /**
      * Runs when a worker returns: drains anything that arrived while it was
      * processing, closes or terminates the Bee when required, and finally hands
      * back its worker permit. Must be race-free: the permit is released under
@@ -419,8 +544,11 @@ public abstract class Bee<M> implements Consumer<M>
      * holding this Bee's lock across such a block would park every other worker
      * and producer of this Bee on that lock, stalling the whole Hive once the
      * pool is exhausted.
+     *
+     * @param permanent {@code true} for the Bee's single permanent worker,
+     *                  {@code false} for temporary "rush" workers
      */
-    private void workerDone()
+    private void workerDone(boolean permanent)
     {
         while (true)
         {
@@ -453,6 +581,10 @@ public abstract class Bee<M> implements Consumer<M>
                 boolean last = activeWorkers.decrementAndGet() == 0;
                 if (closed)
                 {
+                    if (permanent)
+                    {
+                        rushWorkers.set(0);
+                    }
                     if (last)
                     {
                         doTerminate();
@@ -467,6 +599,21 @@ public abstract class Bee<M> implements Consumer<M>
                 }
                 else
                 {
+                    // Both the permanent and the rush worker give their thread
+                    // back to the pool once the Bee has no pending work. The
+                    // permanent worker has already waited up to
+                    // PERMANENT_WAIT_MILLIS in drainBlocking, so it is "sticky"
+                    // across bursts but never holds a pool thread indefinitely:
+                    // a later accept() re-submits it cheaply. Resetting
+                    // permanentWorkerStarted lets accept() restart it.
+                    if (permanent)
+                    {
+                        permanentWorkerStarted = false;
+                    }
+                    else
+                    {
+                        rushWorkers.decrementAndGet();
+                    }
                     workerSlots.release();
                     lock.notifyAll();
                     return;
@@ -479,12 +626,21 @@ public abstract class Bee<M> implements Consumer<M>
             if (close)
             {
                 closeNow();
+                if (permanent)
+                {
+                    rushWorkers.set(0);
+                    permanentWorkerStarted = false;
+                }
+                else
+                {
+                    rushWorkers.decrementAndGet();
+                }
                 synchronized (lock)
                 {
                     workerSlots.release();
                     lock.notifyAll();
-                    return;
                 }
+                return;
             }
         }
     }
@@ -567,16 +723,19 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Returns {@code true} if no messages are pending and no workers are
-     * active.
+     * Returns {@code true} if no messages are pending and no temporary ("rush")
+     * workers are active. The Bee's permanent worker is deliberately excluded:
+     * although it keeps a thread alive waiting for new messages, it does not
+     * make the Bee busy.
      */
     public boolean isIdle()
     {
-        return pending.get() <= 0 && activeWorkers.get() == 0;
+        return pending.get() <= 0 && rushWorkers.get() == 0;
     }
 
     /**
-     * Blocks until this Bee is idle (no pending messages, no active workers).
+     * Blocks until this Bee is idle (no pending messages, no temporary workers
+     * active).
      *
      * @return this Bee, for fluent chaining
      */

@@ -17,6 +17,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -64,6 +65,23 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /** Active non-synchronous Bees attached to this Hive, for coordinated tasks. */
     private final List<Bee<?>> bees = new CopyOnWriteArrayList<>();
 
+    /** O(1) count of registered Bees, used to size the pool as Bees come and go. */
+    private final AtomicInteger beeCount = new AtomicInteger();
+
+    /**
+     * The core pool size as configured at construction. When the number of
+     * registered (non-synchronous) Bees grows beyond this value, the pool's
+     * core size is raised to keep one thread per registered Bee available.
+     */
+    private final int initialCorePoolSize;
+
+    /**
+     * The fixed margin {@code max - core} configured at construction. When the
+     * core size is raised to accommodate more Bees the maximum is raised by the
+     * same amount, so the relation {@code max == core + rush} is preserved.
+     */
+    private final int initialRushPoolSize;
+
     /**
      * Protected constructor used by {@link ProxyHive} and subclasses that
      * supply their own pre-built {@link ThreadPoolExecutor}.
@@ -74,6 +92,8 @@ public class Hive extends Queen implements AutoCloseable, Executor
     protected Hive(ThreadPoolExecutor threadPoolExecutor)
     {
         super(threadPoolExecutor);
+        this.initialCorePoolSize = 0;
+        this.initialRushPoolSize = 0;
     }
 
     /**
@@ -91,7 +111,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        super(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
+        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, false);
     }
 
     /**
@@ -114,6 +134,8 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
         super(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, avoidTracker);
+        this.initialCorePoolSize = corePoolSize;
+        this.initialRushPoolSize = Math.max(0, rushPoolSize - corePoolSize);
     }
 
     /**
@@ -141,6 +163,8 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public Hive(int corePoolSize)
     {
         super(corePoolSize);
+        this.initialCorePoolSize = corePoolSize;
+        this.initialRushPoolSize = 0;
     }
 
     /**
@@ -149,6 +173,8 @@ public class Hive extends Queen implements AutoCloseable, Executor
     public Hive()
     {
         super();
+        this.initialCorePoolSize = CORES;
+        this.initialRushPoolSize = 0;
     }
 
     /**
@@ -220,6 +246,8 @@ public class Hive extends Queen implements AutoCloseable, Executor
     void registerBee(Bee<?> bee)
     {
         bees.add(bee);
+        beeCount.incrementAndGet();
+        adjustPoolToBees();
     }
 
     /**
@@ -230,7 +258,44 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     void unregisterBee(Bee<?> bee)
     {
-        bees.remove(bee);
+        if (bees.remove(bee))
+        {
+            beeCount.decrementAndGet();
+            adjustPoolToBees();
+        }
+    }
+
+    /**
+     * Raises the pool's core and maximum sizes so that there is always one
+     * core thread available per registered (non-synchronous) Bee, while
+     * preserving the {@code max == core + rush} relation configured at
+     * construction. When Bees are removed the sizes shrink back towards their
+     * initial values.
+     */
+    private void adjustPoolToBees()
+    {
+        if (isSynchronous())
+        {
+            return;
+        }
+        int core = Math.max(initialCorePoolSize, beeCount.get());
+        int maximum = core + initialRushPoolSize;
+        if (maximum < core)
+        {
+            maximum = core;
+        }
+        // ThreadPoolExecutor forbids core > maximum. When growing (more Bees)
+        // raise the maximum first; when shrinking, lower the core first.
+        if (maximum > getMaximumPoolSize())
+        {
+            setMaximumPoolSize(maximum);
+            setCorePoolSize(core);
+        }
+        else
+        {
+            setCorePoolSize(core);
+            setMaximumPoolSize(maximum);
+        }
     }
 
     /**
