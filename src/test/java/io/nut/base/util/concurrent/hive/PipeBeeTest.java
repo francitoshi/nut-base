@@ -73,7 +73,7 @@ class PipeBeeTest
         doubler.waitForIdle();
         stringify.waitForIdle();
         sink.waitForIdle();
-        Hive.shutdownAndAwaitTermination(true, doubler, stringify, sink);
+        hive.shutdownAndAwaitTermination(true);
 
         assertEquals(2, sink.received.size());
         assertTrue(sink.received.contains("v=20"));

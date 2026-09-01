@@ -49,25 +49,11 @@ class ShutdownCascadingTest
 
         pipe1.linkTo(pipe2).linkTo(sink);
 
-        Hive.shutdownAndAwaitTermination(true, pipe1);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(pipe1.isTerminated());
         assertTrue(pipe2.isTerminated());
         assertTrue(sink.isTerminated());
-    }
-
-    @Test
-    void shutdownCascadingStopsAtDisconnectedStage() throws InterruptedException
-    {
-        PipeBee<Integer,Integer> pipe1 = hive.pipe(i -> i);
-        PipeBee<Integer,Integer> pipe2 = hive.pipe(i -> i);
-        // Not linked
-
-        Hive.shutdownAndAwaitTermination(true, pipe1);
-
-        assertTrue(pipe1.isTerminated());
-        // pipe2 was never linked, so it's not affected
-        assertFalse(pipe2.isShutdown());
     }
 
     @Test
@@ -79,7 +65,7 @@ class ShutdownCascadingTest
 
         pipe.linkTo(filter).linkTo(sink);
 
-        Hive.shutdownAndAwaitTermination(true, pipe);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(pipe.isTerminated());
         assertTrue(filter.isTerminated());
@@ -95,7 +81,7 @@ class ShutdownCascadingTest
 
         pipe.linkTo(batch).linkTo(sink);
 
-        Hive.shutdownAndAwaitTermination(true, pipe);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(pipe.isTerminated());
         assertTrue(batch.isTerminated());
@@ -113,7 +99,7 @@ class ShutdownCascadingTest
         FanOutBee<Integer> broadcast = hive.broadcast(target1, target2, target3);
         pipe.linkTo(broadcast);
 
-        Hive.shutdownAndAwaitTermination(true, pipe);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(pipe.isTerminated());
         assertTrue(broadcast.isTerminated());
@@ -129,7 +115,7 @@ class ShutdownCascadingTest
         RecordingBee<String> t2 = new RecordingBee<>(hive);
         FanOutBee<String> bc = hive.broadcast(t1, t2);
 
-        Hive.shutdownAndAwaitTermination(true, bc);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(bc.isTerminated());
         assertTrue(t1.isTerminated());
@@ -148,7 +134,7 @@ class ShutdownCascadingTest
 
         pipe1.linkTo(filter).linkTo(batch).linkTo(pipe2).linkTo(sink);
 
-        Hive.shutdownAndAwaitTermination(true, pipe1);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(pipe1.isTerminated());
         assertTrue(filter.isTerminated());
@@ -164,7 +150,7 @@ class ShutdownCascadingTest
         RecordingBee<Integer> sink = new RecordingBee<>(hive);
         pipe1.linkTo(sink);
 
-        Hive.shutdownAndAwaitTermination(true, pipe1);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(pipe1.isTerminated());
         assertTrue(sink.isTerminated());

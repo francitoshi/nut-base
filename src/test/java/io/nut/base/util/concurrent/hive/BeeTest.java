@@ -13,7 +13,6 @@ import java.util.Collections;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -198,14 +197,14 @@ class BeeTest
     }
 
     @Test
-    void staticShutdownAndAwaitTerminationHandlesMultipleBees()
+    void shutdownAndAwaitTerminationHandlesMultipleBees()
     {
         RecordingBee<Integer> b1 = new RecordingBee<>(hive);
         RecordingBee<Integer> b2 = new RecordingBee<>(hive);
         b1.accept(1);
         b2.accept(2);
 
-        Hive.shutdownAndAwaitTermination(true, b1, b2);
+        hive.shutdownAndAwaitTermination(true);
 
         assertTrue(b1.isTerminated());
         assertTrue(b2.isTerminated());
@@ -332,8 +331,7 @@ class BeeTest
                 }
             }
 
-            Consumer<?>[] stages = bees;
-            Hive.shutdownAndAwaitTermination(true, stages);
+            bigHive.shutdownAndAwaitTermination(true);
 
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
             // Every bee forwards each received message to the next two bees, so a

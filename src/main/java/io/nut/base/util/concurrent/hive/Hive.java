@@ -43,7 +43,7 @@ import java.util.logging.Logger;
  *     formatter.linkTo(printer);
  *
  *     for (int i = 0; i < 100; i++) formatter.accept(i);
- *     Hive.shutdownAndAwaitTermination(true, formatter);
+ *     hive.shutdownAndAwaitTermination(true);
  * }
  * }</pre>
  * <p>
@@ -52,12 +52,12 @@ import java.util.logging.Logger;
  * implements {@link Executor}, so it can be passed anywhere a plain
  * {@code Executor} is accepted.
  * <p>
- * Static helper methods ({@link #shutdown(boolean, Consumer[])},
- * {@link #awaitTermination(int, Consumer[])},
- * {@link #shutdownAndAwaitTermination(boolean, Consumer[])}) traverse
- * a chain of linked Bee stages and shut them down collectively, following
- * the links stored by {@link PipeBee}, {@link FilterBee}, {@link BatchBee},
- * and {@link FanOutBee}.
+ * Static helper methods ({@link #shutdown(boolean, Consumer[])} and
+ * {@link #awaitTermination(int, Consumer[])}) traverse a chain of linked Bee
+ * stages and shut them down collectively, following the links stored by
+ * {@link PipeBee}, {@link FilterBee}, {@link BatchBee}, and {@link FanOutBee}.
+ * {@link #shutdownAndAwaitTermination(boolean)} applies this to every Bee
+ * registered with this Hive.
  */
 public class Hive extends Queen implements AutoCloseable, Executor
 {
@@ -754,16 +754,6 @@ public class Hive extends Queen implements AutoCloseable, Executor
         return new BatchBee<>(this, threads, queueSize, maxSize, maxWaitMillis);
     }
     
-    /**
-     * {@inheritDoc}
-     *
-     * @return this Hive, for fluent chaining
-     */
-    public Hive shutdown()
-    {
-        return (Hive) super.shutdown();
-    }
-
     // -------------------------------------------------------------------------
     // Pub/Sub registry
     // -------------------------------------------------------------------------
@@ -927,6 +917,16 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
+     * {@inheritDoc}
+     *
+     * @return this Hive, for fluent chaining
+     */
+    public Hive shutdown()
+    {
+        return (Hive) super.shutdown();
+    }
+
+    /**
      * Initiates a graceful shutdown on every stage in the given chain(s).
      * Stages linked via {@link PipeBee}, {@link FilterBee}, {@link BatchBee},
      * and {@link FanOutBee} are traversed automatically; cycles are handled
@@ -991,32 +991,31 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Shuts down every stage in the given chain(s) and blocks until all of
+     * Shuts down every Bee registered with this Hive and blocks until all of
      * them have terminated. This is a convenience combination of
      * {@link #shutdown(boolean, Consumer[])} followed by
      * {@link #awaitTermination(int, Consumer[])} with an effectively infinite
-     * timeout. Stages linked via {@link PipeBee}, {@link FilterBee},
-     * {@link BatchBee}, and {@link FanOutBee} are traversed automatically;
-     * cycles are handled safely.
+     * timeout, applied to the Bees in {@link #bees()}. Synchronous Bees
+     * ({@code threads == 0}) are not registered and are unaffected. Stages
+     * linked via {@link PipeBee}, {@link FilterBee}, {@link BatchBee}, and
+     * {@link FanOutBee} are traversed automatically; cycles are handled safely.
      * <p>
      * If the calling thread is interrupted while waiting, the interruption is
      * logged and the method returns without re-interrupting the thread.
      *
-     * @param onlyWhenEmpty if {@code true}, each stage defers its shutdown until
+     * @param onlyWhenEmpty if {@code true}, each Bee defers its shutdown until
      *                      its queue is empty; if {@code false}, shutdown starts
      *                      immediately
-     * @param stages        the root stage(s) of the chain(s) to shut down; must
-     *                      not be {@code null}
      */
-    public static void shutdownAndAwaitTermination(boolean onlyWhenEmpty, Consumer<?>... stages)
+    public void shutdownAndAwaitTermination(boolean onlyWhenEmpty)
     {
-        Objects.requireNonNull(stages, "stages must not be null");
+        Consumer<?>[] registered = bees.toArray(new Consumer<?>[0]);
 
-        shutdown(onlyWhenEmpty, stages);
+        shutdown(onlyWhenEmpty, registered);
 
         try
         {
-            awaitTermination(Integer.MAX_VALUE, stages);
+            awaitTermination(Integer.MAX_VALUE, registered);
         }
         catch (InterruptedException ex)
         {
