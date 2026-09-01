@@ -107,7 +107,7 @@ class HiveTest
 
         stage.accept(5);
         stage.waitForIdle().shutdown().awaitTermination(25);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(Collections.singletonList("n5"), sink);
     }
@@ -119,7 +119,7 @@ class HiveTest
         Bee<String> b = hive.bee(sink::add);
 
         b.accept("hi");
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(Collections.singletonList("hi"), sink);
     }
@@ -132,7 +132,7 @@ class HiveTest
 
         b.accept(1);
         b.accept(2);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(2, q.size());
         assertEquals(Integer.valueOf(1), q.take());
@@ -146,7 +146,7 @@ class HiveTest
 
         bee.accept("a");
         bee.accept("b");
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(Arrays.asList("a", "b"), list);
     }
@@ -160,7 +160,7 @@ class HiveTest
         b.accept("x");
         b.accept("x");
         b.accept("y");
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(new HashSet<>(Arrays.asList("x", "y")), new HashSet<>(s));
     }
@@ -175,7 +175,7 @@ class HiveTest
         filter.accept(-1);
         filter.accept(2);
         filter.waitForIdle().shutdown(true).awaitTermination(1);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(Collections.singletonList(2), sink);
     }
@@ -190,7 +190,7 @@ class HiveTest
         bc.accept("m");
 
         bc.waitForIdle().shutdown().awaitTermination(25);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(Collections.singletonList("m"), a);
         assertEquals(Collections.singletonList("m"), b);
@@ -207,7 +207,7 @@ class HiveTest
         batch.accept(2);
         
         batch.waitForIdle().shutdown().awaitTermination(25);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(Collections.singletonList(Arrays.asList(1, 2)), sink);
     }
@@ -223,13 +223,13 @@ class HiveTest
         head.accept(4);
         
         Utils.parkMillis(25);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(Collections.singletonList("v5"), sink);
     }
 
     @Test
-    void shutdownAndAwaitTerminationStopsThePool() throws InterruptedException
+    void shutdownStopsThePool() throws InterruptedException
     {
         assertFalse(hive.isShutdown());
         hive.shutdown();
@@ -240,13 +240,13 @@ class HiveTest
     }
 
     @Test
-    void shutdownAndAwaitTerminationDrainsBeesThenStopsThePool() throws InterruptedException
+    void closeDrainsBeesThenStopsThePool() throws InterruptedException
     {
         RecordingBee<Integer> bee = new RecordingBee<>(hive);
         bee.accept(1);
         bee.accept(2);
 
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
         hive.shutdown().awaitTermination(1);
 
         assertTrue(bee.isTerminated());
@@ -371,13 +371,13 @@ class HiveTest
         List<String> list = new ArrayList<>();
         Bee<String> beeList = proxy.list(list);
         beeList.accept("test-list");
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
         assertEquals(Collections.singletonList("test-list"), list);
 
         Set<String> set = new HashSet<>();
         Bee<String> beeSet = proxy.set(set);
         beeSet.accept("test-set");
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
         assertEquals(Collections.singleton("test-set"), set);
 
         CountDownLatch latch = new CountDownLatch(1);

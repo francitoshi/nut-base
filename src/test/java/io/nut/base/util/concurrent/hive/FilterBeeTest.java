@@ -136,7 +136,7 @@ class FilterBeeTest
         
         filter.waitForIdle();
                 
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(2, result.size());
         assertTrue(result.contains("even=2"));
@@ -187,7 +187,7 @@ class FilterBeeTest
 
         filter.waitForIdle().shutdown().awaitTermination(Integer.MAX_VALUE);
         
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains(15));
@@ -204,7 +204,7 @@ class FilterBeeTest
         filter.accept("hello");
 
         filter.waitForIdle().shutdown().awaitTermination(25);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
         
         assertEquals(1, result.size());
         assertTrue(result.contains("hello"));
@@ -221,7 +221,7 @@ class FilterBeeTest
         filter.accept(1);
 
         filter.waitForIdle().shutdown(true).awaitTermination(1);
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertEquals(1, result.size());
     }

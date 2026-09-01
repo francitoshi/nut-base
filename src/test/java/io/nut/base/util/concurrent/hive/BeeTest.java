@@ -197,14 +197,14 @@ class BeeTest
     }
 
     @Test
-    void shutdownAndAwaitTerminationHandlesMultipleBees()
+    void closeHandlesMultipleBees()
     {
         RecordingBee<Integer> b1 = new RecordingBee<>(hive);
         RecordingBee<Integer> b2 = new RecordingBee<>(hive);
         b1.accept(1);
         b2.accept(2);
 
-        hive.shutdownAndAwaitTermination(true);
+        hive.close(true);
 
         assertTrue(b1.isTerminated());
         assertTrue(b2.isTerminated());
@@ -331,7 +331,7 @@ class BeeTest
                 }
             }
 
-            bigHive.shutdownAndAwaitTermination(true);
+            bigHive.close(true);
 
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
             // Every bee forwards each received message to the next two bees, so a
