@@ -186,4 +186,130 @@ public class ProxyHive extends Hive implements AutoCloseable
         hive.forEach(iterable, consumer);
     }
 
+    @Override
+    void registerBee(Bee<?> bee)
+    {
+        hive.registerBee(bee);
+    }
+
+    @Override
+    void unregisterBee(Bee<?> bee)
+    {
+        hive.unregisterBee(bee);
+    }
+
+    @Override
+    public List<Bee<?>> bees()
+    {
+        return hive.bees();
+    }
+
+    @Override
+    public <T, R> PipeBee<T, R> pipe(Function<T, R> function)
+    {
+        return hive.pipe(function);
+    }
+
+    @Override
+    public <T, R> PipeBee<T, R> pipe(int threads, Function<T, R> function)
+    {
+        return hive.pipe(threads, function);
+    }
+
+    @Override
+    public <T> Bee<T> bee(Consumer<T> consumer)
+    {
+        return hive.bee(consumer);
+    }
+
+    @Override
+    public <T> Bee<T> bee(int threads, Consumer<T> consumer)
+    {
+        return hive.bee(threads, consumer);
+    }
+
+    @Override
+    public <E> Bee<E> queue(BlockingQueue<E> queue)
+    {
+        return hive.queue(queue);
+    }
+
+    @Override
+    public <E> Bee<E> list(List<E> list)
+    {
+        return hive.list(list);
+    }
+
+    @Override
+    public <E> Bee<E> list(int threads, List<E> list)
+    {
+        return hive.list(threads, list);
+    }
+
+    @Override
+    public <T> Bee<T> set(Set<T> set)
+    {
+        return hive.set(set);
+    }
+
+    @Override
+    public <T> Bee<T> set(int threads, Set<T> set)
+    {
+        return hive.set(threads, set);
+    }
+
+    @Override
+    public <T> FilterBee<T> filter(Predicate<T> predicate)
+    {
+        return hive.filter(predicate);
+    }
+
+    @Override
+    public <T> FilterBee<T> filter(int threads, Predicate<T> predicate)
+    {
+        return hive.filter(threads, predicate);
+    }
+
+    @Override
+    public <T, R> HivePipeline<T, R> pipeline(Function<T, R> first)
+    {
+        return hive.pipeline(first);
+    }
+
+    @Override
+    public <T, R> HivePipeline<T, R> pipeline(int threads, Function<T, R> first)
+    {
+        return hive.pipeline(threads, first);
+    }
+
+    @Override
+    public <T> BatchBee<T> batch(int maxSize, long maxWaitMillis)
+    {
+        return hive.batch(maxSize, maxWaitMillis);
+    }
+
+    @Override
+    public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
+    {
+        return hive.sub(topic, threads, consumer);
+    }
+
+    @Override
+    public <T> Bee<T> sub(String topic, Consumer<T> consumer)
+    {
+        return hive.sub(topic, consumer);
+    }
+
+    @Override
+    public Hive shutdown(boolean onlyWhenEmpty)
+    {
+        return hive.shutdown(onlyWhenEmpty);
+    }
+
+    @Override
+    public void close(boolean onlyWhenEmpty)
+    {
+        hive.close(onlyWhenEmpty);
+    }
+
 }

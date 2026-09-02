@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import io.nut.base.math.Nums;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -60,7 +61,6 @@ import java.util.logging.Logger;
  */
 public class Hive extends Queen implements AutoCloseable, Executor
 {
-
     /** Active non-synchronous Bees attached to this Hive, for coordinated tasks. */
     private final List<Bee<?>> bees = new CopyOnWriteArrayList<>();
 
@@ -96,28 +96,10 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Full constructor.
-     *
-     * @param corePoolSize      the number of threads kept alive even when idle
-     * @param rushPoolSize      the maximum number of threads allowed in the pool
-     * @param queueCapacity     the capacity of the task queue; use {@code 0}
-     *                          for a {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   how long excess idle threads are kept alive
-     *                          before being terminated, in milliseconds
-     * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
-     *                          caller; if {@code false}, the caller runs the
-     *                          task itself
-     */
-    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
-    {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, false);
-    }
-
-    /**
      * Full constructor with explicit active-task tracking control.
      *
      * @param corePoolSize      the number of threads kept alive even when idle
-     * @param rushPoolSize      the maximum number of threads allowed in the pool
+     * @param rushPoolSize      the number of additional threads allowed in the pool
      * @param queueCapacity     the capacity of the task queue; use {@code 0}
      *                          for a {@link SynchronousQueue} (no buffering)
      * @param keepAliveMillis   how long excess idle threads are kept alive
@@ -138,17 +120,35 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
+     * Full constructor.
+     *
+     * @param corePoolSize      the number of threads kept alive even when idle
+     * @param rushPoolSize      the number of additional threads allowed in the pool
+     * @param queueCapacity     the capacity of the task queue; use {@code 0}
+     *                          for a {@link SynchronousQueue} (no buffering)
+     * @param keepAliveMillis   how long excess idle threads are kept alive
+     *                          before being terminated, in milliseconds
+     * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
+     *                          caller; if {@code false}, the caller runs the
+     *                          task itself
+     */
+    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    {
+        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
+    }
+
+    /**
      * Constructs a Hive with the {@link ThreadPoolExecutor.CallerRunsPolicy}
      * saturation policy.
      *
      * @param corePoolSize    the number of threads kept alive even when idle
-     * @param rushPoolSize    the maximum number of threads allowed in the pool
+     * @param rushPoolSize    the number of additional threads allowed in the pool
      * @param queueCapacity   the capacity of the task queue (0 = no buffering)
      * @param keepAliveMillis how long excess idle threads survive, in milliseconds
      */
     public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
     {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, false);
+        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -161,9 +161,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public Hive(int corePoolSize)
     {
-        super(corePoolSize);
-        this.initialCorePoolSize = corePoolSize;
-        this.initialRushPoolSize = 0;
+        this(corePoolSize, corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -171,9 +169,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public Hive()
     {
-        super();
-        this.initialCorePoolSize = CORES;
-        this.initialRushPoolSize = 0;
+        this(CORES, CORES, CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -203,7 +199,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      * Static factory with full pool configuration.
      *
      * @param corePoolSize    threads kept alive when idle
-     * @param rushPoolSize    maximum threads in the pool
+     * @param rushPoolSize    the number of additional threads allowed in the pool
      * @param queueCapacity   task queue capacity (0 = no buffering)
      * @param keepAliveMillis lifetime of excess idle threads, in milliseconds
      * @return a new Hive
@@ -217,7 +213,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      * Static factory with full pool configuration and saturation policy choice.
      *
      * @param corePoolSize      threads kept alive when idle
-     * @param rushPoolSize      maximum threads in the pool
+     * @param rushPoolSize      the number of additional threads allowed in the pool
      * @param queueCapacity     task queue capacity (0 = no buffering)
      * @param keepAliveMillis   lifetime of excess idle threads, in milliseconds
      * @param callerWaitsPolicy {@code true} to block the caller when saturated;
@@ -884,36 +880,6 @@ public class Hive extends Queen implements AutoCloseable, Executor
             waitForIdle(set, s);
         }
     }
-    
-    private static void shutdown(Set<Consumer<?>> set, boolean onlyWhenEmpty, Consumer<?> stage)
-    {
-        if(set.contains(stage))
-        {
-            return;
-        }
-        
-        set.add(stage);
-        
-        if (stage instanceof Bee)
-        {
-            Bee<?> bee = (Bee<?>) stage;
-
-            if (onlyWhenEmpty)
-            {
-                bee.shutdown(true);
-                bee.awaitTermination(Integer.MAX_VALUE);
-            }
-            else
-            {
-                bee.shutdown(false);
-            }
-
-            for (Consumer<?> target : bee.getLinkedTargets())
-            {
-                shutdown(set, onlyWhenEmpty, target);
-            }
-        }
-    }
 
     /**
      * {@inheritDoc}
@@ -931,21 +897,18 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /**
      * Initiates a graceful shutdown on every Bee registered with this Hive;
      * synchronous Bees ({@code threads == 0}) are not registered and are
-     * unaffected. Stages linked via {@link PipeBee}, {@link FilterBee},
-     * {@link BatchBee}, and {@link FanOutBee} are traversed automatically;
-     * cycles are handled safely.
+     * unaffected.
      *
-     * @param onlyWhenEmpty if {@code true}, each stage defers its shutdown until
+     * @param onlyWhenEmpty if {@code true}, each Bee defers its shutdown until
      *                      its queue is empty (see {@link Bee#shutdown(boolean)});
      *                      if {@code false}, shutdown starts immediately
      * @return this Hive, for fluent chaining
      */
     public Hive shutdown(boolean onlyWhenEmpty)
     {
-        Set<Consumer<?>> set = new HashSet();
-        for (Consumer<?> s : bees)
+        for (Bee<?> bee : bees)
         {
-            shutdown(set, onlyWhenEmpty, s);
+            bee.shutdown(onlyWhenEmpty);
         }
         return (Hive)super.shutdown();
     }
@@ -985,7 +948,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public static void awaitTermination(int millis, Consumer<?>... stages) throws InterruptedException
     {
-        long untilNanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+        long untilNanos = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
         Set<Consumer<?>> set = new HashSet();
         for(Consumer<?> s : stages)
         {

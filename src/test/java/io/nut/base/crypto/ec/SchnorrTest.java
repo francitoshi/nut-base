@@ -179,9 +179,9 @@ public class SchnorrTest
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Schnorr schnorr = Sign.SECP256K1_SCHNORR;
 
-        final int ths = Hive.CORES*2;
+        final int ths = Hive.CORES*3;
         
-        Hive hive = Hive.hive();
+        Hive hive = Hive.hive(ths);
         
         HivePipeline<Data, Data> pipe = hive.pipeline(ths,ths, (Data data) ->
         {

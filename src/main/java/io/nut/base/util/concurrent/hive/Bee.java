@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.hive;
 
+import io.nut.base.math.Nums;
 import io.nut.base.util.concurrent.channel.Channel;
 import io.nut.base.util.concurrent.channel.CloseableChannel;
 import java.util.Collection;
@@ -90,6 +91,15 @@ public abstract class Bee<M> implements Consumer<M>
 
     /** Messages accepted but not yet received. */
     private final AtomicInteger pending = new AtomicInteger();
+
+    /**
+     * Messages currently being processed by a worker, i.e. pulled from the
+     * channel but not yet returned from {@link #receive(Object, long)}. Used
+     * by {@link #isIdle()} so a Bee whose permanent worker is mid-{@code receive}
+     * is never reported idle, even though {@code pending} is already back to
+     * zero for that message.
+     */
+    private final AtomicInteger processing = new AtomicInteger();
 
     /**
      * Monotonic position assigned to messages as they are pulled from the
@@ -494,6 +504,7 @@ public abstract class Bee<M> implements Consumer<M>
         {
             pending.decrementAndGet();
             long seq = sequenceCounter.incrementAndGet();
+            processing.incrementAndGet();
             try
             {
                 receive(m, seq);
@@ -501,6 +512,10 @@ public abstract class Bee<M> implements Consumer<M>
             catch (Exception ex)
             {
                 handleException(ex);
+            }
+            finally
+            {
+                processing.decrementAndGet();
             }
         }
     }
@@ -520,6 +535,7 @@ public abstract class Bee<M> implements Consumer<M>
         {
             pending.decrementAndGet();
             long seq = sequenceCounter.incrementAndGet();
+            processing.incrementAndGet();
             try
             {
                 receive(m, seq);
@@ -527,6 +543,10 @@ public abstract class Bee<M> implements Consumer<M>
             catch (Exception ex)
             {
                 handleException(ex);
+            }
+            finally
+            {
+                processing.decrementAndGet();
             }
         }
     }
@@ -723,14 +743,11 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Returns {@code true} if no messages are pending and no temporary ("rush")
-     * workers are active. The Bee's permanent worker is deliberately excluded:
-     * although it keeps a thread alive waiting for new messages, it does not
-     * make the Bee busy.
+     * Returns {@code true} if no messages are pending or being processed. 
      */
     public boolean isIdle()
     {
-        return pending.get() <= 0 && rushWorkers.get() == 0;
+        return pending.get() <= 0 && processing.get() == 0;
     }
 
     /**
@@ -827,7 +844,7 @@ public abstract class Bee<M> implements Consumer<M>
      */
     public boolean awaitTermination(int millis)
     {
-        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+        long deadline = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
         return awaitTerminationUntilNanos(deadline);
     }
 

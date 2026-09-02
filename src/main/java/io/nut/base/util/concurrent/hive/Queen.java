@@ -51,7 +51,11 @@ import java.util.concurrent.Phaser;
  * and the pub/sub registry on top of this execution foundation.
  */
 public class Queen implements AutoCloseable, Executor
-{
+{    
+    public static final int DEFAULT_KEEP_ALIVE_MILLIS = 10_000;
+    public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
+    public static final boolean DEFAULT_AVOID_TRACKER = false;
+
     /**
      * Number of available processor cores, used as the default pool size.
      */
@@ -85,7 +89,7 @@ public class Queen implements AutoCloseable, Executor
      * thread, and there is no backing thread pool. Enabled when the pool is
      * constructed with {@code corePoolSize == 0 && rushPoolSize == 0}.
      */
-    private final boolean synchronous;
+    protected final boolean synchronous;
 
     /**
      * Tracks the shutdown state in synchronous mode (there is no backing pool).
@@ -155,7 +159,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, false);
+        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -168,7 +172,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
     {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, false);
+        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -185,7 +189,7 @@ public class Queen implements AutoCloseable, Executor
         // waiting in the queue for a thread that may never be freed. This is
         // what keeps Bee pipelines alive when forwarding stages saturate the
         // pool with blocking channel puts.
-        this(corePoolSize, corePoolSize, 0, KEEP_ALIVE_MILLIS, false);
+        this(corePoolSize, corePoolSize, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -193,7 +197,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen()
     {
-        this(CORES, CORES, 0, KEEP_ALIVE_MILLIS, false);
+        this(CORES, CORES, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     // -------------------------------------------------------------------------

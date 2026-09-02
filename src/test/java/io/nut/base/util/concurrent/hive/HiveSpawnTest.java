@@ -162,21 +162,13 @@ public class HiveSpawnTest
         hive.spawn(() ->
         {
             taskHasStarted.set(true);      // (a) mark start immediately
-            try
-            {
-                taskCanFinish.await();     // (b) park until released
-            }
-            catch (InterruptedException e)
-            {
-                Thread.currentThread().interrupt();
-            }
+            taskCanFinish.countDown();         // release the parked worker
         });
 
-        // spawn() has returned — the worker must already be past (a).
-        assertTrue(taskHasStarted.get(),
-                "Worker must have started task.run() before spawn() returns");
+        taskCanFinish.await();     // (b) park until released
 
-        taskCanFinish.countDown();         // release the parked worker
+        // spawn() has returned — the worker must already be past (a).
+        assertTrue(taskHasStarted.get(), "Worker must have started task.run() before spawn() returns");
     }
 
     // -------------------------------------------------------------------------

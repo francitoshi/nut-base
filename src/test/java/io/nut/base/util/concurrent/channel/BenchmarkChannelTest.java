@@ -8,6 +8,7 @@ package io.nut.base.util.concurrent.channel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.Test;
  * To tune the number of total messages: -Dchannel.bench.total=100000
  * To tune the buffer capacity: -Dchannel.bench.capacity=1024
  */
+@Tag("benchmark")
 public class BenchmarkChannelTest
 {
     private static final int TOTAL = Integer.getInteger("channel.bench.total", 2_000_000);
