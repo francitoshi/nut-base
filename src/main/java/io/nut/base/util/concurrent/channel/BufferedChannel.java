@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Channel with a fixed-capacity buffer without closing: it lives as long as
  * the JVM lives (or as long as the object itself is referenced). There is no
- * close() operation, so put()/get() are delegated directly to
- * ArrayBlockingQueue without any additional state or synchronization.
+ * close() operation, so put()/get() delegate directly to
+ * ArrayBlockingQueue, adding only interruption-tracking state.
  *
  * Unlike UnbufferedChannel, put() does not block until a get() is waiting: the
  * value is stored in the buffer and put() returns as soon as there is room

@@ -46,6 +46,11 @@ public class FanoutChannel<E> implements ChannelWriter<E>
     /**
      * Returns whether an {@link InterruptedException} has ever been raised by
      * a {@link #put} while broadcasting to one of the registered targets.
+     * <p>
+     * <b>Note:</b> this method is currently a no-op — {@link #put} does not
+     * catch {@code InterruptedException}, so this method always returns
+     * {@code false}. It is reserved for a future enhancement where
+     * interruption tracking may be added.
      *
      * @return {@code true} if at least one broadcast was interrupted
      */

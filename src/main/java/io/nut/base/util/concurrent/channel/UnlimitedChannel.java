@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Unbounded and non-closeable channel: it lives as long as the JVM lives (or
  * as long as the object itself is referenced). There is no close() operation,
- * so put()/get() are delegated directly to LinkedBlockingQueue without any
- * additional state or synchronization.
+ * so put()/get() delegate directly to LinkedBlockingQueue, adding only
+ * interruption-tracking state.
  *
  * Since it has no bounded capacity, put() never blocks waiting for room: the
  * value is always enqueued and returns immediately (except for memory

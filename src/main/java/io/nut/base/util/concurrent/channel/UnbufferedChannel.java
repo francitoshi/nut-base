@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * Unbuffered channel without closing: it lives as long as the JVM lives (or
  * as long as the object itself is referenced). There is no close() operation,
- * so put()/get() are delegated directly to SynchronousQueue without any
- * additional state or synchronization.
+ * so put()/get() delegate directly to SynchronousQueue, adding only
+ * interruption-tracking state.
  */
 public final class UnbufferedChannel<E> extends Channel<E>
 {

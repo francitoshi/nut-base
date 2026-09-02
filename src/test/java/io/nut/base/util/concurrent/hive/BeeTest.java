@@ -294,7 +294,7 @@ class BeeTest
         // once every pool thread is held by a blocked forwarder. This is the same
         // configuration the Queen's default constructor uses to avoid that
         // deadlock (see Queen#Queen(int)).
-        Hive bigHive = Hive.hive(100, 100, 0, 10000, false);
+        Hive bigHive = Hive.hive(100, 0, 10000, false);
         try
         {
             Bee<Long>[] bees = new Bee[beesCount];

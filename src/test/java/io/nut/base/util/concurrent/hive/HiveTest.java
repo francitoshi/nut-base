@@ -70,8 +70,8 @@ class HiveTest
     {
         runsATaskOn(Hive.hive());
         runsATaskOn(Hive.hive(2));
-        runsATaskOn(Hive.hive(2, 2, 2, 1000));
-        runsATaskOn(Hive.hive(2, 2, 2, 1000, true));
+        runsATaskOn(Hive.hive(2, 2, 1000));
+        runsATaskOn(Hive.hive(2, 2, 1000, true));
     }
 
     private void runsATaskOn(Hive h) throws Exception

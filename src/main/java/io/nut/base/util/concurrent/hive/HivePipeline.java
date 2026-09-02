@@ -171,7 +171,6 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * linked to a downstream consumer. Finish building the chain before sending.
      *
      * @param message the message to deliver to the head stage
-     * @return {@code true} if the head stage accepted the message
      */
     @Override
     public void accept(T message)

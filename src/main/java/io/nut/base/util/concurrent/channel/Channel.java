@@ -24,8 +24,8 @@ import io.nut.base.util.tuple.Tuple2;
  * </ul>
  *
  * <p>Use the static factory methods below to build channels. The
- * {@code closeable*} variants return a {@link CloseableChannel} that can be
- * explicitly closed to signal end-of-data.
+ * {@code closeable*} variants return a channel implementing
+ * {@link ChannelCloser} that can be explicitly closed to signal end-of-data.
  *
  * <p>Example:
  * <pre>{@code
@@ -124,9 +124,10 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
      * Use it for work queues / pipelines where the producer may run ahead of the
      * consumer, up to {@code capacity} pending items.
      *
-     * @param capacity the number of items the buffer can hold
+     * @param capacity the number of items the buffer can hold (must be &gt; 0)
      * @param <T>      the element type
      * @return a buffered channel with the given capacity
+     * @throws IllegalArgumentException if {@code capacity} is not positive
      */
     public static <T> Channel<T> buffered(int capacity)
     {
@@ -238,7 +239,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
      *
      * @param in  the channel reader to delegate reads to
      * @param out the channel writer to delegate writes to
-     * @param <T> the type of elements read
+     * @param <T> the type of elements read from the input reader and written to the output writer
      * @return a duplex channel delegating to {@code out} and {@code in}
      */
     public static <T> DuplexChannel<T> duplex(ChannelReader<T> in, ChannelWriter<T> out)
@@ -254,6 +255,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
      * @param b  the other end of the connection
      * @param <T> the type of elements exchanged
      * @return a pair of duplex channels, each reading what the other writes
+     * @throws IllegalArgumentException if either channel is already duplex
      */
     public static <T> Tuple2<DuplexChannel<T>, DuplexChannel<T>> duplexPair(Channel<T> a, Channel<T> b)
     {

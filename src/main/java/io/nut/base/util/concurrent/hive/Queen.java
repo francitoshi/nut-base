@@ -41,7 +41,15 @@ import java.util.concurrent.Phaser;
  *   <tr><td>parallel + blocking</td><td>{@link #forEach}</td><td>—</td></tr>
  * </table>
  *
- * <p>{@code Queen} also implements {@link Executor} (via {@link #execute}) so
+ * <p>The pool is sized to a single {@code corePoolSize} value and
+ * {@link ThreadPoolExecutor#allowCoreThreadTimeOut} is enabled, so the number
+ * of live threads scales from {@code 0} up to {@code corePoolSize} following
+ * the load: threads are created on demand and reclaimed once idle for the
+ * keep-alive time. Constructing a Queen with {@code corePoolSize == 0} enables
+ * the synchronous mode, in which every task runs directly in the calling
+ * thread and no backing pool exists.
+ * <p>
+ * {@code Queen} also implements {@link Executor} (via {@link #execute}) so
  * it can be passed anywhere a plain {@code Executor} is expected.
  * <p>
  * {@code Queen} implements {@link AutoCloseable}: {@link #close()} shuts the
@@ -87,7 +95,7 @@ public class Queen implements AutoCloseable, Executor
      * When {@code true}, all {@code execute}/{@code submit}/{@code spawn}/
      * {@code forEach} invocations run the task synchronously in the calling
      * thread, and there is no backing thread pool. Enabled when the pool is
-     * constructed with {@code corePoolSize == 0 && rushPoolSize == 0}.
+     * constructed with {@code corePoolSize == 0}.
      */
     protected final boolean synchronous;
 
@@ -115,20 +123,42 @@ public class Queen implements AutoCloseable, Executor
 
     /**
      * Full constructor.
+     * <p>
+     * The pool is created with {@code corePoolSize} both as the core and the
+     * maximum thread count, and {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
+     * is enabled whenever {@code keepAliveMillis &gt; 0}, so the number of live
+     * threads scales from {@code 0} up to {@code corePoolSize} as demand rises
+     * and falls. Subclasses such as {@link Hive} may grow the maximum beyond
+     * {@code corePoolSize} later via {@link #setMaximumPoolSize}.
      *
-     * @param corePoolSize      threads kept alive even when idle
-     * @param rushPoolSize      maximum threads in the pool
+     * @param corePoolSize      the maximum number of concurrent worker threads;
+     *                          {@code 0} selects the synchronous mode (no pool)
      * @param queueCapacity     task-queue capacity; {@code 0} for a
      *                          {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   lifetime of excess idle threads, in milliseconds
+     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds;
+     *                          must be &ge; 0; when &gt; 0 the core threads are
+     *                          also allowed to time out
      * @param callerWaitsPolicy {@code true} to block the caller on saturation;
      *                          {@code false} to run the task in the caller
      * @param avoidTracker       {@code true} to disable active-task tracking
-     *                          
+     * @throws IllegalArgumentException if {@code corePoolSize &lt; 0} or
+     *         {@code keepAliveMillis &lt; 0}; the synchronous case
+     *         ({@code corePoolSize == 0}) is exempt from these checks
      */
-    public Queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    public Queen(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
-        this.synchronous = corePoolSize == 0 && rushPoolSize == 0;
+        this.synchronous = corePoolSize == 0;
+        if (!this.synchronous)
+        {
+            if (corePoolSize < 0)
+            {
+                throw new IllegalArgumentException("corePoolSize must be >= 0, got " + corePoolSize);
+            }
+            if (keepAliveMillis < 0)
+            {
+                throw new IllegalArgumentException("keepAliveMillis must be >= 0, got " + keepAliveMillis);
+            }
+        }
         if (this.synchronous)
         {
             this.threadPoolExecutor = null;
@@ -139,40 +169,44 @@ public class Queen implements AutoCloseable, Executor
                 ? new SynchronousQueue<>()
                 : new LinkedBlockingQueue<>(queueCapacity);
         this.threadPoolExecutor = new ThreadPoolExecutor(
-                corePoolSize, rushPoolSize,
+                corePoolSize, corePoolSize,
                 keepAliveMillis, TimeUnit.MILLISECONDS,
                 queue,
                 callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY);
+        if (keepAliveMillis > 0)
+        {
+            this.threadPoolExecutor.allowCoreThreadTimeOut(true);
+        }
         this.phaser = avoidTracker ? null : new Phaser(1);
     }
 
     /**
      * Full constructor with tracking disabled.
      *
-     * @param corePoolSize      threads kept alive even when idle
-     * @param rushPoolSize      maximum threads in the pool
+     * @param corePoolSize      the maximum number of concurrent worker threads;
+     *                          {@code 0} selects the synchronous mode
      * @param queueCapacity     task-queue capacity; {@code 0} for a
      *                          {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   lifetime of excess idle threads, in milliseconds
+     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds
      * @param callerWaitsPolicy {@code true} to block the caller on saturation;
      *                          {@code false} to run the task in the caller
      */
-    public Queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public Queen(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
+        this(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
     }
 
     /**
      * Constructs a Queen with the {@link ThreadPoolExecutor.CallerRunsPolicy}.
      *
-     * @param corePoolSize    threads kept alive when idle
-     * @param rushPoolSize    maximum threads in the pool
+     * @param corePoolSize    the maximum number of concurrent worker threads;
+     *                        {@code 0} selects the synchronous mode
      * @param queueCapacity   task-queue capacity (0 = no buffering)
-     * @param keepAliveMillis lifetime of excess idle threads, in milliseconds
+     * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
      */
-    public Queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
+    public Queen(int corePoolSize, int queueCapacity, int keepAliveMillis)
     {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(corePoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -183,13 +217,13 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen(int corePoolSize)
     {
-        // A zero-capacity task queue (SynchronousQueue) combined with the
-        // CallerRunsPolicy keeps the pool from ever parking work behind a
-        // saturated pool: submitted tasks run in the calling thread instead of
-        // waiting in the queue for a thread that may never be freed. This is
-        // what keeps Bee pipelines alive when forwarding stages saturate the
-        // pool with blocking channel puts.
-        this(corePoolSize, corePoolSize, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        // A CPU-sized bounded queue combined with the CallerRunsPolicy keeps
+        // the pool from ever parking work behind a saturated pool: submitted
+        // tasks run in the calling thread instead of waiting in the queue for
+        // a thread that may never be freed. This is what keeps Bee pipelines
+        // alive when forwarding stages saturate the pool with blocking channel
+        // puts.
+        this(corePoolSize, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -197,7 +231,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen()
     {
-        this(CORES, CORES, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(CORES, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     // -------------------------------------------------------------------------
@@ -222,28 +256,26 @@ public class Queen implements AutoCloseable, Executor
     }
 
     /**
-     * @param corePoolSize    threads kept alive when idle
-     * @param rushPoolSize    maximum threads in the pool
+     * @param corePoolSize    the maximum number of concurrent worker threads
      * @param queueCapacity   task-queue capacity (0 = no buffering)
-     * @param keepAliveMillis lifetime of excess idle threads, in milliseconds
+     * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
      * @return a new Queen with the given pool configuration
      */
-    public static Queen queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
+    public static Queen queen(int corePoolSize, int queueCapacity, int keepAliveMillis)
     {
-        return new Queen(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis);
+        return new Queen(corePoolSize, queueCapacity, keepAliveMillis);
     }
 
     /**
-     * @param corePoolSize      threads kept alive when idle
-     * @param rushPoolSize      maximum threads in the pool
+     * @param corePoolSize      the maximum number of concurrent worker threads
      * @param queueCapacity     task-queue capacity (0 = no buffering)
-     * @param keepAliveMillis   lifetime of excess idle threads, in milliseconds
+     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds
      * @param callerWaitsPolicy {@code true} to block caller on saturation
      * @return a new Queen with full pool configuration
      */
-    public static Queen queen(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public static Queen queen(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        return new Queen(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
+        return new Queen(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
     }
 
     // -------------------------------------------------------------------------
@@ -252,7 +284,7 @@ public class Queen implements AutoCloseable, Executor
 
     /**
      * Returns {@code true} if this Queen was constructed with
-     * {@code corePoolSize == 0 && rushPoolSize == 0}, in which case every
+     * {@code corePoolSize == 0}, in which case every
      * execution method runs tasks synchronously in the calling thread and no
      * backing pool exists.
      *

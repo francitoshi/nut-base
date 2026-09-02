@@ -240,7 +240,7 @@ public abstract class Bee<M> implements Consumer<M>
      * Returns whether this Bee runs synchronously: either it was constructed
      * with {@code threads == 0}, no Hive is attached, or the attached Hive is
      * itself synchronous (constructed with
-     * {@code corePoolSize == 0 && rushPoolSize == 0}).
+     * {@code corePoolSize == 0}).
      *
      * @return {@code true} if {@link #accept} runs {@link #receive} directly
      */

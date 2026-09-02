@@ -53,11 +53,18 @@ import java.util.logging.Logger;
  * implements {@link Executor}, so it can be passed anywhere a plain
  * {@code Executor} is accepted.
  * <p>
+ * As with {@link Queen}, the pool is configured with a single
+ * {@code corePoolSize} that also acts as the initial maximum, and idle core
+ * threads are allowed to time out, so the number of threads scales from
+ * {@code 0} up to {@code corePoolSize}. When more (non-synchronous) Bees are
+ * registered than {@code corePoolSize}, the pool's core and maximum sizes
+ * automatically grow to keep one thread available per Bee.
+ * <p>
  * {@link #shutdown(boolean)} and {@link #close(boolean)}
- * shut down every Bee registered with this Hive, following the links stored by
- * {@link PipeBee}, {@link FilterBee}, {@link BatchBee}, and {@link FanOutBee};
- * the static {@link #awaitTermination(int, Consumer[])} blocks until a chain
- * of linked stages has terminated.
+ * shut down every Bee registered with this Hive; the static
+ * {@link #awaitTermination(int, Consumer[])} follows the links stored by
+ * {@link PipeBee}, {@link FilterBee}, {@link BatchBee}, and {@link FanOutBee},
+ * blocking until a chain of linked stages has terminated.
  */
 public class Hive extends Queen implements AutoCloseable, Executor
 {
@@ -84,16 +91,10 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /**
      * The core pool size as configured at construction. When the number of
      * registered (non-synchronous) Bees grows beyond this value, the pool's
-     * core size is raised to keep one thread per registered Bee available.
+     * core size is raised to keep one thread per registered Bee available, and
+     * the maximum is raised by the same amount (see {@link #adjustPoolToBees}).
      */
     private final int initialCorePoolSize;
-
-    /**
-     * The fixed margin {@code max - core} configured at construction. When the
-     * core size is raised to accommodate more Bees the maximum is raised by the
-     * same amount, so the relation {@code max == core + rush} is preserved.
-     */
-    private final int initialRushPoolSize;
 
     /**
      * Protected constructor used by {@link ProxyHive} and subclasses that
@@ -106,18 +107,19 @@ public class Hive extends Queen implements AutoCloseable, Executor
     {
         super(threadPoolExecutor);
         this.initialCorePoolSize = 0;
-        this.initialRushPoolSize = 0;
     }
 
     /**
      * Full constructor with explicit active-task tracking control.
      *
-     * @param corePoolSize      the number of threads kept alive even when idle
-     * @param rushPoolSize      the number of additional threads allowed in the pool
+     * @param corePoolSize      the maximum number of concurrent worker threads;
+     *                          {@code 0} selects the synchronous mode (no pool)
      * @param queueCapacity     the capacity of the task queue; use {@code 0}
      *                          for a {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   how long excess idle threads are kept alive
-     *                          before being terminated, in milliseconds
+     * @param keepAliveMillis   the keep-alive time for idle threads, in
+     *                          milliseconds; the pool grows from {@code 0} up
+     *                          to {@code corePoolSize} threads (or more, when
+     *                          more Bees demand them) as load demands
      * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
      *                          caller; if {@code false}, the caller runs the
      *                          task itself
@@ -126,56 +128,55 @@ public class Hive extends Queen implements AutoCloseable, Executor
      *                          disabled, which reduces overhead but makes
      *                          {@link Queen#waitForIdle()} a no-op
      */
-    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    public Hive(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
-        super(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, avoidTracker);
+        super(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, avoidTracker);
         this.initialCorePoolSize = corePoolSize;
-        this.initialRushPoolSize = Math.max(0, rushPoolSize - corePoolSize);
     }
 
     /**
      * Full constructor.
      *
-     * @param corePoolSize      the number of threads kept alive even when idle
-     * @param rushPoolSize      the number of additional threads allowed in the pool
+     * @param corePoolSize      the maximum number of concurrent worker threads;
+     *                          {@code 0} selects the synchronous mode (no pool)
      * @param queueCapacity     the capacity of the task queue; use {@code 0}
      *                          for a {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   how long excess idle threads are kept alive
-     *                          before being terminated, in milliseconds
+     * @param keepAliveMillis   the keep-alive time for idle threads, in
+     *                          milliseconds
      * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
      *                          caller; if {@code false}, the caller runs the
      *                          task itself
      */
-    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public Hive(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
+        this(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
     }
 
     /**
      * Constructs a Hive with the {@link ThreadPoolExecutor.CallerRunsPolicy}
      * saturation policy.
      *
-     * @param corePoolSize    the number of threads kept alive even when idle
-     * @param rushPoolSize    the number of additional threads allowed in the pool
+     * @param corePoolSize    the maximum number of concurrent worker threads;
+     *                        {@code 0} selects the synchronous mode (no pool)
      * @param queueCapacity   the capacity of the task queue (0 = no buffering)
-     * @param keepAliveMillis how long excess idle threads survive, in milliseconds
+     * @param keepAliveMillis the keep-alive time for idle threads, in milliseconds
      */
-    public Hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
+    public Hive(int corePoolSize, int queueCapacity, int keepAliveMillis)
     {
-        this(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(corePoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
      * Constructs a Hive with a symmetric pool of {@code corePoolSize} threads,
-     * a zero-capacity task queue (so saturated tasks run in the caller under
-     * the {@link ThreadPoolExecutor.CallerRunsPolicy CallerRunsPolicy} instead
-     * of waiting in the queue), and the default keep-alive time.
+     * a task queue of the same capacity, and the default keep-alive time.
+     * When the queue is full, saturated tasks run in the caller under the
+     * {@link ThreadPoolExecutor.CallerRunsPolicy CallerRunsPolicy}.
      *
      * @param corePoolSize the number of threads and queue slots
      */
     public Hive(int corePoolSize)
     {
-        this(corePoolSize, corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -183,7 +184,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public Hive()
     {
-        this(CORES, CORES, CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(CORES, CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -212,31 +213,29 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /**
      * Static factory with full pool configuration.
      *
-     * @param corePoolSize    threads kept alive when idle
-     * @param rushPoolSize    the number of additional threads allowed in the pool
+     * @param corePoolSize    the maximum number of concurrent worker threads
      * @param queueCapacity   task queue capacity (0 = no buffering)
-     * @param keepAliveMillis lifetime of excess idle threads, in milliseconds
+     * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
      * @return a new Hive
      */
-    public static Hive hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis)
+    public static Hive hive(int corePoolSize, int queueCapacity, int keepAliveMillis)
     {
-        return new Hive(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis);
+        return new Hive(corePoolSize, queueCapacity, keepAliveMillis);
     }
 
     /**
      * Static factory with full pool configuration and saturation policy choice.
      *
-     * @param corePoolSize      threads kept alive when idle
-     * @param rushPoolSize      the number of additional threads allowed in the pool
+     * @param corePoolSize      the maximum number of concurrent worker threads
      * @param queueCapacity     task queue capacity (0 = no buffering)
-     * @param keepAliveMillis   lifetime of excess idle threads, in milliseconds
+     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds
      * @param callerWaitsPolicy {@code true} to block the caller when saturated;
      *                          {@code false} to run the task in the caller
      * @return a new Hive
      */
-    public static Hive hive(int corePoolSize, int rushPoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public static Hive hive(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        return new Hive(corePoolSize, rushPoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
+        return new Hive(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
     }
 
     @Override
@@ -290,10 +289,11 @@ public class Hive extends Queen implements AutoCloseable, Executor
 
     /**
      * Raises the pool's core and maximum sizes so that there is always one
-     * core thread available per registered (non-synchronous) Bee, while
-     * preserving the {@code max == core + rush} relation configured at
-     * construction. When Bees are removed the sizes shrink back towards their
-     * initial values.
+     * thread available per registered (non-synchronous) Bee. The pool starts
+     * with a maximum equal to {@code initialCorePoolSize}; when more Bees are
+     * registered than that, both the core and the maximum are raised to keep
+     * one thread per Bee (see {@link Queen}). When Bees are removed the sizes
+     * shrink back towards their initial values.
      */
     private void adjustPoolToBees()
     {
@@ -301,23 +301,18 @@ public class Hive extends Queen implements AutoCloseable, Executor
         {
             return;
         }
-        int core = Math.max(initialCorePoolSize, beeCount.get());
-        int maximum = core + initialRushPoolSize;
-        if (maximum < core)
-        {
-            maximum = core;
-        }
+        int size = Math.max(initialCorePoolSize, beeCount.get());
         // ThreadPoolExecutor forbids core > maximum. When growing (more Bees)
         // raise the maximum first; when shrinking, lower the core first.
-        if (maximum > getMaximumPoolSize())
+        if (size > getMaximumPoolSize())
         {
-            setMaximumPoolSize(maximum);
-            setCorePoolSize(core);
+            setMaximumPoolSize(size);
+            setCorePoolSize(size);
         }
         else
         {
-            setCorePoolSize(core);
-            setMaximumPoolSize(maximum);
+            setCorePoolSize(size);
+            setMaximumPoolSize(size);
         }
     }
 
@@ -1108,6 +1103,10 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /**
      * Blocks until every Bee registered with this Hive has terminated (closed,
      * drained, and unregistered), then returns.
+     * <p>
+     * If the calling thread is interrupted while waiting, the interrupt status
+     * is restored and the interruption is logged at {@link Level#SEVERE}; the
+     * method then returns without waiting for termination to complete.
      */
     public Hive awaitTermination()
     {
