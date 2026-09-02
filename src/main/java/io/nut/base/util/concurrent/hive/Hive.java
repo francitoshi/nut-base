@@ -67,6 +67,20 @@ public class Hive extends Queen implements AutoCloseable, Executor
     /** O(1) count of registered Bees, used to size the pool as Bees come and go. */
     private final AtomicInteger beeCount = new AtomicInteger();
 
+    /** Shared count of messages processed by all Bees attached to this Hive. */
+    private final AtomicInteger processedCount = new AtomicInteger();
+
+    /** Guards the deferred-shutdown handshake between {@link #shutdown(boolean)}
+     *  and {@link #unregisterBee(Bee)}. */
+    private final Object shutdownLock = new Object();
+
+    /**
+     * {@code true} once {@link #shutdown(boolean)} has been called with
+     * {@code onlyWhenEmpty == true} but the pool shutdown is still pending
+     * because at least one non-synchronous Bee has yet to drain and terminate.
+     */
+    private boolean shutdownWhenEmpty;
+
     /**
      * The core pool size as configured at construction. When the number of
      * registered (non-synchronous) Bees grows beyond this value, the pool's
@@ -233,6 +247,19 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }   
     
     /**
+     * Returns the Hive-wide counter of messages processed by its Bees. Bees
+     * attached to this Hive hold a direct reference to it, so a graceful
+     * {@code shutdown(true)} can detect, across {@link #waitForIdle()} passes,
+     * whether any Bee is still forwarding messages.
+     *
+     * @return the shared processed-message counter
+     */
+    AtomicInteger processedCount()
+    {
+        return processedCount;
+    }
+
+    /**
      * Registers a non-synchronous Bee attached to this Hive so its lifecycle
      * can be tracked. Called by {@link Bee} on construction.
      *
@@ -257,6 +284,7 @@ public class Hive extends Queen implements AutoCloseable, Executor
         {
             beeCount.decrementAndGet();
             adjustPoolToBees();
+            maybeShutdownPool();
         }
     }
 
@@ -898,19 +926,100 @@ public class Hive extends Queen implements AutoCloseable, Executor
      * Initiates a graceful shutdown on every Bee registered with this Hive;
      * synchronous Bees ({@code threads == 0}) are not registered and are
      * unaffected.
+     * <p>
+     * When {@code onlyWhenEmpty} is {@code true} the Hive first drains the
+     * whole graph: it waits until every registered Bee is idle, repeating the
+     * pass whenever the Hive-wide processed-message counter advances (so
+     * in-flight forwards between linked stages are not lost), and only then
+     * closes every Bee and the underlying thread pool. When {@code false} the
+     * shutdown starts immediately.
      *
-     * @param onlyWhenEmpty if {@code true}, each Bee defers its shutdown until
-     *                      its queue is empty (see {@link Bee#shutdown(boolean)});
-     *                      if {@code false}, shutdown starts immediately
+     * @param onlyWhenEmpty if {@code true}, the Hive drains until the whole
+     *                      graph is quiescent before shutting down; if
+     *                      {@code false}, shutdown starts immediately
      * @return this Hive, for fluent chaining
      */
     public Hive shutdown(boolean onlyWhenEmpty)
     {
+        if (onlyWhenEmpty)
+        {
+            synchronized (shutdownLock)
+            {
+                if (shutdownWhenEmpty)
+                {
+                    return this;
+                }
+                shutdownWhenEmpty = true;
+            }
+            // Graceful drain: wait until every Bee is idle, repeating the pass
+            // whenever the Hive-wide processed-message counter advanced during
+            // the wait. A Bee that is still forwarding to later stages raises
+            // the counter of a peer Bee, so the repeated pass catches in-flight
+            // forwards; only when the counter stops moving is the whole graph
+            // quiescent and safe to close.
+            long last = processedCount.get();
+            while (true)
+            {
+                for (Bee<?> bee : bees)
+                {
+                    bee.waitForIdle();
+                }
+                long now = processedCount.get();
+                if (now == last)
+                {
+                    break;
+                }
+                last = now;
+            }
+        }
         for (Bee<?> bee : bees)
         {
-            bee.shutdown(onlyWhenEmpty);
+            bee.shutdown(false);
         }
-        return (Hive)super.shutdown();
+        shutdownPoolOrDefer();
+        return this;
+    }
+
+    /**
+     * Shuts down the underlying thread pool unless a graceful
+     * ({@code onlyWhenEmpty == true}) shutdown is still pending Bees that have
+     * yet to drain. When such Bees are still registered the pool is left open
+     * so their workers can complete, and {@link #maybeShutdownPool()} is called
+     * again from {@link #unregisterBee(Bee)} once the last one terminates.
+     */
+    private void shutdownPoolOrDefer()
+    {
+        synchronized (shutdownLock)
+        {
+            if (shutdownWhenEmpty && beeCount.get() > 0)
+            {
+                return;
+            }
+            shutdownWhenEmpty = false;
+            if (!isShutdown())
+            {
+                super.shutdown();
+            }
+        }
+    }
+
+    /**
+     * Shuts down the underlying pool if a graceful shutdown has been requested
+     * and this was the last registered Bee to terminate.
+     */
+    private void maybeShutdownPool()
+    {
+        synchronized (shutdownLock)
+        {
+            if (shutdownWhenEmpty && beeCount.get() == 0)
+            {
+                shutdownWhenEmpty = false;
+                if (!isShutdown())
+                {
+                    super.shutdown();
+                }
+            }
+        }
     }
     
     private static void awaitTerminationUntilNanos(Set<Consumer<?>> set, Consumer<?> stage, long nanos) throws InterruptedException
@@ -957,17 +1066,78 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Shuts down every Bee registered with this Hive and blocks until all of
-     * them have terminated. This is a convenience combination of
-     * {@link #shutdown(boolean)} followed by
-     * {@link #awaitTermination(int, Consumer[])} with an effectively infinite
-     * timeout, applied to the Bees in {@link #bees()}. Synchronous Bees
-     * ({@code threads == 0}) are not registered and are unaffected. Stages
-     * linked via {@link PipeBee}, {@link FilterBee}, {@link BatchBee}, and
-     * {@link FanOutBee} are traversed automatically; cycles are handled safely.
+     * {@inheritDoc}
      * <p>
-     * If the calling thread is interrupted while waiting, the interruption is
-     * logged and the method returns without re-interrupting the thread.
+     * Returns {@code true} only while the pool is idle <em>and</em> every Bee
+     * registered with this Hive is idle (see {@link Bee#isIdle()}).
+     */
+    @Override
+    public boolean isIdle()
+    {
+        if (!super.isIdle())
+        {
+            return false;
+        }
+        for (Bee<?> bee : bees)
+        {
+            if (!bee.isIdle())
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Blocks until the pool is idle <em>and</em> every Bee registered with this
+     * Hive is idle.
+     */
+    @Override
+    public Hive waitForIdle()
+    {
+        super.waitForIdle();
+        for (Bee<?> bee : bees)
+        {
+            bee.waitForIdle();
+        }
+        return this;
+    }
+
+    /**
+     * Blocks until every Bee registered with this Hive has terminated (closed,
+     * drained, and unregistered), then returns.
+     */
+    public Hive awaitTermination()
+    {
+        try
+        {
+            awaitTermination(Integer.MAX_VALUE, bees.toArray(new Consumer<?>[0]));
+        }
+        catch (InterruptedException ex)
+        {
+            Thread.currentThread().interrupt();
+            Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return this;
+    }
+
+    /**
+     * Shuts down this Hive and blocks until every registered Bee has
+     * terminated and the pool has shut down. Implements {@link AutoCloseable}
+     * for use in try-with-resources. Equivalent to {@link #close(boolean)
+     * close(false)}.
+     */
+    @Override
+    public void close()
+    {
+        close(false);
+    }
+
+    /**
+     * Shuts down this Hive and blocks until every registered Bee has
+     * terminated and the pool has shut down.
      *
      * @param onlyWhenEmpty if {@code true}, each Bee defers its shutdown until
      *                      its queue is empty; if {@code false}, shutdown starts
@@ -975,14 +1145,15 @@ public class Hive extends Queen implements AutoCloseable, Executor
      */
     public void close(boolean onlyWhenEmpty)
     {
-        shutdown(onlyWhenEmpty);
-
         try
         {
+            shutdown(onlyWhenEmpty);
             awaitTermination(Integer.MAX_VALUE, bees.toArray(new Consumer<?>[0]));
+            awaitTermination(Integer.MAX_VALUE);
         }
         catch (InterruptedException ex)
         {
+            Thread.currentThread().interrupt();
             Logger.getLogger(Hive.class.getName()).log(Level.SEVERE, null, ex);
         }
     }

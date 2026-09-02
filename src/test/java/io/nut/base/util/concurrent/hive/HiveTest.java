@@ -370,17 +370,18 @@ class HiveTest
         List<String> list = new ArrayList<>();
         Bee<String> beeList = proxy.list(list);
         beeList.accept("test-list");
-        hive.close(true);
-        assertEquals(Collections.singletonList("test-list"), list);
 
         Set<String> set = new HashSet<>();
         Bee<String> beeSet = proxy.set(set);
         beeSet.accept("test-set");
-        hive.close(true);
-        assertEquals(Collections.singleton("test-set"), set);
 
         CountDownLatch latch = new CountDownLatch(1);
         proxy.execute(latch::countDown);
         assertTrue(latch.await(1, TimeUnit.SECONDS));
+
+        hive.close(true);
+
+        assertEquals(Collections.singletonList("test-list"), list);
+        assertEquals(Collections.singleton("test-set"), set);
     }
 }

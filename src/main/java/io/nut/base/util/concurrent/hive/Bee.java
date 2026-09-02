@@ -129,6 +129,17 @@ public abstract class Bee<M> implements Consumer<M>
     /** {@code true} when {@link #shutdown(boolean)} was asked to close only once idle. */
     private boolean shutdownWhenEmpty;
 
+    /** Messages this Bee has processed (each invocation of {@link #receive}). */
+    private final AtomicInteger processedCount = new AtomicInteger();
+
+    /**
+     * The Hive-wide count of messages processed by all its Bees. When attached
+     * to a non-synchronous {@link Hive}, this is a direct reference to the
+     * Hive's shared counter so no lookup is needed to increment it; otherwise
+     * it falls back to this Bee's own counter.
+     */
+    private final AtomicInteger globalProcessedCount;
+
     /** {@code true} after {@link #terminate()} has run. */
     private boolean terminated;
 
@@ -161,6 +172,7 @@ public abstract class Bee<M> implements Consumer<M>
         }
         this.hive = hive;
         this.synchronous = threads == 0;
+        this.globalProcessedCount = hive instanceof Hive ? ((Hive) hive).processedCount() : this.processedCount;
         if (this.synchronous)
         {
             this.threads = 0;
@@ -308,6 +320,8 @@ public abstract class Bee<M> implements Consumer<M>
 
             if (isSynchronous())
             {
+                processedCount.incrementAndGet();
+                globalProcessedCount.incrementAndGet();
                 receive(message);
                 return;
             }
@@ -505,6 +519,8 @@ public abstract class Bee<M> implements Consumer<M>
             pending.decrementAndGet();
             long seq = sequenceCounter.incrementAndGet();
             processing.incrementAndGet();
+            processedCount.incrementAndGet();
+            globalProcessedCount.incrementAndGet();
             try
             {
                 receive(m, seq);
@@ -536,6 +552,8 @@ public abstract class Bee<M> implements Consumer<M>
             pending.decrementAndGet();
             long seq = sequenceCounter.incrementAndGet();
             processing.incrementAndGet();
+            processedCount.incrementAndGet();
+            globalProcessedCount.incrementAndGet();
             try
             {
                 receive(m, seq);
@@ -817,6 +835,34 @@ public abstract class Bee<M> implements Consumer<M>
             }
             lock.notifyAll();
         }
+        return this;
+    }
+
+    /**
+     * Shuts down this Bee and blocks until it has terminated. Equivalent to
+     * {@link #close(boolean) close(false)}.
+     *
+     * @return this Bee, for fluent chaining
+     */
+    public Bee<M> close()
+    {
+        return close(false);
+    }
+
+    /**
+     * Shuts down this Bee and blocks until it has terminated. Provides a
+     * {@code boolean} variant of {@link #close()} for symmetry with
+     * {@link #shutdown(boolean)}.
+     *
+     * @param onlyWhenEmpty if {@code true}, defers close until idle (see
+     *                      {@link #shutdown(boolean)}); if {@code false}, closes
+     *                      immediately
+     * @return this Bee, for fluent chaining
+     */
+    public Bee<M> close(boolean onlyWhenEmpty)
+    {
+        shutdown(onlyWhenEmpty);
+        awaitTermination(Integer.MAX_VALUE);
         return this;
     }
 
