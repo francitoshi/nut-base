@@ -1124,10 +1124,10 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Shuts down this Hive and blocks until every registered Bee has
-     * terminated and the pool has shut down. Implements {@link AutoCloseable}
-     * for use in try-with-resources. Equivalent to {@link #close(boolean)
-     * close(false)}.
+     * {@inheritDoc}
+     * <p>
+     * Also blocks until every Bee registered with this Hive has terminated, and
+     * is equivalent to {@link #close(boolean) close(false)}.
      */
     @Override
     public void close()
