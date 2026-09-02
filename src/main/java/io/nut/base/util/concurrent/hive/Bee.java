@@ -320,8 +320,7 @@ public abstract class Bee<M> implements Consumer<M>
 
             if (isSynchronous())
             {
-                processedCount.incrementAndGet();
-                globalProcessedCount.incrementAndGet();
+                countProcessed();
                 receive(message);
                 return;
             }
@@ -506,6 +505,21 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
+     * Records that this Bee is about to process one message: bumps the per-Bee
+     * counter and, unless it aliases the per-Bee counter (a Bee without an
+     * attached {@link Hive}, where {@link #globalProcessedCount} falls back to
+     * this Bee's own counter), the Hive-wide counter shared with peer Bees.
+     */
+    private void countProcessed()
+    {
+        processedCount.incrementAndGet();
+        if (globalProcessedCount != processedCount)
+        {
+            globalProcessedCount.incrementAndGet();
+        }
+    }
+
+    /**
      * Processes every message currently buffered in the channel, one at a time.
      * The channel is closed (drain-only) during shutdown, so an explicit call
      * here guarantees that buffered messages are received even if no worker
@@ -519,8 +533,7 @@ public abstract class Bee<M> implements Consumer<M>
             pending.decrementAndGet();
             long seq = sequenceCounter.incrementAndGet();
             processing.incrementAndGet();
-            processedCount.incrementAndGet();
-            globalProcessedCount.incrementAndGet();
+            countProcessed();
             try
             {
                 receive(m, seq);
@@ -552,8 +565,7 @@ public abstract class Bee<M> implements Consumer<M>
             pending.decrementAndGet();
             long seq = sequenceCounter.incrementAndGet();
             processing.incrementAndGet();
-            processedCount.incrementAndGet();
-            globalProcessedCount.incrementAndGet();
+            countProcessed();
             try
             {
                 receive(m, seq);
