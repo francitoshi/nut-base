@@ -59,7 +59,7 @@ class PipeActorTest
     }
 
     @Test
-    void hiveBackedChainOfMultipleStagesProducesFinalResult() throws InterruptedException
+    void hubBackedChainOfMultipleStagesProducesFinalResult() throws InterruptedException
     {
         PipeActor<Integer,Integer> doubler = actorHub.pipe(i -> i * 2);
         PipeActor<Integer,String> stringify = actorHub.pipe(i -> "v=" + i);

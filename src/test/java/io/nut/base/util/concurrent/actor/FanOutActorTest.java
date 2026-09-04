@@ -161,7 +161,7 @@ class FanOutActorTest
     }
 
     @Test
-    void hiveBackedBroadcastDeliversConcurrently() throws InterruptedException
+    void hubBackedBroadcastDeliversConcurrently() throws InterruptedException
     {
         for(int th=0;th<2;th++)
         {
@@ -192,7 +192,7 @@ class FanOutActorTest
     }
 
     @Test
-    void hiveFactoryWithTargets()
+    void hubFactoryWithTargets()
     {
         RecordingActor<String> t1 = new RecordingActor<>();
         RecordingActor<String> t2 = new RecordingActor<>();
@@ -206,7 +206,7 @@ class FanOutActorTest
     }
 
     @Test
-    void hiveFactoryWithThreadsParameter()
+    void hubFactoryWithThreadsParameter()
     {
         RecordingActor<String> t1 = new RecordingActor<>();
         FanOutActor<String> bc = actorHub.broadcast(2, t1);
@@ -218,7 +218,7 @@ class FanOutActorTest
     }
 
     @Test
-    void hiveFactoryWithQueueSizeAndThreadsParameter()
+    void hubFactoryWithQueueSizeAndThreadsParameter()
     {
         RecordingActor<String> t1 = new RecordingActor<>();
         FanOutActor<String> bc = actorHub.broadcast(2, 10, t1);

@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * Unit tests for the Pub/Sub feature:
  * <ul>
- *   <li>{@link Pub#accept(Object)} — fan-out to all registered subscribers</li>
+ *   <li>{@link ActorPub#accept(Object)} — fan-out to all registered subscribers</li>
  *   <li>{@link ActorHub#sub(String, Actor)} — subscriber registration</li>
  *   <li>{@link ActorHub#pub(String)} — publisher creation</li>
  *   <li>{@link Actor#sub(String)} — fluent self-registration</li>
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * determinism are needed, and with an ActorHub-attached Actor where async dispatch
  * is the focus.
  */
-class PubTest
+class ActorPubTest
 {
     /** Shared ActorHub instance; shut down after every test. */
     private ActorHub actorHub;
@@ -87,14 +87,14 @@ class PubTest
     }
 
     // =========================================================================
-    // Pub — core fan-out behaviour
+    // ActorPub — core fan-out behaviour
     // =========================================================================
 
-    /** A Pub with no subscribers must not throw and must be a no-op. */
+    /** A ActorPub with no subscribers must not throw and must be a no-op. */
     @Test
     void pub_noSubscribers_noException()
     {
-        Pub<String> pub = actorHub.pub("empty-topic");
+        ActorPub<String> pub = actorHub.pub("empty-topic");
         assertDoesNotThrow(() -> pub.accept("hello"));
     }
 
@@ -139,7 +139,7 @@ class PubTest
         actorHub.sub("nums", syncActor(sink1));
         actorHub.sub("nums", syncActor(sink2));
 
-        Pub<Integer> pub = actorHub.pub("nums");
+        ActorPub<Integer> pub = actorHub.pub("nums");
         pub.accept(1);
         pub.accept(2);
         pub.accept(3);
@@ -170,13 +170,13 @@ class PubTest
     }
 
     /**
-     * A subscriber registered AFTER the Pub is obtained still receives
+     * A subscriber registered AFTER the ActorPub is obtained still receives
      * subsequent publishes (live-list semantics).
      */
     @Test
     void pub_subscriberAddedAfterPubCreation_receivesSubsequentMessages()
     {
-        Pub<String> pub = actorHub.pub("live");
+        ActorPub<String> pub = actorHub.pub("live");
 
         List<String> sink = new ArrayList<>();
         actorHub.sub("live", syncActor(sink));   // registered after pub()
@@ -193,8 +193,8 @@ class PubTest
         List<String> sink = new ArrayList<>();
         actorHub.sub("shared", syncActor(sink));
 
-        Pub<String> pub1 = actorHub.pub("shared");
-        Pub<String> pub2 = actorHub.pub("shared");
+        ActorPub<String> pub1 = actorHub.pub("shared");
+        ActorPub<String> pub2 = actorHub.pub("shared");
 
         pub1.accept("from-1");
         pub2.accept("from-2");
@@ -229,14 +229,14 @@ class PubTest
 
     /** ActorHub.sub rejects a null topic. */
     @Test
-    void hiveSub_nullTopic_throwsNPE()
+    void hubSub_nullTopic_throwsNPE()
     {
         assertThrows(NullPointerException.class, () -> actorHub.sub(null, syncActor(new ArrayList<>())));
     }
 
     /** ActorHub.sub rejects a null Actor. */
     @Test
-    void hiveSub_nullActor_throwsNPE()
+    void hubSub_nullActor_throwsNPE()
     {
         assertThrows(NullPointerException.class, () -> actorHub.sub("t", null));
     }
@@ -247,14 +247,14 @@ class PubTest
 
     /** ActorHub.pub rejects a null topic. */
     @Test
-    void hivePub_nullTopic_throwsNPE()
+    void hubPub_nullTopic_throwsNPE()
     {
         assertThrows(NullPointerException.class, () -> actorHub.pub(null));
     }
 
-    /** ActorHub.pub always returns a non-null Pub even for an unknown topic. */
+    /** ActorHub.pub always returns a non-null ActorPub even for an unknown topic. */
     @Test
-    void hivePub_unknownTopic_returnsNonNull()
+    void hubPub_unknownTopic_returnsNonNull()
     {
         assertNotNull(actorHub.pub("brand-new-topic"));
     }
@@ -265,7 +265,7 @@ class PubTest
 
     /** Actor.sub returns the same Actor instance (fluent chaining). */
     @Test
-    void beeSub_returnsSelf()
+    void actorSub_returnsSelf()
     {
         List<String> sink = new ArrayList<>();
         Actor<String> actor = actorHub.actor(sink::add);
@@ -277,7 +277,7 @@ class PubTest
 
     /** A Actor subscribed via sub() receives messages published to that topic. */
     @Test
-    void beeSub_receivesPublishedMessages()
+    void actorSub_receivesPublishedMessages()
     {
         List<String> sink = new ArrayList<>();
         Actor actor = actorHub.actor((Consumer<String>)sink::add).sub("greet");
@@ -293,7 +293,7 @@ class PubTest
      * receives messages from all of them.
      */
     @Test
-    void beeSub_multipleTopics_receivesFromAll()
+    void actorSub_multipleTopics_receivesFromAll()
     {
         List<String> sink = new ArrayList<>();
         Actor<String> actor = actorHub.actor(sink::add);
@@ -313,7 +313,7 @@ class PubTest
 
     /** Actor.sub throws IllegalStateException when no ActorHub is attached. */
     @Test
-    void beeSub_noActorHub_throwsIllegalState()
+    void actorSub_noActorHub_throwsIllegalState()
     {
         Actor<String> detached = syncActor(new ArrayList<>());  // constructed without ActorHub
 
@@ -324,7 +324,7 @@ class PubTest
      * Actor.sub works when constructed with an ActorHub.
      */
     @Test
-    void beeSub_withActorHub_works()
+    void actorSub_withActorHub_works()
     {
         List<String> sink = new ArrayList<>();
         Actor<String> actor = new Actor<String>(actorHub)
@@ -365,7 +365,7 @@ class PubTest
         asyncActor(actorHub, sink1, latch1).sub("async");
         asyncActor(actorHub, sink2, latch2).sub("async");
 
-        Pub<Integer> pub = actorHub.pub("async");
+        ActorPub<Integer> pub = actorHub.pub("async");
         for (int i = 0; i < msgCount; i++)
         {
             pub.accept(i);
@@ -389,7 +389,7 @@ class PubTest
         CountDownLatch done = new CountDownLatch(rounds);
         List<Throwable> errors = new CopyOnWriteArrayList<>();
 
-        Pub<Integer> pub = actorHub.pub("concurrent");
+        ActorPub<Integer> pub = actorHub.pub("concurrent");
 
         Thread publisher = new Thread(() ->
         {

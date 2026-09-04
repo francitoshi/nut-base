@@ -252,7 +252,7 @@ class BatchActorTest
     }
 
     @Test
-    void hiveBatchFactoryWithMaxSizeAndWindow() throws InterruptedException
+    void hubBatchFactoryWithMaxSizeAndWindow() throws InterruptedException
     {
         List<List<String>> batches = new CopyOnWriteArrayList<>();
         BatchActor<String> batch = actorHub.batch(2, 0L);
@@ -268,7 +268,7 @@ class BatchActorTest
     }
 
     @Test
-    void hiveBatchFactoryWithQueueSizeParameter() throws InterruptedException
+    void hubBatchFactoryWithQueueSizeParameter() throws InterruptedException
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
         BatchActor<Integer> batch = actorHub.batch(2, 10, 3, 0L);

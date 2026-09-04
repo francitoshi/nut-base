@@ -176,7 +176,7 @@ class FilterActorTest
     }
 
     @Test
-    void hiveFilterFactoryCreatesBoundFilterActor() throws InterruptedException
+    void hubFilterFactoryCreatesBoundFilterActor() throws InterruptedException
     {
         List<Integer> result = new CopyOnWriteArrayList<>();
         FilterActor<Integer> filter = actorHub.filter(i -> i > 10);
@@ -194,7 +194,7 @@ class FilterActorTest
     }
 
     @Test
-    void hiveFilterFactoryWithThreadsParameter() throws InterruptedException
+    void hubFilterFactoryWithThreadsParameter() throws InterruptedException
     {
         List<String> result = new CopyOnWriteArrayList<>();
         FilterActor<String> filter = actorHub.filter(2, s -> s.length() > 3);
@@ -211,7 +211,7 @@ class FilterActorTest
     }
 
     @Test
-    void hiveFilterFactoryWithQueueSizeParameter() throws InterruptedException
+    void hubFilterFactoryWithQueueSizeParameter() throws InterruptedException
     {
         java.util.List<Integer> result = new CopyOnWriteArrayList<>();
         FilterActor<Integer> filter = actorHub.filter(20, 10, i -> i > 0);

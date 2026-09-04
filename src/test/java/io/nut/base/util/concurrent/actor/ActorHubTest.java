@@ -254,7 +254,7 @@ class ActorHubTest
     }
 
     @Test
-    void beesListTracksActiveNonSynchronousActorsAndRemovesOnShutdown()
+    void actorsListTracksActiveNonSynchronousActorsAndRemovesOnShutdown()
     {
         RecordingActor<Integer> async1 = new RecordingActor<>(actorHub);
         RecordingActor<Integer> async2 = new RecordingActor<>(actorHub);
@@ -367,12 +367,12 @@ class ActorHubTest
         proxy.setActorHub(actorHub);
 
         List<String> list = new ArrayList<>();
-        Actor<String> beeList = proxy.list(list);
-        beeList.accept("test-list");
+        Actor<String> actorList = proxy.list(list);
+        actorList.accept("test-list");
 
         Set<String> set = new HashSet<>();
-        Actor<String> beeSet = proxy.set(set);
-        beeSet.accept("test-set");
+        Actor<String> actorSet = proxy.set(set);
+        actorSet.accept("test-set");
 
         CountDownLatch latch = new CountDownLatch(1);
         proxy.execute(latch::countDown);
@@ -390,21 +390,21 @@ class ActorHubTest
         ProxyActorHub proxy = new ProxyActorHub();
 
         List<String> list1 = new ArrayList<>();
-        Actor<String> bee1 = proxy.list(list1);
+        Actor<String> actor1 = proxy.list(list1);
         List<String> list2 = new ArrayList<>();
-        Actor<String> bee2 = proxy.list(list2);
+        Actor<String> actor2 = proxy.list(list2);
 
-        assertTrue(proxy.actors().contains(bee1));
-        assertTrue(proxy.actors().contains(bee2));
-        assertFalse(actorHub.actors().contains(bee1));
-        assertFalse(actorHub.actors().contains(bee2));
+        assertTrue(proxy.actors().contains(actor1));
+        assertTrue(proxy.actors().contains(actor2));
+        assertFalse(actorHub.actors().contains(actor1));
+        assertFalse(actorHub.actors().contains(actor2));
 
         proxy.setActorHub(actorHub);
 
-        assertTrue(actorHub.actors().contains(bee1));
-        assertTrue(actorHub.actors().contains(bee2));
-        assertTrue(proxy.actors().contains(bee1));
-        assertTrue(proxy.actors().contains(bee2));
+        assertTrue(actorHub.actors().contains(actor1));
+        assertTrue(actorHub.actors().contains(actor2));
+        assertTrue(proxy.actors().contains(actor1));
+        assertTrue(proxy.actors().contains(actor2));
 
         actorHub.close(true);
     }

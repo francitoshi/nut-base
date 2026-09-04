@@ -269,7 +269,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public <T> Pub<T> pub(String topic)
+    public <T> ActorPub<T> pub(String topic)
     {
         ActorHub h = actorHub;
         if (h != null)

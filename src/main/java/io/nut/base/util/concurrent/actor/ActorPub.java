@@ -24,7 +24,7 @@ import java.util.function.Consumer;
 /**
  * A publisher for a single topic in the ActorHub Pub/Sub system.
  * <p>
- * A {@code Pub<T>} is a {@link Consumer}{@code <T>} obtained from
+ * A {@code ActorPub<T>} is a {@link Consumer}{@code <T>} obtained from
  * {@link ActorHub#pub(String)}. Calling {@link #accept(Object)} fan-outs the
  * message to every {@link Actor} that was registered for this topic via
  * {@link Actor#sub(String)} or {@link ActorHub#sub(String, Actor)}, in registration
@@ -32,7 +32,7 @@ import java.util.function.Consumer;
  * {@link Actor#accept(Object)}, so dispatch is fully asynchronous when the
  * Actors are attached to an ActorHub.
  * <p>
- * {@code Pub} instances are lightweight wrappers around the live subscriber
+ * {@code ActorPub} instances are lightweight wrappers around the live subscriber
  * list held by the {@link ActorHub}; there is no need to re-obtain them after
  * new subscribers join — they will automatically be included in the next
  * {@link #accept} call.
@@ -43,7 +43,7 @@ import java.util.function.Consumer;
  *
  * @param <T> the message type published to subscribers
  */
-public final class Pub<T> implements Consumer<T>
+public final class ActorPub<T> implements Consumer<T>
 {
     /**
      * Live reference to the subscriber list managed by {@link ActorHub}.
@@ -58,7 +58,7 @@ public final class Pub<T> implements Consumer<T>
      * @param subscribers the live subscriber list for the topic; must not be
      *                    {@code null}
      */
-    Pub(List<Consumer<T>> subscribers)
+    ActorPub(List<Consumer<T>> subscribers)
     {
         this.subscribers = subscribers;
     }

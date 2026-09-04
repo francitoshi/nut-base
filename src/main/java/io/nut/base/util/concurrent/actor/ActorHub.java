@@ -74,7 +74,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     private final List<Actor<?>> actors = new CopyOnWriteArrayList<>();
 
     /** O(1) count of registered Actors, used to size the pool as Actors come and go. */
-    private final AtomicInteger beeCount = new AtomicInteger();
+    private final AtomicInteger actorCount = new AtomicInteger();
 
     /** Shared count of messages processed by all Actors attached to this ActorHub. */
     private final AtomicInteger processedCount = new AtomicInteger();
@@ -268,7 +268,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     void registerActor(Actor<?> actor)
     {
         actors.add(actor);
-        beeCount.incrementAndGet();
+        actorCount.incrementAndGet();
         adjustPoolToActors();
     }
 
@@ -282,7 +282,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     {
         if (actors.remove(actor))
         {
-            beeCount.decrementAndGet();
+            actorCount.decrementAndGet();
             adjustPoolToActors();
             maybeShutdownPool();
         }
@@ -291,7 +291,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     /**
      * Adjusts the pool's core and maximum sizes together to match the number
      * of registered Actors. Both are set to {@code max(initialCorePoolSize,
-     * beeCount)}, so the pool stays symmetric (core == maximum, as with
+     * actorCount)}, so the pool stays symmetric (core == maximum, as with
      * {@link ActorPool}) and simply grows one thread per registered Actor beyond
      * the initial core size. Sizing scales down again as Actors terminate.
      * <p>
@@ -305,7 +305,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
         {
             return;
         }
-        int size = Math.max(initialCorePoolSize, beeCount.get());
+        int size = Math.max(initialCorePoolSize, actorCount.get());
         setPoolSize(size);
     }
 
@@ -771,14 +771,14 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
 
     /**
      * Topic → ordered list of subscribers. The list is created on first access
-     * and is protected by its own intrinsic lock (see {@link Pub#accept}).
+     * and is protected by its own intrinsic lock (see {@link ActorPub#accept}).
      */
     private final ConcurrentHashMap<String, List<Consumer<?>>> pubSubRegistry = new ConcurrentHashMap<>();
 
     /**
      * Registers {@code actor} as a subscriber for {@code topic}.
      * <p>
-     * After this call, every message published via the {@link Pub} returned by
+     * After this call, every message published via the {@link ActorPub} returned by
      * {@link #pub(String)} for the same topic will be delivered to {@code actor}
      * through {@link Actor#accept(Object)}. Subscribers are notified in
      * registration order. Registering the same Actor instance more than once for
@@ -835,10 +835,10 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     }
 
     /**
-     * Returns a {@link Pub}{@code <T>} that publishes messages to all
+     * Returns a {@link ActorPub}{@code <T>} that publishes messages to all
      * {@link Actor} instances currently (and future) registered for {@code topic}.
      * <p>
-     * The returned {@code Pub} holds a live reference to the subscriber list, so
+     * The returned {@code ActorPub} holds a live reference to the subscriber list, so
      * Actors subscribed after this call will automatically receive subsequent
      * publishes. Multiple calls with the same topic return publishers backed by
      * the same list.
@@ -848,11 +848,11 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @return a publisher for {@code topic}
      */
     @SuppressWarnings("unchecked")
-    public <T> Pub<T> pub(String topic)
+    public <T> ActorPub<T> pub(String topic)
     {
         Objects.requireNonNull(topic, "topic must not be null");
         List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
-        return new Pub<>((List<Consumer<T>>) (List<?>) list);
+        return new ActorPub<>((List<Consumer<T>>) (List<?>) list);
     }
 
     // -------------------------------------------------------------------------
@@ -979,7 +979,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     {
         synchronized (shutdownLock)
         {
-            if (shutdownWhenEmpty && beeCount.get() > 0)
+            if (shutdownWhenEmpty && actorCount.get() > 0)
             {
                 return;
             }
@@ -999,7 +999,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     {
         synchronized (shutdownLock)
         {
-            if (shutdownWhenEmpty && beeCount.get() == 0)
+            if (shutdownWhenEmpty && actorCount.get() == 0)
             {
                 shutdownWhenEmpty = false;
                 if (!isShutdown())

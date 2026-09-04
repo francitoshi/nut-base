@@ -118,7 +118,7 @@ class ActorTest
     }
 
     @Test
-    void hiveBackedSendIsProcessedAsynchronouslyAndDeterministicallyDrained()
+    void hubBackedSendIsProcessedAsynchronouslyAndDeterministicallyDrained()
     {
         RecordingActor<Integer> actor = new RecordingActor<>(actorHub);
         for (int i = 0; i < 20; i++)
@@ -248,8 +248,8 @@ class ActorTest
 //    @Disabled
     void simpleCascadeActors() throws InterruptedException
     {
-        System.out.println("beesCascadeForwarding(20,1,1)");
-        beesCascadeForwarding(20,20,20);
+        System.out.println("actorCascadeForwarding(20,1,1)");
+        actorsCascadeForwarding(20,20,20);
         System.out.println("-----------------");
     }
     
@@ -259,8 +259,8 @@ class ActorTest
     @Disabled
     void twentyActorsCascadeForwardingCountsProcessedAndElapsed() throws InterruptedException
     {
-        System.out.println("beesCascadeForwarding(20,1,1)");
-        beesCascadeForwarding(20,1,1);
+        System.out.println("actorsCascadeForwarding(20,1,1)");
+        actorsCascadeForwarding(20,1,1);
         System.out.println("-----------------");
                 
         int actors = 20;
@@ -275,7 +275,7 @@ class ActorTest
             for(int queueSize=1;queueSize<Byte.MAX_VALUE;queueSize*=4)
             {
                 long t0 = System.nanoTime();
-                long count = beesCascadeForwarding(actors, queueSize, msgCount);
+                long count = actorsCascadeForwarding(actors, queueSize, msgCount);
                 long t1 = System.nanoTime();
                 long ms = TimeUnit.NANOSECONDS.toMillis(t1-t0);
                 System.out.printf("%d ms %d msg\n", ms, count);
@@ -283,9 +283,9 @@ class ActorTest
         }
         
     }
-    static long beesCascadeForwarding(int beesCount, int queueSize, long maxSends) throws InterruptedException
+    static long actorsCascadeForwarding(int actorsCount, int queueSize, long maxSends) throws InterruptedException
     {
-        System.out.println("beesCascadeForwarding("+beesCount+","+queueSize+","+maxSends+")");
+        System.out.println("actorsCascadeForwarding("+actorsCount+","+queueSize+","+maxSends+")");
 
         AtomicLong processed = new AtomicLong();
         // A zero-capacity task queue: a LinkedBlockingQueue would let worker tasks
@@ -297,8 +297,8 @@ class ActorTest
         ActorHub bigActorHub = ActorHub.actorHub(100, 0, 10000, false);
         try
         {
-            Actor<Long>[] actors = new Actor[beesCount];
-            for (int i = 0; i < beesCount; i++)
+            Actor<Long>[] actors = new Actor[actorsCount];
+            for (int i = 0; i < actorsCount; i++)
             {
                 final int index = i;
                 actors[index] = new Actor<Long>(bigActorHub, index + 1, queueSize)
@@ -335,10 +335,10 @@ class ActorTest
 
             long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
             // Every actor forwards each received message to the next two actors, so a
-            // single root message reaches fanOut(beesCount) receivers. The count
+            // single root message reaches fanOut(actorsCount) receivers. The count
             // must be exact: any message dropped by a shutdown racing an in-flight
             // forward would fall short of this total.
-            long expected = fanOut(beesCount) * maxSends;
+            long expected = fanOut(actorsCount) * maxSends;
             if (processed.get() != expected)
             {
                 System.out.println("MISMATCH processed=" + processed.get() + " expected=" + expected);
