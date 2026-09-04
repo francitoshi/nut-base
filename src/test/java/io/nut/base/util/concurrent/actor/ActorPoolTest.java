@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.util.Utils;
 import java.util.ArrayList;
@@ -18,20 +18,20 @@ import static org.junit.jupiter.api.Assertions.*;
  *
  * @author franci
  */
-public class QueenTest
+public class ActorPoolTest
 {
     
     /**
-     * Test of queen method, of class Queen.
+     * Test of actorPool method, of class ActorPool.
      */
     @Test
     public void testTryAutoClose()
     {
         AtomicInteger count = new AtomicInteger();
         
-        try(Queen queen = Queen.queen(4))
+        try(ActorPool actorPool = ActorPool.actorPool(4))
         {
-            queen.spawn(()-> count.incrementAndGet())
+            actorPool.spawn(()-> count.incrementAndGet())
                  .spawn(()-> count.incrementAndGet())
                  .spawn(()-> count.incrementAndGet())
                  .spawn(()-> count.incrementAndGet())
@@ -47,21 +47,21 @@ public class QueenTest
     }
 
     @Test
-    public void zeroSizedQueenRunsSynchronously()
+    public void zeroSizedActorPoolRunsSynchronously()
     {
-        Queen queen = new Queen(0, 0, 0);
-        assertTrue(queen.isSynchronous());
-        assertEquals(0, queen.getCorePoolSize());
-        assertEquals(0, queen.getMaximumPoolSize());
+        ActorPool actorPool = new ActorPool(0, 0, 0);
+        assertTrue(actorPool.isSynchronous());
+        assertEquals(0, actorPool.getCorePoolSize());
+        assertEquals(0, actorPool.getMaximumPoolSize());
 
         String[] holder = {"not-run"};
-        queen.execute(() -> holder[0] = "executed");
+        actorPool.execute(() -> holder[0] = "executed");
         assertEquals("executed", holder[0]);
 
         java.util.function.Supplier<String> supplier = () -> "submitted";
         try
         {
-            assertEquals("submitted", queen.submit(supplier).get());
+            assertEquals("submitted", actorPool.submit(supplier).get());
         }
         catch (Exception ex)
         {
@@ -69,15 +69,15 @@ public class QueenTest
         }
 
         AtomicInteger spawned = new AtomicInteger();
-        queen.spawn(spawned::incrementAndGet);
+        actorPool.spawn(spawned::incrementAndGet);
         assertEquals(1, spawned.get());
 
         List<Integer> src = new ArrayList<>(Arrays.asList(1, 2, 3));
         List<Integer> out = new ArrayList<>();
-        queen.forEach(src, out::add);
+        actorPool.forEach(src, out::add);
         assertEquals(Arrays.asList(1, 2, 3), out);
 
-        try (Queen sync = new Queen(0, 0, 0))
+        try (ActorPool sync = new ActorPool(0, 0, 0))
         {
             assertTrue(sync.isSynchronous());
             sync.submit(() -> {});
@@ -87,48 +87,48 @@ public class QueenTest
     @Test
     public void constructorValidatesThreadPoolConstraints()
     {
-        assertThrows(IllegalArgumentException.class, () -> new Queen(-1, 4, 1000, false));
-        assertThrows(IllegalArgumentException.class, () -> new Queen(4, 4, -1, false));
-        assertThrows(IllegalArgumentException.class, () -> new Queen(-5, 4, 1000, false));
+        assertThrows(IllegalArgumentException.class, () -> new ActorPool(-1, 4, 1000, false));
+        assertThrows(IllegalArgumentException.class, () -> new ActorPool(4, 4, -1, false));
+        assertThrows(IllegalArgumentException.class, () -> new ActorPool(-5, 4, 1000, false));
 
-        Queen queen = new Queen(4, 4, 1000, false);
-        assertEquals(4, queen.getCorePoolSize());
-        assertEquals(4, queen.getMaximumPoolSize());
+        ActorPool actorPool = new ActorPool(4, 4, 1000, false);
+        assertEquals(4, actorPool.getCorePoolSize());
+        assertEquals(4, actorPool.getMaximumPoolSize());
     }
 
     @Test
-    public void synchronousQueenIsExemptFromValidation()
+    public void synchronousActorPoolIsExemptFromValidation()
     {
-        Queen queen = new Queen(0, 0, 0, false);
-        assertTrue(queen.isSynchronous());
-        assertEquals(0, queen.getCorePoolSize());
-        assertEquals(0, queen.getMaximumPoolSize());
+        ActorPool actorPool = new ActorPool(0, 0, 0, false);
+        assertTrue(actorPool.isSynchronous());
+        assertEquals(0, actorPool.getCorePoolSize());
+        assertEquals(0, actorPool.getMaximumPoolSize());
     }
 
     @Test
     public void coreThreadsTimeOutBackToZero()
     {
-        try (Queen queen = new Queen(4, 4, 50, false))
+        try (ActorPool actorPool = new ActorPool(4, 4, 50, false))
         {
             // the pool is sized to a single corePoolSize value reused as maximum
-            assertEquals(4, queen.getCorePoolSize());
-            assertEquals(4, queen.getMaximumPoolSize());
+            assertEquals(4, actorPool.getCorePoolSize());
+            assertEquals(4, actorPool.getMaximumPoolSize());
 
             AtomicInteger count = new AtomicInteger();
             for (int i = 0; i < 4; i++)
             {
-                queen.spawn(count::incrementAndGet);
+                actorPool.spawn(count::incrementAndGet);
             }
             assertEquals(4, count.get());
 
             // idle core threads (with allowCoreThreadTimeOut) should time out
             // and die, so the pool eventually reports zero active work.
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (queen.getActiveCount() != 0 && System.nanoTime() < deadline)
+            while (actorPool.getActiveCount() != 0 && System.nanoTime() < deadline)
             {
                 Utils.parkMillis(10);
             }
-            assertEquals(0, queen.getActiveCount());
+            assertEquals(0, actorPool.getActiveCount());
         }
     }
     

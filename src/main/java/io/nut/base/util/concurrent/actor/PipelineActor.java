@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -11,10 +11,10 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
- * A fluent, type-safe builder for linear chains of {@link PipeBee} stages all
- * attached to the same {@link Hive}, created via {@link Hive#pipeline}.
+ * A fluent, type-safe builder for linear chains of {@link PipeActor} stages all
+ * attached to the same {@link ActorHub}, created via {@link ActorHub#pipeline}.
  * <p>
- * It hides the manual {@link PipeBee#linkTo} wiring that would otherwise be
+ * It hides the manual {@link PipeActor#linkTo} wiring that would otherwise be
  * needed to build a long chain by hand, while still type-checking every stage
  * at compile time — something a flat, heterogeneous varargs call like
  * {@code pipeline(f1, f2, f3, sink)} cannot do in Java, since each function in
@@ -22,14 +22,14 @@ import java.util.function.Function;
  * <p>
  * <strong>Usage:</strong>
  * <pre>{@code
- * Bee<Integer> head = hive.pipeline((Integer i) -> i * 2)
+ * Actor<Integer> head = actorHub.pipeline((Integer i) -> i * 2)
  *                         .then(i -> "value=" + i)
  *                         .then(String::toUpperCase)
  *                         .sink(System.out::println);
  * head.accept(21);  // prints "VALUE=42"
  * }</pre>
- * Each {@link #then(Function)} call appends one more {@link PipeBee} stage to
- * the chain and returns a new {@code HivePipeline} view with the same head but
+ * Each {@link #then(Function)} call appends one more {@link PipeActor} stage to
+ * the chain and returns a new {@code PipelineActor} view with the same head but
  * an updated "current output type", so further {@code then}/{@link #sink}/
  * {@link #to} calls are type-checked against it. The chain is not ready for
  * {@link #accept(Object)} until it is closed with {@link #sink(Consumer)} or
@@ -38,43 +38,43 @@ import java.util.function.Function;
  * @param <T> the type of message accepted by the first stage of the chain (the head)
  * @param <R> the type currently produced by the last stage added so far (the tail)
  */
-public final class HivePipeline<T,R> implements Consumer<T>
+public final class PipelineActor<T,R> implements Consumer<T>
 {
-    private final Hive hive;
-    private final Bee<T> head;
-    private final PipeBee<?,R> tail;
+    private final ActorHub actorHub;
+    private final Actor<T> head;
+    private final PipeActor<?,R> tail;
 
     /**
-     * Package-private constructor used by {@link Hive#pipeline} and by
+     * Package-private constructor used by {@link ActorHub#pipeline} and by
      * {@link #then} to build successive views of the same chain.
      *
-     * @param hive the Hive to which all stages in this chain are attached
+     * @param actorHub the ActorHub to which all stages in this chain are attached
      * @param head the first stage; messages are sent to it via {@link #accept}
      * @param tail the last stage added so far; new stages are linked to it
      */
-    HivePipeline(Hive hive, Bee<T> head, PipeBee<?,R> tail)
+    PipelineActor(ActorHub actorHub, Actor<T> head, PipeActor<?,R> tail)
     {
-        this.hive = hive;
+        this.actorHub = actorHub;
         this.head = head;
         this.tail = tail;
     }
 
     /**
      * Appends a new transformation stage to the chain, wired to the previous
-     * stage's output, using the Hive's default thread count and queue size for
+     * stage's output, using the ActorHub's default thread count and queue size for
      * the new stage.
      *
      * @param <S>      the output type of the new stage
      * @param function the transformation applied by the new stage; must not be
      *                 {@code null}
-     * @return a new {@code HivePipeline} view with the same head but an updated
+     * @return a new {@code PipelineActor} view with the same head but an updated
      *         current output type {@code S}
      */
-    public <S> HivePipeline<T,S> then(Function<R,S> function)
+    public <S> PipelineActor<T,S> then(Function<R,S> function)
     {
-        PipeBee<R,S> next = hive.pipe(function);
+        PipeActor<R,S> next = actorHub.pipe(function);
         tail.linkTo(next);
-        return new HivePipeline<>(hive, head, next);
+        return new PipelineActor<>(actorHub, head, next);
     }
 
     /**
@@ -85,13 +85,13 @@ public final class HivePipeline<T,R> implements Consumer<T>
      *                 new stage
      * @param function the transformation applied by the new stage; must not be
      *                 {@code null}
-     * @return a new {@code HivePipeline} view with the updated output type
+     * @return a new {@code PipelineActor} view with the updated output type
      */
-    public <S> HivePipeline<T,S> then(int threads, Function<R,S> function)
+    public <S> PipelineActor<T,S> then(int threads, Function<R,S> function)
     {
-        PipeBee<R,S> next = hive.pipe(threads, function);
+        PipeActor<R,S> next = actorHub.pipe(threads, function);
         tail.linkTo(next);
-        return new HivePipeline<>(hive, head, next);
+        return new PipelineActor<>(actorHub, head, next);
     }
 
     /**
@@ -104,13 +104,13 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * @param queueSize the internal queue capacity for the new stage
      * @param function  the transformation applied by the new stage; must not be
      *                  {@code null}
-     * @return a new {@code HivePipeline} view with the updated output type
+     * @return a new {@code PipelineActor} view with the updated output type
      */
-    public <S> HivePipeline<T,S> then(int threads, int queueSize, Function<R,S> function)
+    public <S> PipelineActor<T,S> then(int threads, int queueSize, Function<R,S> function)
     {
-        PipeBee<R,S> next = hive.pipe(threads, queueSize, function);
+        PipeActor<R,S> next = actorHub.pipe(threads, queueSize, function);
         tail.linkTo(next);
-        return new HivePipeline<>(hive, head, next);
+        return new PipelineActor<>(actorHub, head, next);
     }
 
     /**
@@ -118,17 +118,17 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * the head of the fully-wired chain, ready for use.
      * <p>
      * After this call, the chain is complete: messages sent to the returned
-     * {@link Bee} travel through every intermediate stage and are ultimately
+     * {@link Actor} travel through every intermediate stage and are ultimately
      * consumed by {@code consumer}.
      *
      * @param consumer the terminal action applied to each fully-transformed
      *                 value; must not be {@code null}
-     * @return the head {@link Bee}{@code <T>} of the chain — the entry point
-     *         for {@link Consumer#accept} and {@link Bee#shutdown}
+     * @return the head {@link Actor}{@code <T>} of the chain — the entry point
+     *         for {@link Consumer#accept} and {@link Actor#shutdown}
      */
-    public Bee<T> sink(Consumer<R> consumer)
+    public Actor<T> sink(Consumer<R> consumer)
     {
-        Bee<R> terminal = hive.bee(consumer);
+        Actor<R> terminal = actorHub.actor(consumer);
         tail.linkTo(terminal);
         return head;
     }
@@ -137,27 +137,27 @@ public final class HivePipeline<T,R> implements Consumer<T>
      * Closes the chain by linking it to an already-built
      * {@link Consumer}{@code <R>} and returns the head of the fully-wired
      * chain. The {@code next} argument can be any {@link Consumer}{@code <R>} —
-     * another pipeline's head, a {@link Bee} created directly via
-     * {@code hive.bee(...)}, a {@link FanOutBee}, and so on.
+     * another pipeline's head, a {@link Actor} created directly via
+     * {@code actorHub.actor(...)}, a {@link FanOutActor}, and so on.
      *
      * @param next the downstream stage that will receive the final values;
      *             must not be {@code null}
-     * @return the head {@link Bee}{@code <T>} of the chain
+     * @return the head {@link Actor}{@code <T>} of the chain
      */
-    public Bee<T> to(Consumer<R> next)
+    public Actor<T> to(Consumer<R> next)
     {
         tail.linkTo(Objects.requireNonNull(next, "next must not be null"));
         return head;
     }
 
     /**
-     * Returns the head {@link Bee}{@code <T>} of the chain built so far — the
+     * Returns the head {@link Actor}{@code <T>} of the chain built so far — the
      * same instance that {@link #accept(Object)} delegates to. The head can be
-     * used to initiate shutdown of the whole chain via {@link Bee#shutdown()}.
+     * used to initiate shutdown of the whole chain via {@link Actor#shutdown()}.
      *
-     * @return the head Bee of the chain
+     * @return the head Actor of the chain
      */
-    public Bee<T> head()
+    public Actor<T> head()
     {
         return head;
     }
@@ -178,14 +178,14 @@ public final class HivePipeline<T,R> implements Consumer<T>
         head.accept(message);
     }
 
-    public HivePipeline<T,R> shutdown()
+    public PipelineActor<T,R> shutdown()
     {
         head.shutdown();
         tail.shutdown();
         return this;
     }
 
-    public HivePipeline<T,R> shutdown(boolean onlyWhenEmpty)
+    public PipelineActor<T,R> shutdown(boolean onlyWhenEmpty)
     {
         head.shutdown(onlyWhenEmpty);
         tail.shutdown(onlyWhenEmpty);

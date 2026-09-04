@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,32 +22,32 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link BatchBee}: size-based flush, time-based flush,
- * explicit {@link BatchBee#flush()}, {@link BatchBee#pending()} inspection,
- * termination cleanup, and the Hive factory methods.
+ * Unit tests for {@link BatchActor}: size-based flush, time-based flush,
+ * explicit {@link BatchActor#flush()}, {@link BatchActor#pending()} inspection,
+ * termination cleanup, and the ActorHub factory methods.
  */
-class BatchBeeTest
+class BatchActorTest
 {
-    private Hive hive;
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = Hive.hive(2);
+        actorHub = ActorHub.actorHub(2);
     }
 
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        hive.shutdown();
-        hive.awaitTermination(2000);
+        actorHub.shutdown();
+        actorHub.awaitTermination(2000);
     }
 
     @Test
     void sizeBasedFlushIsTriggeredWhenBatchReachesMaxSize()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(3, 0L); // no time-based flush
+        BatchActor<Integer> batch = new BatchActor<>(3, 0L); // no time-based flush
         batch.linkTo(m -> batches.add(m));
 
         batch.accept(1);
@@ -66,7 +66,7 @@ class BatchBeeTest
     void multipleBatchesAreForwardedSequentially()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(2, 0L);
+        BatchActor<Integer> batch = new BatchActor<>(2, 0L);
         batch.linkTo(m -> batches.add(m));
 
         batch.accept(1);
@@ -84,7 +84,7 @@ class BatchBeeTest
     @Test
     void pendingCountReflectsTheCurrentBatchSize()
     {
-        BatchBee<String> batch = new BatchBee<>(5, 0L);
+        BatchActor<String> batch = new BatchActor<>(5, 0L);
 
         assertEquals(0, batch.pending());
 
@@ -105,7 +105,7 @@ class BatchBeeTest
     void explicitFlushEmitsTheCurrentPartialBatch()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(10, 0L); // high threshold
+        BatchActor<Integer> batch = new BatchActor<>(10, 0L); // high threshold
         batch.linkTo(m -> batches.add(m));
 
         batch.accept(1);
@@ -124,7 +124,7 @@ class BatchBeeTest
     void explicitFlushOnEmptyBatchDoesNothing()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(10, 0L);
+        BatchActor<Integer> batch = new BatchActor<>(10, 0L);
         batch.linkTo(m -> batches.add(m));
 
         batch.flush();
@@ -137,7 +137,7 @@ class BatchBeeTest
     void timeBasedFlushIsTriggeredAfterTheConfiguredWindow()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(100, 100L); // 100ms window, high size threshold
+        BatchActor<Integer> batch = new BatchActor<>(100, 100L); // 100ms window, high size threshold
 
         batch.linkTo(m -> batches.add(m));
 
@@ -157,7 +157,7 @@ class BatchBeeTest
     void sizeFlushTakesPrecedenceOverTimeWindow()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(2, 1000L); // 1s window, low size threshold
+        BatchActor<Integer> batch = new BatchActor<>(2, 1000L); // 1s window, low size threshold
 
         batch.linkTo(m -> batches.add(m));
 
@@ -173,7 +173,7 @@ class BatchBeeTest
     void disablingTimeWindowWithZeroOnlyTriggersOnSize()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(5, 0L); // no time-based flush
+        BatchActor<Integer> batch = new BatchActor<>(5, 0L); // no time-based flush
 
         batch.linkTo(m -> batches.add(m));
 
@@ -199,7 +199,7 @@ class BatchBeeTest
     void terminationFlushesPendingBatch()
     {
         List<List<String>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<String> batch = hive.batch(10, 0L); // high threshold
+        BatchActor<String> batch = actorHub.batch(10, 0L); // high threshold
 
         batch.linkTo(m -> batches.add(m));
 
@@ -216,7 +216,7 @@ class BatchBeeTest
     @Test
     void noNextStageLinkedStillAcceptsAndBuffersMessages()
     {
-        BatchBee<Integer> batch = new BatchBee<>(3, 0L);
+        BatchActor<Integer> batch = new BatchActor<>(3, 0L);
 
         batch.accept(1);
         batch.accept(2);
@@ -228,21 +228,21 @@ class BatchBeeTest
     @Test
     void constructorRejectsInvalidMaxSize()
     {
-        assertThrows(IllegalArgumentException.class, () -> new BatchBee<>(0, 100L));
-        assertThrows(IllegalArgumentException.class, () -> new BatchBee<>(-5, 100L));
+        assertThrows(IllegalArgumentException.class, () -> new BatchActor<>(0, 100L));
+        assertThrows(IllegalArgumentException.class, () -> new BatchActor<>(-5, 100L));
     }
 
     @Test
     void linkToRejectsNull()
     {
-        BatchBee<Integer> batch = new BatchBee<>(3, 100L);
+        BatchActor<Integer> batch = new BatchActor<>(3, 100L);
         assertThrows(NullPointerException.class, () -> batch.linkTo(null));
     }
 
     @Test
     void linkToReturnsTheSameNextInstanceForFluentChaining()
     {
-        BatchBee<Integer> batch = new BatchBee<>(3, 100L);
+        BatchActor<Integer> batch = new BatchActor<>(3, 100L);
         java.util.function.Consumer<List<Integer>> consumer = m -> {};
         Consumer<List<Integer>> next = m -> consumer.accept(m);
 
@@ -255,13 +255,13 @@ class BatchBeeTest
     void hiveBatchFactoryWithMaxSizeAndWindow() throws InterruptedException
     {
         List<List<String>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<String> batch = hive.batch(2, 0L);
+        BatchActor<String> batch = actorHub.batch(2, 0L);
         batch.linkTo(m -> batches.add(m));
 
         batch.accept("a");
         batch.accept("b");
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, batches.size());
         assertEquals(Arrays.asList("a", "b"), batches.get(0));
@@ -271,14 +271,14 @@ class BatchBeeTest
     void hiveBatchFactoryWithQueueSizeParameter() throws InterruptedException
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = hive.batch(2, 10, 3, 0L);
+        BatchActor<Integer> batch = actorHub.batch(2, 10, 3, 0L);
         batch.linkTo(m -> batches.add(m));
 
         batch.accept(1);
         batch.accept(2);
         batch.accept(3);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, batches.size());
         assertEquals(Arrays.asList(1, 2, 3), batches.get(0));
@@ -288,7 +288,7 @@ class BatchBeeTest
     void batchesAreIndependentListInstances()
     {
         List<List<Integer>> batches = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = new BatchBee<>(2, 0L);
+        BatchActor<Integer> batch = new BatchActor<>(2, 0L);
         batch.linkTo(m -> batches.add(new ArrayList<>(m)));
 
         batch.accept(1);

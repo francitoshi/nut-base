@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,30 +23,30 @@ import static org.junit.jupiter.api.Assertions.*;
  * Unit tests for the Pub/Sub feature:
  * <ul>
  *   <li>{@link Pub#accept(Object)} — fan-out to all registered subscribers</li>
- *   <li>{@link Hive#sub(String, Bee)} — subscriber registration</li>
- *   <li>{@link Hive#pub(String)} — publisher creation</li>
- *   <li>{@link Bee#sub(String)} — fluent self-registration</li>
+ *   <li>{@link ActorHub#sub(String, Actor)} — subscriber registration</li>
+ *   <li>{@link ActorHub#pub(String)} — publisher creation</li>
+ *   <li>{@link Actor#sub(String)} — fluent self-registration</li>
  * </ul>
  *
- * <p>Tests run with a synchronous Bee (no Hive attached) where ordering and
- * determinism are needed, and with a Hive-attached Bee where async dispatch
+ * <p>Tests run with a synchronous Actor (no ActorHub attached) where ordering and
+ * determinism are needed, and with an ActorHub-attached Actor where async dispatch
  * is the focus.
  */
 class PubTest
 {
-    /** Shared Hive instance; shut down after every test. */
-    private Hive hive;
+    /** Shared ActorHub instance; shut down after every test. */
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = new Hive();
+        actorHub = new ActorHub();
     }
 
     @AfterEach
     void tearDown()
     {
-        hive.close();
+        actorHub.close();
     }
 
     // -------------------------------------------------------------------------
@@ -54,12 +54,12 @@ class PubTest
     // -------------------------------------------------------------------------
 
     /**
-     * Creates a synchronous (no-Hive) Bee that appends every received message
+     * Creates a synchronous (no-ActorHub) Actor that appends every received message
      * to {@code sink}.
      */
-    private <T> Bee<T> syncBee(List<T> sink)
+    private <T> Actor<T> syncActor(List<T> sink)
     {
-        return new Bee<T>()   // no Hive → synchronous
+        return new Actor<T>()   // no ActorHub → synchronous
         {
             @Override
             protected void receive(T m)
@@ -70,12 +70,12 @@ class PubTest
     }
 
     /**
-     * Creates a Hive-attached Bee that appends every received message to
+     * Creates an ActorHub-attached Actor that appends every received message to
      * {@code sink} and counts down {@code latch} on each delivery.
      */
-    private <T> Bee<T> asyncBee(Hive h, List<T> sink, CountDownLatch latch)
+    private <T> Actor<T> asyncActor(ActorHub h, List<T> sink, CountDownLatch latch)
     {
-        return new Bee<T>(h)
+        return new Actor<T>(h)
         {
             @Override
             protected void receive(T m)
@@ -94,7 +94,7 @@ class PubTest
     @Test
     void pub_noSubscribers_noException()
     {
-        Pub<String> pub = hive.pub("empty-topic");
+        Pub<String> pub = actorHub.pub("empty-topic");
         assertDoesNotThrow(() -> pub.accept("hello"));
     }
 
@@ -103,9 +103,9 @@ class PubTest
     void pub_singleSubscriber_receivesMessage()
     {
         List<String> sink = new ArrayList<>();
-        hive.sub("t", syncBee(sink));
+        actorHub.sub("t", syncActor(sink));
 
-        hive.<String>pub("t").accept("ping");
+        actorHub.<String>pub("t").accept("ping");
 
         assertEquals(Collections.singletonList("ping"), sink);
     }
@@ -118,11 +118,11 @@ class PubTest
         List<String> sink2 = new ArrayList<>();
         List<String> sink3 = new ArrayList<>();
 
-        hive.sub("t", syncBee(sink1));
-        hive.sub("t", syncBee(sink2));
-        hive.sub("t", syncBee(sink3));
+        actorHub.sub("t", syncActor(sink1));
+        actorHub.sub("t", syncActor(sink2));
+        actorHub.sub("t", syncActor(sink3));
 
-        hive.<String>pub("t").accept("event");
+        actorHub.<String>pub("t").accept("event");
 
         assertEquals(Collections.singletonList("event"), sink1);
         assertEquals(Collections.singletonList("event"), sink2);
@@ -136,10 +136,10 @@ class PubTest
         List<Integer> sink1 = new ArrayList<>();
         List<Integer> sink2 = new ArrayList<>();
 
-        hive.sub("nums", syncBee(sink1));
-        hive.sub("nums", syncBee(sink2));
+        actorHub.sub("nums", syncActor(sink1));
+        actorHub.sub("nums", syncActor(sink2));
 
-        Pub<Integer> pub = hive.pub("nums");
+        Pub<Integer> pub = actorHub.pub("nums");
         pub.accept(1);
         pub.accept(2);
         pub.accept(3);
@@ -160,10 +160,10 @@ class PubTest
         List<String> sinkA = new ArrayList<>();
         List<String> sinkB = new ArrayList<>();
 
-        hive.sub("topicA", syncBee(sinkA));
-        hive.sub("topicB", syncBee(sinkB));
+        actorHub.sub("topicA", syncActor(sinkA));
+        actorHub.sub("topicB", syncActor(sinkB));
 
-        hive.<String>pub("topicA").accept("only-for-A");
+        actorHub.<String>pub("topicA").accept("only-for-A");
 
         assertEquals(Collections.singletonList("only-for-A"), sinkA);
         assertTrue(sinkB.isEmpty(), "topicB sink must remain empty");
@@ -176,10 +176,10 @@ class PubTest
     @Test
     void pub_subscriberAddedAfterPubCreation_receivesSubsequentMessages()
     {
-        Pub<String> pub = hive.pub("live");
+        Pub<String> pub = actorHub.pub("live");
 
         List<String> sink = new ArrayList<>();
-        hive.sub("live", syncBee(sink));   // registered after pub()
+        actorHub.sub("live", syncActor(sink));   // registered after pub()
 
         pub.accept("late");
 
@@ -191,10 +191,10 @@ class PubTest
     void pub_sameTopicTwoPubs_shareSubscriberList()
     {
         List<String> sink = new ArrayList<>();
-        hive.sub("shared", syncBee(sink));
+        actorHub.sub("shared", syncActor(sink));
 
-        Pub<String> pub1 = hive.pub("shared");
-        Pub<String> pub2 = hive.pub("shared");
+        Pub<String> pub1 = actorHub.pub("shared");
+        Pub<String> pub2 = actorHub.pub("shared");
 
         pub1.accept("from-1");
         pub2.accept("from-2");
@@ -206,17 +206,17 @@ class PubTest
         assertEquals(expected, sink);
     }
 
-    /** Registering the same Bee instance twice produces duplicate deliveries. */
+    /** Registering the same Actor instance twice produces duplicate deliveries. */
     @Test
-    void pub_sameBeeTwice_receivesTwice()
+    void pub_sameActorTwice_receivesTwice()
     {
         List<String> sink = new ArrayList<>();
-        Bee<String> bee = syncBee(sink);
+        Actor<String> actor = syncActor(sink);
 
-        hive.sub("dup", bee);
-        hive.sub("dup", bee);
+        actorHub.sub("dup", actor);
+        actorHub.sub("dup", actor);
 
-        hive.<String>pub("dup").accept("x");
+        actorHub.<String>pub("dup").accept("x");
 
         assertEquals(2, sink.size());
         assertEquals("x", sink.get(0));
@@ -224,110 +224,110 @@ class PubTest
     }
 
     // =========================================================================
-    // Hive.sub — argument validation
+    // ActorHub.sub — argument validation
     // =========================================================================
 
-    /** Hive.sub rejects a null topic. */
+    /** ActorHub.sub rejects a null topic. */
     @Test
     void hiveSub_nullTopic_throwsNPE()
     {
-        assertThrows(NullPointerException.class, () -> hive.sub(null, syncBee(new ArrayList<>())));
+        assertThrows(NullPointerException.class, () -> actorHub.sub(null, syncActor(new ArrayList<>())));
     }
 
-    /** Hive.sub rejects a null Bee. */
+    /** ActorHub.sub rejects a null Actor. */
     @Test
-    void hiveSub_nullBee_throwsNPE()
+    void hiveSub_nullActor_throwsNPE()
     {
-        assertThrows(NullPointerException.class, () -> hive.sub("t", null));
+        assertThrows(NullPointerException.class, () -> actorHub.sub("t", null));
     }
 
     // =========================================================================
-    // Hive.pub — argument validation
+    // ActorHub.pub — argument validation
     // =========================================================================
 
-    /** Hive.pub rejects a null topic. */
+    /** ActorHub.pub rejects a null topic. */
     @Test
     void hivePub_nullTopic_throwsNPE()
     {
-        assertThrows(NullPointerException.class, () -> hive.pub(null));
+        assertThrows(NullPointerException.class, () -> actorHub.pub(null));
     }
 
-    /** Hive.pub always returns a non-null Pub even for an unknown topic. */
+    /** ActorHub.pub always returns a non-null Pub even for an unknown topic. */
     @Test
     void hivePub_unknownTopic_returnsNonNull()
     {
-        assertNotNull(hive.pub("brand-new-topic"));
+        assertNotNull(actorHub.pub("brand-new-topic"));
     }
 
     // =========================================================================
-    // Bee.sub — fluent self-registration
+    // Actor.sub — fluent self-registration
     // =========================================================================
 
-    /** Bee.sub returns the same Bee instance (fluent chaining). */
+    /** Actor.sub returns the same Actor instance (fluent chaining). */
     @Test
     void beeSub_returnsSelf()
     {
         List<String> sink = new ArrayList<>();
-        Bee<String> bee = hive.bee(sink::add);
+        Actor<String> actor = actorHub.actor(sink::add);
 
-        Bee<String> returned = bee.sub("fluent");
+        Actor<String> returned = actor.sub("fluent");
 
-        assertSame(bee, returned);
+        assertSame(actor, returned);
     }
 
-    /** A Bee subscribed via sub() receives messages published to that topic. */
+    /** A Actor subscribed via sub() receives messages published to that topic. */
     @Test
     void beeSub_receivesPublishedMessages()
     {
         List<String> sink = new ArrayList<>();
-        Bee bee = hive.bee((Consumer<String>)sink::add).sub("greet");
+        Actor actor = actorHub.actor((Consumer<String>)sink::add).sub("greet");
 
-        hive.<String>pub("greet").accept("hello");
+        actorHub.<String>pub("greet").accept("hello");
 
-        bee.waitForIdle();
+        actor.waitForIdle();
         assertEquals(Collections.singletonList("hello"), sink);
     }
 
     /**
-     * Bee.sub can be called multiple times for different topics; the Bee
+     * Actor.sub can be called multiple times for different topics; the Actor
      * receives messages from all of them.
      */
     @Test
     void beeSub_multipleTopics_receivesFromAll()
     {
         List<String> sink = new ArrayList<>();
-        Bee<String> bee = hive.bee(sink::add);
+        Actor<String> actor = actorHub.actor(sink::add);
 
-        bee.sub("alpha").sub("beta");
+        actor.sub("alpha").sub("beta");
 
-        hive.<String>pub("alpha").accept("A");
-        hive.<String>pub("beta").accept("B");
+        actorHub.<String>pub("alpha").accept("A");
+        actorHub.<String>pub("beta").accept("B");
 
         List<String> expected = new ArrayList<>();
         expected.add("A");
         expected.add("B");
 
-        bee.waitForIdle().shutdown(true);
+        actor.waitForIdle().shutdown(true);
         assertEquals(expected, sink);
     }
 
-    /** Bee.sub throws IllegalStateException when no Hive is attached. */
+    /** Actor.sub throws IllegalStateException when no ActorHub is attached. */
     @Test
-    void beeSub_noHive_throwsIllegalState()
+    void beeSub_noActorHub_throwsIllegalState()
     {
-        Bee<String> detached = syncBee(new ArrayList<>());  // constructed without Hive
+        Actor<String> detached = syncActor(new ArrayList<>());  // constructed without ActorHub
 
         assertThrows(IllegalStateException.class, () -> detached.sub("any"));
     }
 
     /**
-     * Bee.sub works when constructed with a Hive.
+     * Actor.sub works when constructed with an ActorHub.
      */
     @Test
-    void beeSub_withHive_works()
+    void beeSub_withActorHub_works()
     {
         List<String> sink = new ArrayList<>();
-        Bee<String> bee = new Bee<String>(hive)
+        Actor<String> actor = new Actor<String>(actorHub)
         {
             @Override
             protected void receive(String m)
@@ -336,24 +336,24 @@ class PubTest
             }
         };
 
-        bee.sub("with-hive");
+        actor.sub("with-actorHub");
 
-        hive.<String>pub("with-hive").accept("ok");
-        bee.waitForIdle();
+        actorHub.<String>pub("with-actorHub").accept("ok");
+        actor.waitForIdle();
        
         assertEquals(Collections.singletonList("ok"), sink);
     }
 
     // =========================================================================
-    // Async delivery — Hive-attached Bees
+    // Async delivery — ActorHub-attached Actors
     // =========================================================================
 
     /**
-     * Messages published to a Hive-attached Bee are delivered asynchronously
+     * Messages published to an ActorHub-attached Actor are delivered asynchronously
      * and all arrive within a reasonable timeout.
      */
     @Test
-    void pub_asyncBees_allMessagesDelivered() throws InterruptedException
+    void pub_asyncActors_allMessagesDelivered() throws InterruptedException
     {
         int msgCount = 50;
         CountDownLatch latch1 = new CountDownLatch(msgCount);
@@ -362,10 +362,10 @@ class PubTest
         List<Integer> sink1 = new CopyOnWriteArrayList<>();
         List<Integer> sink2 = new CopyOnWriteArrayList<>();
 
-        asyncBee(hive, sink1, latch1).sub("async");
-        asyncBee(hive, sink2, latch2).sub("async");
+        asyncActor(actorHub, sink1, latch1).sub("async");
+        asyncActor(actorHub, sink2, latch2).sub("async");
 
-        Pub<Integer> pub = hive.pub("async");
+        Pub<Integer> pub = actorHub.pub("async");
         for (int i = 0; i < msgCount; i++)
         {
             pub.accept(i);
@@ -389,7 +389,7 @@ class PubTest
         CountDownLatch done = new CountDownLatch(rounds);
         List<Throwable> errors = new CopyOnWriteArrayList<>();
 
-        Pub<Integer> pub = hive.pub("concurrent");
+        Pub<Integer> pub = actorHub.pub("concurrent");
 
         Thread publisher = new Thread(() ->
         {
@@ -411,7 +411,7 @@ class PubTest
             for (int i = 0; i < rounds; i++)
             {
                 List<Integer> sink = new CopyOnWriteArrayList<>();
-                hive.sub("concurrent", asyncBee(hive, sink, done));
+                actorHub.sub("concurrent", asyncActor(actorHub, sink, done));
             }
         });
 

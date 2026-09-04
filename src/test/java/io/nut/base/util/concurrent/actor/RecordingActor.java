@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -12,32 +12,32 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 /**
- * Test-only Bee that records every message it receives, plus the
+ * Test-only Actor that records every message it receives, plus the
  * invocations of its {@code terminate()} and {@code exception(Exception)}
  * hooks, so unit tests can assert on what actually happened without
  * resorting to reflection or arbitrary sleeps. Not a test class itself;
  * used as a helper by several *Test classes in this package.
  */
-class RecordingBee<M> extends Bee<M>
+class RecordingActor<M> extends Actor<M>
 {
     final List<M> received = new CopyOnWriteArrayList<>();
     final AtomicBoolean terminated = new AtomicBoolean(false);
     final AtomicReference<Exception> lastException = new AtomicReference<>();
     private volatile Consumer<M> action;
 
-    RecordingBee()
+    RecordingActor()
     {
         super();
     }
 
-    RecordingBee(Hive hive)
+    RecordingActor(ActorHub actorHub)
     {
-        super(hive);
+        super(actorHub);
     }
 
-    RecordingBee(Hive hive, int threads, int queueSize)
+    RecordingActor(ActorHub actorHub, int threads, int queueSize)
     {
-        super(hive, threads, queueSize);
+        super(actorHub, threads, queueSize);
     }
 
     /**
@@ -45,7 +45,7 @@ class RecordingBee<M> extends Bee<M>
      * e.g. to make a particular message throw and exercise the
      * exception-handling path.
      */
-    RecordingBee<M> withAction(Consumer<M> action)
+    RecordingActor<M> withAction(Consumer<M> action)
     {
         this.action = action;
         return this;

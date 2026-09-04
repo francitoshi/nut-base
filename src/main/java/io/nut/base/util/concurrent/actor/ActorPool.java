@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
@@ -30,7 +30,7 @@ import java.util.concurrent.Phaser;
 /**
  * A managed thread-pool with a rich task-execution API.
  * <p>
- * {@code Queen} wraps a {@link ThreadPoolExecutor} and exposes five execution
+ * {@code ActorPool} wraps a {@link ThreadPoolExecutor} and exposes five execution
  * modes that cover every combination of <em>who executes</em> and
  * <em>whether a result is returned</em>:
  *
@@ -45,20 +45,20 @@ import java.util.concurrent.Phaser;
  * {@link ThreadPoolExecutor#allowCoreThreadTimeOut} is enabled, so the number
  * of live threads scales from {@code 0} up to {@code corePoolSize} following
  * the load: threads are created on demand and reclaimed once idle for the
- * keep-alive time. Constructing a Queen with {@code corePoolSize == 0} enables
+ * keep-alive time. Constructing an ActorPool with {@code corePoolSize == 0} enables
  * the synchronous mode, in which every task runs directly in the calling
  * thread and no backing pool exists.
  * <p>
- * {@code Queen} also implements {@link Executor} (via {@link #execute}) so
+ * {@code ActorPool} also implements {@link Executor} (via {@link #execute}) so
  * it can be passed anywhere a plain {@code Executor} is expected.
  * <p>
- * {@code Queen} implements {@link AutoCloseable}: {@link #close()} shuts the
+ * {@code ActorPool} implements {@link AutoCloseable}: {@link #close()} shuts the
  * pool down gracefully and blocks until all tasks have finished.
  * <p>
- * {@link Hive} extends {@code Queen} and adds the Bee-specific factory methods
+ * {@link ActorHub} extends {@code ActorPool} and adds the Actor-specific factory methods
  * and the pub/sub registry on top of this execution foundation.
  */
-public class Queen implements AutoCloseable, Executor
+public class ActorPool implements AutoCloseable, Executor
 {    
 
     /**
@@ -110,12 +110,12 @@ public class Queen implements AutoCloseable, Executor
 
     /**
      * Protected constructor for subclasses that supply their own
-     * {@link ThreadPoolExecutor} (e.g. {@link ProxyHive}).
+     * {@link ThreadPoolExecutor} (e.g. {@link ProxyActorHub}).
      *
      * @param threadPoolExecutor the executor to delegate to; may be
      *                           {@code null} for lazy subclasses
      */
-    protected Queen(ThreadPoolExecutor threadPoolExecutor)
+    protected ActorPool(ThreadPoolExecutor threadPoolExecutor)
     {
         this.threadPoolExecutor = threadPoolExecutor;
         this.synchronous = threadPoolExecutor!=null;
@@ -129,7 +129,7 @@ public class Queen implements AutoCloseable, Executor
      * maximum thread count, and {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
      * is enabled whenever {@code keepAliveMillis &gt; 0}, so the number of live
      * threads scales from {@code 0} up to {@code corePoolSize} as demand rises
-     * and falls. Subclasses such as {@link Hive} may resize the pool later via
+     * and falls. Subclasses such as {@link ActorHub} may resize the pool later via
      * {@link #setPoolSize}.
      *
      * @param corePoolSize      the maximum number of concurrent worker threads;
@@ -146,7 +146,7 @@ public class Queen implements AutoCloseable, Executor
      *         {@code keepAliveMillis &lt; 0}; the synchronous case
      *         ({@code corePoolSize == 0}) is exempt from these checks
      */
-    public Queen(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    public ActorPool(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
         this.synchronous = corePoolSize == 0;
         if (!this.synchronous)
@@ -192,45 +192,45 @@ public class Queen implements AutoCloseable, Executor
      * @param callerWaitsPolicy {@code true} to block the caller on saturation;
      *                          {@code false} to run the task in the caller
      */
-    public Queen(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public ActorPool(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
         this(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Constructs a Queen with the {@link ThreadPoolExecutor.CallerRunsPolicy}.
+     * Constructs an ActorPool with the {@link ThreadPoolExecutor.CallerRunsPolicy}.
      *
      * @param corePoolSize    the maximum number of concurrent worker threads;
      *                        {@code 0} selects the synchronous mode
      * @param queueCapacity   task-queue capacity (0 = no buffering)
      * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
      */
-    public Queen(int corePoolSize, int queueCapacity, int keepAliveMillis)
+    public ActorPool(int corePoolSize, int queueCapacity, int keepAliveMillis)
     {
         this(corePoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Constructs a Queen with a symmetric pool of {@code corePoolSize} threads,
+     * Constructs an ActorPool with a symmetric pool of {@code corePoolSize} threads,
      * a bounded queue of the same size, and the default keep-alive time.
      *
      * @param corePoolSize number of threads and queue slots
      */
-    public Queen(int corePoolSize)
+    public ActorPool(int corePoolSize)
     {
         // A bounded queue sized to corePoolSize combined with the
         // CallerRunsPolicy keeps the pool from ever parking work behind a
         // saturated pool: submitted tasks run in the calling thread instead of
         // waiting in the queue for a thread that may never be freed. This is
-        // what keeps Bee pipelines alive when forwarding stages saturate the
+        // what keeps Actor pipelines alive when forwarding stages saturate the
         // pool with blocking channel puts.
         this(corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Constructs a Queen sized to the number of available CPU cores.
+     * Constructs an ActorPool sized to the number of available CPU cores.
      */
-    public Queen()
+    public ActorPool()
     {
         this(CORES, CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
@@ -240,31 +240,31 @@ public class Queen implements AutoCloseable, Executor
     // -------------------------------------------------------------------------
 
     /**
-     * @return a new Queen with default (CPU-core-sized) settings.
+     * @return a new ActorPool with default (CPU-core-sized) settings.
      */
-    public static Queen queen()
+    public static ActorPool actorPool()
     {
-        return new Queen();
+        return new ActorPool();
     }
 
     /**
      * @param corePoolSize number of threads and queue slots
-     * @return a new Queen with a symmetric pool of {@code corePoolSize} threads
+     * @return a new ActorPool with a symmetric pool of {@code corePoolSize} threads
      */
-    public static Queen queen(int corePoolSize)
+    public static ActorPool actorPool(int corePoolSize)
     {
-        return new Queen(corePoolSize);
+        return new ActorPool(corePoolSize);
     }
 
     /**
      * @param corePoolSize    the maximum number of concurrent worker threads
      * @param queueCapacity   task-queue capacity (0 = no buffering)
      * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
-     * @return a new Queen with the given pool configuration
+     * @return a new ActorPool with the given pool configuration
      */
-    public static Queen queen(int corePoolSize, int queueCapacity, int keepAliveMillis)
+    public static ActorPool actorPool(int corePoolSize, int queueCapacity, int keepAliveMillis)
     {
-        return new Queen(corePoolSize, queueCapacity, keepAliveMillis);
+        return new ActorPool(corePoolSize, queueCapacity, keepAliveMillis);
     }
 
     /**
@@ -272,11 +272,11 @@ public class Queen implements AutoCloseable, Executor
      * @param queueCapacity     task-queue capacity (0 = no buffering)
      * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds
      * @param callerWaitsPolicy {@code true} to block caller on saturation
-     * @return a new Queen with full pool configuration
+     * @return a new ActorPool with full pool configuration
      */
-    public static Queen queen(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public static ActorPool actorPool(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        return new Queen(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
+        return new ActorPool(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
     }
 
     // -------------------------------------------------------------------------
@@ -284,7 +284,7 @@ public class Queen implements AutoCloseable, Executor
     // -------------------------------------------------------------------------
 
     /**
-     * Returns {@code true} if this Queen was constructed with
+     * Returns {@code true} if this ActorPool was constructed with
      * {@code corePoolSize == 0}, in which case every
      * execution method runs tasks synchronously in the calling thread and no
      * backing pool exists.
@@ -408,7 +408,7 @@ public class Queen implements AutoCloseable, Executor
      * Blocks the calling thread until all running tasks have finished. If there
      * are no tasks running or queued, returns immediately.
      */
-    public Queen waitForIdle()
+    public ActorPool waitForIdle()
     {
         if(phaser!=null)
         {
@@ -563,7 +563,7 @@ public class Queen implements AutoCloseable, Executor
      *
      * @param task the task to spawn; must not be {@code null}
      */
-    public Queen spawn(Runnable task)
+    public ActorPool spawn(Runnable task)
     {
         Objects.requireNonNull(task, "task must not be null");
 
@@ -667,9 +667,9 @@ public class Queen implements AutoCloseable, Executor
      * Initiates a graceful shutdown: previously submitted tasks continue
      * executing, but no new tasks are accepted.
      *
-     * @return this Queen, for fluent chaining
+     * @return this ActorPool, for fluent chaining
      */
-    public Queen shutdown()
+    public ActorPool shutdown()
     {
         if (synchronous)
         {
@@ -733,7 +733,7 @@ public class Queen implements AutoCloseable, Executor
 
     /**
      * Sets the thread pool size, fixing both the core and the maximum to the
-     * same value. Queen keeps the pool symmetric (core always equals maximum,
+     * same value. ActorPool keeps the pool symmetric (core always equals maximum,
      * with {@link ThreadPoolExecutor#allowCoreThreadTimeOut} enabled), so a
      * single size is sufficient and avoids any risk of a maximum below the
      * core.
@@ -761,7 +761,7 @@ public class Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Shuts down this Queen and blocks until the pool terminates.
+     * Shuts down this ActorPool and blocks until the pool terminates.
      * Implements {@link AutoCloseable} for use in try-with-resources.
      */
     @Override
@@ -774,7 +774,7 @@ public class Queen implements AutoCloseable, Executor
         }
         catch (InterruptedException ex)
         {
-            Logger.getLogger(Queen.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(ActorPool.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 }

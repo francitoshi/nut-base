@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -31,8 +31,8 @@ import java.util.function.Consumer;
  * several messages instead of paying that cost once per message.
  * <p>
  * The time-based flush, when enabled, is driven by a single daemon thread
- * internal to this {@code BatchBee} and is independent of the owning
- * {@link Hive}'s thread pool. {@link #flush()} can also be called manually at
+ * internal to this {@code BatchActor} and is independent of the owning
+ * {@link ActorHub}'s thread pool. {@link #flush()} can also be called manually at
  * any time — for example, to force out a partial batch before shutting down the
  * pipeline.
  * <p>
@@ -43,14 +43,14 @@ import java.util.function.Consumer;
  * <strong>Thread safety:</strong> the internal batch and the reordering buffer
  * are guarded by {@code batchLock}, so concurrent calls to
  * {@link #receive(Object)}, {@link #flush()}, and {@link #pending()} are all
- * safe. When this Bee runs with an attached Hive, several workers may process
+ * safe. When this Actor runs with an attached ActorHub, several workers may process
  * messages concurrently; messages are still assembled into each batch in
  * acceptance order, so the emitted batches keep their input order regardless
  * of the processing order.
  *
  * @param <T> the type of individual messages accumulated into batches
  */
-public class BatchBee<T> extends Bee<T>
+public class BatchActor<T> extends Actor<T>
 {
     private final int maxSize;
     private final Object batchLock = new Object();
@@ -58,7 +58,7 @@ public class BatchBee<T> extends Bee<T>
 
     /**
      * 1-based sequence of the next message expected in the current batch (see
-     * {@link Bee#receive(Object, long)}). When actual arrival order differs
+     * {@link Actor#receive(Object, long)}). When actual arrival order differs
      * from acceptance order, late-arriving messages wait in
      * {@link #buffered} until their predecessors show up.
      */
@@ -81,7 +81,7 @@ public class BatchBee<T> extends Bee<T>
      * Full constructor.
      *
      * @param threads        the maximum number of concurrent worker threads
-     * @param hive           the Hive thread pool, or {@code null} for synchronous
+     * @param actorHub           the ActorHub thread pool, or {@code null} for synchronous
      *                       mode
      * @param queueSize      the internal queue capacity (0 = default)
      * @param maxSize        the number of messages that trigger an immediate flush;
@@ -90,9 +90,9 @@ public class BatchBee<T> extends Bee<T>
      *                       pass {@code 0} to disable periodic flushing
      * @throws IllegalArgumentException if {@code maxSize <= 0}
      */
-    public BatchBee(Hive hive, int threads, int queueSize, int maxSize, long maxWaitMillis)
+    public BatchActor(ActorHub actorHub, int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
-        super(hive, threads, queueSize);
+        super(actorHub, threads, queueSize);
         if (maxSize <= 0)
         {
             throw new IllegalArgumentException("maxSize <= 0");
@@ -101,7 +101,7 @@ public class BatchBee<T> extends Bee<T>
         this.batch = new ArrayList<>(maxSize);
         if (maxWaitMillis > 0)
         {
-            this.scheduler = Executors.newSingleThreadScheduledExecutor(BatchBee::newDaemonThread);
+            this.scheduler = Executors.newSingleThreadScheduledExecutor(BatchActor::newDaemonThread);
             this.scheduler.scheduleWithFixedDelay(this::flush, maxWaitMillis, maxWaitMillis, TimeUnit.MILLISECONDS);
         }
         else
@@ -111,53 +111,53 @@ public class BatchBee<T> extends Bee<T>
     }
 
     /**
-     * Constructs a BatchBee with the given thread count and Hive, using the
+     * Constructs a BatchActor with the given thread count and ActorHub, using the
      * default queue size.
      *
      * @param threads       the maximum number of concurrent worker threads
-     * @param hive          the Hive thread pool, or {@code null} for synchronous mode
+     * @param actorHub          the ActorHub thread pool, or {@code null} for synchronous mode
      * @param maxSize       the number of messages that trigger an immediate flush
      * @param maxWaitMillis the maximum interval between flushes (0 = disabled)
      */
-    public BatchBee(Hive hive, int threads, int maxSize, long maxWaitMillis)
+    public BatchActor(ActorHub actorHub, int threads, int maxSize, long maxWaitMillis)
     {
-        this(hive, threads, 0, maxSize, maxWaitMillis);
+        this(actorHub, threads, 0, maxSize, maxWaitMillis);
     }
 
     /**
-     * Constructs a BatchBee attached to the given Hive with the default thread
+     * Constructs a BatchActor attached to the given ActorHub with the default thread
      * count and queue size.
      *
-     * @param hive          the Hive thread pool, or {@code null} for synchronous mode
+     * @param actorHub          the ActorHub thread pool, or {@code null} for synchronous mode
      * @param maxSize       the number of messages that trigger an immediate flush
      * @param maxWaitMillis the maximum interval between flushes (0 = disabled)
      */
-    public BatchBee(Hive hive, int maxSize, long maxWaitMillis)
+    public BatchActor(ActorHub actorHub, int maxSize, long maxWaitMillis)
     {
-        this(hive, 1, 0, maxSize, maxWaitMillis);
+        this(actorHub, 1, 0, maxSize, maxWaitMillis);
     }
 
     /**
-     * Constructs a standalone BatchBee with the given thread count but no Hive.
-     * A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
+     * Constructs a standalone BatchActor with the given thread count but no ActorHub.
+     * A ActorHub is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param threads       the maximum number of concurrent worker threads
      * @param maxSize       the number of messages that trigger an immediate flush
      * @param maxWaitMillis the maximum interval between flushes (0 = disabled)
      */
-    public BatchBee(int threads, int maxSize, long maxWaitMillis)
+    public BatchActor(int threads, int maxSize, long maxWaitMillis)
     {
         this(null, threads, 0, maxSize, maxWaitMillis);
     }
 
     /**
-     * Constructs a standalone BatchBee with the default thread count and no
-     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
+     * Constructs a standalone BatchActor with the default thread count and no
+     * ActorHub. A ActorHub is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param maxSize       the number of messages that trigger an immediate flush
      * @param maxWaitMillis the maximum interval between flushes (0 = disabled)
      */
-    public BatchBee(int maxSize, long maxWaitMillis)
+    public BatchActor(int maxSize, long maxWaitMillis)
     {
         this(null, 1, 0, maxSize, maxWaitMillis);
     }
@@ -167,21 +167,21 @@ public class BatchBee<T> extends Bee<T>
      * named daemon thread so it does not prevent JVM shutdown.
      *
      * @param r the runnable to wrap
-     * @return a new daemon thread named {@code "BatchBee-flush-timer"}
+     * @return a new daemon thread named {@code "BatchActor-flush-timer"}
      */
     private static Thread newDaemonThread(Runnable r)
     {
-        Thread t = new Thread(r, "BatchBee-flush-timer");
+        Thread t = new Thread(r, "BatchActor-flush-timer");
         t.setDaemon(true);
         return t;
     }
 
     /**
-     * Links this BatchBee to the next stage of the chain (the continuation),
+     * Links this BatchActor to the next stage of the chain (the continuation),
      * which will be invoked with every completed batch. The returned value is
      * {@code next} itself, allowing fluent chaining:
      * <pre>{@code
-     * batchBee.linkTo(pipeOfLists).linkTo(sink);
+     * batchActor.linkTo(pipeOfLists).linkTo(sink);
      * }</pre>
      *
      * @param <S>  the concrete type of the next stage (must extend
@@ -343,7 +343,7 @@ public class BatchBee<T> extends Bee<T>
 
     /**
      * Flushes any remaining pending batch and shuts down the internal flush
-     * scheduler (if one was created). Called automatically by {@link Bee}'s
+     * scheduler (if one was created). Called automatically by {@link Actor}'s
      * shutdown sequence after the last message has been processed.
      */
     @Override

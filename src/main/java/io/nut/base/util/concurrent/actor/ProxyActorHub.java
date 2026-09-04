@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.List;
 import java.util.Set;
@@ -20,33 +20,33 @@ import java.util.function.Supplier;
  *
  * @author franci
  */
-public class ProxyHive extends Hive implements AutoCloseable
+public class ProxyActorHub extends ActorHub implements AutoCloseable
 {
-    private volatile Hive hive;
-    private final List<Bee<?>> pendingBees = new CopyOnWriteArrayList<>();
+    private volatile ActorHub actorHub;
+    private final List<Actor<?>> pendingActors = new CopyOnWriteArrayList<>();
 
-    public ProxyHive()
+    public ProxyActorHub()
     {
         super(0, 0, 0, false, false);
     }
 
-    public void setHive(Hive hive)
+    public void setActorHub(ActorHub actorHub)
     {
-        this.hive = hive;
-        if (hive != null)
+        this.actorHub = actorHub;
+        if (actorHub != null)
         {
-            for (Bee<?> bee : pendingBees)
+            for (Actor<?> actor : pendingActors)
             {
-                hive.registerBee(bee);
+                actorHub.registerActor(actor);
             }
-            pendingBees.clear();
+            pendingActors.clear();
         }
     }
 
     @Override
     public void execute(Runnable task)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.execute(task);
@@ -60,7 +60,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     protected void terminated()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.terminated();
@@ -72,9 +72,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public Hive shutdown()
+    public ActorHub shutdown()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.shutdown();
@@ -89,7 +89,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public boolean isShutdown()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.isShutdown();
@@ -100,7 +100,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public boolean isTerminated()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.isTerminated();
@@ -111,7 +111,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public boolean awaitTermination(int millis) throws InterruptedException
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.awaitTermination(millis);
@@ -122,7 +122,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public int getCorePoolSize()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.getCorePoolSize();
@@ -133,7 +133,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public int getMaximumPoolSize()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.getMaximumPoolSize();
@@ -144,7 +144,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public void setPoolSize(int i)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.setPoolSize(i);
@@ -158,7 +158,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public void close()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.close();
@@ -170,9 +170,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T, R> PipeBee<T, R> pipe(int threads, int queueSize, Function<T, R> function)
+    public <T, R> PipeActor<T, R> pipe(int threads, int queueSize, Function<T, R> function)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.pipe(threads, queueSize, function);
@@ -181,20 +181,20 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> bee(int threads, int queueSize, Consumer<T> consumer)
+    public <T> Actor<T> actor(int threads, int queueSize, Consumer<T> consumer)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
-            return h.bee(threads, queueSize, consumer);
+            return h.actor(threads, queueSize, consumer);
         }
-        return super.bee(threads, queueSize, consumer);
+        return super.actor(threads, queueSize, consumer);
     }
 
     @Override
-    public <E> Bee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
+    public <E> Actor<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.queue(threads, queueSize, queue);
@@ -203,9 +203,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <E> Bee<E> list(int threads, int queueSize, List<E> list)
+    public <E> Actor<E> list(int threads, int queueSize, List<E> list)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.list(threads, queueSize, list);
@@ -214,9 +214,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> set(int threads, int queueSize, Set<T> set)
+    public <T> Actor<T> set(int threads, int queueSize, Set<T> set)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.set(threads, queueSize, set);
@@ -225,9 +225,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> FilterBee<T> filter(int threads, int queueSize, Predicate<T> predicate)
+    public <T> FilterActor<T> filter(int threads, int queueSize, Predicate<T> predicate)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.filter(threads, queueSize, predicate);
@@ -236,9 +236,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> BatchBee<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
+    public <T> BatchActor<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.batch(threads, queueSize, maxSize, maxWaitMillis);
@@ -247,9 +247,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T, R> HivePipeline<T, R> pipeline(int threads, int queueSize, Function<T, R> first)
+    public <T, R> PipelineActor<T, R> pipeline(int threads, int queueSize, Function<T, R> first)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.pipeline(threads, queueSize, first);
@@ -258,20 +258,20 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> sub(String topic, Bee<T> bee)
+    public <T> Actor<T> sub(String topic, Actor<T> actor)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
-            return h.sub(topic, bee);
+            return h.sub(topic, actor);
         }
-        return super.sub(topic, bee);
+        return super.sub(topic, actor);
     }
 
     @Override
     public <T> Pub<T> pub(String topic)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.pub(topic);
@@ -280,9 +280,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public ProxyHive spawn(Runnable task)
+    public ProxyActorHub spawn(Runnable task)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.spawn(task);
@@ -297,7 +297,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public Future<Void> submit(Runnable task)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.submit(task);
@@ -308,7 +308,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public <U> Future<U> submit(Supplier<U> supplier)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.submit(supplier);
@@ -319,7 +319,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public <T> void forEach(Iterable<T> iterable, Consumer<? super T> consumer)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.forEach(iterable, consumer);
@@ -331,48 +331,48 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    void registerBee(Bee<?> bee)
+    void registerActor(Actor<?> actor)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
-            h.registerBee(bee);
+            h.registerActor(actor);
         }
         else
         {
-            pendingBees.add(bee);
+            pendingActors.add(actor);
         }
     }
 
     @Override
-    void unregisterBee(Bee<?> bee)
+    void unregisterActor(Actor<?> actor)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
-            h.unregisterBee(bee);
+            h.unregisterActor(actor);
         }
         else
         {
-            pendingBees.remove(bee);
+            pendingActors.remove(actor);
         }
     }
 
     @Override
-    public List<Bee<?>> bees()
+    public List<Actor<?>> actors()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
-            return h.bees();
+            return h.actors();
         }
-        return pendingBees;
+        return pendingActors;
     }
 
     @Override
-    public <T, R> PipeBee<T, R> pipe(Function<T, R> function)
+    public <T, R> PipeActor<T, R> pipe(Function<T, R> function)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.pipe(function);
@@ -381,9 +381,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T, R> PipeBee<T, R> pipe(int threads, Function<T, R> function)
+    public <T, R> PipeActor<T, R> pipe(int threads, Function<T, R> function)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.pipe(threads, function);
@@ -392,31 +392,31 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> bee(Consumer<T> consumer)
+    public <T> Actor<T> actor(Consumer<T> consumer)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
-            return h.bee(consumer);
+            return h.actor(consumer);
         }
-        return super.bee(consumer);
+        return super.actor(consumer);
     }
 
     @Override
-    public <T> Bee<T> bee(int threads, Consumer<T> consumer)
+    public <T> Actor<T> actor(int threads, Consumer<T> consumer)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
-            return h.bee(threads, consumer);
+            return h.actor(threads, consumer);
         }
-        return super.bee(threads, consumer);
+        return super.actor(threads, consumer);
     }
 
     @Override
-    public <E> Bee<E> queue(BlockingQueue<E> queue)
+    public <E> Actor<E> queue(BlockingQueue<E> queue)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.queue(queue);
@@ -425,9 +425,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <E> Bee<E> list(List<E> list)
+    public <E> Actor<E> list(List<E> list)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.list(list);
@@ -436,9 +436,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <E> Bee<E> list(int threads, List<E> list)
+    public <E> Actor<E> list(int threads, List<E> list)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.list(threads, list);
@@ -447,9 +447,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> set(Set<T> set)
+    public <T> Actor<T> set(Set<T> set)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.set(set);
@@ -458,9 +458,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> set(int threads, Set<T> set)
+    public <T> Actor<T> set(int threads, Set<T> set)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.set(threads, set);
@@ -469,9 +469,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> FilterBee<T> filter(Predicate<T> predicate)
+    public <T> FilterActor<T> filter(Predicate<T> predicate)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.filter(predicate);
@@ -480,9 +480,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> FilterBee<T> filter(int threads, Predicate<T> predicate)
+    public <T> FilterActor<T> filter(int threads, Predicate<T> predicate)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.filter(threads, predicate);
@@ -491,9 +491,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T, R> HivePipeline<T, R> pipeline(Function<T, R> first)
+    public <T, R> PipelineActor<T, R> pipeline(Function<T, R> first)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.pipeline(first);
@@ -502,9 +502,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T, R> HivePipeline<T, R> pipeline(int threads, Function<T, R> first)
+    public <T, R> PipelineActor<T, R> pipeline(int threads, Function<T, R> first)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.pipeline(threads, first);
@@ -513,9 +513,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> BatchBee<T> batch(int maxSize, long maxWaitMillis)
+    public <T> BatchActor<T> batch(int maxSize, long maxWaitMillis)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.batch(maxSize, maxWaitMillis);
@@ -524,9 +524,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
+    public <T> Actor<T> sub(String topic, int threads, Consumer<T> consumer)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.sub(topic, threads, consumer);
@@ -535,9 +535,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public <T> Bee<T> sub(String topic, Consumer<T> consumer)
+    public <T> Actor<T> sub(String topic, Consumer<T> consumer)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.sub(topic, consumer);
@@ -546,9 +546,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public Hive shutdown(boolean onlyWhenEmpty)
+    public ActorHub shutdown(boolean onlyWhenEmpty)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.shutdown(onlyWhenEmpty);
@@ -559,7 +559,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public void close(boolean onlyWhenEmpty)
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             h.close(onlyWhenEmpty);
@@ -573,7 +573,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     AtomicInteger processedCount()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.processedCount();
@@ -584,7 +584,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public boolean isIdle()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.isIdle();
@@ -593,9 +593,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public Hive waitForIdle()
+    public ActorHub waitForIdle()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.waitForIdle();
@@ -604,9 +604,9 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public Hive awaitTermination()
+    public ActorHub awaitTermination()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.awaitTermination();
@@ -617,7 +617,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public boolean isSynchronous()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.isSynchronous();
@@ -628,7 +628,7 @@ public class ProxyHive extends Hive implements AutoCloseable
     @Override
     public int getActiveCount()
     {
-        Hive h = hive;
+        ActorHub h = actorHub;
         if (h != null)
         {
             return h.getActiveCount();

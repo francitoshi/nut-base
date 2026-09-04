@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,26 +19,26 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link FilterBee}: predicate-based message filtering,
- * CPS forwarding to the linked next stage, and the Hive factory methods.
+ * Unit tests for {@link FilterActor}: predicate-based message filtering,
+ * CPS forwarding to the linked next stage, and the ActorHub factory methods.
  */
-class FilterBeeTest
+class FilterActorTest
 {
-    private Hive hive;
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = Hive.hive();
+        actorHub = ActorHub.actorHub();
     }
 
     @AfterEach
     void tearDown()
     {
-        hive.shutdown();
+        actorHub.shutdown();
         try
         {
-            hive.awaitTermination(2000);
+            actorHub.awaitTermination(2000);
         }
         catch (InterruptedException ie)
         {
@@ -49,8 +49,8 @@ class FilterBeeTest
     @Test
     void directModeForwardsOnlyMessagesMatchingThePredicate()
     {
-        RecordingBee<Integer> sink = new RecordingBee<>();
-        FilterBee<Integer> filter = new FilterBee<>(i -> i > 0);
+        RecordingActor<Integer> sink = new RecordingActor<>();
+        FilterActor<Integer> filter = new FilterActor<>(i -> i > 0);
         filter.linkTo(sink);
 
         filter.accept(-1);
@@ -64,8 +64,8 @@ class FilterBeeTest
     @Test
     void discardedMessagesDoNotReachTheNextStage()
     {
-        RecordingBee<String> sink = new RecordingBee<>();
-        FilterBee<String> filter = new FilterBee<>(s -> s.length() > 2);
+        RecordingActor<String> sink = new RecordingActor<>();
+        FilterActor<String> filter = new FilterActor<>(s -> s.length() > 2);
         filter.linkTo(sink);
 
         filter.accept("a");
@@ -80,8 +80,8 @@ class FilterBeeTest
     @Test
     void messageIsUnchangedWhenForwarded()
     {
-        RecordingBee<Integer> sink = new RecordingBee<>();
-        FilterBee<Integer> filter = new FilterBee<>(i -> true);
+        RecordingActor<Integer> sink = new RecordingActor<>();
+        FilterActor<Integer> filter = new FilterActor<>(i -> true);
         filter.linkTo(sink);
 
         filter.accept(42);
@@ -92,10 +92,10 @@ class FilterBeeTest
     @Test
     void linkToReturnsTheSameNextInstanceForChaining()
     {
-        FilterBee<Integer> f1 = new FilterBee<>(i -> i > 0);
-        FilterBee<Integer> f2 = new FilterBee<>(i -> i < 100);
+        FilterActor<Integer> f1 = new FilterActor<>(i -> i > 0);
+        FilterActor<Integer> f2 = new FilterActor<>(i -> i < 100);
 
-        FilterBee<Integer> returned = f1.linkTo(f2);
+        FilterActor<Integer> returned = f1.linkTo(f2);
 
         assertSame(f2, returned);
     }
@@ -103,9 +103,9 @@ class FilterBeeTest
     @Test
     void filtersCanBeChainedInSequence()
     {
-        RecordingBee<Integer> sink = new RecordingBee<>();
-        FilterBee<Integer> positive = new FilterBee<>(i -> i > 0);
-        FilterBee<Integer> small = new FilterBee<>(i -> i < 100);
+        RecordingActor<Integer> sink = new RecordingActor<>();
+        FilterActor<Integer> positive = new FilterActor<>(i -> i > 0);
+        FilterActor<Integer> small = new FilterActor<>(i -> i < 100);
 
         positive.linkTo(small).linkTo(sink);
 
@@ -123,9 +123,9 @@ class FilterBeeTest
     void filterWithPipeFormALogicalChain() throws InterruptedException
     {
         java.util.List<String> result = new CopyOnWriteArrayList<>();
-        FilterBee<Integer> filter = hive.filter(i -> i % 2 == 0);
-        PipeBee<Integer,String> pipe = hive.pipe(i -> "even=" + i);
-        pipe.linkTo(hive.bee(result::add));
+        FilterActor<Integer> filter = actorHub.filter(i -> i % 2 == 0);
+        PipeActor<Integer,String> pipe = actorHub.pipe(i -> "even=" + i);
+        pipe.linkTo(actorHub.actor(result::add));
 
         filter.linkTo(pipe);
 
@@ -136,7 +136,7 @@ class FilterBeeTest
         
         filter.waitForIdle();
                 
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(2, result.size());
         assertTrue(result.contains("even=2"));
@@ -146,7 +146,7 @@ class FilterBeeTest
     @Test
     void messageIsProcessedEvenWhenNoNextStageIsLinked()
     {
-        RecordingBee<Integer> meter = new RecordingBee<Integer>()
+        RecordingActor<Integer> meter = new RecordingActor<Integer>()
         {
             @Override
             protected void receive(Integer m)
@@ -155,7 +155,7 @@ class FilterBeeTest
             }
         };
 
-        FilterBee<Integer> filter = new FilterBee<>(i -> true);
+        FilterActor<Integer> filter = new FilterActor<>(i -> true);
         filter.accept(1);
         // No error, predicate is evaluated even without a next stage
     }
@@ -163,31 +163,31 @@ class FilterBeeTest
     @Test
     void constructorRejectsNullPredicate()
     {
-        assertThrows(NullPointerException.class, () -> new FilterBee<>(null));
-        assertThrows(NullPointerException.class, () -> new FilterBee<>(hive, null));
-        assertThrows(NullPointerException.class, () -> new FilterBee<>(hive, 2, 2, null));
+        assertThrows(NullPointerException.class, () -> new FilterActor<>(null));
+        assertThrows(NullPointerException.class, () -> new FilterActor<>(actorHub, null));
+        assertThrows(NullPointerException.class, () -> new FilterActor<>(actorHub, 2, 2, null));
     }
 
     @Test
     void linkToRejectsNull()
     {
-        FilterBee<Integer> f = new FilterBee<>(i -> true);
+        FilterActor<Integer> f = new FilterActor<>(i -> true);
         assertThrows(NullPointerException.class, () -> f.linkTo(null));
     }
 
     @Test
-    void hiveFilterFactoryCreatesBoundFilterBee() throws InterruptedException
+    void hiveFilterFactoryCreatesBoundFilterActor() throws InterruptedException
     {
         List<Integer> result = new CopyOnWriteArrayList<>();
-        FilterBee<Integer> filter = hive.filter(i -> i > 10);
-        filter.linkTo(hive.bee(result::add));
+        FilterActor<Integer> filter = actorHub.filter(i -> i > 10);
+        filter.linkTo(actorHub.actor(result::add));
 
         filter.accept(5);
         filter.accept(15);
 
         filter.waitForIdle().shutdown().awaitTermination(Integer.MAX_VALUE);
         
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains(15));
@@ -197,14 +197,14 @@ class FilterBeeTest
     void hiveFilterFactoryWithThreadsParameter() throws InterruptedException
     {
         List<String> result = new CopyOnWriteArrayList<>();
-        FilterBee<String> filter = hive.filter(2, s -> s.length() > 3);
-        filter.linkTo(hive.bee(result::add));
+        FilterActor<String> filter = actorHub.filter(2, s -> s.length() > 3);
+        filter.linkTo(actorHub.actor(result::add));
 
         filter.accept("hi");
         filter.accept("hello");
 
         filter.waitForIdle().shutdown().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
         
         assertEquals(1, result.size());
         assertTrue(result.contains("hello"));
@@ -214,14 +214,14 @@ class FilterBeeTest
     void hiveFilterFactoryWithQueueSizeParameter() throws InterruptedException
     {
         java.util.List<Integer> result = new CopyOnWriteArrayList<>();
-        FilterBee<Integer> filter = hive.filter(20, 10, i -> i > 0);
-        filter.linkTo(hive.bee(result::add));
+        FilterActor<Integer> filter = actorHub.filter(20, 10, i -> i > 0);
+        filter.linkTo(actorHub.actor(result::add));
 
         filter.accept(-1);
         filter.accept(1);
 
         filter.waitForIdle().shutdown(true).awaitTermination(1);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
     }
@@ -229,8 +229,8 @@ class FilterBeeTest
     @Test
     void predicateThatAlwaysReturnsFalseDropsAllMessages()
     {
-        RecordingBee<String> sink = new RecordingBee<>();
-        FilterBee<String> filter = new FilterBee<>(s -> false);
+        RecordingActor<String> sink = new RecordingActor<>();
+        FilterActor<String> filter = new FilterActor<>(s -> false);
         filter.linkTo(sink);
 
         filter.accept("a");
@@ -243,8 +243,8 @@ class FilterBeeTest
     @Test
     void predicateThatAlwaysReturnsTrueForwardsAll()
     {
-        RecordingBee<String> sink = new RecordingBee<>();
-        FilterBee<String> filter = new FilterBee<>(s -> true);
+        RecordingActor<String> sink = new RecordingActor<>();
+        FilterActor<String> filter = new FilterActor<>(s -> true);
         filter.linkTo(sink);
 
         filter.accept("a");

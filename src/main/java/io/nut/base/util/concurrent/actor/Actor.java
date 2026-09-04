@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.math.Nums;
 import io.nut.base.util.concurrent.channel.Channel;
@@ -20,38 +20,38 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The fundamental building block of the Hive concurrency framework.
- * A {@code Bee<M>} is an asynchronous message-processing stage: it accepts
+ * The fundamental building block of the ActorHub concurrency framework.
+ * A {@code Actor<M>} is an asynchronous message-processing stage: it accepts
  * messages via {@link #accept(Object)}, buffers them in a
  * {@link CloseableChannel}, and dispatches them to
  * {@link #receive(Object)} on a worker thread supplied by an attached
- * {@link Hive}.
+ * {@link ActorHub}.
  * <p>
- * When no {@link Hive} is attached, or when constructed with
+ * When no {@link ActorHub} is attached, or when constructed with
  * {@code threads == 0}, {@link #accept(Object)} executes
  * {@link #receive(Object)} synchronously in the calling thread.
  * <p>
- * <strong>Worker model</strong>: when a Hive is attached and {@code threads > 0},
+ * <strong>Worker model</strong>: when an ActorHub is attached and {@code threads > 0},
  * the first accepted message starts a single <em>permanent</em> worker that
- * stays alive for the entire lifetime of the Bee, blocking on the internal
+ * stays alive for the entire lifetime of the Actor, blocking on the internal
  * channel waiting for new messages and processing them as they arrive; it only
- * exits when the Bee is shut down. With {@code threads == 1} that is the only
+ * exits when the Actor is shut down. With {@code threads == 1} that is the only
  * worker. With {@code threads > 1}, additional temporary "rush" workers are
  * started as messages arrive (up to the configured maximum) and return to the
- * pool whenever there is nothing left to drain, so the Bee can process
+ * pool whenever there is nothing left to drain, so the Actor can process
  * messages in parallel.
  * <p>
- * <strong>Lifecycle</strong>: a Bee starts active. {@link #shutdown()} (or
+ * <strong>Lifecycle</strong>: an Actor starts active. {@link #shutdown()} (or
  * {@link #shutdown(boolean)}) closes the internal channel; messages buffered
  * before the close are still delivered. Once the channel is drained and every
- * worker has returned, {@link #terminate()} is invoked and the Bee is
+ * worker has returned, {@link #terminate()} is invoked and the Actor is
  * terminated. {@link #awaitTermination(int)} blocks until that point.
  *
- * @param <M> the type of messages this Bee processes
+ * @param <M> the type of messages this Actor processes
  */
-public abstract class Bee<M> implements Consumer<M>
+public abstract class Actor<M> implements Consumer<M>
 {
-    private static final Logger LOG = Logger.getLogger(Bee.class.getName());
+    private static final Logger LOG = Logger.getLogger(Actor.class.getName());
 
     private static final int DEFAULT_QUEUE_SIZE = Short.MAX_VALUE;
 
@@ -78,7 +78,7 @@ public abstract class Bee<M> implements Consumer<M>
 
     /**
      * Permits one worker per free concurrent slot. The permanent worker holds
-     * one permit for the whole lifetime of the Bee (re-acquiring it each time
+     * one permit for the whole lifetime of the Actor (re-acquiring it each time
      * it goes back to blocking), and temporary "rush" workers acquire a permit
      * (atomically, so no {@link #lock} is needed) before starting and hold it
      * until they have drained everything and are about to return. This provides
@@ -95,7 +95,7 @@ public abstract class Bee<M> implements Consumer<M>
     /**
      * Messages currently being processed by a worker, i.e. pulled from the
      * channel but not yet returned from {@link #receive(Object, long)}. Used
-     * by {@link #isIdle()} so a Bee whose permanent worker is mid-{@code receive}
+     * by {@link #isIdle()} so an Actor whose permanent worker is mid-{@code receive}
      * is never reported idle, even though {@code pending} is already back to
      * zero for that message.
      */
@@ -110,12 +110,12 @@ public abstract class Bee<M> implements Consumer<M>
      */
     private final AtomicLong sequenceCounter = new AtomicLong();
 
-    /** Workers currently running (submitted to the Hive pool but not yet done). */
+    /** Workers currently running (submitted to the ActorHub pool but not yet done). */
     private final AtomicInteger activeWorkers = new AtomicInteger();
 
     /**
      * Temporary ("rush") workers currently running, for {@code threads > 1}.
-     * The permanent worker is not counted here, so a Bee waiting for new
+     * The permanent worker is not counted here, so an Actor waiting for new
      * messages on its permanent worker can still report itself idle.
      */
     private final AtomicInteger rushWorkers = new AtomicInteger();
@@ -129,14 +129,14 @@ public abstract class Bee<M> implements Consumer<M>
     /** {@code true} when {@link #shutdown(boolean)} was asked to close only once idle. */
     private boolean shutdownWhenEmpty;
 
-    /** Messages this Bee has processed (each invocation of {@link #receive}). */
+    /** Messages this Actor has processed (each invocation of {@link #receive}). */
     private final AtomicInteger processedCount = new AtomicInteger();
 
     /** {@code true} after {@link #terminate()} has run. */
     private boolean terminated;
 
     private volatile boolean allowLogger = true;
-    private final Hive hive;
+    private final ActorHub actorHub;
     private volatile Exception ex;
 
     // -------------------------------------------------------------------------
@@ -147,12 +147,12 @@ public abstract class Bee<M> implements Consumer<M>
      * @param threads   the maximum number of concurrent worker threads;
      *                  {@code 0} enables synchronous mode (no channel, no
      *                  workers; {@link #accept} calls {@link #receive} directly)
-     * @param hive      the Hive thread pool, or {@code null} for synchronous mode
+     * @param actorHub      the ActorHub thread pool, or {@code null} for synchronous mode
      * @param queueSize buffer capacity of the internal channel; {@code <= 0}
      *                  means unbounded; ignored when {@code threads == 0}
      * @throws IllegalArgumentException if {@code threads < 0} or {@code queueSize < 0}
      */
-    public Bee(Hive hive, int threads, int queueSize)
+    public Actor(ActorHub actorHub, int threads, int queueSize)
     {
         if (threads < 0)
         {
@@ -162,7 +162,7 @@ public abstract class Bee<M> implements Consumer<M>
         {
             throw new IllegalArgumentException("queueSize < 0");
         }
-        this.hive = hive;
+        this.actorHub = actorHub;
         this.synchronous = threads == 0;
         if (this.synchronous)
         {
@@ -174,35 +174,35 @@ public abstract class Bee<M> implements Consumer<M>
         {
             this.threads = threads;
             this.workerSlots = new Semaphore(this.threads);
-            this.channel = queueSize > 0 ? Channel.closeableBuffered(queueSize) : Channel.closeableBuffered(Queen.CORES);
-            registerHive();
+            this.channel = queueSize > 0 ? Channel.closeableBuffered(queueSize) : Channel.closeableBuffered(ActorPool.CORES);
+            registerActorHub();
         }
     }
 
     /**
-     * Registers this (non-synchronous) Bee into the {@link Hive} it is attached
-     * to, so the Hive can track all its active stages. Bees without an attached
-     * Hive (or constructed with {@code threads == 0}) are not registered.
+     * Registers this (non-synchronous) Actor into the {@link ActorHub} it is attached
+     * to, so the ActorHub can track all its active stages. Actors without an attached
+     * ActorHub (or constructed with {@code threads == 0}) are not registered.
      */
-    private void registerHive()
+    private void registerActorHub()
     {
-        if (hive != null)
+        if (actorHub != null)
         {
-            hive.registerBee(this);
+            actorHub.registerActor(this);
         }
     }
 
-    public Bee(Hive hive)
+    public Actor(ActorHub actorHub)
     {
-        this(hive, 1, DEFAULT_QUEUE_SIZE);
+        this(actorHub, 1, DEFAULT_QUEUE_SIZE);
     }
 
-    public Bee(int threads, int queueSize)
+    public Actor(int threads, int queueSize)
     {
         this(null, threads, queueSize);
     }
 
-    public Bee()
+    public Actor()
     {
         this(null, 1, DEFAULT_QUEUE_SIZE);
     }
@@ -211,7 +211,7 @@ public abstract class Bee<M> implements Consumer<M>
     // Configuration
     // -------------------------------------------------------------------------
 
-    public Bee<M> dryLogger()
+    public Actor<M> dryLogger()
     {
         this.allowLogger = false;
         return this;
@@ -222,14 +222,14 @@ public abstract class Bee<M> implements Consumer<M>
         return ex;
     }
 
-    public Hive getHive()
+    public ActorHub getActorHub()
     {
-        return hive;
+        return actorHub;
     }
 
     /**
-     * Returns whether this Bee runs synchronously: either it was constructed
-     * with {@code threads == 0}, no Hive is attached, or the attached Hive is
+     * Returns whether this Actor runs synchronously: either it was constructed
+     * with {@code threads == 0}, no ActorHub is attached, or the attached ActorHub is
      * itself synchronous (constructed with
      * {@code corePoolSize == 0}).
      *
@@ -237,11 +237,11 @@ public abstract class Bee<M> implements Consumer<M>
      */
     private boolean isSynchronous()
     {
-        if (synchronous || hive == null)
+        if (synchronous || actorHub == null)
         {
             return true;
         }
-        return hive != null && hive.isSynchronous();
+        return actorHub != null && actorHub.isSynchronous();
     }
 
     // -------------------------------------------------------------------------
@@ -249,7 +249,7 @@ public abstract class Bee<M> implements Consumer<M>
     // -------------------------------------------------------------------------
 
     /**
-     * Called once for each message delivered to this Bee. Must be implemented
+     * Called once for each message delivered to this Actor. Must be implemented
      * by subclasses.
      *
      * @param m the message to process
@@ -259,10 +259,10 @@ public abstract class Bee<M> implements Consumer<M>
     /**
      * Ordered variant of {@link #receive(Object)}: {@code seq} is the
      * acceptance position of the message (1-based, in {@link #accept} order)
-     * supplied by this Bee when running with an attached Hive. The default
+     * supplied by this Actor when running with an attached ActorHub. The default
      * implementation ignores the sequence and delegates to
      * {@link #receive(Object)}; subclasses that must preserve arrival order
-     * (such as {@code BatchBee}) can override this to reassemble ordered
+     * (such as {@code BatchActor}) can override this to reassemble ordered
      * output even when {@code receive} is invoked concurrently by several
      * workers.
      *
@@ -295,7 +295,7 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Sends a message to this Bee for processing.
+     * Sends a message to this Actor for processing.
      *
      * @param message the message to deliver
      */
@@ -337,7 +337,7 @@ public abstract class Bee<M> implements Consumer<M>
             if (queued)
             {
                 // Start the permanent worker on the first message. It holds one
-                // worker permit for the whole lifetime of the Bee.
+                // worker permit for the whole lifetime of the Actor.
                 initPermanentWorker();
                 // When threads > 1, additional temporary "rush" workers may be
                 // started in parallel. The short critical section guarantees
@@ -377,10 +377,10 @@ public abstract class Bee<M> implements Consumer<M>
     // -------------------------------------------------------------------------
 
     /**
-     * Submits a worker to the Hive pool. Must be called only after a worker
+     * Submits a worker to the ActorHub pool. Must be called only after a worker
      * permit has been acquired from {@link #workerSlots}; the worker keeps the
      * permit for its entire {@link #workerLoop()} (or {@link #permanentWorkerLoop()}).
-     * If the submission fails (or there is no Hive to submit to), the permit is
+     * If the submission fails (or there is no ActorHub to submit to), the permit is
      * returned.
      */
     private void startWorker()
@@ -389,7 +389,7 @@ public abstract class Bee<M> implements Consumer<M>
         rushWorkers.incrementAndGet();
         try
         {
-            Executor h = hive;
+            Executor h = actorHub;
             if (h != null)
             {
                 h.execute(this::workerLoop);
@@ -411,18 +411,18 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Starts the single permanent worker for this Bee, if it has not been
+     * Starts the single permanent worker for this Actor, if it has not been
      * started yet. The permanent worker is started lazily on the first accepted
-     * message, holds one worker permit for the lifetime of the Bee while it is
+     * message, holds one worker permit for the lifetime of the Actor while it is
      * active, and waits up to {@link #PERMANENT_WAIT_MILLIS} for new messages
      * between bursts so it is not destroyed and recreated per message; once the
-     * Bee has been idle for that window it yields its thread back to the pool
+     * Actor has been idle for that window it yields its thread back to the pool
      * (a later {@link #accept(Object)} re-submits it). Used when
      * {@code threads >= 1}; the {@code threads == 1} case has only this
      * permanent worker, while {@code threads > 1} adds temporary "rush" workers
      * on top of it.
      * <p>
-     * The task is submitted to the Hive pool <em>outside</em> the {@link #lock}:
+     * The task is submitted to the ActorHub pool <em>outside</em> the {@link #lock}:
      * {@link Executor#execute} can block (e.g. under the pool's CallerRunsPolicy
      * when the pool is saturated) and the permanent worker waits for messages,
      * so running it while holding the lock would deadlock every other thread that
@@ -447,7 +447,7 @@ public abstract class Bee<M> implements Consumer<M>
         }
         try
         {
-            hive.execute(this::permanentWorkerLoop);
+            actorHub.execute(this::permanentWorkerLoop);
         }
         catch (Exception ex)
         {
@@ -485,7 +485,7 @@ public abstract class Bee<M> implements Consumer<M>
      * The permanent worker loop: keeps a thread alive across bursts of messages,
      * waiting up to {@link #PERMANENT_WAIT_MILLIS} for new work, and processing
      * messages as they arrive. It yields its thread back to the pool once the
-     * Bee has been idle for the wait window and only truly exits on shutdown.
+     * Actor has been idle for the wait window and only truly exits on shutdown.
      */
     private void permanentWorkerLoop()
     {
@@ -500,17 +500,17 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Records that this Bee is about to process one message: bumps the per-Bee
-     * counter and, unless it aliases the per-Bee counter (a Bee without an
-     * attached {@link Hive}, where {@link #globalProcessedCount} falls back to
-     * this Bee's own counter), the Hive-wide counter shared with peer Bees.
+     * Records that this Actor is about to process one message: bumps the per-Actor
+     * counter and, unless it aliases the per-Actor counter (an Actor without an
+     * attached {@link ActorHub}, where {@link #globalProcessedCount} falls back to
+     * this Actor's own counter), the ActorHub-wide counter shared with peer Actors.
      */
     private void countProcessed()
     {
         processedCount.incrementAndGet();
-        if (hive != null)
+        if (actorHub != null)
         {
-            hive.processedCount().incrementAndGet();
+            actorHub.processedCount().incrementAndGet();
         }
     }
 
@@ -549,7 +549,7 @@ public abstract class Bee<M> implements Consumer<M>
      * message that arrives, and returns when the channel has been quiet (or
      * closed) for that long. Used by the permanent worker: it keeps a thread
      * alive across bursts of messages (avoiding per-message thread churn) but
-     * yields the thread once the Bee has been idle for the wait window, so it
+     * yields the thread once the Actor has been idle for the wait window, so it
      * never blocks a pool thread indefinitely.
      */
     private void drainBlocking()
@@ -578,19 +578,19 @@ public abstract class Bee<M> implements Consumer<M>
 
     /**
      * Runs when a worker returns: drains anything that arrived while it was
-     * processing, closes or terminates the Bee when required, and finally hands
+     * processing, closes or terminates the Actor when required, and finally hands
      * back its worker permit. Must be race-free: the permit is released under
      * {@link #lock}, matching the {@code tryAcquire} in {@link #accept(Object)},
      * so a worker that frees a slot is never missed by a producer that has just
      * enqueued a message.
      * <p>
      * The drain runs deliberately <em>outside</em> the lock: {@link #receive(Object)}
-     * may forward messages to other Bees and block on their full channels, and
-     * holding this Bee's lock across such a block would park every other worker
-     * and producer of this Bee on that lock, stalling the whole Hive once the
+     * may forward messages to other Actors and block on their full channels, and
+     * holding this Actor's lock across such a block would park every other worker
+     * and producer of this Actor on that lock, stalling the whole ActorHub once the
      * pool is exhausted.
      *
-     * @param permanent {@code true} for the Bee's single permanent worker,
+     * @param permanent {@code true} for the Actor's single permanent worker,
      *                  {@code false} for temporary "rush" workers
      */
     private void workerDone(boolean permanent)
@@ -618,8 +618,8 @@ public abstract class Bee<M> implements Consumer<M>
                 }
                 // Count the worker out only now, when it truly stops running. A
                 // worker that is still looping (draining, forwarding to other
-                // bees) must keep isIdle() from reporting this bee idle:
-                // otherwise shutdown(true) could close the bee and terminate it
+                // actors) must keep isIdle() from reporting this actor idle:
+                // otherwise shutdown(true) could close the actor and terminate it
                 // while a worker was still delivering downstream, silently
                 // dropping those messages. Terminating also races in-flight
                 // forwards being cut off at the next stage.
@@ -645,7 +645,7 @@ public abstract class Bee<M> implements Consumer<M>
                 else
                 {
                     // Both the permanent and the rush worker give their thread
-                    // back to the pool once the Bee has no pending work. The
+                    // back to the pool once the Actor has no pending work. The
                     // permanent worker has already waited up to
                     // PERMANENT_WAIT_MILLIS in drainBlocking, so it is "sticky"
                     // across bursts but never holds a pool thread indefinitely:
@@ -667,7 +667,7 @@ public abstract class Bee<M> implements Consumer<M>
 
             // Closes on behalf of an empty-when-shutdown request. Runs outside
             // the lock because closeNow may drain, and drain's receive may block
-            // forwarding to a full downstream Bee.
+            // forwarding to a full downstream Actor.
             if (close)
             {
                 closeNow();
@@ -717,7 +717,7 @@ public abstract class Bee<M> implements Consumer<M>
                 return;
             }
             terminated = true;
-            unregisterFromHive();
+            unregisterFromActorHub();
             try
             {
                 terminate();
@@ -731,14 +731,14 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Removes this Bee from the {@link Hive} instance list it was registered
+     * Removes this Actor from the {@link ActorHub} instance list it was registered
      * in, if any.
      */
-    private void unregisterFromHive()
+    private void unregisterFromActorHub()
     {
-        if (hive instanceof Hive)
+        if (actorHub instanceof ActorHub)
         {
-            ((Hive) hive).unregisterBee(this);
+            ((ActorHub) actorHub).unregisterActor(this);
         }
     }
 
@@ -747,7 +747,7 @@ public abstract class Bee<M> implements Consumer<M>
         this.ex = ex;
         if (allowLogger)
         {
-            LOG.log(Level.SEVERE, "Bee", ex);
+            LOG.log(Level.SEVERE, "Actor", ex);
         }
         exception(ex);
     }
@@ -776,12 +776,12 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Blocks until this Bee is idle (no pending messages, no temporary workers
+     * Blocks until this Actor is idle (no pending messages, no temporary workers
      * active).
      *
-     * @return this Bee, for fluent chaining
+     * @return this Actor, for fluent chaining
      */
-    public Bee<M> waitForIdle()
+    public Actor<M> waitForIdle()
     {
         synchronized (lock)
         {
@@ -804,9 +804,9 @@ public abstract class Bee<M> implements Consumer<M>
      * Closes the internal channel, causing workers to finish and exit. No new
      * messages can be accepted after this call.
      *
-     * @return this Bee, for fluent chaining
+     * @return this Actor, for fluent chaining
      */
-    public Bee<M> shutdown()
+    public Actor<M> shutdown()
     {
         return shutdown(false);
     }
@@ -816,9 +816,9 @@ public abstract class Bee<M> implements Consumer<M>
      * once all pending messages have been processed.
      *
      * @param onlyWhenEmpty if {@code true}, defers close until idle
-     * @return this Bee, for fluent chaining
+     * @return this Actor, for fluent chaining
      */
-    public Bee<M> shutdown(boolean onlyWhenEmpty)
+    public Actor<M> shutdown(boolean onlyWhenEmpty)
     {
         synchronized (lock)
         {
@@ -846,27 +846,27 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Shuts down this Bee and blocks until it has terminated. Equivalent to
+     * Shuts down this Actor and blocks until it has terminated. Equivalent to
      * {@link #close(boolean) close(false)}.
      *
-     * @return this Bee, for fluent chaining
+     * @return this Actor, for fluent chaining
      */
-    public Bee<M> close()
+    public Actor<M> close()
     {
         return close(false);
     }
 
     /**
-     * Shuts down this Bee and blocks until it has terminated. Provides a
+     * Shuts down this Actor and blocks until it has terminated. Provides a
      * {@code boolean} variant of {@link #close()} for symmetry with
      * {@link #shutdown(boolean)}.
      *
      * @param onlyWhenEmpty if {@code true}, defers close until idle (see
      *                      {@link #shutdown(boolean)}); if {@code false}, closes
      *                      immediately
-     * @return this Bee, for fluent chaining
+     * @return this Actor, for fluent chaining
      */
-    public Bee<M> close(boolean onlyWhenEmpty)
+    public Actor<M> close(boolean onlyWhenEmpty)
     {
         shutdown(onlyWhenEmpty);
         awaitTermination(Integer.MAX_VALUE);
@@ -882,7 +882,7 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Returns whether this Bee has fully terminated.
+     * Returns whether this Actor has fully terminated.
      */
     public boolean isTerminated()
     {
@@ -890,7 +890,7 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Blocks until the Bee is terminated or the timeout elapses.
+     * Blocks until the Actor is terminated or the timeout elapses.
      *
      * @param millis maximum time to wait
      * @return {@code true} if terminated within the timeout
@@ -902,7 +902,7 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Blocks until the Bee is terminated or the absolute deadline (in
+     * Blocks until the Actor is terminated or the absolute deadline (in
      * nanoseconds) is reached.
      *
      * @param untilNanos the absolute deadline
@@ -946,20 +946,20 @@ public abstract class Bee<M> implements Consumer<M>
     }
 
     /**
-     * Subscribes this Bee to {@code topic} on the attached {@link Hive}.
+     * Subscribes this Actor to {@code topic} on the attached {@link ActorHub}.
      *
      * @param topic the topic name
-     * @return this Bee, for fluent chaining
-     * @throws IllegalStateException if no Hive has been attached
+     * @return this Actor, for fluent chaining
+     * @throws IllegalStateException if no ActorHub has been attached
      */
     @SuppressWarnings("unchecked")
-    public Bee<M> sub(String topic)
+    public Actor<M> sub(String topic)
     {
-        if (!(this.hive instanceof Hive))
+        if (!(this.actorHub instanceof ActorHub))
         {
-            throw new IllegalStateException("No Hive attached.");
+            throw new IllegalStateException("No ActorHub attached.");
         }
-        ((Hive) this.hive).sub(topic, this);
+        ((ActorHub) this.actorHub).sub(topic, this);
         return this;
     }
 }

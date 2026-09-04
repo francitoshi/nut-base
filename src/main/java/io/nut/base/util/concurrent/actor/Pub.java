@@ -16,24 +16,24 @@
  *
  * Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * A publisher for a single topic in the Hive Pub/Sub system.
+ * A publisher for a single topic in the ActorHub Pub/Sub system.
  * <p>
  * A {@code Pub<T>} is a {@link Consumer}{@code <T>} obtained from
- * {@link Hive#pub(String)}. Calling {@link #accept(Object)} fan-outs the
- * message to every {@link Bee} that was registered for this topic via
- * {@link Bee#sub(String)} or {@link Hive#sub(String, Bee)}, in registration
+ * {@link ActorHub#pub(String)}. Calling {@link #accept(Object)} fan-outs the
+ * message to every {@link Actor} that was registered for this topic via
+ * {@link Actor#sub(String)} or {@link ActorHub#sub(String, Actor)}, in registration
  * order. Each subscriber receives the message through its own
- * {@link Bee#accept(Object)}, so dispatch is fully asynchronous when the
- * Bees are attached to a Hive.
+ * {@link Actor#accept(Object)}, so dispatch is fully asynchronous when the
+ * Actors are attached to an ActorHub.
  * <p>
  * {@code Pub} instances are lightweight wrappers around the live subscriber
- * list held by the {@link Hive}; there is no need to re-obtain them after
+ * list held by the {@link ActorHub}; there is no need to re-obtain them after
  * new subscribers join — they will automatically be included in the next
  * {@link #accept} call.
  * <p>
@@ -46,14 +46,14 @@ import java.util.function.Consumer;
 public final class Pub<T> implements Consumer<T>
 {
     /**
-     * Live reference to the subscriber list managed by {@link Hive}.
+     * Live reference to the subscriber list managed by {@link ActorHub}.
      * Reads take a snapshot before iterating to remain safe under concurrent
      * modifications.
      */
     private final List<Consumer<T>> subscribers;
 
     /**
-     * Package-private constructor called by {@link Hive#pub(String)}.
+     * Package-private constructor called by {@link ActorHub#pub(String)}.
      *
      * @param subscribers the live subscriber list for the topic; must not be
      *                    {@code null}
@@ -67,12 +67,12 @@ public final class Pub<T> implements Consumer<T>
      * Publishes {@code message} to all current subscribers.
      * <p>
      * A snapshot of the subscriber list is taken at the start of the call so
-     * that Bees registered concurrently during dispatch are not included in
+     * that Actors registered concurrently during dispatch are not included in
      * this round (consistent fan-out semantics). Each subscriber's
      * {@link Consumer#accept accept()} is called in registration order.
      *
      * @param message the message to deliver; may be {@code null} if the
-     *                subscriber Bees accept {@code null} messages
+     *                subscriber Actors accept {@code null} messages
      */
     @Override
     @SuppressWarnings("unchecked")

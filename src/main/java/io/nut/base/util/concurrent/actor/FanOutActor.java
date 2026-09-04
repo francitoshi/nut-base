@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -22,7 +22,7 @@ import java.util.function.Consumer;
  * calling {@link Consumer#accept accept()} on each of them in turn. Because the
  * targets are invoked from the same worker thread, the fan-out itself is
  * sequential; true parallelism is achieved when each target is backed by its
- * own Hive worker.
+ * own ActorHub worker.
  * <p>
  * Targets can be supplied at construction time and/or added or removed later
  * with {@link #addTarget(Consumer)} / {@link #removeTarget(Consumer)}. The
@@ -31,20 +31,20 @@ import java.util.function.Consumer;
  * <p>
  * <strong>Fan-in</strong> (the inverse pattern, merging several sources into
  * one consumer) needs no dedicated class: any number of producers can simply
- * call {@link Consumer#accept accept()} on the same downstream {@link Bee}.
+ * call {@link Consumer#accept accept()} on the same downstream {@link Actor}.
  * <p>
  * Example:
  * <pre>{@code
- * FanOutBee<String> bc = hive.broadcast();
- * bc.addTarget(hive.bee(s -> saveToDb(s)));
- * bc.addTarget(hive.bee(s -> publishToKafka(s)));
+ * FanOutActor<String> bc = actorHub.broadcast();
+ * bc.addTarget(actorHub.actor(s -> saveToDb(s)));
+ * bc.addTarget(actorHub.actor(s -> publishToKafka(s)));
  * bc.accept("hello");  // both targets receive "hello"
  * }</pre>
  *
- * @param <T> the type of messages this FanOutBee receives and forwards
+ * @param <T> the type of messages this FanOutActor receives and forwards
  *            unchanged to every target
  */
-public class FanOutBee<T> extends Bee<T>
+public class FanOutActor<T> extends Actor<T>
 {
     /**
      * The list of downstream targets. Using {@link CopyOnWriteArrayList} allows
@@ -58,53 +58,53 @@ public class FanOutBee<T> extends Bee<T>
      * Full constructor.
      *
      * @param threads   the maximum number of concurrent worker threads
-     * @param hive      the Hive thread pool, or {@code null} for synchronous mode
+     * @param actorHub      the ActorHub thread pool, or {@code null} for synchronous mode
      * @param queueSize the internal queue capacity (0 = default)
      * @param targets   zero or more initial downstream stages
      */
     @SafeVarargs
-    public FanOutBee(Hive hive, int threads, int queueSize, Consumer<T>... targets)
+    public FanOutActor(ActorHub actorHub, int threads, int queueSize, Consumer<T>... targets)
     {
-        super(hive, threads, queueSize);
+        super(actorHub, threads, queueSize);
         addTargets(targets);
     }
 
     /**
-     * Constructs a FanOutBee attached to the given Hive with the default
+     * Constructs a FanOutActor attached to the given ActorHub with the default
      * thread count and queue size.
      *
-     * @param hive    the Hive thread pool, or {@code null} for synchronous mode
+     * @param actorHub    the ActorHub thread pool, or {@code null} for synchronous mode
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public FanOutBee(Hive hive, Consumer<T>... targets)
+    public FanOutActor(ActorHub actorHub, Consumer<T>... targets)
     {
-        super(hive);
+        super(actorHub);
         addTargets(targets);
     }
 
     /**
-     * Constructs a standalone FanOutBee with the given thread count but no
-     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
+     * Constructs a standalone FanOutActor with the given thread count but no
+     * ActorHub. A ActorHub is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param threads the maximum number of concurrent worker threads
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public FanOutBee(int threads, int queueSize, Consumer<T>... targets)
+    public FanOutActor(int threads, int queueSize, Consumer<T>... targets)
     {
         super(threads, queueSize);
         addTargets(targets);
     }
 
     /**
-     * Constructs a standalone FanOutBee with the default thread count and no
-     * Hive. A Hive is attached at construction time and cannot be changed during the lifecycle of the instance.
+     * Constructs a standalone FanOutActor with the default thread count and no
+     * ActorHub. A ActorHub is attached at construction time and cannot be changed during the lifecycle of the instance.
      *
      * @param targets zero or more initial downstream stages
      */
     @SafeVarargs
-    public FanOutBee(Consumer<T>... targets)
+    public FanOutActor(Consumer<T>... targets)
     {
         super();
         addTargets(targets);
@@ -130,9 +130,9 @@ public class FanOutBee<T> extends Bee<T>
      * forward.
      *
      * @param target the downstream stage to add; must not be {@code null}
-     * @return this FanOutBee, for fluent chaining of additions
+     * @return this FanOutActor, for fluent chaining of additions
      */
-    public FanOutBee<T> addTarget(Consumer<T> target)
+    public FanOutActor<T> addTarget(Consumer<T> target)
     {
         this.targets.add(Objects.requireNonNull(target, "target must not be null"));
         return this;
@@ -180,23 +180,23 @@ public class FanOutBee<T> extends Bee<T>
 
     /**
      * {@inheritDoc}
-     * Overridden to return the more specific {@code FanOutBee<T>} type for
+     * Overridden to return the more specific {@code FanOutActor<T>} type for
      * fluent chaining.
      */
     @Override
-    public FanOutBee<T> shutdown(boolean onlyWhenEmpty)
+    public FanOutActor<T> shutdown(boolean onlyWhenEmpty)
     {
-        return (FanOutBee<T>) super.shutdown(onlyWhenEmpty);
+        return (FanOutActor<T>) super.shutdown(onlyWhenEmpty);
     }
 
     @Override
-    public Bee<T> waitForIdle()
+    public Actor<T> waitForIdle()
     {
         for (Consumer<T> target : targets)
         {
-            if(target instanceof Bee)
+            if(target instanceof Actor)
             {
-                ((Bee<T>)target).waitForIdle();
+                ((Actor<T>)target).waitForIdle();
             }
         }
         return super.waitForIdle();

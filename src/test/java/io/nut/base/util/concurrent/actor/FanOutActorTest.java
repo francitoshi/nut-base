@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.util.Utils;
 import org.junit.jupiter.api.AfterEach;
@@ -22,34 +22,34 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link FanOutBee}: fan-out delivery to multiple
- * targets, dynamic target management via {@link FanOutBee#addTarget}
- * and {@link FanOutBee#removeTarget}, and thread-safe target mutation.
+ * Unit tests for {@link FanOutActor}: fan-out delivery to multiple
+ * targets, dynamic target management via {@link FanOutActor#addTarget}
+ * and {@link FanOutActor#removeTarget}, and thread-safe target mutation.
  */
-class FanOutBeeTest
+class FanOutActorTest
 {
-    private Hive hive;
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = Hive.hive();
+        actorHub = ActorHub.actorHub();
     }
 
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        hive.shutdown();
-        hive.awaitTermination(2000);
+        actorHub.shutdown();
+        actorHub.awaitTermination(2000);
     }
 
     @Test
     void directModeBroadcastsEachMessageToAllTargets()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        RecordingBee<String> t2 = new RecordingBee<>();
-        RecordingBee<String> t3 = new RecordingBee<>();
-        FanOutBee<String> bc = new FanOutBee<>(t1, t2, t3);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        RecordingActor<String> t2 = new RecordingActor<>();
+        RecordingActor<String> t3 = new RecordingActor<>();
+        FanOutActor<String> bc = new FanOutActor<>(t1, t2, t3);
 
         bc.accept("msg");
 
@@ -61,9 +61,9 @@ class FanOutBeeTest
     @Test
     void multipleMessagesAreRepeatedToEachTarget()
     {
-        RecordingBee<Integer> t1 = new RecordingBee<>();
-        RecordingBee<Integer> t2 = new RecordingBee<>();
-        FanOutBee<Integer> bc = new FanOutBee<>(t1, t2);
+        RecordingActor<Integer> t1 = new RecordingActor<>();
+        RecordingActor<Integer> t2 = new RecordingActor<>();
+        FanOutActor<Integer> bc = new FanOutActor<>(t1, t2);
 
         bc.accept(1);
         bc.accept(2);
@@ -76,9 +76,9 @@ class FanOutBeeTest
     @Test
     void addTargetEnablesNewTargetReceivingFutureMessages()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        RecordingBee<String> t2 = new RecordingBee<>();
-        FanOutBee<String> bc = new FanOutBee<>(t1);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        RecordingActor<String> t2 = new RecordingActor<>();
+        FanOutActor<String> bc = new FanOutActor<>(t1);
 
         bc.accept("before");
 
@@ -90,13 +90,13 @@ class FanOutBeeTest
     }
 
     @Test
-    void addTargetReturnsTheFanOutBeeForFluentChaining()
+    void addTargetReturnsTheFanOutActorForFluentChaining()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        RecordingBee<String> t2 = new RecordingBee<>();
-        FanOutBee<String> bc = new FanOutBee<>();
+        RecordingActor<String> t1 = new RecordingActor<>();
+        RecordingActor<String> t2 = new RecordingActor<>();
+        FanOutActor<String> bc = new FanOutActor<>();
 
-        FanOutBee<String> returned = bc.addTarget(t1);
+        FanOutActor<String> returned = bc.addTarget(t1);
 
         assertSame(bc, returned);
         returned.addTarget(t2);
@@ -110,16 +110,16 @@ class FanOutBeeTest
     @Test
     void addTargetRejectsNull()
     {
-        FanOutBee<String> bc = new FanOutBee<>();
+        FanOutActor<String> bc = new FanOutActor<>();
         assertThrows(NullPointerException.class, () -> bc.addTarget(null));
     }
 
     @Test
     void removeTargetStopsTheTargetReceivingFutureMessages()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        RecordingBee<String> t2 = new RecordingBee<>();
-        FanOutBee<String> bc = new FanOutBee<>(t1, t2);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        RecordingActor<String> t2 = new RecordingActor<>();
+        FanOutActor<String> bc = new FanOutActor<>(t1, t2);
 
         bc.accept("before");
         assertTrue(bc.removeTarget(t2));
@@ -132,9 +132,9 @@ class FanOutBeeTest
     @Test
     void removeTargetReturnsFalseIfTargetWasNotPresent()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        RecordingBee<String> t2 = new RecordingBee<>();
-        FanOutBee<String> bc = new FanOutBee<>(t1);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        RecordingActor<String> t2 = new RecordingActor<>();
+        FanOutActor<String> bc = new FanOutActor<>(t1);
 
         assertFalse(bc.removeTarget(t2));
     }
@@ -142,20 +142,20 @@ class FanOutBeeTest
     @Test
     void getTargetsReturnsAnUnmodifiableSnapshot()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        RecordingBee<String> t2 = new RecordingBee<>();
-        FanOutBee<String> bc = new FanOutBee<>(t1, t2);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        RecordingActor<String> t2 = new RecordingActor<>();
+        FanOutActor<String> bc = new FanOutActor<>(t1, t2);
 
         List<Consumer<String>> targets = bc.getTargets();
 
         assertEquals(2, targets.size());
-        assertThrows(UnsupportedOperationException.class, () -> targets.add(new RecordingBee<>()));
+        assertThrows(UnsupportedOperationException.class, () -> targets.add(new RecordingActor<>()));
     }
 
     @Test
-    void emptyFanOutBeeWithNoTargetsStillAcceptsMessages()
+    void emptyFanOutActorWithNoTargetsStillAcceptsMessages()
     {
-        FanOutBee<String> bc = new FanOutBee<>();
+        FanOutActor<String> bc = new FanOutActor<>();
         bc.accept("msg");
         // Message is silently dropped, no targets present
     }
@@ -169,7 +169,7 @@ class FanOutBeeTest
             List<Integer> b = new CopyOnWriteArrayList<>();
             List<Integer> c = new CopyOnWriteArrayList<>();
 
-            FanOutBee<Integer> bc = hive.broadcast(th, hive.bee(th, a::add), hive.bee(th, b::add), hive.bee(th, c::add));
+            FanOutActor<Integer> bc = actorHub.broadcast(th, actorHub.actor(th, a::add), actorHub.actor(th, b::add), actorHub.actor(th, c::add));
 
             for (int i = 0; i < 10; i++)
             {
@@ -187,16 +187,16 @@ class FanOutBeeTest
     @Test
     void constructorRejectsNullTargetVarargs()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        assertThrows(NullPointerException.class, () -> new FanOutBee<>(t1, null));
+        RecordingActor<String> t1 = new RecordingActor<>();
+        assertThrows(NullPointerException.class, () -> new FanOutActor<>(t1, null));
     }
 
     @Test
     void hiveFactoryWithTargets()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        RecordingBee<String> t2 = new RecordingBee<>();
-        FanOutBee<String> bc = hive.broadcast(t1, t2);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        RecordingActor<String> t2 = new RecordingActor<>();
+        FanOutActor<String> bc = actorHub.broadcast(t1, t2);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -208,8 +208,8 @@ class FanOutBeeTest
     @Test
     void hiveFactoryWithThreadsParameter()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        FanOutBee<String> bc = hive.broadcast(2, t1);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        FanOutActor<String> bc = actorHub.broadcast(2, t1);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -220,8 +220,8 @@ class FanOutBeeTest
     @Test
     void hiveFactoryWithQueueSizeAndThreadsParameter()
     {
-        RecordingBee<String> t1 = new RecordingBee<>();
-        FanOutBee<String> bc = hive.broadcast(2, 10, t1);
+        RecordingActor<String> t1 = new RecordingActor<>();
+        FanOutActor<String> bc = actorHub.broadcast(2, 10, t1);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -235,12 +235,12 @@ class FanOutBeeTest
         List<String> chain1Result = new CopyOnWriteArrayList<>();
         List<String> chain2Result = new CopyOnWriteArrayList<>();
 
-        PipeBee<Integer,String> p1 = hive.pipe(i -> "chain1=" + i);
-        PipeBee<Integer,String> p2 = hive.pipe(i -> "chain2=" + i);
-        p1.linkTo(hive.bee(chain1Result::add));
-        p2.linkTo(hive.bee(chain2Result::add));
+        PipeActor<Integer,String> p1 = actorHub.pipe(i -> "chain1=" + i);
+        PipeActor<Integer,String> p2 = actorHub.pipe(i -> "chain2=" + i);
+        p1.linkTo(actorHub.actor(chain1Result::add));
+        p2.linkTo(actorHub.actor(chain2Result::add));
 
-        FanOutBee<Integer> bc = hive.broadcast(p1, p2);
+        FanOutActor<Integer> bc = actorHub.broadcast(p1, p2);
 
         bc.accept(5);
         bc.accept(10);

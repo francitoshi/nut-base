@@ -9,8 +9,8 @@ import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.Utils;
-import io.nut.base.util.concurrent.hive.Hive;
-import io.nut.base.util.concurrent.hive.HivePipeline;
+import io.nut.base.util.concurrent.actor.ActorHub;
+import io.nut.base.util.concurrent.actor.PipelineActor;
 import java.io.InputStreamReader;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -176,11 +176,11 @@ public class SchnorrTest
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Schnorr schnorr = Sign.SECP256K1_SCHNORR;
 
-        final int ths = Hive.CORES*3;
+        final int ths = ActorHub.CORES*3;
         
-        Hive hive = Hive.hive(ths);
+        ActorHub actorHub = ActorHub.actorHub(ths);
         
-        HivePipeline<Data, Data> pipe = hive.pipeline(ths,ths, (Data data) ->
+        PipelineActor<Data, Data> pipe = actorHub.pipeline(ths,ths, (Data data) ->
         {
             if(data!=POISON)
             {

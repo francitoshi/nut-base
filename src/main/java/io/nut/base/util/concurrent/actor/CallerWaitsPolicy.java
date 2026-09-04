@@ -16,7 +16,7 @@
  *
  * Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RejectedExecutionHandler;

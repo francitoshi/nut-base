@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.util.Utils;
 import org.junit.jupiter.api.AfterEach;
@@ -29,29 +29,29 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link Hive}: the thread-pool lifecycle, the static
- * factories, {@code add}/{@code execute}, every Bee-factory method
- * ({@code pipe}, {@code bee}, {@code queue}, {@code list}, {@code set},
+ * Unit tests for {@link ActorHub}: the thread-pool lifecycle, the static
+ * factories, {@code add}/{@code execute}, every Actor-factory method
+ * ({@code pipe}, {@code actor}, {@code queue}, {@code list}, {@code set},
  * {@code filter}, {@code broadcast}, {@code batch}, {@code pipeline}),
  * and {@code async}/{@code lazy}.
  */
-class HiveTest
+class ActorHubTest
 {
-    private Hive hive;
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = Hive.hive(2);
+        actorHub = ActorHub.actorHub(2);
     }
 
     @AfterEach
     void tearDown()
     {
-        hive.shutdown();
+        actorHub.shutdown();
         try
         {
-            hive.awaitTermination(2000);
+            actorHub.awaitTermination(2000);
         }
         catch (InterruptedException ie)
         {
@@ -62,19 +62,19 @@ class HiveTest
     @Test
     void coresConstantMatchesAvailableProcessors()
     {
-        assertEquals(Runtime.getRuntime().availableProcessors(), Hive.CORES);
+        assertEquals(Runtime.getRuntime().availableProcessors(), ActorHub.CORES);
     }
 
     @Test
-    void staticFactoryMethodsCreateUsableHives() throws Exception
+    void staticFactoryMethodsCreateUsableActorHubs() throws Exception
     {
-        runsATaskOn(Hive.hive());
-        runsATaskOn(Hive.hive(2));
-        runsATaskOn(Hive.hive(2, 2, 1000));
-        runsATaskOn(Hive.hive(2, 2, 1000, true));
+        runsATaskOn(ActorHub.actorHub());
+        runsATaskOn(ActorHub.actorHub(2));
+        runsATaskOn(ActorHub.actorHub(2, 2, 1000));
+        runsATaskOn(ActorHub.actorHub(2, 2, 1000, true));
     }
 
-    private void runsATaskOn(Hive h) throws Exception
+    private void runsATaskOn(ActorHub h) throws Exception
     {
         CountDownLatch latch = new CountDownLatch(1);
         h.execute(latch::countDown);
@@ -87,142 +87,142 @@ class HiveTest
     void executeRunsTaskOnThePool() throws InterruptedException
     {
         CountDownLatch latch = new CountDownLatch(1);
-        hive.execute(latch::countDown);
+        actorHub.execute(latch::countDown);
         assertTrue(latch.await(1, TimeUnit.SECONDS));
     }
 
     @Test
     void executeRejectsNullTask()
     {
-        assertThrows(NullPointerException.class, () -> hive.execute(null));
+        assertThrows(NullPointerException.class, () -> actorHub.execute(null));
     }
 
     @Test
     void pipeFactoryCreatesAttachedTransformingStage() throws InterruptedException
     {
         List<String> sink = new CopyOnWriteArrayList<>();
-        PipeBee<Integer,String> stage = hive.pipe(i -> "n" + i);
-        stage.linkTo(hive.bee(sink::add));
+        PipeActor<Integer,String> stage = actorHub.pipe(i -> "n" + i);
+        stage.linkTo(actorHub.actor(sink::add));
 
         stage.accept(5);
         stage.waitForIdle().shutdown().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(Collections.singletonList("n5"), sink);
     }
 
     @Test
-    void beeFactoryCreatesAttachedConsumerBee() throws InterruptedException
+    void beeFactoryCreatesAttachedConsumerActor() throws InterruptedException
     {
         List<String> sink = new CopyOnWriteArrayList<>();
-        Bee<String> b = hive.bee(sink::add);
+        Actor<String> b = actorHub.actor(sink::add);
 
         b.accept("hi");
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(Collections.singletonList("hi"), sink);
     }
 
     @Test
-    void queueFactoryCreatesAttachedQueueBee() throws InterruptedException
+    void queueFactoryCreatesAttachedQueueActor() throws InterruptedException
     {
         BlockingQueue<Integer> q = new LinkedBlockingQueue<>();
-        Bee<Integer> b = hive.queue(q);
+        Actor<Integer> b = actorHub.queue(q);
 
         b.accept(1);
         b.accept(2);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(2, q.size());
         assertEquals(Integer.valueOf(1), q.take());
     }
 
     @Test
-    void listFactoryCreatesAttachedListBee() throws InterruptedException
+    void listFactoryCreatesAttachedListActor() throws InterruptedException
     {
         List<String> list = new ArrayList<>();
-        Bee<String> bee = hive.list(list);
+        Actor<String> actor = actorHub.list(list);
 
-        bee.accept("a");
-        bee.accept("b");
-        hive.close(true);
+        actor.accept("a");
+        actor.accept("b");
+        actorHub.close(true);
 
         assertEquals(Arrays.asList("a", "b"), list);
     }
 
     @Test
-    void setFactoryCreatesAttachedSetBee()
+    void setFactoryCreatesAttachedSetActor()
     {
         Set<String> s = new HashSet<>();
-        Bee<String> b = hive.set(s);
+        Actor<String> b = actorHub.set(s);
 
         b.accept("x");
         b.accept("x");
         b.accept("y");
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(new HashSet<>(Arrays.asList("x", "y")), new HashSet<>(s));
     }
 
     @Test
-    void filterFactoryCreatesAttachedFilterBee()
+    void filterFactoryCreatesAttachedFilterActor()
     {
         List<Integer> sink = new CopyOnWriteArrayList<>();
-        FilterBee<Integer> filter = hive.filter(i -> i > 0);
-        filter.linkTo(hive.bee(sink::add));
+        FilterActor<Integer> filter = actorHub.filter(i -> i > 0);
+        filter.linkTo(actorHub.actor(sink::add));
 
         filter.accept(-1);
         filter.accept(2);
         filter.waitForIdle().shutdown(true).awaitTermination(1);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(Collections.singletonList(2), sink);
     }
 
     @Test
-    void broadcastFactoryCreatesAttachedFanOutBeeWithGivenTargets()
+    void broadcastFactoryCreatesAttachedFanOutActorWithGivenTargets()
     {
         List<String> a = new CopyOnWriteArrayList<>();
         List<String> b = new CopyOnWriteArrayList<>();
-        FanOutBee<String> bc = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
+        FanOutActor<String> bc = actorHub.broadcast(actorHub.actor(a::add), actorHub.actor(b::add));
 
         bc.accept("m");
 
         bc.waitForIdle().shutdown().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(Collections.singletonList("m"), a);
         assertEquals(Collections.singletonList("m"), b);
     }
 
     @Test
-    void batchFactoryCreatesAttachedBatchBee()
+    void batchFactoryCreatesAttachedBatchActor()
     {
         List<List<Integer>> sink = new CopyOnWriteArrayList<>();
-        BatchBee<Integer> batch = hive.batch(2, 0L);
-        batch.linkTo(hive.bee(sink::add));
+        BatchActor<Integer> batch = actorHub.batch(2, 0L);
+        batch.linkTo(actorHub.actor(sink::add));
 
         batch.accept(1);
         batch.accept(2);
         
         batch.waitForIdle().shutdown().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(Collections.singletonList(Arrays.asList(1, 2)), sink);
     }
 
     @Test
-    void pipelineFactoryBuildsChainedHeadBee() throws InterruptedException
+    void pipelineFactoryBuildsChainedHeadActor() throws InterruptedException
     {
         List<String> sink = new CopyOnWriteArrayList<>();
-        Bee<Integer> head = hive.pipeline((Integer i) -> i + 1)
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> i + 1)
                                  .then(i -> "v" + i)
                                  .sink(sink::add);
 
         head.accept(4);
         
         Utils.parkMillis(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(Collections.singletonList("v5"), sink);
     }
@@ -230,53 +230,53 @@ class HiveTest
     @Test
     void shutdownStopsThePool() throws InterruptedException
     {
-        assertFalse(hive.isShutdown());
-        hive.shutdown();
+        assertFalse(actorHub.isShutdown());
+        actorHub.shutdown();
 
-        assertTrue(hive.isShutdown());
-        assertTrue(hive.awaitTermination(2000));
-        assertTrue(hive.isTerminated());
+        assertTrue(actorHub.isShutdown());
+        assertTrue(actorHub.awaitTermination(2000));
+        assertTrue(actorHub.isTerminated());
     }
 
     @Test
-    void closeDrainsBeesThenStopsThePool() throws InterruptedException
+    void closeDrainsActorsThenStopsThePool() throws InterruptedException
     {
-        RecordingBee<Integer> bee = new RecordingBee<>(hive);
-        bee.accept(1);
-        bee.accept(2);
+        RecordingActor<Integer> actor = new RecordingActor<>(actorHub);
+        actor.accept(1);
+        actor.accept(2);
 
-        hive.close(true);
-        hive.shutdown().awaitTermination(1);
+        actorHub.close(true);
+        actorHub.shutdown().awaitTermination(1);
 
-        assertTrue(bee.isTerminated());
-        assertEquals(2, bee.received.size());
-        assertTrue(hive.isTerminated());
+        assertTrue(actor.isTerminated());
+        assertEquals(2, actor.received.size());
+        assertTrue(actorHub.isTerminated());
     }
 
     @Test
-    void beesListTracksActiveNonSynchronousBeesAndRemovesOnShutdown()
+    void beesListTracksActiveNonSynchronousActorsAndRemovesOnShutdown()
     {
-        RecordingBee<Integer> async1 = new RecordingBee<>(hive);
-        RecordingBee<Integer> async2 = new RecordingBee<>(hive);
-        RecordingBee<Integer> sync = new RecordingBee<>(hive, 0, 0);
+        RecordingActor<Integer> async1 = new RecordingActor<>(actorHub);
+        RecordingActor<Integer> async2 = new RecordingActor<>(actorHub);
+        RecordingActor<Integer> sync = new RecordingActor<>(actorHub, 0, 0);
 
-        assertTrue(hive.bees().contains(async1));
-        assertTrue(hive.bees().contains(async2));
-        assertFalse(hive.bees().contains(sync));
+        assertTrue(actorHub.actors().contains(async1));
+        assertTrue(actorHub.actors().contains(async2));
+        assertFalse(actorHub.actors().contains(sync));
 
         async1.shutdown().awaitTermination(50);
 
-        assertFalse(hive.bees().contains(async1));
-        assertTrue(hive.bees().contains(async2));
+        assertFalse(actorHub.actors().contains(async1));
+        assertTrue(actorHub.actors().contains(async2));
 
         async2.shutdown().awaitTermination(50);
-        assertFalse(hive.bees().contains(async2));
+        assertFalse(actorHub.actors().contains(async2));
     }
 
     @Test
     void poolSizeGetterAndSetterWork()
     {
-        Hive h = Hive.hive(3);
+        ActorHub h = ActorHub.actorHub(3);
         assertEquals(3, h.getCorePoolSize());
         assertEquals(3, h.getMaximumPoolSize());
 
@@ -299,7 +299,7 @@ class HiveTest
     @Test
     void closeShutsDownAndAwaitsTermination() throws Exception
     {
-        Hive h = Hive.hive(2);
+        ActorHub h = ActorHub.actorHub(2);
         CountDownLatch latch = new CountDownLatch(1);
         h.execute(latch::countDown);
         assertTrue(latch.await(1, TimeUnit.SECONDS));
@@ -313,7 +313,7 @@ class HiveTest
     void directSendAddsMessageToTheSet()
     {
         Set<String> set = new HashSet<>();
-        Bee<String> sb = hive.set(set);
+        Actor<String> sb = actorHub.set(set);
 
         sb.accept("hello");
 
@@ -326,13 +326,13 @@ class HiveTest
     void duplicatesAreRejectedByTheUnderlyingSet()
     {
         Set<String> set = ConcurrentHashMap.newKeySet();
-        Bee<String> bee = hive.set(set);
+        Actor<String> actor = actorHub.set(set);
 
-        bee.accept("a");
-        bee.accept("a");
-        bee.accept("b");
+        actor.accept("a");
+        actor.accept("a");
+        actor.accept("b");
 
-        bee.waitForIdle();
+        actor.waitForIdle();
         
         assertEquals(2, set.size());
         assertTrue(set.contains("a"));
@@ -343,13 +343,13 @@ class HiveTest
     void iteratorTraversesAllElements() throws InterruptedException
     {
         Set<String> set = ConcurrentHashMap.newKeySet();
-        Bee<String> bee = hive.set(set);
+        Actor<String> actor = actorHub.set(set);
 
-        bee.accept("a");
-        bee.accept("b");
-        bee.accept("c");
+        actor.accept("a");
+        actor.accept("b");
+        actor.accept("c");
 
-        bee.waitForIdle();
+        actor.waitForIdle();
         
         Set<String> traversed = new HashSet<>();
         for (String s : set)
@@ -361,51 +361,51 @@ class HiveTest
     }
 
     @Test
-    void proxyHiveCorrectlyDelegatesAllCalls() throws InterruptedException
+    void proxyActorHubCorrectlyDelegatesAllCalls() throws InterruptedException
     {
-        ProxyHive proxy = new ProxyHive();
-        proxy.setHive(hive);
+        ProxyActorHub proxy = new ProxyActorHub();
+        proxy.setActorHub(actorHub);
 
         List<String> list = new ArrayList<>();
-        Bee<String> beeList = proxy.list(list);
+        Actor<String> beeList = proxy.list(list);
         beeList.accept("test-list");
 
         Set<String> set = new HashSet<>();
-        Bee<String> beeSet = proxy.set(set);
+        Actor<String> beeSet = proxy.set(set);
         beeSet.accept("test-set");
 
         CountDownLatch latch = new CountDownLatch(1);
         proxy.execute(latch::countDown);
         assertTrue(latch.await(1, TimeUnit.SECONDS));
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(Collections.singletonList("test-list"), list);
         assertEquals(Collections.singleton("test-set"), set);
     }
 
     @Test
-    void proxyHiveAccumulatesNoHiveAndMigratesOnSetHive()
+    void proxyActorHubAccumulatesNoActorHubAndMigratesOnSetActorHub()
     {
-        ProxyHive proxy = new ProxyHive();
+        ProxyActorHub proxy = new ProxyActorHub();
 
         List<String> list1 = new ArrayList<>();
-        Bee<String> bee1 = proxy.list(list1);
+        Actor<String> bee1 = proxy.list(list1);
         List<String> list2 = new ArrayList<>();
-        Bee<String> bee2 = proxy.list(list2);
+        Actor<String> bee2 = proxy.list(list2);
 
-        assertTrue(proxy.bees().contains(bee1));
-        assertTrue(proxy.bees().contains(bee2));
-        assertFalse(hive.bees().contains(bee1));
-        assertFalse(hive.bees().contains(bee2));
+        assertTrue(proxy.actors().contains(bee1));
+        assertTrue(proxy.actors().contains(bee2));
+        assertFalse(actorHub.actors().contains(bee1));
+        assertFalse(actorHub.actors().contains(bee2));
 
-        proxy.setHive(hive);
+        proxy.setActorHub(actorHub);
 
-        assertTrue(hive.bees().contains(bee1));
-        assertTrue(hive.bees().contains(bee2));
-        assertTrue(proxy.bees().contains(bee1));
-        assertTrue(proxy.bees().contains(bee2));
+        assertTrue(actorHub.actors().contains(bee1));
+        assertTrue(actorHub.actors().contains(bee2));
+        assertTrue(proxy.actors().contains(bee1));
+        assertTrue(proxy.actors().contains(bee2));
 
-        hive.close(true);
+        actorHub.close(true);
     }
 }

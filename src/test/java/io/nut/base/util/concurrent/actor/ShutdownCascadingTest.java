@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,25 +14,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests for cascading shutdown: when one stage in a chain is shut down
  * with shutdownCascading(), the shutdown propagates through all linked
- * downstream stages until reaching a plain Bee or a disconnected stage.
+ * downstream stages until reaching a plain Actor or a disconnected stage.
  */
 class ShutdownCascadingTest
 {
-    private Hive hive;
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = Hive.hive(2);
+        actorHub = ActorHub.actorHub(2);
     }
 
     @AfterEach
     void tearDown()
     {
-        hive.shutdown();
+        actorHub.shutdown();
         try
         {
-            hive.awaitTermination(2000);
+            actorHub.awaitTermination(2000);
         }
         catch (InterruptedException ie)
         {
@@ -41,15 +41,15 @@ class ShutdownCascadingTest
     }
 
     @Test
-    void shutdownCascadingPropagatesThroughLinearPipeBeeChain() throws InterruptedException
+    void shutdownCascadingPropagatesThroughLinearPipeActorChain() throws InterruptedException
     {
-        PipeBee<Integer,Integer> pipe1 = hive.pipe(i -> i * 2);
-        PipeBee<Integer,String> pipe2 = hive.pipe(i -> "v=" + i);
-        RecordingBee<String> sink = new RecordingBee<>(hive);
+        PipeActor<Integer,Integer> pipe1 = actorHub.pipe(i -> i * 2);
+        PipeActor<Integer,String> pipe2 = actorHub.pipe(i -> "v=" + i);
+        RecordingActor<String> sink = new RecordingActor<>(actorHub);
 
         pipe1.linkTo(pipe2).linkTo(sink);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertTrue(pipe1.isTerminated());
         assertTrue(pipe2.isTerminated());
@@ -57,15 +57,15 @@ class ShutdownCascadingTest
     }
 
     @Test
-    void shutdownCascadingPropagatesThroughFilterBee() throws InterruptedException
+    void shutdownCascadingPropagatesThroughFilterActor() throws InterruptedException
     {
-        PipeBee<Integer,Integer> pipe = hive.pipe(i -> i);
-        FilterBee<Integer> filter = hive.filter(i -> i > 0);
-        RecordingBee<Integer> sink = new RecordingBee<>(hive);
+        PipeActor<Integer,Integer> pipe = actorHub.pipe(i -> i);
+        FilterActor<Integer> filter = actorHub.filter(i -> i > 0);
+        RecordingActor<Integer> sink = new RecordingActor<>(actorHub);
 
         pipe.linkTo(filter).linkTo(sink);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertTrue(pipe.isTerminated());
         assertTrue(filter.isTerminated());
@@ -73,15 +73,15 @@ class ShutdownCascadingTest
     }
 
     @Test
-    void shutdownCascadingPropagatesThroughBatchBee() throws InterruptedException
+    void shutdownCascadingPropagatesThroughBatchActor() throws InterruptedException
     {
-        PipeBee<Integer,Integer> pipe = hive.pipe(i -> i);
-        BatchBee<Integer> batch = hive.batch(5, 0L);
-        RecordingBee<java.util.List<Integer>> sink = new RecordingBee<>(hive);
+        PipeActor<Integer,Integer> pipe = actorHub.pipe(i -> i);
+        BatchActor<Integer> batch = actorHub.batch(5, 0L);
+        RecordingActor<java.util.List<Integer>> sink = new RecordingActor<>(actorHub);
 
         pipe.linkTo(batch).linkTo(sink);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertTrue(pipe.isTerminated());
         assertTrue(batch.isTerminated());
@@ -89,17 +89,17 @@ class ShutdownCascadingTest
     }
 
     @Test
-    void shutdownCascadingFromFanOutBeeShutdownsAllTargets() throws InterruptedException
+    void shutdownCascadingFromFanOutActorShutdownsAllTargets() throws InterruptedException
     {
-        PipeBee<Integer,Integer> pipe = hive.pipe(i -> i);
-        RecordingBee<Integer> target1 = new RecordingBee<>(hive);
-        RecordingBee<Integer> target2 = new RecordingBee<>(hive);
-        RecordingBee<Integer> target3 = new RecordingBee<>(hive);
+        PipeActor<Integer,Integer> pipe = actorHub.pipe(i -> i);
+        RecordingActor<Integer> target1 = new RecordingActor<>(actorHub);
+        RecordingActor<Integer> target2 = new RecordingActor<>(actorHub);
+        RecordingActor<Integer> target3 = new RecordingActor<>(actorHub);
 
-        FanOutBee<Integer> broadcast = hive.broadcast(target1, target2, target3);
+        FanOutActor<Integer> broadcast = actorHub.broadcast(target1, target2, target3);
         pipe.linkTo(broadcast);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertTrue(pipe.isTerminated());
         assertTrue(broadcast.isTerminated());
@@ -109,13 +109,13 @@ class ShutdownCascadingTest
     }
 
     @Test
-    void shutdownCascadingFromFanOutBeeDirectly() throws InterruptedException
+    void shutdownCascadingFromFanOutActorDirectly() throws InterruptedException
     {
-        RecordingBee<String> t1 = new RecordingBee<>(hive);
-        RecordingBee<String> t2 = new RecordingBee<>(hive);
-        FanOutBee<String> bc = hive.broadcast(t1, t2);
+        RecordingActor<String> t1 = new RecordingActor<>(actorHub);
+        RecordingActor<String> t2 = new RecordingActor<>(actorHub);
+        FanOutActor<String> bc = actorHub.broadcast(t1, t2);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertTrue(bc.isTerminated());
         assertTrue(t1.isTerminated());
@@ -126,15 +126,15 @@ class ShutdownCascadingTest
     void shutdownCascadingWithComplexTopology() throws InterruptedException
     {
         // pipe1 -> filter -> batch -> (pipe2, pipe3)
-        PipeBee<Integer,Integer> pipe1 = hive.pipe(i -> i * 2);
-        FilterBee<Integer> filter = hive.filter(i -> i > 0);
-        BatchBee<Integer> batch = hive.batch(3, 0L);
-        PipeBee<java.util.List<Integer>,String> pipe2 = hive.pipe(lst -> "batch=" + lst);
-        RecordingBee<String> sink = new RecordingBee<>(hive);
+        PipeActor<Integer,Integer> pipe1 = actorHub.pipe(i -> i * 2);
+        FilterActor<Integer> filter = actorHub.filter(i -> i > 0);
+        BatchActor<Integer> batch = actorHub.batch(3, 0L);
+        PipeActor<java.util.List<Integer>,String> pipe2 = actorHub.pipe(lst -> "batch=" + lst);
+        RecordingActor<String> sink = new RecordingActor<>(actorHub);
 
         pipe1.linkTo(filter).linkTo(batch).linkTo(pipe2).linkTo(sink);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertTrue(pipe1.isTerminated());
         assertTrue(filter.isTerminated());
@@ -146,11 +146,11 @@ class ShutdownCascadingTest
     @Test
     void shutdownCascadingWithOnlyWhenEmptyFlag() throws InterruptedException
     {
-        PipeBee<Integer,Integer> pipe1 = hive.pipe(i -> i);
-        RecordingBee<Integer> sink = new RecordingBee<>(hive);
+        PipeActor<Integer,Integer> pipe1 = actorHub.pipe(i -> i);
+        RecordingActor<Integer> sink = new RecordingActor<>(actorHub);
         pipe1.linkTo(sink);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertTrue(pipe1.isTerminated());
         assertTrue(sink.isTerminated());
@@ -159,9 +159,9 @@ class ShutdownCascadingTest
     @Test
     void normalShutdownDoesNotPropagate()
     {
-        PipeBee<Integer,Integer> pipe1 = hive.pipe(i -> i);
-        PipeBee<Integer,Integer> pipe2 = hive.pipe(i -> i);
-        RecordingBee<Integer> sink = new RecordingBee<>(hive);
+        PipeActor<Integer,Integer> pipe1 = actorHub.pipe(i -> i);
+        PipeActor<Integer,Integer> pipe2 = actorHub.pipe(i -> i);
+        RecordingActor<Integer> sink = new RecordingActor<>(actorHub);
 
         pipe1.linkTo(pipe2).linkTo(sink);
 

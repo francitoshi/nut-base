@@ -8,7 +8,7 @@ package io.nut.base.cache;
 import io.nut.base.profile.Profiler;
 import io.nut.base.time.JavaTime;
 import io.nut.base.util.Utils;
-import io.nut.base.util.concurrent.hive.Hive;
+import io.nut.base.util.concurrent.actor.ActorHub;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.Test;
@@ -40,14 +40,14 @@ public class CacheBenchmarkTest
             runWorkload(cache[k], 10, 0);
         }
         
-        Hive hive = Hive.hive();
+        ActorHub actorHub = ActorHub.actorHub();
         CountDownLatch cdl = new CountDownLatch(cache.length);
 
         for(int k=0;k<cache.length;k++)
         {
             final Profiler.Task tk = t[k]; 
             final Cache cacheK = cache[k]; 
-            hive.spawn(()->
+            actorHub.spawn(()->
             {
                 tk.start();
                 runWorkload(cacheK, N, T);

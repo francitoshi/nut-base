@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit tests for {@link Hive#spawn(Runnable)}.
+ * Unit tests for {@link ActorHub#spawn(Runnable)}.
  *
  * <p>The contract under test:
  * <ol>
@@ -30,20 +30,20 @@ import static org.junit.jupiter.api.Assertions.*;
  *   <li>On interruption the task is not lost (fallback to {@code execute}).</li>
  * </ol>
  */
-public class HiveSpawnTest
+public class ActorHubSpawnTest
 {
-    private Hive hive;
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = new Hive();
+        actorHub = new ActorHub();
     }
 
     @AfterEach
     void tearDown()
     {
-        hive.close();
+        actorHub.close();
     }
 
     // -------------------------------------------------------------------------
@@ -53,7 +53,7 @@ public class HiveSpawnTest
     @Test
     void spawn_nullTask_throwsNPE()
     {
-        assertThrows(NullPointerException.class, () -> hive.spawn(null));
+        assertThrows(NullPointerException.class, () -> actorHub.spawn(null));
     }
 
     // -------------------------------------------------------------------------
@@ -68,7 +68,7 @@ public class HiveSpawnTest
     {
         CountDownLatch done = new CountDownLatch(1);
 
-        hive.spawn(done::countDown);
+        actorHub.spawn(done::countDown);
 
         assertTrue(done.await(5, TimeUnit.SECONDS), "Task was never executed");
     }
@@ -87,7 +87,7 @@ public class HiveSpawnTest
         AtomicReference<Thread> workerThread = new AtomicReference<>();
         CountDownLatch done = new CountDownLatch(1);
 
-        hive.spawn(() ->
+        actorHub.spawn(() ->
         {
             workerThread.set(Thread.currentThread());
             done.countDown();
@@ -113,7 +113,7 @@ public class HiveSpawnTest
         CountDownLatch taskFinished = new CountDownLatch(1);
         AtomicBoolean spawnReturnedBeforeTaskFinished = new AtomicBoolean(false);
 
-        hive.spawn(() ->
+        actorHub.spawn(() ->
         {
             taskStarted.countDown();
             try
@@ -159,7 +159,7 @@ public class HiveSpawnTest
         AtomicBoolean taskHasStarted = new AtomicBoolean(false);
         CountDownLatch taskCanFinish = new CountDownLatch(1);
 
-        hive.spawn(() ->
+        actorHub.spawn(() ->
         {
             taskHasStarted.set(true);      // (a) mark start immediately
             taskCanFinish.countDown();         // release the parked worker
@@ -186,7 +186,7 @@ public class HiveSpawnTest
         CountDownLatch callerAck    = new CountDownLatch(1);
         CountDownLatch taskCanExit  = new CountDownLatch(1);
 
-        hive.spawn(() ->
+        actorHub.spawn(() ->
         {
             taskRunning.countDown();       // signal: task is running
             try
@@ -221,7 +221,7 @@ public class HiveSpawnTest
 
         for (int i = 0; i < count; i++)
         {
-            hive.spawn(done::countDown);
+            actorHub.spawn(done::countDown);
         }
 
         assertTrue(done.await(10, TimeUnit.SECONDS),
@@ -246,7 +246,7 @@ public class HiveSpawnTest
         {
             // Self-interrupt before spawn so await() sees the flag immediately.
             Thread.currentThread().interrupt();
-            hive.spawn(taskDone::countDown);
+            actorHub.spawn(taskDone::countDown);
             interrupted.set(Thread.currentThread().isInterrupted());
         });
 

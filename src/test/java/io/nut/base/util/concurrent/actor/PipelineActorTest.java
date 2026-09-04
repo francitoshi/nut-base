@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util.concurrent.hive;
+package io.nut.base.util.concurrent.actor;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,25 +19,25 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Unit tests for {@link HivePipeline}: fluent chainable builder syntax,
+ * Unit tests for {@link PipelineActor}: fluent chainable builder syntax,
  * type-safe transformation stages, closing with {@code sink}/{@code to},
- * integration with {@link Hive}, and message delivery through the chain.
+ * integration with {@link ActorHub}, and message delivery through the chain.
  */
-class HivePipelineTest
+class PipelineActorTest
 {
-    private Hive hive;
+    private ActorHub actorHub;
 
     @BeforeEach
     void setUp()
     {
-        hive = Hive.hive(2);
+        actorHub = ActorHub.actorHub(2);
     }
 
     @AfterEach
     void tearDown() throws InterruptedException
     {
-        hive.shutdown();
-        hive.awaitTermination(2000);
+        actorHub.shutdown();
+        actorHub.awaitTermination(2000);
     }
 
     @Test
@@ -45,14 +45,14 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Bee<Integer> head = hive.pipeline((Integer i) -> i * 2)
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> i * 2)
                                  .then(i -> "value=" + i)
                                  .then(String::toUpperCase)
                                  .sink(result::add);
 
         head.accept(10);
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("VALUE=20"));
@@ -63,7 +63,7 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Bee<Integer> head = hive.pipeline((Integer i) -> i + 1)
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> i + 1)
                                  .then((Integer i) -> i * 2)
                                  .then((Integer i) -> "n=" + i)
                                  .sink(result::add);
@@ -73,7 +73,7 @@ class HivePipelineTest
         head.accept(10);
 
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(3, result.size());
         assertTrue(result.contains("n=4")); // (1+1)*2 = 4
@@ -84,16 +84,16 @@ class HivePipelineTest
     @Test
     void thenReturnsANewPipelineViewWithUpdatedOutputType() throws InterruptedException
     {
-        HivePipeline<Integer,Integer> stage1 = hive.pipeline(i -> i * 2);
-        HivePipeline<Integer,String> stage2 = stage1.then(i -> "v=" + i);
-        HivePipeline<Integer,String> stage3 = stage2.then(String::toUpperCase);
+        PipelineActor<Integer,Integer> stage1 = actorHub.pipeline(i -> i * 2);
+        PipelineActor<Integer,String> stage2 = stage1.then(i -> "v=" + i);
+        PipelineActor<Integer,String> stage3 = stage2.then(String::toUpperCase);
 
         List<String> result = new CopyOnWriteArrayList<>();
         stage3.sink(result::add).accept(5);
         
         stage3.head().waitForIdle().awaitTermination(25);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("V=10"));
@@ -104,13 +104,13 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Bee<String> head = hive.pipeline((String s) -> s)
+        Actor<String> head = actorHub.pipeline((String s) -> s)
                                  .sink(result::add);
 
         head.accept("msg");
 
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("msg"));
@@ -120,14 +120,14 @@ class HivePipelineTest
     void toClosesThePipelineWithAnArbitrarySendable() throws InterruptedException
     {
         BlockingQueue<String> q = new LinkedBlockingQueue<>();
-        Bee<String> b = hive.queue(q);
+        Actor<String> b = actorHub.queue(q);
 
-        Bee<String> head = hive.pipeline((String s) -> s.toUpperCase()).to(b);
+        Actor<String> head = actorHub.pipeline((String s) -> s.toUpperCase()).to(b);
 
         head.accept("hello");
 
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, q.size());
         assertEquals("HELLO", q.peek());
@@ -136,14 +136,14 @@ class HivePipelineTest
     @Test
     void toRejectsNull()
     {
-        HivePipeline<Integer,String> p = hive.pipeline(i -> "v=" + i);
+        PipelineActor<Integer,String> p = actorHub.pipeline(i -> "v=" + i);
         assertThrows(NullPointerException.class, () -> p.to(null));
     }
 
     @Test
-    void headReturnsTheFirstBeeOfTheChain()
+    void headReturnsTheFirstActorOfTheChain()
     {
-        Bee<Integer> head = hive.pipeline((Integer i) -> i)
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> i)
                                  .then((Integer i) -> i)
                                  .head();
 
@@ -151,17 +151,17 @@ class HivePipelineTest
     }
 
     @Test
-    void sendDelegatesBeeToTheHead() throws InterruptedException
+    void sendDelegatesActorToTheHead() throws InterruptedException
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        HivePipeline<Integer,String> pipeline = hive.pipeline(i -> "v=" + i);
-        Bee<Integer> unused = pipeline.sink(result::add);
+        PipelineActor<Integer,String> pipeline = actorHub.pipeline(i -> "v=" + i);
+        Actor<Integer> unused = pipeline.sink(result::add);
 
         pipeline.accept(42);
 
         pipeline.head().waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("v=42"));
@@ -172,7 +172,7 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Bee<Integer> head = hive.pipeline((Integer i) -> i + 1)           // Integer -> Integer
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> i + 1)           // Integer -> Integer
                                  .then(i -> i * 2)                       // Integer -> Integer
                                  .then(i -> (double) i / 3)             // Integer -> Double
                                  .then(d -> String.format("%.2f", d))  // Double -> String
@@ -181,7 +181,7 @@ class HivePipelineTest
         head.accept(6);
         
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         // (6+1)*2 = 14, 14/3 ≈ 4.67
         assertEquals(1, result.size());
@@ -193,17 +193,17 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Bee<Integer> head = hive.pipeline((Integer i) -> "n=" + i)
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> "n=" + i)
                                  .sink(s -> result.add(s));
 
-        FilterBee<Integer> filter = hive.filter(i -> i > 5);
+        FilterActor<Integer> filter = actorHub.filter(i -> i > 5);
         filter.linkTo(head);
 
         filter.accept(3);
         filter.accept(10);
         filter.waitForIdle().awaitTermination(25);
 
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("n=10"));
@@ -214,14 +214,14 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Bee<Integer> head = hive.pipeline(2, (Integer i) -> "v=" + i)
+        Actor<Integer> head = actorHub.pipeline(2, (Integer i) -> "v=" + i)
                                  .then(s -> s.toUpperCase())
                                  .sink(result::add);
 
         head.accept(7);
 
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("V=7"));
@@ -232,13 +232,13 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Bee<Integer> head = hive.pipeline(2, 10, (Integer i) -> "v=" + i)
+        Actor<Integer> head = actorHub.pipeline(2, 10, (Integer i) -> "v=" + i)
                                  .sink(result::add);
 
         head.accept(99);
 
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("v=99"));
@@ -249,14 +249,14 @@ class HivePipelineTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        HivePipeline<Integer,Integer> p1 = hive.pipeline(i -> i * 2);
-        HivePipeline<Integer,String> p2 = p1.then(2, i -> "v=" + i); // different thread count
-        Bee<Integer> head = p2.sink(result::add);
+        PipelineActor<Integer,Integer> p1 = actorHub.pipeline(i -> i * 2);
+        PipelineActor<Integer,String> p2 = p1.then(2, i -> "v=" + i); // different thread count
+        Actor<Integer> head = p2.sink(result::add);
 
         head.accept(5);
 
         head.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(1, result.size());
         assertTrue(result.contains("v=10"));
@@ -268,17 +268,17 @@ class HivePipelineTest
         List<String> a = new CopyOnWriteArrayList<>();
         List<String> b = new CopyOnWriteArrayList<>();
 
-        Bee<Integer> head = hive.pipeline((Integer i) -> "v=" + i).head();
-        FanOutBee<String> broadcaster = hive.broadcast(hive.bee(a::add), hive.bee(b::add));
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> "v=" + i).head();
+        FanOutActor<String> broadcaster = actorHub.broadcast(actorHub.actor(a::add), actorHub.actor(b::add));
 
-        PipeBee<Integer,String> pipe = (PipeBee<Integer,String>) head;
+        PipeActor<Integer,String> pipe = (PipeActor<Integer,String>) head;
         pipe.linkTo(broadcaster);
 
         pipe.accept(5);
         pipe.accept(10);
 
         pipe.waitForIdle().awaitTermination(25);
-        hive.close(true);
+        actorHub.close(true);
 
         assertEquals(2, a.size());
         assertEquals(2, b.size());
@@ -287,9 +287,9 @@ class HivePipelineTest
     @Test
     void shutdownOfHeadShutdownsEntireChain()
     {
-        RecordingBee<String> collector = new RecordingBee<>(hive);
+        RecordingActor<String> collector = new RecordingActor<>(actorHub);
 
-        Bee<Integer> head = hive.pipeline((Integer i) -> "v=" + i)
+        Actor<Integer> head = actorHub.pipeline((Integer i) -> "v=" + i)
                                  .then((String s) -> s.toUpperCase())
                                  .to(collector);
 
@@ -297,7 +297,7 @@ class HivePipelineTest
 
         head.waitForIdle().shutdown().awaitTermination(Integer.MAX_VALUE);
 
-        hive.close(true);
+        actorHub.close(true);
         
         assertTrue(head.isTerminated());
         assertTrue(collector.isTerminated());
@@ -306,8 +306,8 @@ class HivePipelineTest
     @Test
     void pipelineSendReturnsFalseAfterHeadIsShutdown()
     {
-        HivePipeline<Integer,String> pipeline = hive.pipeline((Integer i) -> "v=" + i);
-        Bee<Integer> head = pipeline.sink(s -> {});
+        PipelineActor<Integer,String> pipeline = actorHub.pipeline((Integer i) -> "v=" + i);
+        Actor<Integer> head = pipeline.sink(s -> {});
         head.shutdown();
         head.dryLogger();
 
