@@ -91,10 +91,10 @@ public class Hive extends Queen implements AutoCloseable, Executor
     private boolean shutdownWhenEmpty;
 
     /**
-     * The core pool size as configured at construction. When the number of
-     * registered (non-synchronous) Bees grows beyond this value, the pool's
-     * core size is raised to keep one thread per registered Bee available, and
-     * the maximum is raised by the same amount (see {@link #adjustPoolToBees}).
+     * The core pool size as configured at construction. The pool's core
+     * grows beyond this value when more non-synchronous Bees are registered,
+     * and the maximum grows by one thread per registered Bee (see
+     * {@link #adjustPoolToBees}).
      */
     private final int initialCorePoolSize;
 
@@ -290,12 +290,15 @@ public class Hive extends Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Raises the pool's core and maximum sizes so that there is always one
-     * thread available per registered (non-synchronous) Bee. The pool starts
-     * with a maximum equal to {@code initialCorePoolSize}; when more Bees are
-     * registered than that, both the core and the maximum are raised to keep
-     * one thread per Bee (see {@link Queen}). When Bees are removed the sizes
-     * shrink back towards their initial values.
+     * Adjusts the pool's core and maximum sizes to accommodate registered
+     * Bees. The core is raised when more Bees are registered than the
+     * initial core pool size; the maximum grows by one thread per registered
+     * Bee so the pool always has spare capacity above the core for burst
+     * work or temporary rush workers.
+     * <p>
+     * ThreadPoolExecutor requires {@code maximumPoolSize &ge; corePoolSize},
+     * so when growing the maximum is raised first and when shrinking the
+     * core is lowered first.
      */
     private void adjustPoolToBees()
     {
@@ -303,18 +306,24 @@ public class Hive extends Queen implements AutoCloseable, Executor
         {
             return;
         }
-        int size = Math.max(initialCorePoolSize, beeCount.get());
-        // ThreadPoolExecutor forbids core > maximum. When growing (more Bees)
-        // raise the maximum first; when shrinking, lower the core first.
-        if (size > getMaximumPoolSize())
+        int count = beeCount.get();
+        int newCore = Math.max(initialCorePoolSize, count);
+        int newMax = initialCorePoolSize + count;
+        if (newMax < newCore)
         {
-            setMaximumPoolSize(size);
-            setCorePoolSize(size);
+            newMax = newCore;
+        }
+        if (newCore > getCorePoolSize())
+        {
+            // Growing: raise maximum first (must stay >= core).
+            setMaximumPoolSize(newMax);
+            setCorePoolSize(newCore);
         }
         else
         {
-            setCorePoolSize(size);
-            setMaximumPoolSize(size);
+            // Shrinking: lower core first (must stay <= maximum).
+            setCorePoolSize(newCore);
+            setMaximumPoolSize(newMax);
         }
     }
 
