@@ -49,7 +49,7 @@ import java.util.logging.Logger;
  *
  * @param <M> the type of messages this Actor processes
  */
-public abstract class Actor<M> implements Consumer<M>
+public abstract class Actor<M> implements Consumer<M>, AutoCloseable
 {
     private static final Logger LOG = Logger.getLogger(Actor.class.getName());
 
@@ -848,12 +848,11 @@ public abstract class Actor<M> implements Consumer<M>
     /**
      * Shuts down this Actor and blocks until it has terminated. Equivalent to
      * {@link #close(boolean) close(false)}.
-     *
-     * @return this Actor, for fluent chaining
      */
-    public Actor<M> close()
+    @Override
+    public void close()
     {
-        return close(false);
+        close(false);
     }
 
     /**
@@ -864,13 +863,11 @@ public abstract class Actor<M> implements Consumer<M>
      * @param onlyWhenEmpty if {@code true}, defers close until idle (see
      *                      {@link #shutdown(boolean)}); if {@code false}, closes
      *                      immediately
-     * @return this Actor, for fluent chaining
      */
-    public Actor<M> close(boolean onlyWhenEmpty)
+    public void close(boolean onlyWhenEmpty)
     {
         shutdown(onlyWhenEmpty);
         awaitTermination(Integer.MAX_VALUE);
-        return this;
     }
 
     /**
