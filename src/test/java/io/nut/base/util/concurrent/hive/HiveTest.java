@@ -384,4 +384,29 @@ class HiveTest
         assertEquals(Collections.singletonList("test-list"), list);
         assertEquals(Collections.singleton("test-set"), set);
     }
+
+    @Test
+    void proxyHiveAccumulatesNoHiveAndMigratesOnSetHive()
+    {
+        ProxyHive proxy = new ProxyHive();
+
+        List<String> list1 = new ArrayList<>();
+        Bee<String> bee1 = proxy.list(list1);
+        List<String> list2 = new ArrayList<>();
+        Bee<String> bee2 = proxy.list(list2);
+
+        assertTrue(proxy.bees().contains(bee1));
+        assertTrue(proxy.bees().contains(bee2));
+        assertFalse(hive.bees().contains(bee1));
+        assertFalse(hive.bees().contains(bee2));
+
+        proxy.setHive(hive);
+
+        assertTrue(hive.bees().contains(bee1));
+        assertTrue(hive.bees().contains(bee2));
+        assertTrue(proxy.bees().contains(bee1));
+        assertTrue(proxy.bees().contains(bee2));
+
+        hive.close(true);
+    }
 }

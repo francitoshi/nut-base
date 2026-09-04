@@ -8,7 +8,9 @@ package io.nut.base.util.concurrent.hive;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -21,295 +23,631 @@ import java.util.function.Supplier;
 public class ProxyHive extends Hive implements AutoCloseable
 {
     private volatile Hive hive;
+    private final List<Bee<?>> pendingBees = new CopyOnWriteArrayList<>();
 
     public ProxyHive()
     {
-        super(null);
+        super(0, 0, 0, false, false);
     }
 
     public void setHive(Hive hive)
     {
         this.hive = hive;
+        if (hive != null)
+        {
+            for (Bee<?> bee : pendingBees)
+            {
+                hive.registerBee(bee);
+            }
+            pendingBees.clear();
+        }
     }
 
     @Override
     public void execute(Runnable task)
     {
-        hive.execute(task);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.execute(task);
+        }
+        else
+        {
+            super.execute(task);
+        }
     }
 
     @Override
     protected void terminated()
     {
-        hive.terminated();
+        Hive h = hive;
+        if (h != null)
+        {
+            h.terminated();
+        }
+        else
+        {
+            super.terminated();
+        }
     }
 
     @Override
     public Hive shutdown()
     {
-        hive.shutdown();
+        Hive h = hive;
+        if (h != null)
+        {
+            h.shutdown();
+        }
+        else
+        {
+            super.shutdown();
+        }
         return this;
     }
 
     @Override
     public boolean isShutdown()
     {
-        return hive.isShutdown();
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.isShutdown();
+        }
+        return super.isShutdown();
     }
 
     @Override
     public boolean isTerminated()
     {
-        return hive.isTerminated();
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.isTerminated();
+        }
+        return super.isTerminated();
     }
 
     @Override
     public boolean awaitTermination(int millis) throws InterruptedException
     {
-        return hive.awaitTermination(millis);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.awaitTermination(millis);
+        }
+        return super.awaitTermination(millis);
     }
 
     @Override
     public int getCorePoolSize()
     {
-        return hive.getCorePoolSize();
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.getCorePoolSize();
+        }
+        return super.getCorePoolSize();
     }
 
     @Override
     public int getMaximumPoolSize()
     {
-        return hive.getMaximumPoolSize();
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.getMaximumPoolSize();
+        }
+        return super.getMaximumPoolSize();
     }
 
     @Override
     public void setCorePoolSize(int i)
     {
-        hive.setCorePoolSize(i);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.setCorePoolSize(i);
+        }
+        else
+        {
+            super.setCorePoolSize(i);
+        }
     }
 
     @Override
     public void setMaximumPoolSize(int i)
     {
-        hive.setMaximumPoolSize(i);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.setMaximumPoolSize(i);
+        }
+        else
+        {
+            super.setMaximumPoolSize(i);
+        }
     }
 
     @Override
     public void close()
     {
-        hive.close();
+        Hive h = hive;
+        if (h != null)
+        {
+            h.close();
+        }
+        else
+        {
+            super.close();
+        }
     }
-
 
     @Override
     public <T, R> PipeBee<T, R> pipe(int threads, int queueSize, Function<T, R> function)
     {
-        return hive.pipe(threads, queueSize, function);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.pipe(threads, queueSize, function);
+        }
+        return super.pipe(threads, queueSize, function);
     }
 
     @Override
     public <T> Bee<T> bee(int threads, int queueSize, Consumer<T> consumer)
     {
-        return hive.bee(threads, queueSize, consumer);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.bee(threads, queueSize, consumer);
+        }
+        return super.bee(threads, queueSize, consumer);
     }
 
     @Override
     public <E> Bee<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
-        return hive.queue(threads, queueSize, queue);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.queue(threads, queueSize, queue);
+        }
+        return super.queue(threads, queueSize, queue);
     }
 
     @Override
     public <E> Bee<E> list(int threads, int queueSize, List<E> list)
     {
-        return hive.list(threads, queueSize, list);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.list(threads, queueSize, list);
+        }
+        return super.list(threads, queueSize, list);
     }
 
     @Override
     public <T> Bee<T> set(int threads, int queueSize, Set<T> set)
     {
-        return hive.set(threads, queueSize, set);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.set(threads, queueSize, set);
+        }
+        return super.set(threads, queueSize, set);
     }
 
     @Override
     public <T> FilterBee<T> filter(int threads, int queueSize, Predicate<T> predicate)
     {
-        return hive.filter(threads, queueSize, predicate);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.filter(threads, queueSize, predicate);
+        }
+        return super.filter(threads, queueSize, predicate);
     }
 
     @Override
     public <T> BatchBee<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
-        return hive.batch(threads, queueSize, maxSize, maxWaitMillis);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.batch(threads, queueSize, maxSize, maxWaitMillis);
+        }
+        return super.batch(threads, queueSize, maxSize, maxWaitMillis);
     }
 
     @Override
     public <T, R> HivePipeline<T, R> pipeline(int threads, int queueSize, Function<T, R> first)
     {
-        return hive.pipeline(threads, queueSize, first);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.pipeline(threads, queueSize, first);
+        }
+        return super.pipeline(threads, queueSize, first);
     }
 
     @Override
     public <T> Bee<T> sub(String topic, Bee<T> bee)
     {
-        return hive.sub(topic, bee);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.sub(topic, bee);
+        }
+        return super.sub(topic, bee);
     }
 
     @Override
     public <T> Pub<T> pub(String topic)
     {
-        return hive.pub(topic);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.pub(topic);
+        }
+        return super.pub(topic);
     }
-
 
     @Override
     public ProxyHive spawn(Runnable task)
     {
-        hive.spawn(task);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.spawn(task);
+        }
+        else
+        {
+            super.spawn(task);
+        }
         return this;
     }
 
     @Override
     public Future<Void> submit(Runnable task)
     {
-        return hive.submit(task);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.submit(task);
+        }
+        return super.submit(task);
     }
 
     @Override
     public <U> Future<U> submit(Supplier<U> supplier)
     {
-        return hive.submit(supplier);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.submit(supplier);
+        }
+        return super.submit(supplier);
     }
 
     @Override
     public <T> void forEach(Iterable<T> iterable, Consumer<? super T> consumer)
     {
-        hive.forEach(iterable, consumer);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.forEach(iterable, consumer);
+        }
+        else
+        {
+            super.forEach(iterable, consumer);
+        }
     }
 
     @Override
     void registerBee(Bee<?> bee)
     {
-        hive.registerBee(bee);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.registerBee(bee);
+        }
+        else
+        {
+            pendingBees.add(bee);
+        }
     }
 
     @Override
     void unregisterBee(Bee<?> bee)
     {
-        hive.unregisterBee(bee);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.unregisterBee(bee);
+        }
+        else
+        {
+            pendingBees.remove(bee);
+        }
     }
 
     @Override
     public List<Bee<?>> bees()
     {
-        return hive.bees();
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.bees();
+        }
+        return pendingBees;
     }
 
     @Override
     public <T, R> PipeBee<T, R> pipe(Function<T, R> function)
     {
-        return hive.pipe(function);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.pipe(function);
+        }
+        return super.pipe(function);
     }
 
     @Override
     public <T, R> PipeBee<T, R> pipe(int threads, Function<T, R> function)
     {
-        return hive.pipe(threads, function);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.pipe(threads, function);
+        }
+        return super.pipe(threads, function);
     }
 
     @Override
     public <T> Bee<T> bee(Consumer<T> consumer)
     {
-        return hive.bee(consumer);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.bee(consumer);
+        }
+        return super.bee(consumer);
     }
 
     @Override
     public <T> Bee<T> bee(int threads, Consumer<T> consumer)
     {
-        return hive.bee(threads, consumer);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.bee(threads, consumer);
+        }
+        return super.bee(threads, consumer);
     }
 
     @Override
     public <E> Bee<E> queue(BlockingQueue<E> queue)
     {
-        return hive.queue(queue);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.queue(queue);
+        }
+        return super.queue(queue);
     }
 
     @Override
     public <E> Bee<E> list(List<E> list)
     {
-        return hive.list(list);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.list(list);
+        }
+        return super.list(list);
     }
 
     @Override
     public <E> Bee<E> list(int threads, List<E> list)
     {
-        return hive.list(threads, list);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.list(threads, list);
+        }
+        return super.list(threads, list);
     }
 
     @Override
     public <T> Bee<T> set(Set<T> set)
     {
-        return hive.set(set);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.set(set);
+        }
+        return super.set(set);
     }
 
     @Override
     public <T> Bee<T> set(int threads, Set<T> set)
     {
-        return hive.set(threads, set);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.set(threads, set);
+        }
+        return super.set(threads, set);
     }
 
     @Override
     public <T> FilterBee<T> filter(Predicate<T> predicate)
     {
-        return hive.filter(predicate);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.filter(predicate);
+        }
+        return super.filter(predicate);
     }
 
     @Override
     public <T> FilterBee<T> filter(int threads, Predicate<T> predicate)
     {
-        return hive.filter(threads, predicate);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.filter(threads, predicate);
+        }
+        return super.filter(threads, predicate);
     }
 
     @Override
     public <T, R> HivePipeline<T, R> pipeline(Function<T, R> first)
     {
-        return hive.pipeline(first);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.pipeline(first);
+        }
+        return super.pipeline(first);
     }
 
     @Override
     public <T, R> HivePipeline<T, R> pipeline(int threads, Function<T, R> first)
     {
-        return hive.pipeline(threads, first);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.pipeline(threads, first);
+        }
+        return super.pipeline(threads, first);
     }
 
     @Override
     public <T> BatchBee<T> batch(int maxSize, long maxWaitMillis)
     {
-        return hive.batch(maxSize, maxWaitMillis);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.batch(maxSize, maxWaitMillis);
+        }
+        return super.batch(maxSize, maxWaitMillis);
     }
 
     @Override
     public <T> Bee<T> sub(String topic, int threads, Consumer<T> consumer)
     {
-        return hive.sub(topic, threads, consumer);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.sub(topic, threads, consumer);
+        }
+        return super.sub(topic, threads, consumer);
     }
 
     @Override
     public <T> Bee<T> sub(String topic, Consumer<T> consumer)
     {
-        return hive.sub(topic, consumer);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.sub(topic, consumer);
+        }
+        return super.sub(topic, consumer);
     }
 
     @Override
     public Hive shutdown(boolean onlyWhenEmpty)
     {
-        return hive.shutdown(onlyWhenEmpty);
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.shutdown(onlyWhenEmpty);
+        }
+        return super.shutdown(onlyWhenEmpty);
     }
 
     @Override
     public void close(boolean onlyWhenEmpty)
     {
-        hive.close(onlyWhenEmpty);
+        Hive h = hive;
+        if (h != null)
+        {
+            h.close(onlyWhenEmpty);
+        }
+        else
+        {
+            super.close(onlyWhenEmpty);
+        }
+    }
+
+    @Override
+    AtomicInteger processedCount()
+    {
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.processedCount();
+        }
+        return super.processedCount();
+    }
+
+    @Override
+    public boolean isIdle()
+    {
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.isIdle();
+        }
+        return super.isIdle();
+    }
+
+    @Override
+    public Hive waitForIdle()
+    {
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.waitForIdle();
+        }
+        return super.waitForIdle();
+    }
+
+    @Override
+    public Hive awaitTermination()
+    {
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.awaitTermination();
+        }
+        return super.awaitTermination();
+    }
+
+    @Override
+    public boolean isSynchronous()
+    {
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.isSynchronous();
+        }
+        return super.isSynchronous();
+    }
+
+    @Override
+    public int getActiveCount()
+    {
+        Hive h = hive;
+        if (h != null)
+        {
+            return h.getActiveCount();
+        }
+        return super.getActiveCount();
     }
 
 }

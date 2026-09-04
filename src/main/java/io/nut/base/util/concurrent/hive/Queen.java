@@ -60,9 +60,6 @@ import java.util.concurrent.Phaser;
  */
 public class Queen implements AutoCloseable, Executor
 {    
-    public static final int DEFAULT_KEEP_ALIVE_MILLIS = 10_000;
-    public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
-    public static final boolean DEFAULT_AVOID_TRACKER = false;
 
     /**
      * Number of available processor cores, used as the default pool size.
@@ -72,7 +69,9 @@ public class Queen implements AutoCloseable, Executor
     /**
      * Default keep-alive time for idle excess threads, in milliseconds (30 s).
      */
-    public static final int KEEP_ALIVE_MILLIS = 30_000;
+    public static final int DEFAULT_KEEP_ALIVE_MILLIS = 30_000;
+    public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
+    public static final boolean DEFAULT_AVOID_TRACKER = false;
 
     /**
      * Saturation policy: run the overflowing task in the calling thread.
@@ -97,7 +96,7 @@ public class Queen implements AutoCloseable, Executor
      * thread, and there is no backing thread pool. Enabled when the pool is
      * constructed with {@code corePoolSize == 0}.
      */
-    protected final boolean synchronous;
+    private final boolean synchronous;
 
     /**
      * Tracks the shutdown state in synchronous mode (there is no backing pool).
@@ -117,7 +116,7 @@ public class Queen implements AutoCloseable, Executor
     protected Queen(ThreadPoolExecutor threadPoolExecutor)
     {
         this.threadPoolExecutor = threadPoolExecutor;
-        this.synchronous = false;
+        this.synchronous = threadPoolExecutor!=null;
         this.phaser = new Phaser(1);
     }
 
@@ -223,7 +222,7 @@ public class Queen implements AutoCloseable, Executor
         // a thread that may never be freed. This is what keeps Bee pipelines
         // alive when forwarding stages saturate the pool with blocking channel
         // puts.
-        this(corePoolSize, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -231,7 +230,7 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen()
     {
-        this(CORES, CORES, KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(CORES, CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     // -------------------------------------------------------------------------

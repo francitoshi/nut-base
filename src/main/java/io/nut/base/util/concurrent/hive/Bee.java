@@ -132,19 +132,11 @@ public abstract class Bee<M> implements Consumer<M>
     /** Messages this Bee has processed (each invocation of {@link #receive}). */
     private final AtomicInteger processedCount = new AtomicInteger();
 
-    /**
-     * The Hive-wide count of messages processed by all its Bees. When attached
-     * to a non-synchronous {@link Hive}, this is a direct reference to the
-     * Hive's shared counter so no lookup is needed to increment it; otherwise
-     * it falls back to this Bee's own counter.
-     */
-    private final AtomicInteger globalProcessedCount;
-
     /** {@code true} after {@link #terminate()} has run. */
     private boolean terminated;
 
     private volatile boolean allowLogger = true;
-    private final Executor hive;
+    private final Hive hive;
     private volatile Exception ex;
 
     // -------------------------------------------------------------------------
@@ -172,7 +164,6 @@ public abstract class Bee<M> implements Consumer<M>
         }
         this.hive = hive;
         this.synchronous = threads == 0;
-        this.globalProcessedCount = hive instanceof Hive ? ((Hive) hive).processedCount() : this.processedCount;
         if (this.synchronous)
         {
             this.threads = 0;
@@ -195,9 +186,9 @@ public abstract class Bee<M> implements Consumer<M>
      */
     private void registerHive()
     {
-        if (hive instanceof Hive)
+        if (hive != null)
         {
-            ((Hive) hive).registerBee(this);
+            hive.registerBee(this);
         }
     }
 
@@ -231,7 +222,7 @@ public abstract class Bee<M> implements Consumer<M>
         return ex;
     }
 
-    public Executor getHive()
+    public Hive getHive()
     {
         return hive;
     }
@@ -250,7 +241,7 @@ public abstract class Bee<M> implements Consumer<M>
         {
             return true;
         }
-        return hive instanceof Queen && ((Queen) hive).isSynchronous();
+        return hive != null && hive.isSynchronous();
     }
 
     // -------------------------------------------------------------------------
@@ -513,9 +504,9 @@ public abstract class Bee<M> implements Consumer<M>
     private void countProcessed()
     {
         processedCount.incrementAndGet();
-        if (globalProcessedCount != processedCount)
+        if (hive != null)
         {
-            globalProcessedCount.incrementAndGet();
+            hive.processedCount().incrementAndGet();
         }
     }
 

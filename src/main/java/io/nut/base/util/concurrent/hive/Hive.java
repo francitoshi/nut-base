@@ -68,6 +68,8 @@ import java.util.logging.Logger;
  */
 public class Hive extends Queen implements AutoCloseable, Executor
 {
+    public static Hive SYNCHRONOUS = new Hive(null);
+    
     /** Active non-synchronous Bees attached to this Hive, for coordinated tasks. */
     private final List<Bee<?>> bees = new CopyOnWriteArrayList<>();
 
