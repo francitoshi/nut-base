@@ -274,17 +274,16 @@ class HiveTest
     }
 
     @Test
-    void corePoolSizeGetterAndSetterWork()
+    void poolSizeGetterAndSetterWork()
     {
         Hive h = Hive.hive(3);
         assertEquals(3, h.getCorePoolSize());
         assertEquals(3, h.getMaximumPoolSize());
 
-        h.setMaximumPoolSize(10);
-        h.setCorePoolSize(5);
+        h.setPoolSize(5);
 
         assertEquals(5, h.getCorePoolSize());
-        assertEquals(10, h.getMaximumPoolSize());
+        assertEquals(5, h.getMaximumPoolSize());
 
         h.shutdown();
         try

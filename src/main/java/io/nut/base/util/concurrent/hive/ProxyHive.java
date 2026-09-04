@@ -142,30 +142,16 @@ public class ProxyHive extends Hive implements AutoCloseable
     }
 
     @Override
-    public void setCorePoolSize(int i)
+    public void setPoolSize(int i)
     {
         Hive h = hive;
         if (h != null)
         {
-            h.setCorePoolSize(i);
+            h.setPoolSize(i);
         }
         else
         {
-            super.setCorePoolSize(i);
-        }
-    }
-
-    @Override
-    public void setMaximumPoolSize(int i)
-    {
-        Hive h = hive;
-        if (h != null)
-        {
-            h.setMaximumPoolSize(i);
-        }
-        else
-        {
-            super.setMaximumPoolSize(i);
+            super.setPoolSize(i);
         }
     }
 

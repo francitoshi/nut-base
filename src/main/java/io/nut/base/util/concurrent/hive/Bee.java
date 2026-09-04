@@ -339,24 +339,28 @@ public abstract class Bee<M> implements Consumer<M>
                 // Start the permanent worker on the first message. It holds one
                 // worker permit for the whole lifetime of the Bee.
                 initPermanentWorker();
-                // The short critical section guarantees that a worker that is
-                // about to release its slot will not abandon a message we have
-                // just enqueued: the release and this tryAcquire both happen
-                // under the lock, so a slot freed here is always observed. When
-                // threads > 1, additional temporary "rush" workers may be
-                // started here to process in parallel.
-                synchronized (lock)
+                // When threads > 1, additional temporary "rush" workers may be
+                // started in parallel. The short critical section guarantees
+                // that a worker about to release its slot will not abandon a
+                // message we have just enqueued: the release and this tryAcquire
+                // both happen under the lock, so a slot freed here is always
+                // observed. When threads == 1 the permanent worker already holds
+                // the only permit, so no rush worker can start.
+                if (threads > 1)
                 {
-                    if (workerSlots.tryAcquire())
+                    synchronized (lock)
                     {
-                        try
+                        if (workerSlots.tryAcquire())
                         {
-                            startWorker();
-                        }
-                        catch (Exception ex)
-                        {
-                            workerSlots.release();
-                            throw ex;
+                            try
+                            {
+                                startWorker();
+                            }
+                            catch (Exception ex)
+                            {
+                                workerSlots.release();
+                                throw ex;
+                            }
                         }
                     }
                 }

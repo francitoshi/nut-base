@@ -67,7 +67,9 @@ public class Queen implements AutoCloseable, Executor
     public static final int CORES = Runtime.getRuntime().availableProcessors();
 
     /**
-     * Default keep-alive time for idle excess threads, in milliseconds (30 s).
+     * Default keep-alive time for idle threads, in milliseconds (30 s).
+     * Applied to all threads since the pool is symmetric (core always equals
+     * maximum) with {@link ThreadPoolExecutor#allowCoreThreadTimeOut} enabled.
      */
     public static final int DEFAULT_KEEP_ALIVE_MILLIS = 30_000;
     public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
@@ -127,8 +129,8 @@ public class Queen implements AutoCloseable, Executor
      * maximum thread count, and {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
      * is enabled whenever {@code keepAliveMillis &gt; 0}, so the number of live
      * threads scales from {@code 0} up to {@code corePoolSize} as demand rises
-     * and falls. Subclasses such as {@link Hive} may grow the maximum beyond
-     * {@code corePoolSize} later via {@link #setMaximumPoolSize}.
+     * and falls. Subclasses such as {@link Hive} may resize the pool later via
+     * {@link #setPoolSize}.
      *
      * @param corePoolSize      the maximum number of concurrent worker threads;
      *                          {@code 0} selects the synchronous mode (no pool)
@@ -216,12 +218,12 @@ public class Queen implements AutoCloseable, Executor
      */
     public Queen(int corePoolSize)
     {
-        // A CPU-sized bounded queue combined with the CallerRunsPolicy keeps
-        // the pool from ever parking work behind a saturated pool: submitted
-        // tasks run in the calling thread instead of waiting in the queue for
-        // a thread that may never be freed. This is what keeps Bee pipelines
-        // alive when forwarding stages saturate the pool with blocking channel
-        // puts.
+        // A bounded queue sized to corePoolSize combined with the
+        // CallerRunsPolicy keeps the pool from ever parking work behind a
+        // saturated pool: submitted tasks run in the calling thread instead of
+        // waiting in the queue for a thread that may never be freed. This is
+        // what keeps Bee pipelines alive when forwarding stages saturate the
+        // pool with blocking channel puts.
         this(corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
@@ -730,28 +732,31 @@ public class Queen implements AutoCloseable, Executor
     }
 
     /**
-     * Sets the core number of threads in the pool.
+     * Sets the thread pool size, fixing both the core and the maximum to the
+     * same value. Queen keeps the pool symmetric (core always equals maximum,
+     * with {@link ThreadPoolExecutor#allowCoreThreadTimeOut} enabled), so a
+     * single size is sufficient and avoids any risk of a maximum below the
+     * core.
      *
-     * @param cps new core pool size
+     * @param pcp new pool size (core and maximum)
      */
-    public void setCorePoolSize(int cps)
+    public void setPoolSize(int pcp)
     {
         if (!synchronous)
         {
-            threadPoolExecutor.setCorePoolSize(cps);
-        }
-    }
-
-    /**
-     * Sets the maximum allowed number of threads in the pool.
-     *
-     * @param mps new maximum pool size
-     */
-    public void setMaximumPoolSize(int mps)
-    {
-        if (!synchronous)
-        {
-            threadPoolExecutor.setMaximumPoolSize(mps);
+            // ThreadPoolExecutor forbids maximum < core. When growing set the
+            // maximum first, when shrinking set the core first, so the pool
+            // always satisfies the invariant throughout the resize.
+            if (pcp >= threadPoolExecutor.getCorePoolSize())
+            {
+                threadPoolExecutor.setMaximumPoolSize(pcp);
+                threadPoolExecutor.setCorePoolSize(pcp);
+            }
+            else
+            {
+                threadPoolExecutor.setCorePoolSize(pcp);
+                threadPoolExecutor.setMaximumPoolSize(pcp);
+            }
         }
     }
 
