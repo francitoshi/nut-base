@@ -6,10 +6,12 @@
 package io.nut.base.util;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -1152,6 +1154,60 @@ public class Strings
             sj.add(item);
         }
         return sj.toString();
+    }
+
+    /**
+     * <p>Splits the given String into an array of lines, handling the line
+     * terminators {@code \n}, {@code \r\n} and {@code \r}.</p>
+     *
+     * <p>Consecutive line terminators produce empty lines. A trailing line
+     * terminator does not add a trailing empty line. A <code>null</code> input
+     * String returns <code>null</code>.</p>
+     *
+     * <pre>
+     * Strings.lines(null)            = null
+     * Strings.lines("")              = []
+     * Strings.lines("abc")           = ["abc"]
+     * Strings.lines("a\nb")          = ["a", "b"]
+     * Strings.lines("a\nb\nc")       = ["a", "b", "c"]
+     * Strings.lines("a\nb\n")        = ["a", "b"]
+     * Strings.lines("a\rb")          = ["a", "b"]
+     * Strings.lines("a\r\nb")        = ["a", "b"]
+     * Strings.lines("a\n\nb")        = ["a", "", "b"]
+     * </pre>
+     *
+     * @param s the String to split into lines, may be null
+     * @return an array of lines or <code>null</code> if the String input is null
+     */
+    public static String[] lines(String s)
+    {
+        if (s == null)
+        {
+            return null;
+        }
+        int len = s.length();
+        List<String> list = new ArrayList<>();
+        int start = 0;
+        int i = 0;
+        while (i < len)
+        {
+            char c = s.charAt(i);
+            if (c == '\n' || c == '\r')
+            {
+                list.add(s.substring(start, i));
+                if (c == '\r' && i + 1 < len && s.charAt(i + 1) == '\n')
+                {
+                    i++;
+                }
+                start = i + 1;
+            }
+            i++;
+        }
+        if (start < len)
+        {
+            list.add(s.substring(start));
+        }
+        return list.toArray(new String[list.size()]);
     }
     
     /**

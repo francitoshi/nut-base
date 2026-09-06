@@ -13,10 +13,26 @@ import java.util.zip.CRC32;
  *
  * @author franci
  */
-public class Hashes
+public class Checksums
 {
-    private Hashes()
+    private Checksums()
     {
+    }
+
+    // CRC-32C (Castagnoli) lookup tables, polynomial 0x1EDC6F41
+    // (reflected, init 0xFFFFFFFF, final XOR 0xFFFFFFFF).
+    private static final long[] CRC32C_TABLE = new long[256];
+    static
+    {
+        for (int i = 0; i < 256; i++)
+        {
+            long crc = i;
+            for (int j = 0; j < 8; j++)
+            {
+                crc = (crc & 1) != 0 ? (crc >>> 1) ^ 0x82F63B78L : crc >>> 1;
+            }
+            CRC32C_TABLE[i] = crc;
+        }
     }
 
     /**
@@ -164,5 +180,68 @@ public class Hashes
         rc[2] = (byte) ((value >> 8) & 0xFF);
         rc[3] = (byte) (value & 0xFF);
         return rc;
-    }    
+    }
+
+    /**
+     * Returns the CRC-32C (Castagnoli) checksum of the given portion of bytes.
+     * <p>
+     * Uses the Castagnoli polynomial 0x1EDC6F41, with reflection of input and
+     * output and a final XOR of 0xFFFFFFFF, as specified by RFC 3720 (iSCSI).
+     *
+     * @param bytes the input data.
+     * @param off the offset of the first byte to include.
+     * @param len the number of bytes to include.
+     * @return the 32-bit CRC-32C checksum.
+     */
+    public static long crc32c(byte[] bytes, int off, int len)
+    {
+        long crc = 0xFFFFFFFFL;
+        for (int i = off; i < off + len; i++)
+        {
+            crc = CRC32C_TABLE[((int) (crc ^ bytes[i])) & 0xFF] ^ (crc >>> 8);
+        }
+        return crc ^ 0xFFFFFFFFL;
+    }
+
+    /**
+     * Returns the CRC-32C (Castagnoli) checksum of the given bytes.
+     * <p>
+     * Uses the Castagnoli polynomial 0x1EDC6F41, with reflection of input and
+     * output and a final XOR of 0xFFFFFFFF, as specified by RFC 3720 (iSCSI).
+     *
+     * @param bytes the input data.
+     * @return the 32-bit CRC-32C checksum.
+     */
+    public static long crc32c(byte[] bytes)
+    {
+        return crc32c(bytes, 0, bytes.length);
+    }
+
+    /**
+     * Returns the CRC-32C (Castagnoli) checksum of the given portion of bytes as a 4-byte big-endian array.
+     * <p>
+     * Uses the Castagnoli polynomial 0x1EDC6F41, with reflection of input and
+     * output and a final XOR of 0xFFFFFFFF, as specified by RFC 3720 (iSCSI).
+     *
+     * @param bytes the input data.
+     * @param off the offset of the first byte to include.
+     * @param len the number of bytes to include.
+     * @param rc the 4-byte array to store the result into, or null to allocate a new one.
+     * @return the 4-byte big-endian CRC-32C checksum.
+     */
+    public static byte[] crc32c(byte[] bytes, int off, int len, byte[] rc) 
+    {
+        if (rc == null || rc.length != 4)
+        {
+            rc = new byte[4];
+        }
+        
+        long value = crc32c(bytes, off, len);
+        // store the 4 bytes of CRC32C int the rc array (big-endian)
+        rc[0] = (byte) ((value >> 24) & 0xFF);
+        rc[1] = (byte) ((value >> 16) & 0xFF);
+        rc[2] = (byte) ((value >> 8) & 0xFF);
+        rc[3] = (byte) (value & 0xFF);
+        return rc;
+    }
 }

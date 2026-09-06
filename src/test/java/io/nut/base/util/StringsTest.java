@@ -9,10 +9,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -806,6 +802,27 @@ public class StringsTest
         assertEquals("000|111|222|333", Strings.split("000111222333",3,"|"));
         assertEquals("000|111|222|333|4", Strings.split("0001112223334",3,"|"));
         
+    }
+
+    /**
+     * Test of lines method, of class Strings.
+     */
+    @Test
+    public void testLines()
+    {
+        assertNull(Strings.lines(null));
+        assertArrayEquals(new String[]{}, Strings.lines(""));
+        assertArrayEquals(new String[]{"abc"}, Strings.lines("abc"));
+        assertArrayEquals(new String[]{"a", "b"}, Strings.lines("a\nb"));
+        assertArrayEquals(new String[]{"a", "b", "c"}, Strings.lines("a\nb\nc"));
+        assertArrayEquals(new String[]{"a", "b"}, Strings.lines("a\nb\n"));
+        assertArrayEquals(new String[]{"a", "b"}, Strings.lines("a\rb"));
+        assertArrayEquals(new String[]{"a", "b"}, Strings.lines("a\r\nb"));
+        assertArrayEquals(new String[]{"a", "", "b"}, Strings.lines("a\n\nb"));
+        assertArrayEquals(new String[]{""}, Strings.lines("\n"));
+        assertArrayEquals(new String[]{"", ""}, Strings.lines("\n\n"));
+        assertArrayEquals(new String[]{"a"}, Strings.lines("a\n"));
+        assertArrayEquals(new String[]{"a", "b", "c"}, Strings.lines("a\rb\nc"));
     }
 
 
