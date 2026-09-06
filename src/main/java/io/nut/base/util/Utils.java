@@ -54,8 +54,6 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.Adler32;
-import java.util.zip.CRC32;
 
 /**
  *
@@ -1121,84 +1119,6 @@ public abstract class Utils
         queue.addAll(Arrays.asList(items));
         return queue;
     }
-    
-    public static int crc16(byte[] bytes, int off, int len)
-    {
-        int crc = 0xFFFF;
-        for (int i = off; i < off + len; i++)
-        {
-            crc ^= (bytes[i] & 0xFF) << 8;
-            for (int j = 0; j < 8; j++)
-            {
-                if ((crc & 0x8000) != 0)
-                {
-                    crc = (crc << 1) ^ 0x1021;
-                }
-                else
-                {
-                    crc <<= 1;
-                }
-            }
-            crc &= 0xFFFF;
-        }
-        return crc;
-    }
-    public static int crc16(byte[] bytes)
-    {
-        return crc16(bytes, 0, bytes.length);
-    }
-    
-    public static long adler32(byte[] bytes, int off, int len)
-    {
-        Adler32 adler32 = new Adler32();
-        adler32.update(bytes, off, len);
-        return adler32.getValue();
-    }
-    public static long adler32(byte[] bytes)
-    {
-        return adler32(bytes,0,bytes.length);
-    }
-    public static byte[] adler32(byte[] bytes, int off, int len, byte[] rc) 
-    {
-        if (rc == null || rc.length != 4)
-        {
-            rc = new byte[4];
-        }
-        
-        long value = adler32(bytes, off, len);
-        // store the 4 bytes of Adler32 int the rc array (big-endian)
-        rc[0] = (byte) ((value >> 24) & 0xFF);
-        rc[1] = (byte) ((value >> 16) & 0xFF);
-        rc[2] = (byte) ((value >> 8) & 0xFF);
-        rc[3] = (byte) (value & 0xFF);
-        return rc;
-    }    
-
-    public static long crc32(byte[] bytes, int off, int len)
-    {
-        CRC32 crc32 = new CRC32();
-        crc32.update(bytes, off, len);
-        return crc32.getValue();
-    }
-    public static long crc32(byte[] bytes)
-    {
-        return crc32(bytes, 0, bytes.length);
-    }
-    public static byte[] crc32(byte[] bytes, int off, int len, byte[] rc) 
-    {
-        if (rc == null || rc.length != 4)
-        {
-            rc = new byte[4];
-        }
-        
-        long value = crc32(bytes, off, len);
-        // store the 4 bytes of CRC32 int the rc array (big-endian)
-        rc[0] = (byte) ((value >> 24) & 0xFF);
-        rc[1] = (byte) ((value >> 16) & 0xFF);
-        rc[2] = (byte) ((value >> 8) & 0xFF);
-        rc[3] = (byte) (value & 0xFF);
-        return rc;
-    }    
     
     /**
      * Returns the minimum value among the given elements, or null if none are given.

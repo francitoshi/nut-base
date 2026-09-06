@@ -16,8 +16,8 @@ import io.nut.base.util.BitSetReader;
 import io.nut.base.util.BitSetWriter;
 import io.nut.base.util.Bits;
 import io.nut.base.util.Empty;
+import io.nut.base.util.Hashes;
 import io.nut.base.util.Strings;
-import io.nut.base.util.Utils;
 import io.nut.base.util.Zip;
 import io.nut.base.varint.CompactSize;
 import java.nio.ByteBuffer;
@@ -174,7 +174,7 @@ public class Steganography
         }
         byte[] countBytes = CompactSize.encode(bytes.length);
         
-        byte mask = Bits.bitSet((byte)Utils.adler32(bytes), 7, deflate);
+        byte mask = Bits.bitSet((byte)Hashes.adler32(bytes), 7, deflate);
         
         ByteBuffer buffer = ByteBuffer.allocate(countBytes.length+1+bytes.length);
 
@@ -201,7 +201,7 @@ public class Steganography
             buffer.get(bytes, 0, len);
         }
 
-        byte mask2 = Bits.bitSet((byte)Utils.adler32(bytes), 7, deflate);
+        byte mask2 = Bits.bitSet((byte)Hashes.adler32(bytes), 7, deflate);
         if(mask!=mask2)
         {
             throw new RuntimeException("invalid crc code");

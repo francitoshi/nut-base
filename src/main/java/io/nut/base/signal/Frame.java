@@ -6,7 +6,7 @@
 package io.nut.base.signal;
 
 import io.nut.base.util.Empty;
-import io.nut.base.util.Utils;
+import io.nut.base.util.Hashes;
 
 /**
  * Frame — builds and parses binary frames over a byte stream.
@@ -107,7 +107,7 @@ public class Frame
         pos += len;
 
         // CRC32 over: id_high + id_low + len_high + len_low + payload
-        int crc16 = Utils.crc16(frame, 0, HEADER_SIZE + len);
+        int crc16 = Hashes.crc16(frame, 0, HEADER_SIZE + len);
         frame[pos++] = (byte) ((crc16 >>  8) & 0xFF);  // crc1
         frame[pos++] = (byte)  (crc16        & 0xFF);  // crc0 — LSB
 
@@ -140,7 +140,7 @@ public class Frame
         {
             return -3;
         }
-        int expected = Utils.crc16(frame, 0, HEADER_SIZE + payloadLen);
+        int expected = Hashes.crc16(frame, 0, HEADER_SIZE + payloadLen);
         int actual = readChar(frame, payloadLen);
         return (expected == actual) ? 0 : -4;
     }
