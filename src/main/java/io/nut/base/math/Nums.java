@@ -3373,4 +3373,349 @@ public class Nums
 
         return q;
     }    
+
+    /**
+     * Returns whether all the given byte values are between a and b, inclusive, regardless of order.
+     *
+     * @param a the first bound.
+     * @param b the second bound.
+     * @param values the values to check.
+     * @return true if every value is between a and b (inclusive), or true if no values are given; false otherwise.
+     */
+    public static boolean between(byte a, byte b, byte... values)
+    {
+        if (values == null || values.length == 0)
+        {
+            return true;
+        }
+        for (byte value : values)
+        {
+            if (!((a <= b) ? a <= value && value <= b : b <= value && value <= a))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether all the given int values are between a and b, inclusive, regardless of order.
+     *
+     * @param a the first bound.
+     * @param b the second bound.
+     * @param values the values to check.
+     * @return true if every value is between a and b (inclusive), or true if no values are given; false otherwise.
+     */
+    public static boolean between(int a, int b, int... values)
+    {
+        if (values == null || values.length == 0)
+        {
+            return true;
+        }
+        for (int value : values)
+        {
+            if (!((a <= b) ? a <= value && value <= b : b <= value && value <= a))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether all the given long values are between a and b, inclusive, regardless of order.
+     *
+     * @param a the first bound.
+     * @param b the second bound.
+     * @param values the values to check.
+     * @return true if every value is between a and b (inclusive), or true if no values are given; false otherwise.
+     */
+    public static boolean between(long a, long b, long... values)
+    {
+        if (values == null || values.length == 0)
+        {
+            return true;
+        }
+        for (long value : values)
+        {
+            if (!((a <= b) ? a <= value && value <= b : b <= value && value <= a))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether all the given float values are between a and b, inclusive, regardless of order.
+     *
+     * @param a the first bound.
+     * @param b the second bound.
+     * @param values the values to check.
+     * @return true if every value is between a and b (inclusive), or true if no values are given; false otherwise.
+     */
+    public static boolean between(float a, float b, float... values)
+    {
+        if (values == null || values.length == 0)
+        {
+            return true;
+        }
+        for (float value : values)
+        {
+            if (!((a <= b) ? a <= value && value <= b : b <= value && value <= a))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns whether all the given double values are between a and b, inclusive, regardless of order.
+     *
+     * @param a the first bound.
+     * @param b the second bound.
+     * @param values the values to check.
+     * @return true if every value is between a and b (inclusive), or true if no values are given; false otherwise.
+     */
+    public static boolean between(double a, double b, double... values)
+    {
+        if (values == null || values.length == 0)
+        {
+            return true;
+        }
+        for (double value : values)
+        {
+            if (!((a <= b) ? a <= value && value <= b : b <= value && value <= a))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    /**
+     * Clamps the given byte {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the byte value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
+    public static byte bound(byte min, byte max, byte value)
+    {
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
+        if (value < min)
+        {
+            return min;
+        }
+        if (value > max)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given short {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the short value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
+    public static short bound(short min, short max, short value)
+    {
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
+        if (value < min)
+        {
+            return min;
+        }
+        if (value > max)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given integer {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the integer value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
+    public static int bound(int min, int max, int value)
+    {
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
+        if (value < min)
+        {
+            return min;
+        }
+        if (value > max)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given long {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the long value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
+    public static long bound(long min, long max, long value)
+    {
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
+        if (value < min)
+        {
+            return min;
+        }
+        if (value > max)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given float {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the float value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
+    public static float bound(float min, float max, float value)
+    {
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
+        if (value < min)
+        {
+            return min;
+        }
+        if (value > max)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given double {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the double value to clamp.
+     * @return      the clamped value; {@code min} if {@code value < min}, {@code max} if {@code value > max},
+     *              and {@code value} otherwise.
+     */
+    public static double bound(double min, double max, double value)
+    {
+        if(min>max)
+        {
+            return bound(max,min,value);
+        }
+        if (value < min)
+        {
+            return min;
+        }
+        if (value > max)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given {@link BigInteger} {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the BigInteger value to clamp.
+     * @return      the clamped value; {@code min} if {@code value} is less than {@code min},
+     *              {@code max} if {@code value} is greater than {@code max}, and {@code value} otherwise.
+     */
+    public static BigInteger bound(BigInteger min, BigInteger max, BigInteger value)
+    {
+        if(min.compareTo(max)>0)
+        {
+            return bound(max,min,value);
+        }
+        if (value.compareTo(min) < 0)
+        {
+            return min;
+        }
+        if (value.compareTo(max) > 0)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given {@link BigDecimal} {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the BigDecimal value to clamp.
+     * @return      the clamped value; {@code min} if {@code value} is less than {@code min},
+     *              {@code max} if {@code value} is greater than {@code max}, and {@code value} otherwise.
+     */
+    public static BigDecimal bound(BigDecimal min, BigDecimal max, BigDecimal value)
+    {
+        if(min.compareTo(max)>0)
+        {
+            return bound(max,min,value);
+        }
+        if (value.compareTo(min) < 0)
+        {
+            return min;
+        }
+        if (value.compareTo(max) > 0)
+        {
+            return max;
+        }
+        return value;
+    }
+    
 }

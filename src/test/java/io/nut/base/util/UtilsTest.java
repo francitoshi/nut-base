@@ -1102,160 +1102,6 @@ public class UtilsTest
         }
     }
 
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_1()
-    {
-        byte z = 0;
-        byte c = 100;
-        byte n = -1;
-        byte m = 50;
-        byte o = 127;
-        assertEquals(z, Utils.bound(z, c, n));
-        assertEquals(z, Utils.bound(z, c, z));
-        assertEquals(m, Utils.bound(z, c, m));
-        assertEquals(c, Utils.bound(z, c, c));
-        assertEquals(c, Utils.bound(z, c, o));
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_2()
-    {
-        short z = 0;
-        short c = 100;
-        short n = -1;
-        short m = 50;
-        short o = 127;
-        assertEquals(z, Utils.bound(z, c, n));
-        assertEquals(z, Utils.bound(z, c, z));
-        assertEquals(m, Utils.bound(z, c, m));
-        assertEquals(c, Utils.bound(z, c, c));
-        assertEquals(c, Utils.bound(z, c, o));
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_3()
-    {
-        int z = 0;
-        int c = 100;
-        int n = -1;
-        int m = 50;
-        int o = 127;
-        assertEquals(z, Utils.bound(z, c, n));
-        assertEquals(z, Utils.bound(z, c, z));
-        assertEquals(m, Utils.bound(z, c, m));
-        assertEquals(c, Utils.bound(z, c, c));
-        assertEquals(c, Utils.bound(z, c, o));
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_4()
-    {
-        long z = 0;
-        long c = 100;
-        long n = -1;
-        long m = 50;
-        long o = 127;
-        assertEquals(z, Utils.bound(z, c, n));
-        assertEquals(z, Utils.bound(z, c, z));
-        assertEquals(m, Utils.bound(z, c, m));
-        assertEquals(c, Utils.bound(z, c, c));
-        assertEquals(c, Utils.bound(z, c, o));
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_5()
-    {
-        float z = 0;
-        float c = 100;
-        float n = -1;
-        float m = 50;
-        float o = 127;
-        assertEquals(z, Utils.bound(z, c, n), 0.0f);
-        assertEquals(z, Utils.bound(z, c, z), 0.0f);
-        assertEquals(m, Utils.bound(z, c, m), 0.0f);
-        assertEquals(c, Utils.bound(z, c, c), 0.0f);
-        assertEquals(c, Utils.bound(z, c, o), 0.0f);
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_6()
-    {
-        double z = 0;
-        double c = 100;
-        double n = -1;
-        double m = 50;
-        double o = 127;
-        assertEquals(z, Utils.bound(z, c, n), 0.0);
-        assertEquals(z, Utils.bound(z, c, z), 0.0);
-        assertEquals(m, Utils.bound(z, c, m), 0.0);
-        assertEquals(c, Utils.bound(z, c, c), 0.0);
-        assertEquals(c, Utils.bound(z, c, o), 0.0);
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-
-        /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_7()
-    {
-        BigInteger z = BigInteger.ZERO;
-        BigInteger c = BigInteger.valueOf(100);
-        BigInteger n = BigInteger.valueOf(-1);
-        BigInteger m = BigInteger.valueOf(50);
-        BigInteger o = BigInteger.valueOf(127);
-        assertEquals(z, Utils.bound(z, c, n));
-        assertEquals(z, Utils.bound(z, c, z));
-        assertEquals(m, Utils.bound(z, c, m));
-        assertEquals(c, Utils.bound(z, c, c));
-        assertEquals(c, Utils.bound(z, c, o));
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-
-    /**
-     * Test of bound method, of class Utils.
-     */
-    @Test
-    public void testBound_3args_8()
-    {
-        BigDecimal z = BigDecimal.ZERO;
-        BigDecimal c = BigDecimal.valueOf(100);
-        BigDecimal n = BigDecimal.valueOf(-1);
-        BigDecimal m = BigDecimal.valueOf(50);
-        BigDecimal o = BigDecimal.valueOf(127);
-        assertEquals(z, Utils.bound(z, c, n));
-        assertEquals(z, Utils.bound(z, c, z));
-        assertEquals(m, Utils.bound(z, c, m));
-        assertEquals(c, Utils.bound(z, c, c));
-        assertEquals(c, Utils.bound(z, c, o));
-        assertEquals(c, Utils.bound(c, z, o));
-    }
-    
-
     /**
      * Test of unique method, of class Utils.
      */
@@ -2005,6 +1851,13 @@ public class UtilsTest
 
             assertFalse(Utils.between(a, b, c));
             assertFalse(Utils.between(b, c, a));
+
+            assertTrue(Utils.between(a, c, a, b, c));
+            assertTrue(Utils.between(c, a, c, b, a));
+            assertFalse(Utils.between(a, c, a, b, c, BigDecimal.TEN.negate()));
+            assertTrue(Utils.between(a, c));
+            assertTrue(Utils.between(a, c, new BigDecimal[0]));
+            assertTrue(Utils.between(a, c, (BigDecimal[])null));
         }
         {
             LocalDateTime now = LocalDateTime.now();
@@ -2020,6 +1873,13 @@ public class UtilsTest
 
             assertFalse(Utils.between(a, b, c));
             assertFalse(Utils.between(b, c, a));
+
+            assertTrue(Utils.between(a, c, a, b, c));
+            assertTrue(Utils.between(c, a, c, b, a));
+            assertFalse(Utils.between(a, c, a, b, c, now.plusDays(20)));
+            assertTrue(Utils.between(a, c));
+            assertTrue(Utils.between(a, c, new LocalDateTime[0]));
+            assertTrue(Utils.between(a, c, (LocalDateTime[])null));
         }
     }
 

@@ -349,7 +349,7 @@ public class NumsTest
     }    
     
     /**
-     * Test of equalsEnough method, of class Utils.
+     * Test of equalsEnough method, of class Nums.
      */
     @Test
     public void testEqualsEnough()
@@ -365,7 +365,7 @@ public class NumsTest
         assertFalse(Nums.equalsEnough(0.000001, 0.000003, 0.000001));
     }
     /**
-     * Test of orderOfMagnitude method, of class Utils.
+     * Test of orderOfMagnitude method, of class Nums.
      */
     @Test
     public void testOrderOfMagnitude_long()
@@ -390,7 +390,7 @@ public class NumsTest
     }
 
     /**
-     * Test of orderOfMagnitude method, of class Utils.
+     * Test of orderOfMagnitude method, of class Nums.
      */
     @Test
     public void testOrderOfMagnitude_double()
@@ -1991,4 +1991,236 @@ public class NumsTest
         assertThrows(ArithmeticException.class, () -> Nums.ceilDiv(1L, 0L));
     }
 
+    /**
+     * Test of between method, of class Nums.
+     */
+    @Test
+    public void testBetween_byte()
+    {
+        assertTrue(Nums.between((byte)1, (byte)5, (byte)1, (byte)3, (byte)5));
+        assertTrue(Nums.between((byte)5, (byte)1, (byte)3, (byte)5, (byte)1));
+        assertTrue(Nums.between((byte)2, (byte)2, (byte)2, (byte)2));
+        assertFalse(Nums.between((byte)1, (byte)5, (byte)0, (byte)3));
+        assertFalse(Nums.between((byte)1, (byte)5, (byte)3, (byte)6));
+        assertTrue(Nums.between((byte)1, (byte)5));
+        assertTrue(Nums.between((byte)1, (byte)5, new byte[0]));
+        assertTrue(Nums.between((byte)1, (byte)5, (byte[])null));
+    }
+
+    /**
+     * Test of between method, of class Nums.
+     */
+    @Test
+    public void testBetween_int()
+    {
+        assertTrue(Nums.between(1, 5, 1, 3, 5));
+        assertTrue(Nums.between(5, 1, 3, 5, 1));
+        assertTrue(Nums.between(2, 2, 2, 2));
+        assertFalse(Nums.between(1, 5, 0, 3));
+        assertFalse(Nums.between(1, 5, 3, 6));
+        assertTrue(Nums.between(1, 5));
+        assertTrue(Nums.between(1, 5, new int[0]));
+        assertTrue(Nums.between(1, 5, (int[])null));
+    }
+
+    /**
+     * Test of between method, of class Nums.
+     */
+    @Test
+    public void testBetween_long()
+    {
+        assertTrue(Nums.between(1L, 5L, 1L, 3L, 5L));
+        assertTrue(Nums.between(5L, 1L, 3L, 5L, 1L));
+        assertTrue(Nums.between(2L, 2L, 2L, 2L));
+        assertFalse(Nums.between(1L, 5L, 0L, 3L));
+        assertFalse(Nums.between(1L, 5L, 3L, 6L));
+        assertTrue(Nums.between(1L, 5L));
+        assertTrue(Nums.between(1L, 5L, new long[0]));
+        assertTrue(Nums.between(1L, 5L, (long[])null));
+    }
+
+    /**
+     * Test of between method, of class Nums.
+     */
+    @Test
+    public void testBetween_float()
+    {
+        assertTrue(Nums.between(1.0f, 5.0f, 1.0f, 3.0f, 5.0f));
+        assertTrue(Nums.between(5.0f, 1.0f, 3.0f, 5.0f, 1.0f));
+        assertTrue(Nums.between(2.0f, 2.0f, 2.0f, 2.0f));
+        assertFalse(Nums.between(1.0f, 5.0f, 0.0f, 3.0f));
+        assertFalse(Nums.between(1.0f, 5.0f, 3.0f, 6.0f));
+        assertTrue(Nums.between(1.0f, 5.0f));
+        assertTrue(Nums.between(1.0f, 5.0f, new float[0]));
+        assertTrue(Nums.between(1.0f, 5.0f, (float[])null));
+    }
+
+    /**
+     * Test of between method, of class Nums.
+     */
+    @Test
+    public void testBetween_double()
+    {
+        assertTrue(Nums.between(1.0, 5.0, 1.0, 3.0, 5.0));
+        assertTrue(Nums.between(5.0, 1.0, 3.0, 5.0, 1.0));
+        assertTrue(Nums.between(2.0, 2.0, 2.0, 2.0));
+        assertFalse(Nums.between(1.0, 5.0, 0.0, 3.0));
+        assertFalse(Nums.between(1.0, 5.0, 3.0, 6.0));
+        assertTrue(Nums.between(1.0, 5.0));
+        assertTrue(Nums.between(1.0, 5.0, new double[0]));
+        assertTrue(Nums.between(1.0, 5.0, (double[])null));
+    }
+
+    /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_1()
+    {
+        byte z = 0;
+        byte c = 100;
+        byte n = -1;
+        byte m = 50;
+        byte o = 127;
+        assertEquals(z, Nums.bound(z, c, n));
+        assertEquals(z, Nums.bound(z, c, z));
+        assertEquals(m, Nums.bound(z, c, m));
+        assertEquals(c, Nums.bound(z, c, c));
+        assertEquals(c, Nums.bound(z, c, o));
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+
+    /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_2()
+    {
+        short z = 0;
+        short c = 100;
+        short n = -1;
+        short m = 50;
+        short o = 127;
+        assertEquals(z, Nums.bound(z, c, n));
+        assertEquals(z, Nums.bound(z, c, z));
+        assertEquals(m, Nums.bound(z, c, m));
+        assertEquals(c, Nums.bound(z, c, c));
+        assertEquals(c, Nums.bound(z, c, o));
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+
+    /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_3()
+    {
+        int z = 0;
+        int c = 100;
+        int n = -1;
+        int m = 50;
+        int o = 127;
+        assertEquals(z, Nums.bound(z, c, n));
+        assertEquals(z, Nums.bound(z, c, z));
+        assertEquals(m, Nums.bound(z, c, m));
+        assertEquals(c, Nums.bound(z, c, c));
+        assertEquals(c, Nums.bound(z, c, o));
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+
+    /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_4()
+    {
+        long z = 0;
+        long c = 100;
+        long n = -1;
+        long m = 50;
+        long o = 127;
+        assertEquals(z, Nums.bound(z, c, n));
+        assertEquals(z, Nums.bound(z, c, z));
+        assertEquals(m, Nums.bound(z, c, m));
+        assertEquals(c, Nums.bound(z, c, c));
+        assertEquals(c, Nums.bound(z, c, o));
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+
+    /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_5()
+    {
+        float z = 0;
+        float c = 100;
+        float n = -1;
+        float m = 50;
+        float o = 127;
+        assertEquals(z, Nums.bound(z, c, n), 0.0f);
+        assertEquals(z, Nums.bound(z, c, z), 0.0f);
+        assertEquals(m, Nums.bound(z, c, m), 0.0f);
+        assertEquals(c, Nums.bound(z, c, c), 0.0f);
+        assertEquals(c, Nums.bound(z, c, o), 0.0f);
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+
+    /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_6()
+    {
+        double z = 0;
+        double c = 100;
+        double n = -1;
+        double m = 50;
+        double o = 127;
+        assertEquals(z, Nums.bound(z, c, n), 0.0);
+        assertEquals(z, Nums.bound(z, c, z), 0.0);
+        assertEquals(m, Nums.bound(z, c, m), 0.0);
+        assertEquals(c, Nums.bound(z, c, c), 0.0);
+        assertEquals(c, Nums.bound(z, c, o), 0.0);
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+
+        /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_7()
+    {
+        BigInteger z = BigInteger.ZERO;
+        BigInteger c = BigInteger.valueOf(100);
+        BigInteger n = BigInteger.valueOf(-1);
+        BigInteger m = BigInteger.valueOf(50);
+        BigInteger o = BigInteger.valueOf(127);
+        assertEquals(z, Nums.bound(z, c, n));
+        assertEquals(z, Nums.bound(z, c, z));
+        assertEquals(m, Nums.bound(z, c, m));
+        assertEquals(c, Nums.bound(z, c, c));
+        assertEquals(c, Nums.bound(z, c, o));
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+
+    /**
+     * Test of bound method, of class Nums.
+     */
+    @Test
+    public void testBound_3args_8()
+    {
+        BigDecimal z = BigDecimal.ZERO;
+        BigDecimal c = BigDecimal.valueOf(100);
+        BigDecimal n = BigDecimal.valueOf(-1);
+        BigDecimal m = BigDecimal.valueOf(50);
+        BigDecimal o = BigDecimal.valueOf(127);
+        assertEquals(z, Nums.bound(z, c, n));
+        assertEquals(z, Nums.bound(z, c, z));
+        assertEquals(m, Nums.bound(z, c, m));
+        assertEquals(c, Nums.bound(z, c, c));
+        assertEquals(c, Nums.bound(z, c, o));
+        assertEquals(c, Nums.bound(c, z, o));
+    }
+        
 }
