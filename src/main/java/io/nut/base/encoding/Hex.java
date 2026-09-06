@@ -82,4 +82,32 @@ public class Hex
         }
         return data;
     }
+
+    /**
+     * Returns whether the given string is a valid hexadecimal string.
+     * <p>
+     * A string is valid if it is non-null, has an even length and only
+     * contains hexadecimal digits (0-9, a-f, A-F). An empty string is
+     * considered valid.
+     *
+     * @param s the string to check.
+     * @return true if the string is a valid hexadecimal string, false otherwise.
+     */
+    public static boolean isValid(String s)
+    {
+        if (s == null || (s.length() & 1) != 0)
+        {
+            return false;
+        }
+        for (int i = 0; i < s.length(); i++)
+        {
+            char c = s.charAt(i);
+            int v = c < 256 ? DECODE[c] : -1;
+            if (v < 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 }

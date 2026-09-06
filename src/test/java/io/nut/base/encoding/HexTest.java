@@ -67,4 +67,28 @@ public class HexTest
         assertArrayEquals(DATA2, Hex.decode("000101020305080d152237591a2b3c4d5e6f"));
         assertArrayEquals(DATA2, Hex.decode("000101020305080D152237591A2B3C4D5E6F"));
     }
+
+    /**
+     * Test of isValid method, of class Hex.
+     */
+    @Test
+    public void testIsValid()
+    {
+        assertTrue(Hex.isValid(""));
+        assertTrue(Hex.isValid("00"));
+        assertTrue(Hex.isValid("0001122334455667780a0b1c2d3e4f"));
+        assertTrue(Hex.isValid("0001122334455667780A0B1C2D3E4F"));
+        assertTrue(Hex.isValid("0123456789ABCDEF"));
+        assertTrue(Hex.isValid("0123456789abcdef"));
+
+        assertFalse(Hex.isValid(null));
+        assertFalse(Hex.isValid("0"));
+        assertFalse(Hex.isValid("abc"));
+        assertFalse(Hex.isValid("0g"));
+        assertFalse(Hex.isValid("0G"));
+        assertFalse(Hex.isValid("00 11"));
+        assertFalse(Hex.isValid("0x00"));
+        assertFalse(Hex.isValid("éé"));
+        assertFalse(Hex.isValid("ññ"));
+    }
 }
