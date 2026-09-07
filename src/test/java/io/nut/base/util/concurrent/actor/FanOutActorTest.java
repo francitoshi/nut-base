@@ -33,7 +33,7 @@ class FanOutActorTest
     @BeforeEach
     void setUp()
     {
-        actorHub = ActorHub.actorHub();
+        actorHub = ActorHub.hub();
     }
 
     @AfterEach
@@ -169,7 +169,7 @@ class FanOutActorTest
             List<Integer> b = new CopyOnWriteArrayList<>();
             List<Integer> c = new CopyOnWriteArrayList<>();
 
-            FanOutActor<Integer> bc = actorHub.broadcast(th, actorHub.actor(th, a::add), actorHub.actor(th, b::add), actorHub.actor(th, c::add));
+            FanOutActor<Integer> bc = actorHub.fanout(th, actorHub.actor(th, a::add), actorHub.actor(th, b::add), actorHub.actor(th, c::add));
 
             for (int i = 0; i < 10; i++)
             {
@@ -196,7 +196,7 @@ class FanOutActorTest
     {
         RecordingActor<String> t1 = new RecordingActor<>();
         RecordingActor<String> t2 = new RecordingActor<>();
-        FanOutActor<String> bc = actorHub.broadcast(t1, t2);
+        FanOutActor<String> bc = actorHub.fanout(t1, t2);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -209,7 +209,7 @@ class FanOutActorTest
     void hubFactoryWithThreadsParameter()
     {
         RecordingActor<String> t1 = new RecordingActor<>();
-        FanOutActor<String> bc = actorHub.broadcast(2, t1);
+        FanOutActor<String> bc = actorHub.fanout(2, t1);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -221,7 +221,7 @@ class FanOutActorTest
     void hubFactoryWithQueueSizeAndThreadsParameter()
     {
         RecordingActor<String> t1 = new RecordingActor<>();
-        FanOutActor<String> bc = actorHub.broadcast(2, 10, t1);
+        FanOutActor<String> bc = actorHub.fanout(2, 10, t1);
 
         bc.accept("msg");
         Utils.parkMillis(100);
@@ -240,7 +240,7 @@ class FanOutActorTest
         p1.linkTo(actorHub.actor(chain1Result::add));
         p2.linkTo(actorHub.actor(chain2Result::add));
 
-        FanOutActor<Integer> bc = actorHub.broadcast(p1, p2);
+        FanOutActor<Integer> bc = actorHub.fanout(p1, p2);
 
         bc.accept(5);
         bc.accept(10);

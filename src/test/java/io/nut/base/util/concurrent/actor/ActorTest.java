@@ -35,7 +35,7 @@ class ActorTest
     @BeforeEach
     void setUp()
     {
-        actorHub = ActorHub.actorHub(2);
+        actorHub = ActorHub.hub(2);
     }
 
     @AfterEach
@@ -171,7 +171,7 @@ class ActorTest
     {
         // A ActorHub sized 0x0 runs synchronously; an Actor attached to it must too,
         // regardless of its own (positive) thread count.
-        ActorHub syncActorHub = ActorHub.actorHub(0);
+        ActorHub syncActorHub = ActorHub.hub(0);
         try
         {
             assertTrue(syncActorHub.isSynchronous());
@@ -294,7 +294,7 @@ class ActorTest
         // once every pool thread is held by a blocked forwarder. This is the same
         // configuration the ActorPool's default constructor uses to avoid that
         // deadlock (see ActorPool#ActorPool(int)).
-        ActorHub bigActorHub = ActorHub.actorHub(100, 0, 10000, false);
+        ActorHub bigActorHub = ActorHub.hub(100, 0, 10000, false);
         try
         {
             Actor<Long>[] actors = new Actor[actorsCount];

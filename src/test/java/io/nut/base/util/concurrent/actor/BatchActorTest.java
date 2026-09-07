@@ -33,7 +33,7 @@ class BatchActorTest
     @BeforeEach
     void setUp()
     {
-        actorHub = ActorHub.actorHub(2);
+        actorHub = ActorHub.hub(2);
     }
 
     @AfterEach

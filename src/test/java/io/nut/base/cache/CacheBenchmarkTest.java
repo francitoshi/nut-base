@@ -40,7 +40,7 @@ public class CacheBenchmarkTest
             runWorkload(cache[k], 10, 0);
         }
         
-        ActorHub actorHub = ActorHub.actorHub();
+        ActorHub actorHub = ActorHub.hub();
         CountDownLatch cdl = new CountDownLatch(cache.length);
 
         for(int k=0;k<cache.length;k++)

@@ -29,7 +29,7 @@ class FilterActorTest
     @BeforeEach
     void setUp()
     {
-        actorHub = ActorHub.actorHub();
+        actorHub = ActorHub.hub();
     }
 
     @AfterEach

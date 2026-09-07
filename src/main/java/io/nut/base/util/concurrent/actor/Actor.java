@@ -944,6 +944,8 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
 
     /**
      * Subscribes this Actor to {@code topic} on the attached {@link ActorHub}.
+     * The Actor is registered directly (it is not wrapped in another Actor), so
+     * delivery preserves its asynchronous semantics.
      *
      * @param topic the topic name
      * @return this Actor, for fluent chaining

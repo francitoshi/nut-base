@@ -30,7 +30,7 @@ class PipelineActorTest
     @BeforeEach
     void setUp()
     {
-        actorHub = ActorHub.actorHub(2);
+        actorHub = ActorHub.hub(2);
     }
 
     @AfterEach
@@ -269,7 +269,7 @@ class PipelineActorTest
         List<String> b = new CopyOnWriteArrayList<>();
 
         Actor<Integer> head = actorHub.pipeline((Integer i) -> "v=" + i).head();
-        FanOutActor<String> broadcaster = actorHub.broadcast(actorHub.actor(a::add), actorHub.actor(b::add));
+        FanOutActor<String> broadcaster = actorHub.fanout(actorHub.actor(a::add), actorHub.actor(b::add));
 
         PipeActor<Integer,String> pipe = (PipeActor<Integer,String>) head;
         pipe.linkTo(broadcaster);

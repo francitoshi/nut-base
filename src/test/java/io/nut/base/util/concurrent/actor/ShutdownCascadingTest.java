@@ -23,7 +23,7 @@ class ShutdownCascadingTest
     @BeforeEach
     void setUp()
     {
-        actorHub = ActorHub.actorHub(2);
+        actorHub = ActorHub.hub(2);
     }
 
     @AfterEach
@@ -96,7 +96,7 @@ class ShutdownCascadingTest
         RecordingActor<Integer> target2 = new RecordingActor<>(actorHub);
         RecordingActor<Integer> target3 = new RecordingActor<>(actorHub);
 
-        FanOutActor<Integer> broadcast = actorHub.broadcast(target1, target2, target3);
+        FanOutActor<Integer> broadcast = actorHub.fanout(target1, target2, target3);
         pipe.linkTo(broadcast);
 
         actorHub.close(true);
@@ -113,7 +113,7 @@ class ShutdownCascadingTest
     {
         RecordingActor<String> t1 = new RecordingActor<>(actorHub);
         RecordingActor<String> t2 = new RecordingActor<>(actorHub);
-        FanOutActor<String> bc = actorHub.broadcast(t1, t2);
+        FanOutActor<String> bc = actorHub.fanout(t1, t2);
 
         actorHub.close(true);
 

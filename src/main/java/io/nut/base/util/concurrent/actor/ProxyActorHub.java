@@ -258,7 +258,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public <T> Actor<T> sub(String topic, Actor<T> actor)
+    public <T> Subscription<T> sub(String topic, Actor<T> actor)
     {
         ActorHub h = actorHub;
         if (h != null)
@@ -269,7 +269,18 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public <T> ActorPub<T> pub(String topic)
+    public <T> Subscription<T> sub(String tag, Consumer<T> consumer)
+    {
+        ActorHub h = actorHub;
+        if (h != null)
+        {
+            return h.sub(tag, consumer);
+        }
+        return super.sub(tag, consumer);
+    }
+
+    @Override
+    public <T> Publisher<T> pub(String topic)
     {
         ActorHub h = actorHub;
         if (h != null)
@@ -521,28 +532,6 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
             return h.batch(maxSize, maxWaitMillis);
         }
         return super.batch(maxSize, maxWaitMillis);
-    }
-
-    @Override
-    public <T> Actor<T> sub(String topic, int threads, Consumer<T> consumer)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.sub(topic, threads, consumer);
-        }
-        return super.sub(topic, threads, consumer);
-    }
-
-    @Override
-    public <T> Actor<T> sub(String topic, Consumer<T> consumer)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.sub(topic, consumer);
-        }
-        return super.sub(topic, consumer);
     }
 
     @Override

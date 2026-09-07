@@ -178,7 +178,7 @@ public class SchnorrTest
 
         final int ths = ActorHub.CORES*3;
         
-        ActorHub actorHub = ActorHub.actorHub(ths);
+        ActorHub actorHub = ActorHub.hub(ths);
         
         PipelineActor<Data, Data> pipe = actorHub.pipeline(ths,ths, (Data data) ->
         {

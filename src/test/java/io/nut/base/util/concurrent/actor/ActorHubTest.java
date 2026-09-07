@@ -42,7 +42,7 @@ class ActorHubTest
     @BeforeEach
     void setUp()
     {
-        actorHub = ActorHub.actorHub(2);
+        actorHub = ActorHub.hub(2);
     }
 
     @AfterEach
@@ -68,10 +68,10 @@ class ActorHubTest
     @Test
     void staticFactoryMethodsCreateUsableActorHubs() throws Exception
     {
-        runsATaskOn(ActorHub.actorHub());
-        runsATaskOn(ActorHub.actorHub(2));
-        runsATaskOn(ActorHub.actorHub(2, 2, 1000));
-        runsATaskOn(ActorHub.actorHub(2, 2, 1000, true));
+        runsATaskOn(ActorHub.hub());
+        runsATaskOn(ActorHub.hub(2));
+        runsATaskOn(ActorHub.hub(2, 2, 1000));
+        runsATaskOn(ActorHub.hub(2, 2, 1000, true));
     }
 
     private void runsATaskOn(ActorHub h) throws Exception
@@ -184,7 +184,7 @@ class ActorHubTest
     {
         List<String> a = new CopyOnWriteArrayList<>();
         List<String> b = new CopyOnWriteArrayList<>();
-        FanOutActor<String> bc = actorHub.broadcast(actorHub.actor(a::add), actorHub.actor(b::add));
+        FanOutActor<String> bc = actorHub.fanout(actorHub.actor(a::add), actorHub.actor(b::add));
 
         bc.accept("m");
 
@@ -276,7 +276,7 @@ class ActorHubTest
     @Test
     void poolSizeGetterAndSetterWork()
     {
-        ActorHub h = ActorHub.actorHub(3);
+        ActorHub h = ActorHub.hub(3);
         assertEquals(3, h.getCorePoolSize());
         assertEquals(3, h.getMaximumPoolSize());
 
@@ -299,7 +299,7 @@ class ActorHubTest
     @Test
     void closeShutsDownAndAwaitsTermination() throws Exception
     {
-        ActorHub h = ActorHub.actorHub(2);
+        ActorHub h = ActorHub.hub(2);
         CountDownLatch latch = new CountDownLatch(1);
         h.execute(latch::countDown);
         assertTrue(latch.await(1, TimeUnit.SECONDS));

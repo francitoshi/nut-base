@@ -32,7 +32,7 @@ import java.util.logging.Logger;
  * execution engine for all {@link Actor} stages that are attached to it. Stages
  * are created with the factory methods ({@link #actor}, {@link #pipe},
  * {@link #filter}, {@link #batch}, {@link #queue}, {@link #list},
- * {@link #set}, {@link #broadcast}, {@link #pipeline}) and automatically
+ * {@link #set}, {@link #fanout}, {@link #pipeline}) and automatically
  * receive a reference to this ActorHub, so every {@link Actor#accept(Object)} call
  * dispatches work to the same underlying thread pool.
  * <p>
@@ -194,7 +194,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      *
      * @return a new default ActorHub
      */
-    public static ActorHub actorHub()
+    public static ActorHub hub()
     {
         return new ActorHub();
     }
@@ -206,7 +206,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @param corePoolSize the number of threads and queue slots
      * @return a new ActorHub
      */
-    public static ActorHub actorHub(int corePoolSize)
+    public static ActorHub hub(int corePoolSize)
     {
         return new ActorHub(corePoolSize);
     }
@@ -219,7 +219,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
      * @return a new ActorHub
      */
-    public static ActorHub actorHub(int corePoolSize, int queueCapacity, int keepAliveMillis)
+    public static ActorHub hub(int corePoolSize, int queueCapacity, int keepAliveMillis)
     {
         return new ActorHub(corePoolSize, queueCapacity, keepAliveMillis);
     }
@@ -234,7 +234,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      *                          {@code false} to run the task in the caller
      * @return a new ActorHub
      */
-    public static ActorHub actorHub(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public static ActorHub hub(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
     {
         return new ActorHub(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
     }
@@ -637,9 +637,9 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @return a new FanOutActor attached to this ActorHub
      */
     @SafeVarargs
-    public final <T> FanOutActor<T> broadcast(Consumer<T>... targets)
+    public final <T> FanOutActor<T> fanout(Consumer<T>... targets)
     {
-        return broadcast(1, 0, targets);
+        return fanout(1, 0, targets);
     }
 
     /**
@@ -651,9 +651,9 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @return a new FanOutActor attached to this ActorHub
      */
     @SafeVarargs
-    public final <T> FanOutActor<T> broadcast(int threads, Consumer<T>... targets)
+    public final <T> FanOutActor<T> fanout(int threads, Consumer<T>... targets)
     {
-        return broadcast(threads, 0, targets);
+        return fanout(threads, 0, targets);
     }
 
     /**
@@ -667,7 +667,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @return a new FanOutActor attached to this ActorHub
      */
     @SafeVarargs
-    public final <T> FanOutActor<T> broadcast(int threads, int queueSize, Consumer<T>... targets)
+    public final <T> FanOutActor<T> fanout(int threads, int queueSize, Consumer<T>... targets)
     {
         return new FanOutActor<>(this, threads, queueSize, targets);
     }
@@ -770,89 +770,130 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
     // -------------------------------------------------------------------------
 
     /**
-     * Topic → ordered list of subscribers. The list is created on first access
-     * and is protected by its own intrinsic lock (see {@link ActorPub#accept}).
+     * Tag → {@link PubSub} entry. Entries are created lazily by
+     * {@link #pub(String)} and {@link #sub(String, Consumer)} and are removed
+     * once they hold no subscribers and no {@link Publisher} references.
      */
-    private final ConcurrentHashMap<String, List<Consumer<?>>> pubSubRegistry = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, PubSub<?>> pubSubRegistry = new ConcurrentHashMap<>();
 
     /**
-     * Registers {@code actor} as a subscriber for {@code topic}.
+     * Registers {@code consumer} as a subscriber for {@code tag} and returns a
+     * {@link Subscription} handle that can be closed to unregister it.
      * <p>
-     * After this call, every message published via the {@link ActorPub} returned by
-     * {@link #pub(String)} for the same topic will be delivered to {@code actor}
-     * through {@link Actor#accept(Object)}. Subscribers are notified in
-     * registration order. Registering the same Actor instance more than once for
-     * the same topic will result in duplicate deliveries.
-     *
-     * @param <T>   the message type
-     * @param topic the topic name; must not be {@code null}
-     * @param actor   the subscriber; must not be {@code null}
-     * @return return the same Actor passed as parameter
-     */
-    public <T> Actor<T> sub(String topic, Actor<T> actor)
-    {
-        Objects.requireNonNull(topic, "topic must not be null");
-        Objects.requireNonNull(actor,   "actor must not be null");
-        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
-        synchronized (list)
-        {
-            list.add(actor);
-        }
-        return actor;
-    }
-    
-    /**
-     * Creates a new {@link Actor} with the given thread count, subscribes it to
-     * {@code topic}, and returns it. Convenience shorthand for
-     * {@code sub(topic, actor(threads, consumer))}.
+     * When this ActorHub is asynchronous, the consumer is wrapped in an
+     * {@link Actor} (via {@link #actor(Consumer)}) so delivery happens on the
+     * hub's thread pool; closing the returned {@link Subscription} shuts that
+     * internally-created Actor down. When the hub is synchronous
+     * ({@link #isSynchronous()} is {@code true}), the consumer is used directly
+     * and delivery happens on the caller's thread. Subscribers are notified in
+     * registration order; registering the same consumer more than once for the
+     * same tag results in duplicate deliveries.
+     * <p>
+     * The {@code PubSub} entry for the tag is created on demand and kept alive
+     * while it still has subscribers or publishers.
      *
      * @param <T>      the message type
-     * @param topic    the topic name; must not be {@code null}
-     * @param threads  the maximum number of concurrent worker threads for the
-     *                 new Actor
-     * @param consumer the action performed for each message; must not be
+     * @param tag      the tag name; must not be {@code null}
+     * @param consumer the consumer that receives the events; must not be
      *                 {@code null}
-     * @return the newly created and subscribed Actor
-     */
-    public <T> Actor<T> sub(String topic, int threads, Consumer<T> consumer)
-    {
-        return sub(topic, actor(threads, consumer));
-    }
-    
-    /**
-     * Creates a new {@link Actor}, subscribes it to {@code topic}, and returns
-     * it. Convenience shorthand for {@code sub(topic, actor(consumer))}.
-     *
-     * @param <T>      the message type
-     * @param topic    the topic name; must not be {@code null}
-     * @param consumer the action performed for each message; must not be
-     *                 {@code null}
-     * @return the newly created and subscribed Actor
-     */
-    public <T> Actor<T> sub(String topic, Consumer<T> consumer)
-    {
-        return sub(topic, actor(consumer));
-    }
-
-    /**
-     * Returns a {@link ActorPub}{@code <T>} that publishes messages to all
-     * {@link Actor} instances currently (and future) registered for {@code topic}.
-     * <p>
-     * The returned {@code ActorPub} holds a live reference to the subscriber list, so
-     * Actors subscribed after this call will automatically receive subsequent
-     * publishes. Multiple calls with the same topic return publishers backed by
-     * the same list.
-     *
-     * @param <T>   the message type
-     * @param topic the topic name; must not be {@code null}
-     * @return a publisher for {@code topic}
+     * @return the new subscription, to be closed when no longer needed
      */
     @SuppressWarnings("unchecked")
-    public <T> ActorPub<T> pub(String topic)
+    public <T> Subscription<T> sub(String tag, Consumer<T> consumer)
     {
-        Objects.requireNonNull(topic, "topic must not be null");
-        List<Consumer<?>> list = pubSubRegistry.computeIfAbsent(topic, k -> new ArrayList<>());
-        return new ActorPub<>((List<Consumer<T>>) (List<?>) list);
+        Objects.requireNonNull(tag, "tag must not be null");
+        Objects.requireNonNull(consumer, "consumer must not be null");
+        Consumer<T> delivery;
+        Actor<?> wrappedActor;
+        if (isSynchronous())
+        {
+            delivery = consumer;
+            wrappedActor = null;
+        }
+        else
+        {
+            Actor<T> wrapped = actor(consumer);
+            delivery = wrapped;
+            wrappedActor = wrapped;
+        }
+        PubSub<T> pubSub = (PubSub<T>) pubSubRegistry.compute(tag, (key, current) ->
+        {
+            PubSub<T> ps = (PubSub<T>) current;
+            if (ps == null)
+            {
+                ps = new PubSub<>(pubSubRegistry, tag);
+            }
+            ps.addSubscriber(delivery);
+            return ps;
+        });
+        return new Subscription<>(tag, consumer, () ->
+        {
+            pubSub.removeSubscriber(delivery);
+            if (wrappedActor != null)
+            {
+                wrappedActor.shutdown();
+            }
+        });
+    }
+
+    /**
+     * Registers the already-constructed {@code actor} directly as a subscriber
+     * for {@code tag}, without wrapping it in another Actor. Used by
+     * {@link Actor#sub(String)} for fluent self-registration.
+     *
+     * @param <T>   the message type
+     * @param tag   the tag name; must not be {@code null}
+     * @param actor the Actor subscriber; must not be {@code null}
+     * @return a handle to unsubscribe the Actor
+     */
+    @SuppressWarnings("unchecked")
+    public <T> Subscription<T> sub(String tag, Actor<T> actor)
+    {
+        Objects.requireNonNull(tag, "tag must not be null");
+        Objects.requireNonNull(actor, "actor must not be null");
+        PubSub<T> pubSub = (PubSub<T>) pubSubRegistry.compute(tag, (key, current) ->
+        {
+            PubSub<T> ps = (PubSub<T>) current;
+            if (ps == null)
+            {
+                ps = new PubSub<>(pubSubRegistry, tag);
+            }
+            ps.addSubscriber(actor);
+            return ps;
+        });
+        return new Subscription<>(tag, actor, () -> pubSub.removeSubscriber(actor));
+    }
+
+    /**
+     * Creates a new {@link Publisher} for the given tag. The publisher may be
+     * created before any subscriber exists; subscribers are looked up at publish
+     * time. Closing the returned handle releases its reference on the backing
+     * {@code PubSub} entry, which is removed from the registry once no
+     * publisher references it and no subscriber remains.
+     * <p>
+     * Multiple calls with the same tag return publishers backed by the same
+     * {@code PubSub} entry; the entry stays alive while any of them references
+     * it or while it still has subscribers.
+     *
+     * @param <T> the message type
+     * @param tag the tag name; must not be {@code null}
+     * @return a publisher for {@code tag}
+     */
+    @SuppressWarnings("unchecked")
+    public <T> Publisher<T> pub(String tag)
+    {
+        Objects.requireNonNull(tag, "tag must not be null");
+        PubSub<T> pubSub = (PubSub<T>) pubSubRegistry.compute(tag, (key, current) ->
+        {
+            PubSub<T> ps = (PubSub<T>) current;
+            if (ps == null)
+            {
+                ps = new PubSub<>(pubSubRegistry, tag);
+            }
+            ps.acquire();
+            return ps;
+        });
+        return new Publisher<>(tag, pubSub);
     }
 
     // -------------------------------------------------------------------------
