@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.tea.base.util.properties;
+package io.nut.base.util.properties;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;

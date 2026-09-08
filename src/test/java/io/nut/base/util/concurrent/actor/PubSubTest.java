@@ -64,7 +64,7 @@ class PubSubTest
     void pub_noSubscribers_noException()
     {
         Publisher<String> pub = syncHub.pub("empty-topic");
-        assertDoesNotThrow(() -> pub.publish("hello"));
+        assertDoesNotThrow(() -> pub.accept("hello"));
     }
 
     /** A single subscriber receives the published message. */
@@ -74,7 +74,7 @@ class PubSubTest
         List<String> sink = new ArrayList<>();
         syncHub.<String>sub("t", sink::add);
 
-        syncHub.<String>pub("t").publish("ping");
+        syncHub.<String>pub("t").accept("ping");
 
         assertEquals(Collections.singletonList("ping"), sink);
     }
@@ -91,7 +91,7 @@ class PubSubTest
         syncHub.<String>sub("t", sink2::add);
         syncHub.<String>sub("t", sink3::add);
 
-        syncHub.<String>pub("t").publish("event");
+        syncHub.<String>pub("t").accept("event");
 
         assertEquals(Collections.singletonList("event"), sink1);
         assertEquals(Collections.singletonList("event"), sink2);
@@ -109,9 +109,9 @@ class PubSubTest
         syncHub.<Integer>sub("nums", sink2::add);
 
         Publisher<Integer> pub = syncHub.pub("nums");
-        pub.publish(1);
-        pub.publish(2);
-        pub.publish(3);
+        pub.accept(1);
+        pub.accept(2);
+        pub.accept(3);
 
         List<Integer> expected = new ArrayList<>();
         expected.add(1);
@@ -132,7 +132,7 @@ class PubSubTest
         syncHub.<String>sub("topicA", sinkA::add);
         syncHub.<String>sub("topicB", sinkB::add);
 
-        syncHub.<String>pub("topicA").publish("only-for-A");
+        syncHub.<String>pub("topicA").accept("only-for-A");
 
         assertEquals(Collections.singletonList("only-for-A"), sinkA);
         assertTrue(sinkB.isEmpty(), "topicB sink must remain empty");
@@ -150,7 +150,7 @@ class PubSubTest
         List<String> sink = new ArrayList<>();
         syncHub.<String>sub("live", sink::add);   // registered after pub()
 
-        pub.publish("late");
+        pub.accept("late");
 
         assertEquals(Collections.singletonList("late"), sink);
     }
@@ -165,8 +165,8 @@ class PubSubTest
         Publisher<String> pub1 = syncHub.pub("shared");
         Publisher<String> pub2 = syncHub.pub("shared");
 
-        pub1.publish("from-1");
-        pub2.publish("from-2");
+        pub1.accept("from-1");
+        pub2.accept("from-2");
 
         List<String> expected = new ArrayList<>();
         expected.add("from-1");
@@ -185,7 +185,7 @@ class PubSubTest
         syncHub.<String>sub("dup", consumer);
         syncHub.<String>sub("dup", consumer);
 
-        syncHub.<String>pub("dup").publish("x");
+        syncHub.<String>pub("dup").accept("x");
 
         assertEquals(2, sink.size());
         assertEquals("x", sink.get(0));
@@ -199,10 +199,10 @@ class PubSubTest
         List<String> sink = new ArrayList<>();
         Subscription<String> subscription = syncHub.<String>sub("t", sink::add);
 
-        syncHub.<String>pub("t").publish("a");
+        syncHub.<String>pub("t").accept("a");
         subscription.close();
         assertTrue(subscription.isClosed());
-        syncHub.<String>pub("t").publish("b");
+        syncHub.<String>pub("t").accept("b");
 
         assertEquals(Collections.singletonList("a"), sink);
     }
@@ -214,10 +214,10 @@ class PubSubTest
         List<String> sink = new ArrayList<>();
         syncHub.<String>sub("t", sink::add);
         Publisher<String> p = syncHub.pub("t");
-        p.publish("a");
+        p.accept("a");
         p.close();
         assertTrue(p.isClosed());
-        assertThrows(IllegalStateException.class, () -> p.publish("b"));
+        assertThrows(IllegalStateException.class, () -> p.accept("b"));
         assertEquals(Collections.singletonList("a"), sink);
     }
 
@@ -276,7 +276,7 @@ class PubSubTest
         List<String> sink = new ArrayList<>();
         Actor actor = syncHub.actor((Consumer<String>) sink::add).sub("greet");
 
-        syncHub.<String>pub("greet").publish("hello");
+        syncHub.<String>pub("greet").accept("hello");
 
         assertEquals(Collections.singletonList("hello"), sink);
     }
@@ -293,8 +293,8 @@ class PubSubTest
 
         actor.sub("alpha").sub("beta");
 
-        syncHub.<String>pub("alpha").publish("A");
-        syncHub.<String>pub("beta").publish("B");
+        syncHub.<String>pub("alpha").accept("A");
+        syncHub.<String>pub("beta").accept("B");
 
         List<String> expected = new ArrayList<>();
         expected.add("A");
@@ -351,7 +351,7 @@ class PubSubTest
         Publisher<Integer> pub = asyncHub.pub("async");
         for (int i = 0; i < msgCount; i++)
         {
-            pub.publish(i);
+            pub.accept(i);
         }
 
         assertTrue(latch1.await(5, TimeUnit.SECONDS), "subscriber-1 did not receive all messages");
@@ -380,7 +380,7 @@ class PubSubTest
             {
                 try
                 {
-                    pub.publish(i);
+                    pub.accept(i);
                 }
                 catch (Throwable t)
                 {

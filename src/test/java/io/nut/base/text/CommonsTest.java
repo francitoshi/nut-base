@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.tea.base.text;
+package io.nut.base.text;
 
 import io.nut.base.text.Commons;
 import java.util.Arrays;

@@ -1,27 +1,11 @@
 /*
- *  KeyStoreManagerTest.java
- *
- *  Copyright (C) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.KeyStoreType;
-import static io.nut.base.util.Assert.assertTrue;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -30,6 +14,7 @@ import java.security.cert.X509Certificate;
 import org.junit.jupiter.api.Assertions;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
 public class KeyStoreManagerTest
@@ -169,7 +154,7 @@ public class KeyStoreManagerTest
         byte[] secretKeyRaw1 = "this is a secreatKey".getBytes(StandardCharsets.UTF_8);
         manager.setSecretKeyRaw(secretAlias, secretKeyRaw1);
         byte[] secretKeyRaw2 = manager.getSecretKeyRaw(secretAlias);
-        Assertions.assertArrayEquals(secretKeyRaw1, secretKeyRaw2);
+        assertArrayEquals(secretKeyRaw1, secretKeyRaw2);
 
         byte[] secretKeyRaw3 = "this is a very very very long secret key to test a non standard key that should fail on some KeyStore types".getBytes(StandardCharsets.UTF_8);
         manager.setSecretKeyRaw(secretAlias, secretKeyRaw3);
@@ -184,6 +169,6 @@ public class KeyStoreManagerTest
         char[] passphrase2 = manager.getPassphrase(passphraseAlias);
         assertArrayEquals(passphrase, passphrase2);
 
-        assertTrue(manager.isModified());
+        Assertions.assertTrue(manager.isModified());
     }
 }
