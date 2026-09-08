@@ -463,6 +463,76 @@ public class Strings
     }
 
     /**
+     * <p>Removes a prefix from a String, if the String starts with it.</p>
+     *
+     * <p>Behaves like Python's {@code str.removeprefix(prefix)}. If the String
+     * does not start with the prefix, it is returned unchanged. <code>null</code>s
+     * are handled without exceptions.</p>
+     *
+     * <pre>
+     * Strings.removePrefix(null, "ab")     = null
+     * Strings.removePrefix("abc", null)    = "abc"
+     * Strings.removePrefix("abc", "")      = "abc"
+     * Strings.removePrefix("abcabc", "ab") = "cabc"
+     * Strings.removePrefix("abc", "ab")    = "c"
+     * Strings.removePrefix("abc", "abc")   = ""
+     * Strings.removePrefix("abc", "xyz")   = "abc"
+     * </pre>
+     *
+     * @param s the String to process, may be null
+     * @param prefix the prefix to remove, may be null
+     * @return the String without the prefix, or the original String if it does
+     *  not start with the prefix
+     */
+    public static String removePrefix(String s, String prefix)
+    {
+        if(s==null || prefix==null)
+        {
+            return s;
+        }
+        if(s.startsWith(prefix))
+        {
+            return s.substring(prefix.length());
+        }
+        return s;
+    }
+
+    /**
+     * <p>Removes a suffix from a String, if the String ends with it.</p>
+     *
+     * <p>Behaves like Python's {@code str.removesuffix(suffix)}. If the String
+     * does not end with the suffix, it is returned unchanged. <code>null</code>s
+     * are handled without exceptions.</p>
+     *
+     * <pre>
+     * Strings.removeSuffix(null, "bc")     = null
+     * Strings.removeSuffix("abc", null)    = "abc"
+     * Strings.removeSuffix("abc", "")      = "abc"
+     * Strings.removeSuffix("abcabc", "bc") = "abc"
+     * Strings.removeSuffix("abc", "bc")    = "a"
+     * Strings.removeSuffix("abc", "abc")   = ""
+     * Strings.removeSuffix("abc", "xyz")   = "abc"
+     * </pre>
+     *
+     * @param s the String to process, may be null
+     * @param suffix the suffix to remove, may be null
+     * @return the String without the suffix, or the original String if it does
+     *  not end with the suffix
+     */
+    public static String removeSuffix(String s, String suffix)
+    {
+        if(s==null || suffix==null)
+        {
+            return s;
+        }
+        if(s.endsWith(suffix))
+        {
+            return s.substring(0, s.length()-suffix.length());
+        }
+        return s;
+    }
+
+    /**
      * <p>Converts a String to lower case as per {@link String#toLowerCase()}.</p>
      *
      * <p>A <code>null</code> input String returns <code>null</code>.</p>

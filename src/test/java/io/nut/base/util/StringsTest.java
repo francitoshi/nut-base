@@ -617,6 +617,38 @@ public class StringsTest
         assertFalse(Strings.endsWith("sss", "d"));
         
     }
+
+    /**
+     * Test of removePrefix method, of class Strings.
+     */
+    @Test
+    public void testRemovePrefix()
+    {
+        assertNull(Strings.removePrefix(null, "ab"));
+        assertEquals("abc", Strings.removePrefix("abc", null));
+        assertEquals("abc", Strings.removePrefix("abc", ""));
+        assertEquals("cabc", Strings.removePrefix("abcabc", "ab"));
+        assertEquals("c", Strings.removePrefix("abc", "ab"));
+        assertEquals("", Strings.removePrefix("abc", "abc"));
+        assertEquals("abc", Strings.removePrefix("abc", "xyz"));
+        assertEquals("abc", Strings.removePrefix("abc", "abcd"));
+    }
+
+    /**
+     * Test of removeSuffix method, of class Strings.
+     */
+    @Test
+    public void testRemoveSuffix()
+    {
+        assertNull(Strings.removeSuffix(null, "bc"));
+        assertEquals("abc", Strings.removeSuffix("abc", null));
+        assertEquals("abc", Strings.removeSuffix("abc", ""));
+        assertEquals("abca", Strings.removeSuffix("abcabc", "bc"));
+        assertEquals("a", Strings.removeSuffix("abc", "bc"));
+        assertEquals("", Strings.removeSuffix("abc", "abc"));
+        assertEquals("abc", Strings.removeSuffix("abc", "xyz"));
+        assertEquals("abc", Strings.removeSuffix("abc", "xabc"));
+    }
     /**
      * Test of endsWithAny method, of class Strings.
      */
