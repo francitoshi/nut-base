@@ -218,5 +218,5 @@ uno_dos_+tres_cuatro_cinco_+seis_siete_ocho
 Llegado  el caso, cualquier  usuario  podría codificar  y decodificar un
 mensaje  de forma  manual, siempre  que no se  use cifrado.
 
-(c) Francisco  Gómez Carrasco
+x xx  xx x
 
