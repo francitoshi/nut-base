@@ -35,6 +35,22 @@ public class Checksums
         }
     }
 
+    // CRC-64/ECMA-182 lookup tables, polynomial 0x42F0E1EBA9EA3693
+    // (non-reflected, init 0x0000000000000000, final XOR 0x0000000000000000).
+    private static final long[] CRC64_TABLE = new long[256];
+    static
+    {
+        for (int i = 0; i < 256; i++)
+        {
+            long crc = (long) i << 56;
+            for (int j = 0; j < 8; j++)
+            {
+                crc = (crc & 0x8000000000000000L) != 0 ? (crc << 1) ^ 0x42F0E1EBA9EA3693L : crc << 1;
+            }
+            CRC64_TABLE[i] = crc;
+        }
+    }
+
     /**
      * Returns the CRC-16/CCITT-FALSE checksum of the given portion of bytes.
      * <p>
@@ -242,6 +258,73 @@ public class Checksums
         rc[1] = (byte) ((value >> 16) & 0xFF);
         rc[2] = (byte) ((value >> 8) & 0xFF);
         rc[3] = (byte) (value & 0xFF);
+        return rc;
+    }
+
+    /**
+     * Returns the CRC-64/ECMA-182 checksum of the given portion of bytes.
+     * <p>
+     * Uses the ECMA-182 polynomial 0x42F0E1EBA9EA3693 with an initial value
+     * of 0x0000000000000000 and no final XOR (non-reflected).
+     *
+     * @param bytes the input data.
+     * @param off the offset of the first byte to include.
+     * @param len the number of bytes to include.
+     * @return the 64-bit CRC-64/ECMA-182 checksum.
+     */
+    public static long crc64(byte[] bytes, int off, int len)
+    {
+        long crc = 0;
+        for (int i = off; i < off + len; i++)
+        {
+            crc = (crc << 8) ^ CRC64_TABLE[((int) (crc >>> 56) ^ bytes[i]) & 0xFF];
+        }
+        return crc;
+    }
+
+    /**
+     * Returns the CRC-64/ECMA-182 checksum of the given bytes.
+     * <p>
+     * Uses the ECMA-182 polynomial 0x42F0E1EBA9EA3693 with an initial value
+     * of 0x0000000000000000 and no final XOR (non-reflected).
+     *
+     * @param bytes the input data.
+     * @return the 64-bit CRC-64/ECMA-182 checksum.
+     */
+    public static long crc64(byte[] bytes)
+    {
+        return crc64(bytes, 0, bytes.length);
+    }
+
+    /**
+     * Returns the CRC-64/ECMA-182 checksum of the given portion of bytes as an 8-byte big-endian array.
+     * <p>
+     * Uses the ECMA-182 polynomial 0x42F0E1EBA9EA3693 with an initial value
+     * of 0x0000000000000000 and no final XOR (non-reflected).
+     *
+     * @param bytes the input data.
+     * @param off the offset of the first byte to include.
+     * @param len the number of bytes to include.
+     * @param rc the 8-byte array to store the result into, or null to allocate a new one.
+     * @return the 8-byte big-endian CRC-64/ECMA-182 checksum.
+     */
+    public static byte[] crc64(byte[] bytes, int off, int len, byte[] rc) 
+    {
+        if (rc == null || rc.length != 8)
+        {
+            rc = new byte[8];
+        }
+        
+        long value = crc64(bytes, off, len);
+        // store the 8 bytes of CRC64 int the rc array (big-endian)
+        rc[0] = (byte) ((value >> 56) & 0xFF);
+        rc[1] = (byte) ((value >> 48) & 0xFF);
+        rc[2] = (byte) ((value >> 40) & 0xFF);
+        rc[3] = (byte) ((value >> 32) & 0xFF);
+        rc[4] = (byte) ((value >> 24) & 0xFF);
+        rc[5] = (byte) ((value >> 16) & 0xFF);
+        rc[6] = (byte) ((value >> 8) & 0xFF);
+        rc[7] = (byte) (value & 0xFF);
         return rc;
     }
 }

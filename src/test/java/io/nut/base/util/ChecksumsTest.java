@@ -201,4 +201,60 @@ public class ChecksumsTest
         assertEquals(4, rcFixed.length);
         assertArrayEquals(rc, rcFixed);
     }
+
+    /**
+     * Test of crc64 method, of class Checksums.
+     */
+    @Test
+    public void testCrc64_3args()
+    {
+        byte[] bytes123456789 = "123456789".getBytes();
+        assertEquals(0x6C40DF5F0B497347L, Checksums.crc64(bytes123456789, 0, bytes123456789.length));
+
+        byte[] bytes0 = {};
+        assertEquals(0L, Checksums.crc64(bytes0, 0, bytes0.length));
+    }
+
+    /**
+     * Test of crc64 method, of class Checksums.
+     */
+    @Test
+    public void testCrc64_byteArr()
+    {
+        byte[] bytes123456789 = "123456789".getBytes();
+        assertEquals(0x6C40DF5F0B497347L, Checksums.crc64(bytes123456789));
+
+        byte[] bytes0 = {};
+        assertEquals(0L, Checksums.crc64(bytes0));
+    }
+
+    /**
+     * Test of crc64 method, of class Checksums.
+     */
+    @Test
+    public void testCrc64_4args()
+    {
+        byte[] bytes123456789 = "123456789".getBytes();
+        long value = Checksums.crc64(bytes123456789, 0, bytes123456789.length);
+
+        byte[] rc = new byte[8];
+        assertSame(rc, Checksums.crc64(bytes123456789, 0, bytes123456789.length, rc));
+        assertEquals((byte) ((value >> 56) & 0xFF), rc[0]);
+        assertEquals((byte) ((value >> 48) & 0xFF), rc[1]);
+        assertEquals((byte) ((value >> 40) & 0xFF), rc[2]);
+        assertEquals((byte) ((value >> 32) & 0xFF), rc[3]);
+        assertEquals((byte) ((value >> 24) & 0xFF), rc[4]);
+        assertEquals((byte) ((value >> 16) & 0xFF), rc[5]);
+        assertEquals((byte) ((value >> 8) & 0xFF), rc[6]);
+        assertEquals((byte) (value & 0xFF), rc[7]);
+
+        byte[] rcAlloc = Checksums.crc64(bytes123456789, 0, bytes123456789.length, null);
+        assertEquals(8, rcAlloc.length);
+        assertArrayEquals(rc, rcAlloc);
+
+        byte[] badSize = new byte[4];
+        byte[] rcFixed = Checksums.crc64(bytes123456789, 0, bytes123456789.length, badSize);
+        assertEquals(8, rcFixed.length);
+        assertArrayEquals(rc, rcFixed);
+    }
 }

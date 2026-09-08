@@ -120,10 +120,10 @@ public class EmailsTest
     @DisplayName("Format 'name <email>' with compound name")
     void testFullFormatWithCompoundName() 
     {
-        String[] result = Emails.parseEmailAddress("Francisco Toshi <francitoshi@gmail.com>");
+        String[] result = Emails.parseEmailAddress("Franci Toshi <francitoshi@gmail.com>");
         assertAll
         (
-            () -> assertEquals("Francisco Toshi", result[0]),
+            () -> assertEquals("Franci Toshi", result[0]),
             () -> assertEquals("francitoshi@gmail.com", result[1])
         );
     }

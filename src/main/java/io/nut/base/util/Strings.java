@@ -285,6 +285,10 @@ public class Strings
     {
         return (value==null || value.length()==0) ? null : value;
     }
+    public static String defaultString(String s)
+    {
+        return (s==null) ? "" : s;
+    }
     //convierte a string si es posible, evitando NullPointerException si es nulo
     public static String safeToString(Object value)
     {

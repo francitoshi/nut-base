@@ -241,6 +241,17 @@ public class StringsTest
         assertEquals("1",Strings.safeToString("1"));
     }
 
+    /**
+     * Test of defaultString method, of class Strings.
+     */
+    @Test
+    public void testDefaultString()
+    {
+        assertEquals("", Strings.defaultString(null));
+        assertEquals("", Strings.defaultString(""));
+        assertEquals("abc", Strings.defaultString("abc"));
+    }
+
 
     /**
      * Test of ocurrences method, of class Strings.
