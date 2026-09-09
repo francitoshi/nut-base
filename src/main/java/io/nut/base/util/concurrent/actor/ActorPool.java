@@ -118,8 +118,8 @@ public class ActorPool implements AutoCloseable, Executor
     protected ActorPool(ThreadPoolExecutor threadPoolExecutor)
     {
         this.threadPoolExecutor = threadPoolExecutor;
-        this.synchronous = threadPoolExecutor!=null;
-        this.phaser = new Phaser(1);
+        this.synchronous = threadPoolExecutor==null;
+        this.phaser = this.synchronous ? null : new Phaser(1);
     }
 
     /**
