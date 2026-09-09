@@ -74,7 +74,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     public final int capacity;
     private final String tag;
     private final BlockingQueue<Item<E>> queue;
-    private volatile E nextElement = null;
+    private volatile Item<E> nextItem = null;
     private volatile boolean shutdownRequested;
     private volatile boolean terminated;
     private volatile Thread producerThread;
@@ -271,7 +271,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
             {
                 return false;
             }
-            if(this.nextElement != null)
+            if(this.nextItem != null)
             {
                 return true;
             }
@@ -283,7 +283,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                 shutdownRequested = terminated = true;
                 return false;
             }
-            this.nextElement = item.e;
+            this.nextItem = item;
             return true;            
         }
         catch (InterruptedException ex) 
@@ -303,12 +303,12 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
     @Override
     public E next()
     {
-        if(this.nextElement == null && !hasNext())
+        if(this.nextItem == null && !hasNext())
         {
             throw new NoSuchElementException();
         }
-        E currentElement = this.nextElement;
-        this.nextElement = null;
+        E currentElement = this.nextItem.e;
+        this.nextItem = null;
         return currentElement;
     }
 
@@ -395,6 +395,6 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         this.terminated=false;
         this.shutdownRequested=false;
         this.queue.clear();
-        this.nextElement = null;
+        this.nextItem = null;
     }
 }
