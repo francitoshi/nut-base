@@ -5,6 +5,9 @@
  */
 package io.nut.base.util.concurrent.actor;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -178,17 +181,46 @@ public final class PipelineActor<T,R> implements Consumer<T>
         head.accept(message);
     }
 
+    /**
+     * Collects every stage owned by this pipeline: the head, all intermediate
+     * stages added with {@code then}, and the tail. The traversal follows the
+     * {@code next} links exposed by {@link Actor#getLinkedTargets()} in
+     * upstream-to-downstream order and stops before the first downstream
+     * consumer that is not a {@link PipeActor} (i.e. the terminal consumer
+     * wired with {@link #sink(Consumer)}/{@link #to(Consumer)}), which is not
+     * owned by the pipeline.
+     *
+     * @return the owned stages of the chain, in delivery order
+     */
+    private List<Actor<?>> collectStages()
+    {
+        List<Actor<?>> stages = new ArrayList<>();
+        Actor<?> cursor = head;
+        while (cursor != null)
+        {
+            stages.add(cursor);
+            Collection<Consumer<?>> targets = cursor.getLinkedTargets();
+            if (targets.isEmpty())
+            {
+                break;
+            }
+            Consumer<?> next = targets.iterator().next();
+            cursor = (next instanceof PipeActor) ? (PipeActor<?,?>) next : null;
+        }
+        return stages;
+    }
+
     public PipelineActor<T,R> shutdown()
     {
-        head.shutdown();
-        tail.shutdown();
-        return this;
+        return shutdown(false);
     }
 
     public PipelineActor<T,R> shutdown(boolean onlyWhenEmpty)
     {
-        head.shutdown(onlyWhenEmpty);
-        tail.shutdown(onlyWhenEmpty);
+        for (Actor<?> stage : collectStages())
+        {
+            stage.shutdown(onlyWhenEmpty);
+        }
         return this;
     }
 
@@ -196,9 +228,12 @@ public final class PipelineActor<T,R> implements Consumer<T>
     public boolean awaitTermination(int millis)
     {
         long nanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
-        boolean h = head.awaitTerminationUntilNanos(nanos);
-        boolean t = tail.awaitTerminationUntilNanos(nanos);
-        return h && t;
+        boolean ok = true;
+        for (Actor<?> stage : collectStages())
+        {
+            ok = stage.awaitTerminationUntilNanos(nanos) && ok;
+        }
+        return ok;
     }
     
 }
