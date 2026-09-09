@@ -95,7 +95,7 @@ public class Bip39
         // used as a pseudo-random function. Desired length of the
         // derived key is 512 bits (= 64 bytes).
         String pass = normalizeNFKD(Strings.join(" ", words));
-        String salt = "mnemonic" + passphrase;
+        String salt = "mnemonic" + normalizeNFKD(passphrase);
         return PBKDF2SHA512.derive(pass, salt, PBKDF2_ROUNDS, 64);
     }
 

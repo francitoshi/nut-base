@@ -1,28 +1,14 @@
 /*
- *  Bip32.java
- *
- *  Copyright (C) 2023-2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.ec.ECDSA;
+import io.nut.base.crypto.ec.Point;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.crypto.ec.Sign;
 import io.nut.base.encoding.Base58;
@@ -187,21 +173,22 @@ public class Bip32
         byte[] IR = new byte[32];
         ByteBuffer.wrap(I).get(IL).get(IR);
 
-        BigInteger Kpar = Utils.newBigInteger(1, parent.key, 1, 32);
         BigInteger il = new BigInteger(1, IL);
         if(il.compareTo(N)>=0)
         {
             return null;
         }
-        BigInteger Ki = il.add(Kpar).mod(N);
-        if(Ki.compareTo(BigInteger.ZERO)==0)
+
+        // K_i = point(parse256(I_L)) + K_par
+        Point Ki = Secp256k1.INSTANCE.G.mul(il).add(ECDSA.pointPubKey(parent.key));
+        if(Ki.isInfinite())
         {
             return null;
         }
 
         byte[] fingerprint = getFingerprint(parent);
         
-        IL = Utils.asBytes(Ki, 33);
+        IL = ECDSA.compressedPubKey(Ki);
         
         return new ExtKey(parent.version, (byte)(parent.depth+1), fingerprint, childNumber, IR, IL);
     }

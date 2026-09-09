@@ -187,6 +187,30 @@ public class Bip32Test
     }
 
     /**
+     * Test of ckdPub method, of class Bip32.
+     * K_i = point(parse256(I_L)) + K_par  must match the public key derived
+     * from the private child key (neutered), per BIP32 Test Vectors.
+     * @throws java.lang.Exception
+     */
+    @Test
+    public void testCkdPub() throws Exception
+    {
+        String seed = "000102030405060708090a0b0c0d0e0f";
+        Bip32 bip32 = Bip32.build(Hex.decode(seed), ExtKey.ScriptType.Legacy, ExtKey.PolicyType.SingleSig, ExtKey.Network.MainNet, true);
+
+        ExtKey parentPrv = bip32.xprv(1);
+        ExtKey parentPub = bip32.xpub(1);
+
+        int[] indexes = {0, 1, 2, 3, 7, 42, 999, 0x7fffffff};
+        for(int i : indexes)
+        {
+            ExtKey expected = Bip32.neutered(Bip32.ckdPrv(parentPrv, i));
+            ExtKey actual = Bip32.ckdPub(parentPub, i);
+            assertEquals(expected.toString(), actual.toString(), "index "+i);
+        }
+    }
+
+    /**
      * Test of hardened method, of class Bip32.
      * @throws io.nut.base.encoding.Base58.FormatException
      */
