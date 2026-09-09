@@ -1,34 +1,15 @@
 /*
- *  Files.java
- *
- *  Copyright (C) 2024-2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.io;
 
 import io.nut.base.util.MimeTypes;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -201,44 +182,8 @@ public class FileUtils extends IO
         }
     }
 
-    public static String readInputStreamAsString(InputStream inputStream, String charsetName) throws IOException
-    {
-        try(BufferedInputStream bis = new BufferedInputStream(inputStream))
-        {
-            try(ByteArrayOutputStream bos = new ByteArrayOutputStream())
-            {
-                FileUtils.copy(bis, bos);
-                byte[] contents = bos.toByteArray();
-                return new String(contents, charsetName);
-            }
-        }
-    }
-    public static String readInputStreamAsString(InputStream inputStream) throws IOException
-    {
-        return readInputStreamAsString(inputStream, UTF8);
-    }
-    
-    public static String readFileAsString(File file, String charsetName) throws IOException
-    {
-        return readInputStreamAsString(new FileInputStream(file), charsetName);
-    }
-    public static String readFileAsString(File file) throws IOException
-    {
-        return readInputStreamAsString(new FileInputStream(file), UTF8);
-    }
-    
     public static String digestFileName(String s, String extension, String separator, int size, boolean dropExtensions, boolean allowTildes) throws UnsupportedEncodingException
     {
-        String a = "\u00E9";
-        String b = "\u0065\u0301";
-        System.out.println(a);
-        System.out.println(b);
-        System.out.println(a.equals(b));
-        System.out.println(a.equalsIgnoreCase(b));
-        System.out.println(a.contentEquals(b));
-        System.out.println(a.codePointCount(0,1));
-        System.out.println(b.codePointCount(0,2));
-        
         if(dropExtensions)
         {
             String ext;

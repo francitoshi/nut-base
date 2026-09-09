@@ -173,6 +173,19 @@ public class IO
         }
         return baos.toByteArray();
     }
+    
+    public static String readFileAsString(File file, String charsetName) throws IOException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return readInputStreamAsString(fis, charsetName);
+        }
+    }
+    public static String readFileAsString(File file) throws IOException
+    {
+        return readInputStreamAsString(new FileInputStream(file), UTF8);
+    }
+    
     public static byte[] bytesFromFile(InputStream in) throws IOException
     {
         return bytesFromFile(in, Integer.MAX_VALUE);
