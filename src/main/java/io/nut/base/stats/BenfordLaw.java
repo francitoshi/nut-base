@@ -23,7 +23,7 @@ public class BenfordLaw
         }
         if(value<0)
         {
-            value = -value;
+            value = value==Integer.MIN_VALUE ? Integer.MAX_VALUE : -value;
         }
         return Nums.log(radix, 1.0+1.0/value);
     }
@@ -45,7 +45,18 @@ public class BenfordLaw
     
     public void update(int value)
     {
-        value = value>=0 ? value : -value;
+        if(value==Integer.MIN_VALUE)
+        {
+            value = Integer.MAX_VALUE;
+        }
+        else if(value<0)
+        {
+            value = -value;
+        }
+        if(value<1)
+        {
+            return;
+        }
         while(value>=radix)
         {
             value /= radix;
@@ -55,12 +66,16 @@ public class BenfordLaw
     }
     public void update(double value)
     {
+        if(!Double.isFinite(value) || value==0)
+        {
+            return;
+        }
         value = value>=0 ? value : -value;
         while(value>=radix)
         {
             value /= radix;
         }
-        while(value<1 && value>0)
+        while(value<1)
         {
             value *= radix;
         }
@@ -70,17 +85,22 @@ public class BenfordLaw
     }
     public void update(float value)
     {
+        if(!Float.isFinite(value) || value==0)
+        {
+            return;
+        }
         value = value>=0 ? value : -value;
         while(value>=radix)
         {
             value /= radix;
         }
-        while(value<1 && value>0)
+        while(value<1)
         {
             value *= radix;
         }
+        int v = (int)value;
         this.count++;
-        this.hits[(int)value]++;
+        this.hits[v]++;
     }
     
     public double frequency(int digit)
