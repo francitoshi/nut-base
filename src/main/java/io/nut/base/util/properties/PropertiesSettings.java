@@ -57,7 +57,10 @@ public class PropertiesSettings
     {
         synchronized(lock)
         {
-            properties.load(new FileInputStream(file));
+            try(FileInputStream in = new FileInputStream(file))
+            {
+                properties.load(in);
+            }
             loaded = true;
         }
     }
@@ -65,7 +68,10 @@ public class PropertiesSettings
     {
         synchronized(lock)
         {
-            properties.store(new FileOutputStream(file), comments);
+            try(FileOutputStream out = new FileOutputStream(file))
+            {
+                properties.store(out, comments);
+            }
             this.modified = false;
         }
     }
