@@ -52,15 +52,25 @@ public class DenseMatrix3D<E> implements Matrix<E>
     {
         if(items.length<=x)
         {
-            items = Arrays.copyOf(items, x);
+            int oldLen = items.length;
+            items = Arrays.copyOf(items, x+1);
+            for(int i=oldLen;i<items.length;i++)
+            {
+                items[i] = (E[][])new Object[0][];
+            }
         }
         if(items[x].length<=y)
         {
-            items[x] = Arrays.copyOf(items[x], y);
+            int oldLen = items[x].length;
+            items[x] = Arrays.copyOf(items[x], y+1);
+            for(int i=oldLen;i<items[x].length;i++)
+            {
+                items[x][i] = (E[])new Object[0];
+            }
         }
         if(items[x][y].length<=z)
         {
-            items[x][y] = Arrays.copyOf(items[x][y], z);
+            items[x][y] = Arrays.copyOf(items[x][y], z+1);
         }
         
         E prev = items[x][y][z];
