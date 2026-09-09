@@ -55,7 +55,7 @@ test
         excludeTags 'slow','integration','benchmark'
     }
 
-    testLogging { events 'started' }
+//    testLogging { events 'started' }
 
     afterTest 
     { 
