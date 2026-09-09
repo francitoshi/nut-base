@@ -15,7 +15,7 @@ repositories
   mavenCentral()
 }
 
-def bouncycastleVersion = '1.84'
+def bouncycastleVersion = '1.85'
 
 dependencies
 {
