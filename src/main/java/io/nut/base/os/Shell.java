@@ -8,9 +8,13 @@ package io.nut.base.os;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.StringTokenizer;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -212,6 +216,24 @@ public abstract class Shell
         return doShellCommand(null, cmds, sc, runAsRoot, waitFor).exitValue();
     }
 
+    private static void drainStream(InputStream in, List<String> lines, AtomicReference<IOException> error)
+    {
+        try
+        {
+            char buf[] = new char[20];
+            int read;
+            InputStreamReader reader = new InputStreamReader(in);
+            while ((read = reader.read(buf)) != -1)
+            {
+                lines.add(new String(buf, 0, read));
+            }
+        }
+        catch (IOException ex)
+        {
+            error.set(ex);
+        }
+    }
+
     public Process doShellCommand(Process proc, String[] cmds, ShellCallback sc, boolean runAsRoot, boolean waitFor) throws Exception
     {
         if (proc == null)
@@ -237,30 +259,43 @@ public abstract class Shell
 
         if (waitFor)
         {
-            final char buf[] = new char[20];
+            List<String> stdoutLines = new ArrayList<>();
+            List<String> stderrLines = new ArrayList<>();
+            final AtomicReference<IOException> stdoutError = new AtomicReference<>();
+            final AtomicReference<IOException> stderrError = new AtomicReference<>();
+            final Process p = proc;
 
-            // Consume the "stdout"
-            InputStreamReader reader = new InputStreamReader(proc.getInputStream());
-            int read = 0;
-            while ((read = reader.read(buf)) != -1)
+            // Drain stdout and stderr concurrently; reading them sequentially can
+            // deadlock if the child fills the stderr pipe buffer (64KB) while we block on stdout.
+            Thread stdoutThread = new Thread(() -> drainStream(p.getInputStream(), stdoutLines, stdoutError), "Shell-stdout");
+            Thread stderrThread = new Thread(() -> drainStream(p.getErrorStream(), stderrLines, stderrError), "Shell-stderr");
+
+            stdoutThread.start();
+            stderrThread.start();
+            stdoutThread.join();
+            stderrThread.join();
+
+            if (stdoutError.get() != null)
             {
-                if (sc != null)
+                throw stdoutError.get();
+            }
+            if (stderrError.get() != null)
+            {
+                throw stderrError.get();
+            }
+            p.waitFor();
+
+            if (sc != null)
+            {
+                for (String line : stdoutLines)
                 {
-                    sc.shellOut(new String(buf));
+                    sc.shellOut(line);
+                }
+                for (String line : stderrLines)
+                {
+                    sc.shellOut(line);
                 }
             }
-
-            // Consume the "stderr"
-            reader = new InputStreamReader(proc.getErrorStream());
-            read = 0;
-            while ((read = reader.read(buf)) != -1)
-            {
-                if (sc != null)
-                {
-                    sc.shellOut(new String(buf));
-                }
-            }
-            proc.waitFor();
         }
 
         if (sc != null)
