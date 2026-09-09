@@ -39,7 +39,6 @@ public final class ConflatedChannel<E> extends Channel<E>
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean wasInterrupted = false;
         while (true)
         {
             try
@@ -50,10 +49,6 @@ public final class ConflatedChannel<E> extends Channel<E>
                     this.value = value;
                     this.hasValue = true;
                     notEmpty.signal();
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return;
                 }
                 finally
@@ -64,7 +59,6 @@ public final class ConflatedChannel<E> extends Channel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -73,7 +67,6 @@ public final class ConflatedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean wasInterrupted = false;
         while (true)
         {
             try
@@ -84,10 +77,6 @@ public final class ConflatedChannel<E> extends Channel<E>
                     this.value = value;
                     this.hasValue = true;
                     notEmpty.signal();
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return true;
                 }
                 finally
@@ -98,7 +87,6 @@ public final class ConflatedChannel<E> extends Channel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -106,7 +94,6 @@ public final class ConflatedChannel<E> extends Channel<E>
     @Override
     public E get()
     {
-        boolean wasInterrupted = false;
         while (true)
         {
             try
@@ -123,16 +110,11 @@ public final class ConflatedChannel<E> extends Channel<E>
                         catch (InterruptedException ex)
                         {
                             markInterrupted();
-                            wasInterrupted = true;
                         }
                     }
                     E result = value;
                     value = null;
                     hasValue = false;
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return result;
                 }
                 finally
@@ -143,7 +125,6 @@ public final class ConflatedChannel<E> extends Channel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -171,7 +152,6 @@ public final class ConflatedChannel<E> extends Channel<E>
             }
         }
 
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
@@ -185,10 +165,6 @@ public final class ConflatedChannel<E> extends Channel<E>
                         long remaining = deadline - System.nanoTime();
                         if (remaining <= 0)
                         {
-                            if (wasInterrupted)
-                            {
-                                Thread.currentThread().interrupt();
-                            }
                             return null;
                         }
                         try
@@ -198,17 +174,12 @@ public final class ConflatedChannel<E> extends Channel<E>
                         catch (InterruptedException ex)
                         {
                             markInterrupted();
-                            wasInterrupted = true;
                             continue;
                         }
                     }
                     E result = value;
                     value = null;
                     hasValue = false;
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return result;
                 }
                 finally
@@ -219,7 +190,6 @@ public final class ConflatedChannel<E> extends Channel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }

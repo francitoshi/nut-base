@@ -27,7 +27,6 @@ public final class UnlimitedChannel<E> extends Channel<E>
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean wasInterrupted = false;
         while (true)
         {
             try
@@ -38,12 +37,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
-        }
-        if (wasInterrupted)
-        {
-            Thread.currentThread().interrupt();
         }
     }
 
@@ -51,23 +45,16 @@ public final class UnlimitedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
             try
             {
-                boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
-                return result;
+                return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             }
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -75,22 +62,15 @@ public final class UnlimitedChannel<E> extends Channel<E>
     @Override
     public E get()
     {
-        boolean wasInterrupted = false;
         while (true)
         {
             try
             {
-                E result = queue.take();
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
-                return result;
+                return queue.take();
             }
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -98,23 +78,16 @@ public final class UnlimitedChannel<E> extends Channel<E>
     @Override
     public E get(long timeout, TimeUnit unit)
     {
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
             try
             {
-                E result = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
-                return result;
+                return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             }
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }

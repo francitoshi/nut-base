@@ -30,15 +30,10 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
 
-        boolean wasInterrupted = false;
         while (true)
         {
             if (closed)
             {
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
                 throw new IllegalStateException("closed");
             }
 
@@ -47,26 +42,17 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     throw new IllegalStateException("closed");
                 }
 
                 try
                 {
                     queue.put(value);
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return;
                 }
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally
@@ -81,16 +67,11 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
 
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
             if (closed)
             {
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
                 return false;
             }
 
@@ -99,10 +80,6 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return false;
                 }
 
@@ -117,16 +94,11 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                     {
                         result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
                     }
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return result;
                 }
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally
@@ -140,15 +112,10 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     @Override
     public E get()
     {
-        boolean wasInterrupted = false;
         while (true)
         {
             if (closed)
             {
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
                 return drainAfterClose();
             }
 
@@ -157,26 +124,17 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return drainAfterClose();
                 }
 
                 try
                 {
                     Object item = queue.take();
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return item == POISON ? null : (E) item;
                 }
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally
@@ -200,16 +158,11 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             return drainAfterClosePoll();
         }
 
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
             if (closed)
             {
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
                 return drainAfterClosePoll();
             }
 
@@ -218,20 +171,12 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return drainAfterClosePoll();
                 }
 
                 try
                 {
                     Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     if (item == null || item == POISON)
                     {
                         return null;
@@ -241,7 +186,6 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally

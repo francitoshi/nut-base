@@ -40,7 +40,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean wasInterrupted = false;
         while (true)
         {
             try
@@ -50,19 +49,11 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                 {
                     if (closedFlag)
                     {
-                        if (wasInterrupted)
-                        {
-                            Thread.currentThread().interrupt();
-                        }
                         throw new IllegalStateException("closed");
                     }
                     this.value = value;
                     this.hasValue = true;
                     notEmpty.signal();
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return;
                 }
                 finally
@@ -73,7 +64,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -82,7 +72,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean wasInterrupted = false;
         while (true)
         {
             try
@@ -92,19 +81,11 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                 {
                     if (closedFlag)
                     {
-                        if (wasInterrupted)
-                        {
-                            Thread.currentThread().interrupt();
-                        }
                         return false;
                     }
                     this.value = value;
                     this.hasValue = true;
                     notEmpty.signal();
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return true;
                 }
                 finally
@@ -115,7 +96,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -124,7 +104,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     @Override
     public E get()
     {
-        boolean wasInterrupted = false;
         while (true)
         {
             try
@@ -136,10 +115,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                     {
                         if (closedFlag)
                         {
-                            if (wasInterrupted)
-                            {
-                                Thread.currentThread().interrupt();
-                            }
                             return null;
                         }
                         try
@@ -149,17 +124,12 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                         catch (InterruptedException ex)
                         {
                             markInterrupted();
-                            wasInterrupted = true;
                             continue;
                         }
                     }
                     E result = (E) this.value;
                     this.value = null;
                     hasValue = false;
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return result;
                 }
                 finally
@@ -170,7 +140,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }
@@ -199,7 +168,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             }
         }
 
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
@@ -212,19 +180,11 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                     {
                         if (closedFlag)
                         {
-                            if (wasInterrupted)
-                            {
-                                Thread.currentThread().interrupt();
-                            }
                             return null;
                         }
                         long remaining = deadline - System.nanoTime();
                         if (remaining <= 0)
                         {
-                            if (wasInterrupted)
-                            {
-                                Thread.currentThread().interrupt();
-                            }
                             return null;
                         }
                         try
@@ -234,17 +194,12 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                         catch (InterruptedException ex)
                         {
                             markInterrupted();
-                            wasInterrupted = true;
                             continue;
                         }
                     }
                     E result = (E) this.value;
                     this.value = null;
                     hasValue = false;
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return result;
                 }
                 finally
@@ -255,7 +210,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             catch (InterruptedException ex)
             {
                 markInterrupted();
-                wasInterrupted = true;
             }
         }
     }

@@ -39,17 +39,12 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
 
-        boolean wasInterrupted = false;
         while (true)
         {
             synchronized (lock)
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     throw new IllegalStateException("closed");
                 }
                 activeWriters++;
@@ -59,16 +54,11 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 try
                 {
                     queue.put(value);
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return;
                 }
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally
@@ -96,7 +86,6 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             return queue.offer(value);
         }
 
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
@@ -104,10 +93,6 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return false;
                 }
                 activeWriters++;
@@ -117,16 +102,11 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 try
                 {
                     boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return result;
                 }
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally
@@ -144,15 +124,10 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
     @Override
     public E get()
     {
-        boolean wasInterrupted = false;
         while (true)
         {
             if (closed)
             {
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
                 return drainAfterClose();
             }
 
@@ -161,26 +136,17 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return drainAfterClose();
                 }
 
                 try
                 {
                     Object item = queue.take();
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return item == POISON ? null : (E) item;
                 }
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally
@@ -204,16 +170,11 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             return drainAfterClosePoll();
         }
 
-        boolean wasInterrupted = false;
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
             if (closed)
             {
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
                 return drainAfterClosePoll();
             }
 
@@ -222,20 +183,12 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             {
                 if (closed)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return drainAfterClosePoll();
                 }
 
                 try
                 {
                     Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     if (item == null || item == POISON)
                     {
                         return null;
@@ -245,7 +198,6 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
             finally
@@ -271,16 +223,11 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
     @SuppressWarnings("unchecked")
     private E drainAfterClose()
     {
-        boolean wasInterrupted = false;
         while (true)
         {
             Object item = queue.poll();
             if (item != null)
             {
-                if (wasInterrupted)
-                {
-                    Thread.currentThread().interrupt();
-                }
                 return (item == POISON) ? null : (E) item;
             }
 
@@ -288,10 +235,6 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             {
                 if (activeWriters == 0)
                 {
-                    if (wasInterrupted)
-                    {
-                        Thread.currentThread().interrupt();
-                    }
                     return null;
                 }
                 try
@@ -301,7 +244,6 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     markInterrupted();
-                    wasInterrupted = true;
                 }
             }
         }
