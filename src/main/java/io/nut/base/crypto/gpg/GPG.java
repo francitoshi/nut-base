@@ -256,16 +256,53 @@ public class GPG
         return new GnuPG(debug, params);
     }
     
+    /**
+     * Runs a GnuPG process merging stdout and stderr into a single stream and
+     * draining it to completion before waiting for the process to exit.
+     * <p>
+     * Draining the merged output <em>before</em> {@code waitFor()} avoids the
+     * classic pipe-buffer deadlock that hangs the calling thread whenever a
+     * command produces more output than the OS pipe buffer (64 KiB on most
+     * platforms).
+     *
+     * @param gnupg  the command to run; must not be {@code null}
+     * @param output optional collector for the merged output; may be {@code null}
+     * @return the GPG process exit code
+     * @throws IOException          if the process cannot be started or read
+     * @throws InterruptedException if the calling thread is interrupted while
+     *                              waiting for the process to finish
+     */
+    private int runGpg(GnuPG gnupg, StringBuilder output) throws IOException, InterruptedException
+    {
+        Process process = gnupg.merge().start();
+        try (Scanner sc = new Scanner(process.getInputStream()))
+        {
+            while (sc.hasNext())
+            {
+                String line = sc.nextLine();
+                if (output != null)
+                {
+                    output.append(line).append('\n');
+                }
+            }
+        }
+        return process.waitFor();
+    }
+    
     
     public boolean isInstalled()
     {
         try
         {
-            Process process = gpg("--version").start();
-            return (process.waitFor() == 0);
+            return runGpg(gpg("--version"), null) == 0;
         }
-        catch (IOException | InterruptedException ex)
+        catch (IOException ex)
         {
+            return false;
+        }
+        catch (InterruptedException ex)
+        {
+            Thread.currentThread().interrupt();
             return false;
         }
     }
@@ -357,7 +394,16 @@ public class GPG
     {
         List<PubKey> pubs = new ArrayList<>();
         Process process = gpg(BATCH, "--list-public-keys","--with-colons").add(lookfor).start();
-        parseKeys(process.getInputStream(), pubs, null);
+        try (InputStream is = process.getInputStream())
+        {
+            parseKeys(is, pubs, null);
+        }
+        try (InputStream es = process.getErrorStream())
+        {
+            while (es.read() != -1)
+            {
+            }
+        }
         process.waitFor();
         return pubs.toArray(new PubKey[0]);
     }
@@ -383,7 +429,16 @@ public class GPG
     {
         List<SecKey> secs = new ArrayList<>();
         Process process = gpg(BATCH, "--list-secret-keys","--with-colons").add(lookfor).start();
-        parseKeys(process.getInputStream(), null, secs);
+        try (InputStream is = process.getInputStream())
+        {
+            parseKeys(is, null, secs);
+        }
+        try (InputStream es = process.getErrorStream())
+        {
+            while (es.read() != -1)
+            {
+            }
+        }
         process.waitFor();
         return secs.toArray(new SecKey[0]);
     }
@@ -1858,18 +1913,11 @@ public class GPG
         GnuPG gnupg = gpg(BATCH, "--send-keys");
         gnupg.add(keyIds);
 
-        Process process = gnupg.start();
-
-        int exitCode = process.waitFor();
+        StringBuilder errorOutput = new StringBuilder();
+        int exitCode = runGpg(gnupg, errorOutput);
         if (exitCode != 0)
         {
-            try (Scanner sc = new Scanner(process.getInputStream()))
-            {
-                while (sc.hasNext())
-                {
-                    System.err.println(sc.nextLine());
-                }
-            }
+            System.err.print(errorOutput);
         }
         return exitCode;
     }
@@ -1893,18 +1941,11 @@ public class GPG
         GnuPG gnupg = gpg(BATCH, "--receive-keys");
         gnupg.add(keyIds);
 
-        Process process = gnupg.start();
-
-        int exitCode = process.waitFor();
+        StringBuilder errorOutput = new StringBuilder();
+        int exitCode = runGpg(gnupg, errorOutput);
         if (exitCode != 0)
         {
-            try (Scanner sc = new Scanner(process.getInputStream()))
-            {
-                while (sc.hasNext())
-                {
-                    System.err.println(sc.nextLine());
-                }
-            }
+            System.err.print(errorOutput);
         }
         return exitCode;
     }
@@ -1917,18 +1958,11 @@ public class GPG
      */
     public int refreshKeys() throws IOException, InterruptedException
     {
-        Process process = gpg(BATCH, "--refresh-keys").start();
-
-        int exitCode = process.waitFor();
-        if (exitCode != 0) 
+        StringBuilder errorOutput = new StringBuilder();
+        int exitCode = runGpg(gpg(BATCH, "--refresh-keys"), errorOutput);
+        if (exitCode != 0)
         {
-            try (Scanner sc = new Scanner(process.getInputStream())) 
-            {
-                while(sc.hasNext())
-                {
-                    System.err.println(sc.nextLine());
-                }
-            }
+            System.err.print(errorOutput);
         }
         return exitCode;
     }    

@@ -1,28 +1,14 @@
 /*
- *  PASS.java
- *
- *  Copyright (c) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.gpg;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.util.ArrayList;
@@ -45,6 +31,27 @@ import java.util.List;
  */
 public class PASS
 {
+    /**
+     * Reads the given stream to end-of-file and closes it. Draining the
+     * stream prevents the child process from blocking on a full OS pipe
+     * buffer (deadlock) and closes the file descriptor.
+     *
+     * @param in the stream to drain and close; may be {@code null}
+     */
+    private static void drain(InputStream in)
+    {
+        try (InputStream stream = in)
+        {
+            byte[] buf = new byte[4096];
+            while (stream.read(buf) != -1)
+            {
+            }
+        }
+        catch (IOException ex)
+        {
+            // best-effort cleanup; nothing useful to report to the caller
+        }
+    }
     /**
      * Stores or replaces a passphrase in the {@code pass} password store.
      *
@@ -72,10 +79,17 @@ public class PASS
                 writer.write(passphrase);
                 writer.newLine();
             }
+            drain(process.getInputStream());
+            drain(process.getErrorStream());
             return process.waitFor()==0;
         }
-        catch (IOException | InterruptedException e)
+        catch (IOException e)
         {
+            return false;
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
             return false;
         }
     }
@@ -107,6 +121,8 @@ public class PASS
                 password = reader.readLine();
             }
 
+            drain(process.getErrorStream());
+
             int exitCode = process.waitFor();
             if (exitCode != 0)
             {
@@ -120,8 +136,13 @@ public class PASS
 
             return password.trim(); // Devolver la contraseña sin espacios
         }
-        catch (IOException | InterruptedException e)
+        catch (IOException e)
         {
+            return null;
+        }
+        catch (InterruptedException e)
+        {
+            Thread.currentThread().interrupt();
             return null;
         }
     }
@@ -153,8 +174,17 @@ public class PASS
                     keys.add(line);
                 }
             }
-            return keys;
         }
+        drain(process.getErrorStream());
+        try
+        {
+            process.waitFor();
+        }
+        catch (InterruptedException ex)
+        {
+            Thread.currentThread().interrupt();
+        }
+        return keys;
 
 
 //        for (String line : output.split("\n"))

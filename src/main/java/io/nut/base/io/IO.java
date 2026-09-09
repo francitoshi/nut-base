@@ -1,22 +1,7 @@
 /*
- *  IO.java
- *
- *  Copyright (C) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.io;
 
@@ -194,11 +179,17 @@ public class IO
     }
     public static byte[] bytesFromFile(File file, int readlimit) throws IOException
     {
-        return bytesFromFile(new FileInputStream(file), readlimit);
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return bytesFromFile(fis, readlimit);
+        }
     }
     public static byte[] bytesFromFile(File file) throws IOException
     {
-        return bytesFromFile(new FileInputStream(file), Integer.MAX_VALUE);
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return bytesFromFile(fis, Integer.MAX_VALUE);
+        }
     }
     public static byte[] bytesFromFileGZ(InputStream in, int readlimit, boolean forceGZ) throws IOException
     {
@@ -233,11 +224,17 @@ public class IO
     }
     public static byte[] bytesFromFileGZ(File file, int readlimit, boolean detect) throws IOException
     {
-        return bytesFromFileGZ(new FileInputStream(file), readlimit, detect);
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return bytesFromFileGZ(fis, readlimit, detect);
+        }
     }
     public static byte[] bytesFromFileGZ(File file, boolean detect) throws IOException
     {
-        return bytesFromFileGZ(new FileInputStream(file), Integer.MAX_VALUE, detect);
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return bytesFromFileGZ(fis, Integer.MAX_VALUE, detect);
+        }
     }
     
     public static void writeToFile(File file, byte[] bytes) throws IOException
