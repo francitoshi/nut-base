@@ -75,7 +75,9 @@ public final class Retry
     /**
      * Returns a {@code Retry} instance configured with default settings.
      * By default, it allows up to 3 attempts, has no backoff (no delay between retries),
-     * retries on any throwables (except interruptions), and uses the system sleeper.
+     * retries on any {@code Exception} (except interruptions), and uses the system sleeper.
+     * {@code Error}s (e.g. {@code OutOfMemoryError}, {@code StackOverflowError}) are never
+     * retried by default: they are propagated on the first attempt.
      *
      * @return a default {@code Retry} instance; never {@code null}
      */
@@ -198,7 +200,7 @@ public final class Retry
         }
         if (retryOnClasses.isEmpty() && retryIfPredicates.isEmpty())
         {
-            return true;
+            return (error instanceof Exception);
         }
         for (Class<? extends Throwable> clazz : retryOnClasses)
         {

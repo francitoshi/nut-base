@@ -124,6 +124,85 @@ class RetryTest
     }
 
     @Test
+    @DisplayName("does not retry on Error by default")
+    void testDoesNotRetryOnErrorByDefault()
+    {
+        Retry retry = Retry.builder()
+                .maxAttempts(3)
+                .backoff(Retry.Backoffs.none())
+                .build();
+
+        AtomicInteger attempts = new AtomicInteger();
+        assertThrows(OutOfMemoryError.class, () -> retry.call(() ->
+        {
+            attempts.incrementAndGet();
+            throw new OutOfMemoryError("boom");
+        }));
+
+        assertEquals(1, attempts.get());
+
+        Retry runRetry = Retry.builder()
+                .maxAttempts(3)
+                .backoff(Retry.Backoffs.none())
+                .build();
+        AtomicInteger runAttempts = new AtomicInteger();
+        assertThrows(StackOverflowError.class, () -> runRetry.run(() ->
+        {
+            runAttempts.incrementAndGet();
+            throw new StackOverflowError("boom");
+        }));
+        assertEquals(1, runAttempts.get());
+    }
+
+    @Test
+    @DisplayName("explicit retryOn(Error.class) still retries Errors")
+    void testExplicitRetryOnErrorIsHonored() throws Exception
+    {
+        Retry retry = Retry.builder()
+                .maxAttempts(3)
+                .retryOn(OutOfMemoryError.class)
+                .backoff(Retry.Backoffs.none())
+                .build();
+
+        AtomicInteger attempts = new AtomicInteger();
+        retry.call(() ->
+        {
+            int current = attempts.incrementAndGet();
+            if (current < 2)
+            {
+                throw new OutOfMemoryError("transient");
+            }
+            return "ok";
+        });
+
+        assertEquals(2, attempts.get());
+    }
+
+    @Test
+    @DisplayName("explicit retryIf predicate still retries Errors")
+    void testExplicitRetryIfOnErrorIsHonored()
+    {
+        Retry retry = Retry.builder()
+                .maxAttempts(3)
+                .retryIf(ex -> "transient".equals(ex.getMessage()))
+                .backoff(Retry.Backoffs.none())
+                .build();
+
+        AtomicInteger attempts = new AtomicInteger();
+        assertThrows(AssertionError.class, () -> retry.call(() ->
+        {
+            int current = attempts.incrementAndGet();
+            if (current < 3)
+            {
+                throw new AssertionError("transient");
+            }
+            throw new AssertionError("persistent");
+        }));
+
+        assertEquals(3, attempts.get());
+    }
+
+    @Test
     @DisplayName("retries based on result predicate")
     void testRetryIfResult() throws Exception
     {
