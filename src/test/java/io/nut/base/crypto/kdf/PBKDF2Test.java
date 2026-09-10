@@ -19,6 +19,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Tag;
 
 public class PBKDF2Test
 {
@@ -47,6 +48,7 @@ public class PBKDF2Test
 
     }
     @Test
+    @Tag("benchmark")
     public void testCalibrate() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException, InvalidKeySpecException
     {
         long secToLoop = 5;
