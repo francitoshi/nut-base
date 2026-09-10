@@ -6,13 +6,10 @@
 package io.nut.base.crypto.gpg;
 
 import static io.nut.base.crypto.gpg.GPG.CURVE25519;
-import static io.nut.base.crypto.gpg.GPG.DSA2048;
-import static io.nut.base.crypto.gpg.GPG.ELG4096;
 import static io.nut.base.crypto.gpg.GPG.NISTP256;
 import static io.nut.base.crypto.gpg.GPG.NISTP384;
 import static io.nut.base.crypto.gpg.GPG.NISTP521;
 import static io.nut.base.crypto.gpg.GPG.RSA1024;
-import static io.nut.base.crypto.gpg.GPG.RSA2048;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
 import io.nut.base.encoding.Hex;
 import java.io.IOException;
@@ -58,7 +55,7 @@ public class GPGTest
         GPG gpg = new GPG().setDebug(DEBUG);
         String name = GPG.class.getName()+System.nanoTime();
         
-        assertEquals(0, gpg.genKey(RSA4096, SCA, NISTP521, E, name, "1", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(RSA1024, SCA, NISTP521, E, name, "1", EMAIL, PASSPHRASE, "4y"));
         assertEquals(0, gpg.genKey(NISTP384, SCA, NISTP256, E, name, "1", EMAIL, PASSPHRASE, "4y"));
         assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, name, "3", EMAIL, PASSPHRASE, "4y"));
 
@@ -100,9 +97,9 @@ public class GPGTest
         String recipientId1 = "recipient1";
         String recipientId2 = "recipient2";
 
-        assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, signerId, "", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, recipientId1, "", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(NISTP521, S, NISTP521, E, recipientId2, "", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, signerId, "", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, recipientId1, "", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, recipientId2, "", EMAIL, PASSPHRASE, "4y"));
 
         // Cifrar y firmar
         byte[] encryptedSigned = gpg.encryptAndSign(plaindata, signerId, passphrase, recipientId1, recipientId2);
@@ -210,8 +207,8 @@ public class GPGTest
     {
         GPG gpg = new GPG().setDebug(DEBUG).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
 
-        gpg.genKey(NISTP521, SCA, NISTP521, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE, "4y");
-        gpg.genKey(NISTP521, SCA, NISTP521, E, "bob", "1", "bob@gpgtest.io", PASSPHRASE, "4y");
+        gpg.genKey(NISTP256, SCA, NISTP256, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE, "4y");
+        gpg.genKey(NISTP256, SCA, NISTP256, E, "bob", "1", "bob@gpgtest.io", PASSPHRASE, "4y");
         
         byte[] plaintext = "hello world!!!".getBytes(StandardCharsets.UTF_8);
         
