@@ -95,7 +95,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
 
     public static RingQueueBigInteger getSynchronized(RingQueueBigInteger queue)
     {
-        return new RingQueueBigInteger(0)
+        return new RingQueueBigInteger(1)
         {
             final Object lock = new Object();
 

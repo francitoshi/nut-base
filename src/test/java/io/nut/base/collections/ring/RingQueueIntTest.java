@@ -95,4 +95,25 @@ class RingQueueIntTest
         assertEquals(2, queue.size());
     }
     
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueInt queue = new RingQueueInt(5);
+        queue.push(100);
+        queue.push(200);
+        queue.push(300);
+
+        RingQueueInt sync = RingQueueInt.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals(100, sync.get(0));
+        assertEquals(200, sync.get(1));
+        assertEquals(300, sync.get(2));
+
+        sync.push(400);
+
+        assertEquals(4, queue.size());
+        assertEquals(400, queue.get(3));
+    }
+
 }

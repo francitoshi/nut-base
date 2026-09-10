@@ -82,4 +82,25 @@ class RingQueueBigIntegerTest
         assertEquals(2, queue.size());
     }
         
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueBigInteger queue = new RingQueueBigInteger(5);
+        queue.push(new BigInteger("100"));
+        queue.push(new BigInteger("200"));
+        queue.push(new BigInteger("300"));
+
+        RingQueueBigInteger sync = RingQueueBigInteger.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals(new BigInteger("100"), sync.get(0));
+        assertEquals(new BigInteger("200"), sync.get(1));
+        assertEquals(new BigInteger("300"), sync.get(2));
+
+        sync.push(new BigInteger("400"));
+
+        assertEquals(4, queue.size());
+        assertEquals(new BigInteger("400"), queue.get(3));
+    }
+
 }

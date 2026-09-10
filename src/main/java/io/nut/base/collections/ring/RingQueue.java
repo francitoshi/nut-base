@@ -318,7 +318,7 @@ public class RingQueue<E>
     
     public static <E> RingQueue<E> getSynchronized(RingQueue<E> queue)
     {
-        return new RingQueue<E>(0)
+        return new RingQueue<E>(1)
         {
             final Object lock = new Object();
 

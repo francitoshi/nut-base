@@ -81,4 +81,25 @@ class RingQueueBigDecimalTest
         assertEquals(2, queue.size());
     }
     
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueBigDecimal queue = new RingQueueBigDecimal(5);
+        queue.push(new BigDecimal("10.5"));
+        queue.push(new BigDecimal("20.7"));
+        queue.push(new BigDecimal("30.1"));
+
+        RingQueueBigDecimal sync = RingQueueBigDecimal.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals(new BigDecimal("10.5"), sync.get(0));
+        assertEquals(new BigDecimal("20.7"), sync.get(1));
+        assertEquals(new BigDecimal("30.1"), sync.get(2));
+
+        sync.push(new BigDecimal("40.2"));
+
+        assertEquals(4, queue.size());
+        assertEquals(new BigDecimal("40.2"), queue.get(3));
+    }
+
 }

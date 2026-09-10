@@ -59,4 +59,25 @@ class RingQueueShortTest
         assertEquals(2, queue.size());
     }
         
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueShort queue = new RingQueueShort(5);
+        queue.push((short) 10);
+        queue.push((short) 20);
+        queue.push((short) 30);
+
+        RingQueueShort sync = RingQueueShort.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals((short) 10, sync.get(0));
+        assertEquals((short) 20, sync.get(1));
+        assertEquals((short) 30, sync.get(2));
+
+        sync.push((short) 40);
+
+        assertEquals(4, queue.size());
+        assertEquals((short) 40, queue.get(3));
+    }
+
 }

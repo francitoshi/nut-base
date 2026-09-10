@@ -262,7 +262,7 @@ public class RingQueueByte
 
     public static RingQueueByte getSynchronized(RingQueueByte queue)
     {
-        return new RingQueueByte(0)
+        return new RingQueueByte(1)
         {
             final Object lock = new Object();
             

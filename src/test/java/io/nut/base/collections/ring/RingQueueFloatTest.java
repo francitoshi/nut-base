@@ -74,4 +74,25 @@ class RingQueueFloatTest
         assertEquals(2, queue.size());
     }
     
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueFloat queue = new RingQueueFloat(5);
+        queue.push(1.5f);
+        queue.push(2.5f);
+        queue.push(3.0f);
+
+        RingQueueFloat sync = RingQueueFloat.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals(1.5f, sync.get(0), 0.001);
+        assertEquals(2.5f, sync.get(1), 0.001);
+        assertEquals(3.0f, sync.get(2), 0.001);
+
+        sync.push(4.0f);
+
+        assertEquals(4, queue.size());
+        assertEquals(4.0f, queue.get(3), 0.001);
+    }
+
 }

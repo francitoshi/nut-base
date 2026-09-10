@@ -264,7 +264,7 @@ public class RingQueueFloat
 
     public static RingQueueFloat getSynchronized(RingQueueFloat queue)
     {
-        return new RingQueueFloat(0)
+        return new RingQueueFloat(1)
         {
             final Object lock = new Object();
 

@@ -98,7 +98,7 @@ public class RingQueueBigDecimal extends RingQueue<BigDecimal>
 
     public static RingQueueBigDecimal getSynchronized(RingQueueBigDecimal queue)
     {
-        return new RingQueueBigDecimal(0)
+        return new RingQueueBigDecimal(1)
         {
             final Object lock = new Object();
 

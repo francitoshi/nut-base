@@ -379,7 +379,7 @@ public class RingQueueBoolean
 
     public static RingQueueBoolean getSynchronized(RingQueueBoolean queue)
     {
-        return new RingQueueBoolean(0)
+        return new RingQueueBoolean(1)
         {
             final Object lock = new Object();
             

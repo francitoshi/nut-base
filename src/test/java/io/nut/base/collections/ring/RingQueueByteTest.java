@@ -60,4 +60,25 @@ class RingQueueByteTest
         assertEquals(2, queue.size());
     }
 
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueByte queue = new RingQueueByte(5);
+        queue.push((byte) 10);
+        queue.push((byte) 20);
+        queue.push((byte) 30);
+
+        RingQueueByte sync = RingQueueByte.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals((byte) 10, sync.get(0));
+        assertEquals((byte) 20, sync.get(1));
+        assertEquals((byte) 30, sync.get(2));
+
+        sync.push((byte) 40);
+
+        assertEquals(4, queue.size());
+        assertEquals((byte) 40, queue.get(3));
+    }
+
 }

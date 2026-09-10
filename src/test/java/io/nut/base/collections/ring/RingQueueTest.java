@@ -270,6 +270,26 @@ class RingQueueTest
     }
 
     @Test
+    void testGetSynchronized()
+    {
+        stringQueue.push("A");
+        stringQueue.push("B");
+        stringQueue.push("C");
+
+        RingQueue<String> sync = RingQueue.getSynchronized(stringQueue);
+
+        assertEquals(3, sync.size());
+        assertEquals("A", sync.get(0));
+        assertEquals("B", sync.get(1));
+        assertEquals("C", sync.get(2));
+
+        sync.push("D");
+
+        assertEquals(4, stringQueue.size());
+        assertEquals("D", stringQueue.get(3));
+    }
+
+    @Test
     void testForeachAfterOverflow()
     {
         stringQueue.push("A");

@@ -264,7 +264,7 @@ public class RingQueueShort
 
     public static RingQueueShort getSynchronized(RingQueueShort queue)
     {
-        return new RingQueueShort(0)
+        return new RingQueueShort(1)
         {
             final Object lock = new Object();
             

@@ -204,4 +204,25 @@ class RingQueueBooleanTest
         queue.foreach(val -> sb.append(val?1:0));
         assertEquals("101", sb.toString());
     }    
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueBoolean queue = new RingQueueBoolean(5);
+        queue.push(true);
+        queue.push(false);
+        queue.push(true);
+
+        RingQueueBoolean sync = RingQueueBoolean.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertTrue(sync.get(0));
+        assertFalse(sync.get(1));
+        assertTrue(sync.get(2));
+
+        sync.push(false);
+
+        assertEquals(4, queue.size());
+        assertFalse(queue.get(3));
+    }
+
 }

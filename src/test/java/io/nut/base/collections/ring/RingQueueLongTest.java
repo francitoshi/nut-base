@@ -181,4 +181,25 @@ class RingQueueLongTest
         assertEquals(2, queue.size());
     }
     
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueLong queue = new RingQueueLong(5);
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        RingQueueLong sync = RingQueueLong.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals(10L, sync.get(0));
+        assertEquals(20L, sync.get(1));
+        assertEquals(30L, sync.get(2));
+
+        sync.push(40L);
+
+        assertEquals(4, queue.size());
+        assertEquals(40L, queue.get(3));
+    }
+
 }

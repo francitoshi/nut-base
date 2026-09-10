@@ -70,4 +70,25 @@ class RingQueueDoubleTest
         assertEquals(2, queue.size());
     }
     
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueDouble queue = new RingQueueDouble(5);
+        queue.push(1.5);
+        queue.push(2.5);
+        queue.push(3.0);
+
+        RingQueueDouble sync = RingQueueDouble.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals(1.5, sync.get(0), 0.001);
+        assertEquals(2.5, sync.get(1), 0.001);
+        assertEquals(3.0, sync.get(2), 0.001);
+
+        sync.push(4.0);
+
+        assertEquals(4, queue.size());
+        assertEquals(4.0, queue.get(3), 0.001);
+    }
+
 }

@@ -264,7 +264,7 @@ public class RingQueueDouble
 
     public static RingQueueDouble getSynchronized(RingQueueDouble queue)
     {
-        return new RingQueueDouble(0)
+        return new RingQueueDouble(1)
         {
             final Object lock = new Object();
             
