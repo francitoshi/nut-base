@@ -183,7 +183,10 @@ public class IO
     }
     public static String readFileAsString(File file) throws IOException
     {
-        return readInputStreamAsString(new FileInputStream(file), UTF8);
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return readInputStreamAsString(fis, UTF8);
+        }
     }
     
     public static byte[] bytesFromFile(InputStream in) throws IOException
