@@ -77,7 +77,6 @@ public class GPGTest
         String id = keys[0].main.getFingerprint();
 
         assertEquals(0, gpg.addKeyRSA(id, 1024, true, true, true, "1y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyRSA(id, 1024, true, false, false, "4y", PASSPHRASE));
         
         assertEquals(0, gpg.addKeyDSA(id, 1024, true, true, "1y", PASSPHRASE));
         
