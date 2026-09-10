@@ -50,14 +50,7 @@ import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
-import java.security.spec.InvalidKeySpecException;
-import java.security.spec.InvalidParameterSpecException;
-import javax.crypto.NoSuchPaddingException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -1501,18 +1494,15 @@ public class NumsTest
 
     static SecureRandom rnd = new SecureRandom();
     /**
-     * Test of safePrime method, of class BigMath.
+     * Test of safePrime method, of class Nums.
      */
     @Test
-    public void testSafePrime() throws NoSuchAlgorithmException, InvalidParameterSpecException, NoSuchPaddingException, InvalidAlgorithmParameterException, InvalidKeyException, InvalidKeySpecException, NoSuchProviderException
+    public void testSafePrime()
     {
         BigInteger p = Nums.safePrime(rnd, 512);
         assertTrue(p.isProbablePrime(100));
         BigInteger q = p.subtract(BigInteger.ONE).divide(BIG_INT_TWO);
         assertTrue(q.isProbablePrime(100));
-        
-        BigInteger g = Nums.safePrime(rnd, 512);
-        
     }
 
     /**

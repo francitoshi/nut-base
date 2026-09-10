@@ -5,12 +5,14 @@
  */
 package io.nut.base.crypto;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  *
  * @author franci
  */
+@Tag("benchmark")
 public class BenchmarkTest
 {
     
