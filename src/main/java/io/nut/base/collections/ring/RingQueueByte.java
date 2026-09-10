@@ -262,7 +262,7 @@ public class RingQueueByte
 
     public static RingQueueByte getSynchronized(RingQueueByte queue)
     {
-        return new RingQueueByte(queue.capacity)
+        return new RingQueueByte(0)
         {
             final Object lock = new Object();
             
@@ -271,7 +271,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.push(value);
+                    return queue.push(value);
                 }
             }
 
@@ -280,7 +280,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    super.pushAll(value);
+                    queue.pushAll(value);
                 }
             }
 
@@ -289,7 +289,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.pop();
+                    return queue.pop();
                 }
             }
 
@@ -298,7 +298,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.peek();
+                    return queue.peek();
                 }
             }
 
@@ -307,7 +307,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.get(n);
+                    return queue.get(n);
                 }
             }
 
@@ -316,7 +316,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.size();
+                    return queue.size();
                 }
             }
 
@@ -325,7 +325,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.isEmpty();
+                    return queue.isEmpty();
                 }
             }
 
@@ -334,7 +334,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.array();
+                    return queue.array();
                 }
             }
 
@@ -343,7 +343,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    super.foreach(consumer);
+                    queue.foreach(consumer);
                 }
             }
 
@@ -352,7 +352,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.max();
+                    return queue.max();
                 }
             }
 
@@ -361,7 +361,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.min();
+                    return queue.min();
                 }
             }
 
@@ -370,7 +370,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.sum();
+                    return queue.sum();
                 }
             }
 
@@ -379,7 +379,7 @@ public class RingQueueByte
             {
                 synchronized(lock)
                 {
-                    return super.average();
+                    return queue.average();
                 }
             }
 

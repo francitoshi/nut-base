@@ -264,7 +264,7 @@ public class RingQueueFloat
 
     public static RingQueueFloat getSynchronized(RingQueueFloat queue)
     {
-        return new RingQueueFloat(queue.capacity)
+        return new RingQueueFloat(0)
         {
             final Object lock = new Object();
 
@@ -273,7 +273,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.push(value);
+                    return queue.push(value);
                 }
             }
 
@@ -282,7 +282,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    super.pushAll(value);
+                    queue.pushAll(value);
                 }
             }
 
@@ -291,7 +291,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.pop();
+                    return queue.pop();
                 }
             }
 
@@ -300,7 +300,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.peek();
+                    return queue.peek();
                 }
             }
 
@@ -309,7 +309,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.get(n);
+                    return queue.get(n);
                 }
             }
 
@@ -318,7 +318,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.size();
+                    return queue.size();
                 }
             }
 
@@ -327,7 +327,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.isEmpty();
+                    return queue.isEmpty();
                 }
             }
 
@@ -336,7 +336,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.array();
+                    return queue.array();
                 }
             }
 
@@ -345,7 +345,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    super.foreach(consumer);
+                    queue.foreach(consumer);
                 }
             }
 
@@ -354,7 +354,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.max();
+                    return queue.max();
                 }
             }
 
@@ -363,7 +363,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.min();
+                    return queue.min();
                 }
             }
 
@@ -372,7 +372,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.sum();
+                    return queue.sum();
                 }
             }
 
@@ -381,7 +381,7 @@ public class RingQueueFloat
             {
                 synchronized(lock)
                 {
-                    return super.average();
+                    return queue.average();
                 }
             }
 

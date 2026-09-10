@@ -66,7 +66,7 @@ public class RingQueue<E>
             throw new IllegalArgumentException("data cannot be empty");
         }
         this.capacity = data.length;
-        this.buffer = Arrays.asList(data);
+        this.buffer = Arrays.asList(data.clone());
         this.head = 0;
         this.tail = 0;
         this.size = data.length;
@@ -318,7 +318,7 @@ public class RingQueue<E>
     
     public static <E> RingQueue<E> getSynchronized(RingQueue<E> queue)
     {
-        return new RingQueue<E>(queue.capacity)
+        return new RingQueue<E>(0)
         {
             final Object lock = new Object();
 
@@ -327,7 +327,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.push(value);
+                    return queue.push(value);
                 }
             }
             
@@ -336,7 +336,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    super.pushAll(value);
+                    queue.pushAll(value);
                 }
             }
             
@@ -345,7 +345,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.pop();
+                    return queue.pop();
                 }
             }
 
@@ -354,7 +354,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.list();
+                    return queue.list();
                 }
             }
 
@@ -363,7 +363,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.get(n);
+                    return queue.get(n);
                 }
             }
 
@@ -372,7 +372,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.size();
+                    return queue.size();
                 }
             }
             
@@ -381,7 +381,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.isEmpty();
+                    return queue.isEmpty();
                 }
             }
             
@@ -390,7 +390,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.array(e);
+                    return queue.array(e);
                 }
             }
 
@@ -399,7 +399,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    super.foreach(consumer);
+                    queue.foreach(consumer);
                 }
             }
 
@@ -408,7 +408,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.max();
+                    return queue.max();
                 }
             }
 
@@ -417,7 +417,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.max(comparator);
+                    return queue.max(comparator);
                 }
             }
 
@@ -426,7 +426,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.min();
+                    return queue.min();
                 }
             }
 
@@ -435,7 +435,7 @@ public class RingQueue<E>
             {
                 synchronized(lock)
                 {
-                    return super.min(comparator);
+                    return queue.min(comparator);
                 }
             }
         };

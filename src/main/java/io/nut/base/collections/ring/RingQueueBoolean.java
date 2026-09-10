@@ -379,7 +379,7 @@ public class RingQueueBoolean
 
     public static RingQueueBoolean getSynchronized(RingQueueBoolean queue)
     {
-        return new RingQueueBoolean(queue.capacity)
+        return new RingQueueBoolean(0)
         {
             final Object lock = new Object();
             
@@ -388,7 +388,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.push(value);
+                    return queue.push(value);
                 }
             }
 
@@ -397,7 +397,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    super.pushAll(value);
+                    queue.pushAll(value);
                 }
             }
 
@@ -406,7 +406,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.pop();
+                    return queue.pop();
                 }
             }
 
@@ -415,7 +415,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.peek(bytes);
+                    return queue.peek(bytes);
                 }
             }
 
@@ -424,7 +424,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.peek(buf);
+                    return queue.peek(buf);
                 }
             }
 
@@ -433,7 +433,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.peek();
+                    return queue.peek();
                 }
             }
 
@@ -442,7 +442,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.pop(bytes);
+                    return queue.pop(bytes);
                 }
             }
 
@@ -451,7 +451,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    super.push(bytes);
+                    queue.push(bytes);
                 }                
             }
 
@@ -460,7 +460,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.get(n);
+                    return queue.get(n);
                 }
             }
 
@@ -469,7 +469,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.size();
+                    return queue.size();
                 }
             }
 
@@ -478,7 +478,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.isEmpty();
+                    return queue.isEmpty();
                 }
             }
 
@@ -487,7 +487,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.array();
+                    return queue.array();
                 }
             }
 
@@ -496,7 +496,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    super.foreach(consumer);
+                    queue.foreach(consumer);
                 }
             }
             
@@ -505,7 +505,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.max();
+                    return queue.max();
                 }
             }
 
@@ -514,7 +514,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.min();
+                    return queue.min();
                 }
             }
 
@@ -523,7 +523,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.sum();
+                    return queue.sum();
                 }
             }
 
@@ -532,7 +532,7 @@ public class RingQueueBoolean
             {
                 synchronized(lock)
                 {
-                    return super.average();
+                    return queue.average();
                 }
             }
 

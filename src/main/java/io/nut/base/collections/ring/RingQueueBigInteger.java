@@ -95,7 +95,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
 
     public static RingQueueBigInteger getSynchronized(RingQueueBigInteger queue)
     {
-        return new RingQueueBigInteger(queue.getCapacity())
+        return new RingQueueBigInteger(0)
         {
             final Object lock = new Object();
 
@@ -104,7 +104,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.push(value);
+                    return queue.push(value);
                 }
             }
 
@@ -113,7 +113,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    super.pushAll(value);
+                    queue.pushAll(value);
                 }
             }
 
@@ -122,7 +122,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.pop();
+                    return queue.pop();
                 }
             }
 
@@ -131,7 +131,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.peek();
+                    return queue.peek();
                 }
             }
 
@@ -140,7 +140,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.get(n);
+                    return queue.get(n);
                 }
             }
 
@@ -149,7 +149,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.size();
+                    return queue.size();
                 }
             }
 
@@ -158,7 +158,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.isEmpty();
+                    return queue.isEmpty();
                 }
             }
 
@@ -167,7 +167,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.array();
+                    return queue.array();
                 }
             }
 
@@ -176,7 +176,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.array(a);
+                    return queue.array(a);
                 }
             }
 
@@ -185,7 +185,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    super.foreach(consumer);
+                    queue.foreach(consumer);
                 }
             }
 
@@ -194,7 +194,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.max();
+                    return queue.max();
                 }
             }
 
@@ -203,7 +203,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.min();
+                    return queue.min();
                 }
             }
 
@@ -212,7 +212,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.sum();
+                    return queue.sum();
                 }
             }
 
@@ -221,7 +221,7 @@ public class RingQueueBigInteger extends RingQueue<BigInteger>
             {
                 synchronized(lock)
                 {
-                    return super.average();
+                    return queue.average();
                 }
             }
         };
