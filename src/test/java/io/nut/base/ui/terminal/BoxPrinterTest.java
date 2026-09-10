@@ -20,6 +20,7 @@
  */
 package io.nut.base.ui.terminal;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import org.junit.jupiter.api.Test;
@@ -96,7 +97,7 @@ public class BoxPrinterTest
         fileBox.println("Reporte generado\n2025-03-24\nTodos los sistemas operativos.");
         fileBox.toStdOut();
         System.out.println("  → Caja escrita en output.txt\n");
-
+        new File("output.txt").delete();
         // ─────────────────────────────────────────────────────────────────────
         // 8. Componer varias cajas en un PrintStream personalizado
         // ─────────────────────────────────────────────────────────────────────
