@@ -393,4 +393,129 @@ public class StatsTest
             assertEquals(doubleSma8, decimalSma8.doubleValue(), 0.00000001, "i="+i);
         }
     }
+
+    private static final double DELTA = 1e-9;
+
+    // ------------------------------------------------------------------
+    // Bug principal: overflow de int en covariance(int[], int[])
+    // ------------------------------------------------------------------
+    @Test
+    void covariance_int_doesNotOverflowOnLargeProducts()
+    {
+        // x[i]*y[i] = 50000*60000 = 3.000.000.000, que ya supera
+        // Integer.MAX_VALUE (2.147.483.647) y desborda si se calcula en int.
+        int[] x = {50000, 60000};
+        int[] y = {60000, 50000};
+
+        // Covarianza real calculada a mano:
+        // mean(x) = mean(y) = 55000
+        // ((50000-55000)*(60000-55000) + (60000-55000)*(50000-55000)) / 2
+        // = (-25.000.000 + -25.000.000) / 2 = -25.000.000
+        double expected = -25_000_000.0;
+
+        assertEquals(expected, Stats.covariance(x, y), DELTA,
+                "covariance(int[], int[]) debe evitar el overflow de "
+                + "'x[i]*y[i]' en aritmética int");
+    }
+
+    @Test
+    void covariance_long_doesNotOverflowOnLargeProducts()
+    {
+        // Mismo caso pero con valores que además comprueban que sx*sy y
+        // n*n no desbordan para el overload long[].
+        long[] x = {5_000_000_000L, 6_000_000_000L};
+        long[] y = {6_000_000_000L, 5_000_000_000L};
+
+        // mean(x) = mean(y) = 5.500.000.000
+        // dx = {-500.000.000, 500.000.000}; dy = {500.000.000, -500.000.000}
+        // (dx1*dy1 + dx2*dy2) / 2
+        // = (-500.000.000*500.000.000 + 500.000.000*-500.000.000) / 2
+        // = (-2,5e17 + -2,5e17) / 2 = -2,5e17
+        double expected = -250_000_000_000_000_000.0;
+
+        assertEquals(expected, Stats.covariance(x, y), 1.0,
+                "covariance(long[], long[]) debe evitar overflow en sx*sy / n*n");
+    }
+
+    // ------------------------------------------------------------------
+    // Corrección esperada de las 4 variantes con un caso simple conocido
+    // ------------------------------------------------------------------
+    @Test
+    void covariance_int_matchesHandComputedValue()
+    {
+        int[] x = {1, 2, 3, 4, 5};
+        int[] y = {2, 4, 5, 4, 5};
+        assertEquals(1.2, Stats.covariance(x, y), DELTA);
+    }
+
+    @Test
+    void covariance_long_matchesHandComputedValue()
+    {
+        long[] x = {1, 2, 3, 4, 5};
+        long[] y = {2, 4, 5, 4, 5};
+        assertEquals(1.2, Stats.covariance(x, y), DELTA);
+    }
+
+    @Test
+    void covariance_float_matchesHandComputedValue()
+    {
+        float[] x = {1, 2, 3, 4, 5};
+        float[] y = {2, 4, 5, 4, 5};
+        assertEquals(1.2, Stats.covariance(x, y), DELTA);
+    }
+
+    @Test
+    void covariance_double_matchesHandComputedValue()
+    {
+        double[] x = {1, 2, 3, 4, 5};
+        double[] y = {2, 4, 5, 4, 5};
+        assertEquals(1.2, Stats.covariance(x, y), DELTA);
+    }
+
+    // ------------------------------------------------------------------
+    // Validación de precondiciones: debe lanzar excepción, no depender
+    // de 'assert' (deshabilitado por defecto en producción)
+    // ------------------------------------------------------------------
+    @Test
+    void covariance_int_throwsOnMismatchedLengths()
+    {
+        int[] x = {1, 2, 3};
+        int[] y = {1, 2};
+        assertThrows(IllegalArgumentException.class,
+                () -> Stats.covariance(x, y));
+    }
+
+    @Test
+    void covariance_double_throwsOnMismatchedLengths()
+    {
+        double[] x = {1, 2, 3};
+        double[] y = {1, 2};
+        assertThrows(IllegalArgumentException.class, () -> Stats.covariance(x, y));
+    }
+
+    // ------------------------------------------------------------------
+    // Caso borde: arrays vacíos no deben producir NaN
+    // ------------------------------------------------------------------
+    @Test
+    void covariance_int_emptyArraysReturnsZero()
+    {
+        assertEquals(0.0, Stats.covariance(new int[0], new int[0]), DELTA);
+    }
+
+    @Test
+    void covariance_double_emptyArraysReturnsZero()
+    {
+        assertEquals(0.0, Stats.covariance(new double[0], new double[0]), DELTA);
+    }
+
+    // ------------------------------------------------------------------
+    // Propiedad matemática: la covarianza es simétrica
+    // ------------------------------------------------------------------
+    @Test
+    void covariance_double_isSymmetric()
+    {
+        double[] x = {1, 2, 3, 4, 5};
+        double[] y = {2, 4, 5, 4, 5};
+        assertEquals(Stats.covariance(x, y), Stats.covariance(y, x), DELTA);
+    }
 }

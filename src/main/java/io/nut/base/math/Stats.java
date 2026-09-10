@@ -29,78 +29,94 @@ public class Stats
     
     public static double covariance(int[] x, int[] y)
     {
-        assert (x.length==y.length) : "x.length!=y.length";
-        
+        if (x.length != y.length)
+        {
+            throw new IllegalArgumentException("x.length != y.length");
+        }
         final int n = x.length;
-        
-        long sx = 0;
-        long sy = 0;
-        long sxy= 0;
-        
+        if (n == 0)
+        {
+            return 0.0;
+        }
+
+        double mx = Nums.avg(x);
+        double my = Nums.avg(y);
+
+        double sum = 0;
         for(int i=0;i<n;i++)
         {
-            sx += x[i];
-            sy += y[i];
-            sxy+= x[i] * y[i];
+            sum += (x[i]-mx) * (y[i]-my);
         }
-        return (sxy/(double)n) - (sx*sy)/(double)(n*n);
+        return sum/n;
     }
     
     public static double covariance(long[] x, long[] y)
     {
-        assert (x.length==y.length) : "x.length!=y.length";
-        
+        if (x.length != y.length)
+        {
+            throw new IllegalArgumentException("x.length != y.length");
+        }
         final int n = x.length;
-        
-        long sx = 0;
-        long sy = 0;
-        long sxy= 0;
-        
+        if (n == 0)
+        {
+            return 0.0;
+        }
+
+        double mx = Nums.avg(x);
+        double my = Nums.avg(y);
+
+        double sum = 0;
         for(int i=0;i<n;i++)
         {
-            sx += x[i];
-            sy += y[i];
-            sxy+= x[i] * y[i];
+            sum += (x[i]-mx) * (y[i]-my);
         }
-        return (sxy/(double)n) - (sx*sy)/(double)(n*n);
+        return sum/n;
     }
 
     public static double covariance(float[] x, float[] y)
     {
-        assert (x.length==y.length) : "x.length!=y.length";
-        
+        if (x.length != y.length)
+        {
+            throw new IllegalArgumentException("x.length != y.length");
+        }
         final int n = x.length;
-        
-        double sx = 0;
-        double sy = 0;
-        double sxy= 0;
-        
+        if (n == 0)
+        {
+            return 0.0;
+        }
+
+        double mx = Nums.avg(x);
+        double my = Nums.avg(y);
+
+        double sum = 0;
         for(int i=0;i<n;i++)
         {
-            sx += x[i];
-            sy += y[i];
-            sxy+= x[i] * y[i];
+            sum += (x[i]-mx) * (y[i]-my);
         }
-        return (sxy/n) - (sx*sy)/(n*n);
+        return sum/n;
     }
 
     public static double covariance(double[] x,double[] y)
     {
-        assert (x.length==y.length) : "x.length!=y.length";
-        
+        if (x.length != y.length)
+        {
+            throw new IllegalArgumentException("x.length != y.length");
+        }
         final int n = x.length;
-        
-        double sx = 0;
-        double sy = 0;
-        double sxy= 0;
-        
+        if (n == 0)
+        {
+            return 0.0;
+        }
+
+        double mx = Nums.avg(x);
+        double my = Nums.avg(y);
+
+        double sum = 0;
         for(int i=0;i<n;i++)
         {
-            sx += x[i];
-            sy += y[i];
-            sxy+= x[i] * y[i];
+            sum += (x[i]-mx) * (y[i]-my);
         }
-        return (sxy/n) - (sx*sy)/(n*n);
+        return sum/n;
     }
 
     public static double standardDeviation(int[] x)
