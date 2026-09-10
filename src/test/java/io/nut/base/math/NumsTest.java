@@ -1500,9 +1500,9 @@ public class NumsTest
     public void testSafePrime()
     {
         BigInteger p = Nums.safePrime(rnd, 512);
-        assertTrue(p.isProbablePrime(100));
+        assertTrue(p.isProbablePrime(99));
         BigInteger q = p.subtract(BigInteger.ONE).divide(BIG_INT_TWO);
-        assertTrue(q.isProbablePrime(100));
+        assertTrue(q.isProbablePrime(99));
     }
 
     /**

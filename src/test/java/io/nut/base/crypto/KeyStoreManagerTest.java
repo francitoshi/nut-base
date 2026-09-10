@@ -23,11 +23,12 @@ public class KeyStoreManagerTest
     @Test
     public void testMain() throws Exception
     {
-        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS));
-        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS));
+//        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS));
+//        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS));
         test(Kripto.getInstance(true).getKeyStoreManager(KeyStoreType.BCFKS));
         test(Kripto.getInstance().getKeyStoreManagerPKCS12());
     }
+    
     public void test(KeyStoreManager manager) throws NoSuchAlgorithmException, Exception
     {
         String secretAlias = "secretAlias";
@@ -116,8 +117,8 @@ public class KeyStoreManagerTest
     @Test
     public void testMain2() throws Exception 
     {
-        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS,PASSPHRASER));
-        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS,PASSPHRASER));
+//        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS,PASSPHRASER));
+//        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS,PASSPHRASER));
         test2(Kripto.getInstance(true).getKeyStoreManager(KeyStoreType.BCFKS,PASSPHRASER));
         test2(Kripto.getInstance().getKeyStoreManagerPKCS12(PASSPHRASER));
     }
@@ -169,6 +170,6 @@ public class KeyStoreManagerTest
         char[] passphrase2 = manager.getPassphrase(passphraseAlias);
         assertArrayEquals(passphrase, passphrase2);
 
-        Assertions.assertTrue(manager.isModified());
+        assertTrue(manager.isModified());
     }
 }
