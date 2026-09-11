@@ -34,7 +34,6 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     private E value;
     private boolean hasValue;
     private volatile boolean closedFlag;
-    private int activeWriters;
 
     @Override
     public void put(E value)
