@@ -41,7 +41,7 @@ public final class BufferedChannel<E> extends Channel<E>
             try
             {
                 queue.put(value);
-                break;
+                return;
             }
             catch (InterruptedException ex)
             {
@@ -54,12 +54,24 @@ public final class BufferedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit) 
     {
         Objects.requireNonNull(value, "value must not be null");
+        if (timeout <= 0)
+        {
+            return queue.offer(value);
+        }
+
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
+            long remaining = deadline - System.nanoTime();
+            if (remaining <= 0)
+            {
+                // El tiempo expiró; intenta un último offer no bloqueante
+                return queue.offer(value);
+            }
+
             try
             {
-                return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                return queue.offer(value, remaining, TimeUnit.NANOSECONDS);
             }
             catch (InterruptedException ex)
             {
@@ -87,12 +99,24 @@ public final class BufferedChannel<E> extends Channel<E>
     @Override
     public E get(long timeout, TimeUnit unit) 
     {
+        if (timeout <= 0)
+        {
+            return queue.poll();
+        }
+
         long deadline = System.nanoTime() + unit.toNanos(timeout);
         while (true)
         {
+            long remaining = deadline - System.nanoTime();
+            if (remaining <= 0)
+            {
+                // El tiempo expiró; intenta un último poll no bloqueante
+                return queue.poll();
+            }
+
             try
             {
-                return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                return queue.poll(remaining, TimeUnit.NANOSECONDS);
             }
             catch (InterruptedException ex)
             {
