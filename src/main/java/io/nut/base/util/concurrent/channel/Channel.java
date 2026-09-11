@@ -6,6 +6,7 @@
 package io.nut.base.util.concurrent.channel;
 
 import io.nut.base.util.tuple.Tuple2;
+import java.util.Objects;
 
 /**
  * Abstract base class for thread-safe communication channels between
@@ -22,23 +23,11 @@ import io.nut.base.util.tuple.Tuple2;
  *   <li><b>Unlimited</b>: no capacity limit. Suited when the producer may run ahead
  *       without ever blocking (at the cost of unbounded memory).</li>
  * </ul>
- *
- * <p>Use the static factory methods below to build channels. The
- * {@code closeable*} variants return a channel implementing
- * {@link ChannelCloser} that can be explicitly closed to signal end-of-data.
- *
- * <p>Example:
- * <pre>{@code
- * Channel<String> ch = Channel.of(10);
- * new Thread(() -> {
- *     try { ch.put("hello"); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
- * }).start();
- * String msg = ch.get();   // "hello"
- * }</pre>
  */
 public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
 {
     private volatile boolean interrupted;
+    private volatile InterruptionPolicy interruptionPolicy = InterruptionPolicy.IGNORE;
 
     /**
      * Returns whether an {@link InterruptedException} has ever been raised in
@@ -58,14 +47,64 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
     }
 
     /**
+     * Establece la política de reacción ante interrupciones de hilos.
+     *
+     * @param policy la política deseada; no debe ser {@code null}
+     */
+    public void setInterruptionPolicy(InterruptionPolicy policy)
+    {
+        this.interruptionPolicy = Objects.requireNonNull(policy, "policy must not be null");
+    }
+
+    /**
+     * Retorna la política de reacción configurada para este canal.
+     *
+     * @return la política actual
+     */
+    public InterruptionPolicy getInterruptionPolicy()
+    {
+        return interruptionPolicy;
+    }
+
+    /**
+     * Evalúa y ejecuta la acción correspondiente según la {@link InterruptionPolicy} configurada.
+     * Debe ser invocado por las subclases dentro de los bloques {@code catch (InterruptedException ex)}.
+     *
+     * @param ex la excepción de interrupción capturada
+     * @throws ChannelInterruptedException si la política es {@link InterruptionPolicy#THROW_EXCEPTION}
+     *                                     o {@link InterruptionPolicy#CLOSE_CHANNEL}
+     */
+    protected void handleInterruptedException(InterruptedException ex)
+    {
+        markInterrupted();
+
+        switch (interruptionPolicy)
+        {
+            case THROW_EXCEPTION:
+                Thread.currentThread().interrupt();
+                throw new ChannelInterruptedException("Operación interrumpida en el canal", ex);
+
+            case CLOSE_CHANNEL:
+                if (this instanceof ChannelCloser)
+                {
+                    ((ChannelCloser) this).close();
+                }
+                throw new ChannelInterruptedException("Canal cerrado debido a interrupción externa", ex);
+
+            case IGNORE:
+            default:
+                // Continúa la ejecución; la subclase reintentará la operación
+                break;
+        }
+    }
+
+    /**
      * Creates the appropriate channel according to the given capacity:
      * <ul>
      *   <li><code> capacity == 0</code>: unbuffered (rendezvous)</li>
      *   <li><code> capacity &gt; 0</code>: buffered with that capacity</li>
      *   <li><code> capacity &lt; 0</code>: unbounded capacity</li>
      * </ul>
-     * Use this single entry point when the desired buffering is known only at
-     * runtime (e.g. read from configuration).
      *
      * @param capacity the channel capacity, see semantics above
      * @param <T>      the element type
@@ -86,8 +125,6 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
 
     /**
      * Same as {@link #of(int)} but returns a {@link CloseableChannel}.
-     * Use it when the producer needs to signal "no more data" by closing the
-     * channel so consumers can stop waiting.
      *
      * @param capacity the channel capacity, see {@link #of(int)}
      * @param <T>      the element type
@@ -99,7 +136,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
         {
             return new CloseableUnbufferedChannel<>();
         }
-        if(capacity>0)
+        if (capacity>0)
         {
             return new CloseableBufferedChannel<>(capacity);
         }
@@ -265,6 +302,4 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
         }
         return new Tuple2<>(new DuplexChannel<>(a, b), new DuplexChannel<>(b, a));
     }
-
 }
-

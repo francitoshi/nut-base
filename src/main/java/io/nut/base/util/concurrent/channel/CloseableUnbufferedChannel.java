@@ -49,7 +49,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -97,7 +97,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -137,7 +137,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -188,7 +188,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -234,7 +234,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
         }

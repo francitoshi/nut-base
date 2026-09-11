@@ -62,7 +62,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -94,7 +94,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -122,7 +122,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                         }
                         catch (InterruptedException ex)
                         {
-                            markInterrupted();
+                            handleInterruptedException(ex);
                             continue;
                         }
                     }
@@ -138,7 +138,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -192,7 +192,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                         }
                         catch (InterruptedException ex)
                         {
-                            markInterrupted();
+                            handleInterruptedException(ex);
                             continue;
                         }
                     }
@@ -208,7 +208,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }

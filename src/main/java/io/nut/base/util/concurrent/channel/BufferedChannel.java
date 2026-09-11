@@ -45,7 +45,7 @@ public final class BufferedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -65,7 +65,6 @@ public final class BufferedChannel<E> extends Channel<E>
             long remaining = deadline - System.nanoTime();
             if (remaining <= 0)
             {
-                // El tiempo expiró; intenta un último offer no bloqueante
                 return queue.offer(value);
             }
 
@@ -75,7 +74,7 @@ public final class BufferedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -91,7 +90,7 @@ public final class BufferedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -110,7 +109,6 @@ public final class BufferedChannel<E> extends Channel<E>
             long remaining = deadline - System.nanoTime();
             if (remaining <= 0)
             {
-                // El tiempo expiró; intenta un último poll no bloqueante
                 return queue.poll();
             }
 
@@ -120,7 +118,7 @@ public final class BufferedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }

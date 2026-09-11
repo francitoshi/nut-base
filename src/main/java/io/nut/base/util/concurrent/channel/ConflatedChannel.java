@@ -58,7 +58,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -86,7 +86,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -109,7 +109,7 @@ public final class ConflatedChannel<E> extends Channel<E>
                         }
                         catch (InterruptedException ex)
                         {
-                            markInterrupted();
+                            handleInterruptedException(ex);
                         }
                     }
                     E result = value;
@@ -124,7 +124,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -173,8 +173,7 @@ public final class ConflatedChannel<E> extends Channel<E>
                         }
                         catch (InterruptedException ex)
                         {
-                            markInterrupted();
-                            continue;
+                            handleInterruptedException(ex);
                         }
                     }
                     E result = value;
@@ -189,7 +188,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }

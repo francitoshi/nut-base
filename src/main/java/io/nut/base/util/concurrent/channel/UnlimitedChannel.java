@@ -36,7 +36,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -54,7 +54,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -70,7 +70,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }
@@ -87,7 +87,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
             }
             catch (InterruptedException ex)
             {
-                markInterrupted();
+                handleInterruptedException(ex);
             }
         }
     }

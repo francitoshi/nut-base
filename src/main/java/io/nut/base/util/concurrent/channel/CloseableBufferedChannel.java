@@ -51,15 +51,12 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             }
             try
             {
-                try
-                {
-                    queue.put(value);
-                    return;
-                }
-                catch (InterruptedException ex)
-                {
-                    markInterrupted();
-                }
+                queue.put(value);
+                return;
+            }
+            catch (InterruptedException ex)
+            {
+                handleInterruptedException(ex);
             }
             finally
             {
@@ -99,15 +96,12 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
             }
             try
             {
-                try
-                {
-                    boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                    return result;
-                }
-                catch (InterruptedException ex)
-                {
-                    markInterrupted();
-                }
+                boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                return result;
+            }
+            catch (InterruptedException ex)
+            {
+                handleInterruptedException(ex);
             }
             finally
             {
@@ -146,7 +140,7 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -197,7 +191,7 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -243,7 +237,7 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
         }

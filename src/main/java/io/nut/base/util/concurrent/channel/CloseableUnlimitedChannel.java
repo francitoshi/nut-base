@@ -52,7 +52,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -98,7 +98,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 }
                 catch (InterruptedException ex)
                 {
-                    markInterrupted();
+                    handleInterruptedException(ex);
                 }
             }
             finally
@@ -127,15 +127,12 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                     return drainAfterClose();
                 }
 
-                try
-                {
-                    Object item = queue.take();
-                    return item == POISON ? null : (E) item;
-                }
-                catch (InterruptedException ex)
-                {
-                    markInterrupted();
-                }
+                Object item = queue.take();
+                return item == POISON ? null : (E) item;
+            }
+            catch (InterruptedException ex)
+            {
+                handleInterruptedException(ex);
             }
             finally
             {
@@ -174,19 +171,16 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                     return drainAfterClosePoll();
                 }
 
-                try
+                Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                if (item == null || item == POISON)
                 {
-                    Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                    if (item == null || item == POISON)
-                    {
-                        return null;
-                    }
-                    return (E) item;
+                    return null;
                 }
-                catch (InterruptedException ex)
-                {
-                    markInterrupted();
-                }
+                return (E) item;
+            }
+            catch (InterruptedException ex)
+            {
+                handleInterruptedException(ex);
             }
             finally
             {
