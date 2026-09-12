@@ -776,6 +776,9 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     /**
      * Closes the internal channel, causing workers to finish and exit. No new
      * messages can be accepted after this call.
+     * <p>
+     * Never blocks: the channel is closed immediately and messages already
+     * buffered are still received before the Actor terminates.
      *
      * @return this Actor, for fluent chaining
      */
@@ -787,12 +790,11 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
 
     /**
      * Initiates shutdown. If {@code onlyWhenEmpty}, the channel is closed only
-     * once all pending messages have been processed.
-     * <p>
-     * Note that unlike {@link ActorLifecycle#shutdown(boolean)}, which blocks
-     * until the instance is idle before closing, this implementation never
-     * blocks: with {@code onlyWhenEmpty == true} it defers the actual close
-     * until the Actor becomes idle.
+     * once all pending messages have been processed and the call returns
+     * immediately; otherwise the channel is closed immediately. In both forms
+     * this method never blocks: it returns as soon as the close is ordered,
+     * and messages already buffered are still received before the Actor
+     * terminates.
      *
      * @param onlyWhenEmpty if {@code true}, defers close until idle
      * @return this Actor, for fluent chaining

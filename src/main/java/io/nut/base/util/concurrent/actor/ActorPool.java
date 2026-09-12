@@ -104,6 +104,13 @@ public class ActorPool implements ActorLifecycle, Executor
      * Tracks the shutdown state in synchronous mode (there is no backing pool).
      */
     private volatile boolean shutdown;
+
+    /**
+     * When {@code true}, {@link #shutdown(boolean)} has been asked to close
+     * admission of new work once the pool becomes idle. Cleared when the
+     * request is honoured (or an immediate shutdown supersedes it).
+     */
+    private volatile boolean shutdownWhenIdle;
     // -------------------------------------------------------------------------
     // Constructors
     // -------------------------------------------------------------------------
@@ -331,6 +338,7 @@ public class ActorPool implements ActorLifecycle, Executor
             finally
             {
                 phaser.arriveAndDeregister();
+                maybeShutdownWhenIdle();
             }
         };
     }
@@ -361,6 +369,7 @@ public class ActorPool implements ActorLifecycle, Executor
             finally
             {
                 phaser.arriveAndDeregister();
+                maybeShutdownWhenIdle();
             }
         };
     }
@@ -502,6 +511,7 @@ public class ActorPool implements ActorLifecycle, Executor
             {
                 arrived.set(true);
                 phaser.arriveAndDeregister();
+                maybeShutdownWhenIdle();
             }
         };
         return CompletableFuture.runAsync(registeredTask, this.threadPoolExecutor).whenComplete((v, ex) ->
@@ -509,6 +519,7 @@ public class ActorPool implements ActorLifecycle, Executor
             if (arrived.compareAndSet(false, true))
             {
                 phaser.arriveAndDeregister();
+                maybeShutdownWhenIdle();
             }
         });
     }
@@ -546,6 +557,7 @@ public class ActorPool implements ActorLifecycle, Executor
             {
                 arrived.set(true);
                 phaser.arriveAndDeregister();
+                maybeShutdownWhenIdle();
             }
         };
         return CompletableFuture.supplyAsync(registeredSupplier, this.threadPoolExecutor).whenComplete((v, ex) ->
@@ -553,6 +565,7 @@ public class ActorPool implements ActorLifecycle, Executor
             if (arrived.compareAndSet(false, true))
             {
                 phaser.arriveAndDeregister();
+                maybeShutdownWhenIdle();
             }
         });
     }
@@ -668,6 +681,10 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Initiates a graceful shutdown: previously submitted tasks continue
      * executing, but no new tasks are accepted.
+     * <p>
+     * Never blocks: the underlying {@link ThreadPoolExecutor} shuts down in
+     * the background, completing tasks that were already submitted before the
+     * shutdown.
      *
      * @return this ActorPool, for fluent chaining
      */
@@ -686,25 +703,67 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Stops accepting new work, optionally waiting until the pool is idle
-     * first (no tasks pending or running).
+     * Stops accepting new work, optionally deferring admission closure until
+     * the pool is idle. Never blocks: with {@code true} the pool keeps
+     * accepting and processing work until it runs empty and only then shuts
+     * down its backing pool; {@link ThreadPoolExecutor#shutdown()} is already
+     * graceful, so previously submitted work is always completed in both
+     * forms.
+     * <p>
+     * If idle-tracking was disabled at construction time ({@code avoidTracker}
+     * or synchronous mode), the deferral cannot be reliably observed and this
+     * degrades to the immediate {@link #shutdown()}.
      *
-     * @param waitForIdleFirst if {@code true}, blocks until
-     *                         {@link #waitForIdle()} returns before actually
-     *                         closing admission of new work; if
-     *                         {@code false}, equivalent to {@link #shutdown()}
+     * @param whenIdle if {@code true}, shut down once the pool is idle
+     *                 (deferred); if {@code false}, shut down immediately
      * @return this ActorPool, for fluent chaining
-     * @throws InterruptedException if interrupted while waiting for idle
      */
     @Override
-    public ActorPool shutdown(boolean waitForIdleFirst) throws InterruptedException
+    public ActorPool shutdown(boolean whenIdle)
     {
-        if (waitForIdleFirst)
+        if (whenIdle)
         {
-            waitForIdle();
+            if (phaser == null)
+            {
+                shutdown();
+                return this;
+            }
+            if (shutdownWhenIdle)
+            {
+                return this;
+            }
+            shutdownWhenIdle = true;
+            maybeShutdownWhenIdle();
         }
-        shutdown();
+        else
+        {
+            shutdown();
+        }
         return this;
+    }
+
+    /**
+     * Shuts the backing pool down if a deferred
+     * ({@code shutdown(true)}) request is pending and the pool is now idle.
+     * Called from the completion hooks of {@link #wrap(Runnable)},
+     * {@link #tracked(Runnable)} and {@link #submit}, so it runs on the
+     * worker thread that just finished the last tracked task. Idempotent:
+     * clears {@link #shutdownWhenIdle} before invoking {@link #shutdown()}.
+     */
+    private void maybeShutdownWhenIdle()
+    {
+        if (!shutdownWhenIdle || synchronous)
+        {
+            return;
+        }
+        boolean idle = phaser == null
+                ? threadPoolExecutor.getActiveCount() == 0
+                : phaser.getRegisteredParties() == 1;
+        if (idle)
+        {
+            shutdownWhenIdle = false;
+            shutdown();
+        }
     }
 
     /**

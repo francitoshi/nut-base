@@ -11,13 +11,12 @@ package io.nut.base.util.concurrent.actor;
  * <p>
  * All three follow the same semantics:
  * <ul>
- *   <li>{@link #shutdown()} stops accepting new work immediately, but any
- *       work already submitted is still processed to completion in the
- *       background. This call never blocks.</li>
- *   <li>{@link #shutdown(boolean)} with {@code true} first waits until the
- *       instance is idle ({@link #waitForIdle()}) and only then stops
- *       accepting new work; with {@code false} it behaves exactly like
- *       {@link #shutdown()}.</li>
+ *   <li>{@link #shutdown()} stops accepting new work, but any work already
+ *       submitted is still processed to completion in the background.</li>
+ *   <li>{@link #shutdown(boolean)} with {@code true} closes admission of new
+ *       work only once the instance is idle, so work already submitted is
+ *       processed to completion first; with {@code false} it behaves exactly
+ *       like {@link #shutdown()}.</li>
  *   <li>{@link #waitForIdle()} blocks until there is no work pending or in
  *       progress. This is a point-in-time condition: unless the instance is
  *       also shut down, new work may arrive right afterwards.</li>
@@ -28,32 +27,51 @@ package io.nut.base.util.concurrent.actor;
  *       friendly combination: {@code shutdown(); awaitTermination();}.</li>
  * </ul>
  * <p>
+ * The shutdown methods ({@link #shutdown()} and {@link #shutdown(boolean)})
+ * are non-blocking by convention but not by contract. An implementation is
+ * strongly encouraged to return immediately and complete the shutdown in the
+ * background, yet it <em>may</em> wait as long as necessary to honour the
+ * guarantee that work submitted before the shutdown is never abandoned. For
+ * example, {@link ActorHub#shutdown(boolean)} waits until every linked stage
+ * of its graph is quiescent before closing, so that in-flight forwards
+ * between stages are not lost. In all cases the methods are idempotent: the
+ * second call behaves like the first.
+ * </p>
+ * <p>
  * Implementations return {@code this} (as a subtype) from the operations that
  * do not produce a value, enabling fluent chaining; a parameterized reference
  * may use the {@code ActorLifecycle} return type declared here.
  */
 public interface ActorLifecycle extends AutoCloseable
 {
-    /**
-     * Stops accepting new work. Does not block: work already submitted keeps
-     * being processed in the background. Idempotent.
+/**
+     * Stops accepting new work. Work already submitted is still processed to
+     * completion in the background. Idempotent.
+     * <p>
+     * Non-blocking by convention: implementations return as soon as possible
+     * and may wait only when necessary to guarantee that previously submitted
+     * work is not abandoned.
      *
      * @return this instance, for fluent chaining
      */
     ActorLifecycle shutdown();
 
     /**
-     * Stops accepting new work, optionally waiting until the instance is
-     * idle first.
+     * Stops accepting new work. With {@code true} admission of new work closes
+     * only once this instance is idle; with {@code false} it closes
+     * immediately. Work submitted before the shutdown is never abandoned.
+     * Idempotent.
+     * <p>
+     * Non-blocking by convention: implementations return as soon as possible
+     * and may wait only when necessary to guarantee that previously submitted
+     * work is not abandoned.
      *
-     * @param waitForIdleFirst if {@code true}, blocks until
-     *                         {@link #waitForIdle()} returns before actually
-     *                         closing admission of new work; if
-     *                         {@code false}, equivalent to {@link #shutdown()}
+     * @param whenIdle if {@code true}, close admission of new work once this
+     *                 instance is idle; if {@code false}, close admission
+     *                 immediately
      * @return this instance, for fluent chaining
-     * @throws InterruptedException if interrupted while waiting for idle
      */
-    ActorLifecycle shutdown(boolean waitForIdleFirst) throws InterruptedException;
+    ActorLifecycle shutdown(boolean whenIdle);
 
     /**
      * Blocks the calling thread until this instance has no work pending or

@@ -939,7 +939,8 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * {@inheritDoc}
      * <p>
      * Shuts down every Actor registered with this ActorHub first, then shuts down the
-     * underlying thread pool.
+     * underlying thread pool. Never blocks; equivalent to
+     * {@link #shutdown(boolean) shutdown(false)}.
      *
      * @return this ActorHub, for fluent chaining
      */
@@ -959,7 +960,9 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * pass whenever the ActorHub-wide processed-message counter advances (so
      * in-flight forwards between linked stages are not lost), and only then
      * closes every Actor and the underlying thread pool. When {@code false} the
-     * shutdown starts immediately.
+     * shutdown starts immediately (and never blocks). This is the wait that the
+     * {@link ActorLifecycle} contract explicitly allows: it is only as long as
+     * necessary to guarantee that forwards already in flight are never lost.
      *
      * @param onlyWhenEmpty if {@code true}, the ActorHub drains until the whole
      *                      graph is quiescent before shutting down; if
@@ -999,10 +1002,17 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
                 }
                 last = now;
             }
+            for (Actor<?> actor : actors)
+            {
+                actor.shutdown(false);
+            }
         }
-        for (Actor<?> actor : actors)
+        else
         {
-            actor.shutdown(false);
+            for (Actor<?> actor : actors)
+            {
+                actor.shutdown(false);
+            }
         }
         shutdownPoolOrDefer();
         return this;
