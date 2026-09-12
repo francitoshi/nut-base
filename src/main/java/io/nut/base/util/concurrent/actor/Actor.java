@@ -473,7 +473,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     {
         try
         {
-            drain();
+            drain(0);
         }
         finally
         {
@@ -491,7 +491,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     {
         try
         {
-            drainBlocking();
+            drain(PERMANENT_WAIT_MILLIS);
         }
         finally
         {
@@ -515,47 +515,19 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     }
 
     /**
-     * Processes every message currently buffered in the channel, one at a time.
-     * The channel is closed (drain-only) during shutdown, so an explicit call
-     * here guarantees that buffered messages are received even if no worker
-     * could be submitted to the pool.
+     * Processes every message available on the channel, one at a time. With
+     * {@code timeoutMillis == 0} only messages currently buffered are drained;
+     * a positive timeout additionally waits up to that long for the next
+     * message, keeping a worker thread alive across bursts of messages while
+     * still yielding it once the Actor has been quiet (or closed) for the wait
+     * window. The channel is closed (drain-only) during shutdown, so an explicit
+     * call with a zero timeout guarantees that buffered messages are received
+     * even if no worker could be submitted to the pool.
      */
-    private void drain()
+    private void drain(long timeoutMillis)
     {
         M m;
-        while ((m = channel.get(0, TimeUnit.MILLISECONDS)) != null)
-        {
-            pending.decrementAndGet();
-            long seq = sequenceCounter.incrementAndGet();
-            processing.incrementAndGet();
-            countProcessed();
-            try
-            {
-                receive(m, seq);
-            }
-            catch (Exception ex)
-            {
-                handleException(ex);
-            }
-            finally
-            {
-                processing.decrementAndGet();
-            }
-        }
-    }
-
-    /**
-     * Waits up to {@link #PERMANENT_WAIT_MILLIS} for a message, processing every
-     * message that arrives, and returns when the channel has been quiet (or
-     * closed) for that long. Used by the permanent worker: it keeps a thread
-     * alive across bursts of messages (avoiding per-message thread churn) but
-     * yields the thread once the Actor has been idle for the wait window, so it
-     * never blocks a pool thread indefinitely.
-     */
-    private void drainBlocking()
-    {
-        M m;
-        while ((m = channel.get(PERMANENT_WAIT_MILLIS, TimeUnit.MILLISECONDS)) != null)
+        while ((m = channel.get(timeoutMillis, TimeUnit.MILLISECONDS)) != null)
         {
             pending.decrementAndGet();
             long seq = sequenceCounter.incrementAndGet();
@@ -604,7 +576,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
             // zero under the lock, guaranteeing those messages are not abandoned.
             while (pending.get() > 0)
             {
-                drain();
+                drain(0);
             }
 
             boolean close = false;
@@ -701,7 +673,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
         channel.close();
         if (activeWorkers.get() == 0)
         {
-            drain();
+            drain(0);
             doTerminate();
         }
     }
