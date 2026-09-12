@@ -5,8 +5,9 @@
  */
 package io.nut.base.util.concurrent.channel;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * A {@link FanoutChannel} that can be closed, propagating end-of-data to all
@@ -17,6 +18,10 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * not implement {@link ChannelCloser} are left untouched — they will stop
  * receiving values because {@link #put} throws
  * {@link IllegalStateException} after close.
+ * <p>
+ * A {@code put} that is blocked on a full target at the moment of closing is
+ * aborted: it returns without delivering to the remaining destinations, and
+ * the close proceeds without waiting for the in-flight broadcast to finish.
  * <p>
  * <strong>Ownership:</strong> this class assumes it is the sole owner of its
  * closeable targets. If targets are shared with other producers, do not close
@@ -40,11 +45,26 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements ChannelCloser
 {
-    private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
-
+    /**
+     * Guards {@link #closed}, the {@link #writers} set and the close() wait.
+     * The broadcast itself happens outside this monitor so that a blocked put
+     * never prevents close() from marking the channel closed.
+     */
     private final Object closeLock = new Object();
 
+    /**
+     * Threads currently broadcasting. Tracked so that close() can interrupt
+     * them and wait until no broadcast is in flight before closing targets.
+     */
+    private final Set<Thread> writers = new HashSet<>();
+
     private volatile boolean closed;
+
+    /**
+     * Result of the last close() attempt, returned by subsequent idempotent
+     * close() calls so they do not claim success after a failed close.
+     */
+    private volatile boolean closeResult;
 
     /**
      * Creates a closeable fan-out channel with the given initial destinations.
@@ -65,6 +85,10 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
      * If the current thread is interrupted while broadcasting, the interrupted
      * target aborts its {@code put} (closing itself if it is closeable) and the
      * broadcast returns without completing the remaining destinations.
+     * <p>
+     * A concurrent {@link #close()} never deadlocks with a {@code put} blocked
+     * on a full target: close() marks the channel closed, interrupts the
+     * in-flight broadcasters and closes the targets once they have drained.
      *
      * @param value the value to broadcast
      * @throws IllegalStateException if this fan-out has been closed
@@ -72,18 +96,25 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
     @Override
     public void put(E value)
     {
-        rwLock.readLock().lock();
-        try
+        synchronized (closeLock)
         {
             if (closed)
             {
                 throw new IllegalStateException("closed");
             }
-            super.put(value);
+            writers.add(Thread.currentThread());
+        }
+        try
+        {
+            broadcast(value);
         }
         finally
         {
-            rwLock.readLock().unlock();
+            synchronized (closeLock)
+            {
+                writers.remove(Thread.currentThread());
+                closeLock.notifyAll();
+            }
         }
     }
 
@@ -101,18 +132,48 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
     @Override
     public boolean put(E value, long timeout, TimeUnit unit)
     {
-        rwLock.readLock().lock();
-        try
+        synchronized (closeLock)
         {
             if (closed)
             {
                 return false;
             }
-            return super.put(value, timeout, unit);
+            writers.add(Thread.currentThread());
+        }
+        try
+        {
+            for (ChannelWriter<E> target : targets)
+            {
+                if (closed)
+                {
+                    return false;
+                }
+                if (!target.put(value, timeout, unit))
+                {
+                    return false;
+                }
+            }
+            return true;
         }
         finally
         {
-            rwLock.readLock().unlock();
+            synchronized (closeLock)
+            {
+                writers.remove(Thread.currentThread());
+                closeLock.notifyAll();
+            }
+        }
+    }
+
+    private void broadcast(E value)
+    {
+        for (ChannelWriter<E> target : targets)
+        {
+            target.put(value);
+            if (closed)
+            {
+                return;
+            }
         }
     }
 
@@ -120,13 +181,20 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
      * Closes this fan-out and propagates end-of-data to all registered
      * targets that implement {@link ChannelCloser}.
      * <p>
+     * Passing puts are aborted first: close() marks the channel closed under
+     * the same monitor used to register in-flight broadcasts, interrupts the
+     * registered writers (each blocked target put aborts per the interruption
+     * contract) and waits until no broadcast is in flight before closing the
+     * targets, so the close never waits for a put that blocks forever.
+     * <p>
      * After this call:
      * <ul>
      *   <li>Any subsequent {@link #put} throws {@link IllegalStateException}.</li>
      *   <li>{@link ChannelReader#get} on each closeable target drains
      *       remaining buffered elements and then returns {@code null}.</li>
      * </ul>
-     * This method is idempotent.
+     * This method is idempotent: subsequent calls return the same result as
+     * the first call.
      *
      * @return {@code true} if all closeable targets were closed successfully;
      *         {@code false} if the close could not complete (e.g. interrupted)
@@ -134,22 +202,30 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
     @Override
     public boolean close()
     {
-        rwLock.writeLock().lock();
-        try
+        synchronized (closeLock)
         {
             if (closed)
             {
-                return true;
+                return closeResult;
             }
             closed = true;
-            synchronized (closeLock)
+            closeLock.notifyAll();
+            for (Thread writer : writers)
             {
-                closeLock.notifyAll();
+                writer.interrupt();
             }
-        }
-        finally
-        {
-            rwLock.writeLock().unlock();
+            while (!writers.isEmpty())
+            {
+                try
+                {
+                    closeLock.wait();
+                }
+                catch (InterruptedException ex)
+                {
+                    closeResult = false;
+                    return false;
+                }
+            }
         }
 
         boolean allClosed = true;
@@ -163,6 +239,7 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
                 }
             }
         }
+        closeResult = allClosed;
         return allClosed;
     }
 
