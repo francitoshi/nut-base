@@ -65,7 +65,7 @@ import java.util.logging.Logger;
  * {@link PipeActor}, {@link FilterActor}, {@link BatchActor}, and {@link FanOutActor},
  * blocking until a chain of linked stages has terminated.
  */
-public class ActorHub extends ActorPool implements Executor
+public class ActorHub extends ActorPool implements ActorLifecycle, Executor
 {
     public static ActorHub SYNCHRONOUS = new ActorHub(null);
     
