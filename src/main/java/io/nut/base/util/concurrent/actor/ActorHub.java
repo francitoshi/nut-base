@@ -1060,7 +1060,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         }
     }
     
-    private static void awaitTerminationUntilNanos(Set<Consumer<?>> set, Consumer<?> stage, long nanos) throws InterruptedException
+    private static void awaitTerminationUntilNanos(Set<Consumer<?>> set, Consumer<?> stage, long nanos)
     {
         if(set.contains(stage))
         {
@@ -1090,10 +1090,8 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * @param millis the maximum time to wait in total, in milliseconds
      * @param stages the root stage(s) of the chain(s) to wait on; must not be
      *               {@code null}
-     * @throws InterruptedException if the calling thread is interrupted while
-     *                              waiting
      */
-    public static void awaitTermination(int millis, Consumer<?>... stages) throws InterruptedException
+    public static void awaitTermination(int millis, Consumer<?>... stages)
     {
         long untilNanos = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
         Set<Consumer<?>> set = new HashSet();
@@ -1146,25 +1144,13 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     /**
      * Blocks until every Actor registered with this ActorHub has terminated (closed,
      * drained, and unregistered), then returns.
-     * <p>
-     * If the calling thread is interrupted while waiting, the interrupt status
-     * is restored and the interruption is logged at {@link Level#SEVERE}; the
-     * method then returns without waiting for termination to complete.
      *
      * @return this ActorHub, for fluent chaining
      */
     @Override
     public ActorHub awaitTermination()
     {
-        try
-        {
-            awaitTermination(Integer.MAX_VALUE, actors.toArray(new Consumer<?>[0]));
-        }
-        catch (InterruptedException ex)
-        {
-            Thread.currentThread().interrupt();
-            Logger.getLogger(ActorHub.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        awaitTermination(Integer.MAX_VALUE, actors.toArray(new Consumer<?>[0]));
         return this;
     }
 
@@ -1190,17 +1176,9 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     public void close(boolean onlyWhenEmpty)
     {
-        try
-        {
-            shutdown(onlyWhenEmpty);
-            awaitTermination(Integer.MAX_VALUE, actors.toArray(new Consumer<?>[0]));
-            awaitTermination(Integer.MAX_VALUE);
-        }
-        catch (InterruptedException ex)
-        {
-            Thread.currentThread().interrupt();
-            Logger.getLogger(ActorHub.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        shutdown(onlyWhenEmpty);
+        awaitTermination(Integer.MAX_VALUE, actors.toArray(new Consumer<?>[0]));
+        awaitTermination(Integer.MAX_VALUE);
     }
 
 }

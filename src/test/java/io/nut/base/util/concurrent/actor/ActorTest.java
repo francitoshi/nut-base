@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -150,6 +151,99 @@ class ActorTest
 
         assertTrue(actor.awaitTermination(2000));
         assertEquals(50, actor.received.size());
+    }
+
+    @Test
+    void waitForIdleIgnoresInterruptionAndKeepsWaitingUntilIdle() throws Exception
+    {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch gate = new CountDownLatch(1);
+        Actor<String> actor = new Actor<String>(actorHub)
+        {
+            @Override
+            protected void receive(String m)
+            {
+                started.countDown();
+                try
+                {
+                    gate.await();
+                }
+                catch (InterruptedException ex)
+                {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        };
+        actor.accept("block");
+
+        assertTrue(started.await(1, TimeUnit.SECONDS));
+
+        Thread waiter = new Thread(() -> actor.waitForIdle());
+        waiter.start();
+
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (waiter.getState() != Thread.State.WAITING && System.nanoTime() < deadline)
+        {
+            Thread.sleep(10);
+        }
+        assertEquals(Thread.State.WAITING, waiter.getState());
+
+        waiter.interrupt();
+        Thread.sleep(100);
+        assertTrue(waiter.isAlive(), "waitForIdle must keep waiting when interrupted");
+
+        gate.countDown();
+        waiter.join(2000);
+        assertFalse(waiter.isAlive());
+        assertFalse(waiter.isInterrupted(), "waitForIdle must not restore the interrupt flag");
+
+        actor.shutdown();
+    }
+
+    @Test
+    void awaitTerminationIgnoresInterruptionAndKeepsWaitingUntilTerminated() throws Exception
+    {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch gate = new CountDownLatch(1);
+        Actor<String> actor = new Actor<String>(actorHub)
+        {
+            @Override
+            protected void receive(String m)
+            {
+                started.countDown();
+                try
+                {
+                    gate.await();
+                }
+                catch (InterruptedException ex)
+                {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        };
+        actor.accept("block");
+
+        assertTrue(started.await(1, TimeUnit.SECONDS));
+        actor.shutdown();
+
+        Thread waiter = new Thread(() -> actor.awaitTermination());
+        waiter.start();
+
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (waiter.getState() != Thread.State.TIMED_WAITING && System.nanoTime() < deadline)
+        {
+            Thread.sleep(10);
+        }
+        assertEquals(Thread.State.TIMED_WAITING, waiter.getState());
+
+        waiter.interrupt();
+        Thread.sleep(100);
+        assertTrue(waiter.isAlive(), "awaitTermination must keep waiting when interrupted");
+
+        gate.countDown();
+        waiter.join(2000);
+        assertFalse(waiter.isAlive());
+        assertFalse(waiter.isInterrupted(), "awaitTermination must not restore the interrupt flag");
     }
 
     @Test

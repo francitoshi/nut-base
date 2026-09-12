@@ -109,7 +109,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public boolean awaitTermination(int millis) throws InterruptedException
+    public boolean awaitTermination(int millis)
     {
         ActorHub h = actorHub;
         if (h != null)

@@ -19,10 +19,13 @@ package io.nut.base.util.concurrent.actor;
  *       like {@link #shutdown()}.</li>
  *   <li>{@link #waitForIdle()} blocks until there is no work pending or in
  *       progress. This is a point-in-time condition: unless the instance is
- *       also shut down, new work may arrive right afterwards.</li>
+ *       also shut down, new work may arrive right afterwards. It is not
+ *       responsive to interruption: an interrupt is ignored and the method
+ *       keeps waiting until the instance is idle.</li>
  *   <li>{@link #awaitTermination()} blocks until the instance no longer
  *       accepts work <em>and</em> has finished processing everything that was
- *       submitted before it was shut down.</li>
+ *       submitted before it was shut down. Like {@link #waitForIdle()}, it
+ *       is not responsive to interruption.</li>
  *   <li>{@link #close()} is the blocking, idempotent, try-with-resources
  *       friendly combination: {@code shutdown(); awaitTermination();}.</li>
  * </ul>
@@ -76,21 +79,30 @@ public interface ActorLifecycle extends AutoCloseable
     /**
      * Blocks the calling thread until this instance has no work pending or
      * in progress.
+     * <p>
+     * This method deliberately does not respond to interruption: if the calling
+     * thread is interrupted while waiting, the interruption is ignored and the
+     * method keeps waiting until the instance is idle (or, if shut down, until
+     * all previously submitted work has completed). The thread's interrupt
+     * status is <strong>not</strong> restored.
      *
      * @return this instance, for fluent chaining
-     * @throws InterruptedException if interrupted while waiting
      */
-    ActorLifecycle waitForIdle() throws InterruptedException;
+    ActorLifecycle waitForIdle();
 
     /**
      * Blocks the calling thread until this instance no longer accepts new
      * work and has finished processing everything submitted before the
      * shutdown.
+     * <p>
+     * This method deliberately does not respond to interruption: if the calling
+     * thread is interrupted while waiting, the interruption is ignored and the
+     * method keeps waiting until the instance has terminated. The thread's
+     * interrupt status is <strong>not</strong> restored.
      *
      * @return this instance, for fluent chaining
-     * @throws InterruptedException if interrupted while waiting
      */
-    ActorLifecycle awaitTermination() throws InterruptedException;
+    ActorLifecycle awaitTermination();
 
     /**
      * @return {@code true} if {@link #shutdown()} (in either form) has been
@@ -106,8 +118,8 @@ public interface ActorLifecycle extends AutoCloseable
 
     /**
      * Blocking, idempotent close: equivalent to calling {@link #shutdown()}
-     * followed by {@link #awaitTermination()}. If interrupted while waiting,
-     * restores the interrupt flag on the current thread and returns.
+     * followed by {@link #awaitTermination()}. The wait is not responsive to
+     * interruption (see {@link #awaitTermination()}).
      */
     @Override
     void close();

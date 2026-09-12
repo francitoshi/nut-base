@@ -49,14 +49,7 @@ class ActorHubTest
     void tearDown()
     {
         actorHub.shutdown();
-        try
-        {
-            actorHub.awaitTermination(2000);
-        }
-        catch (InterruptedException ie)
-        {
-            Thread.currentThread().interrupt();
-        }
+        actorHub.awaitTermination(2000);
     }
 
     @Test
@@ -286,14 +279,7 @@ class ActorHubTest
         assertEquals(5, h.getMaximumPoolSize());
 
         h.shutdown();
-        try
-        {
-            h.awaitTermination(1000);
-        }
-        catch (InterruptedException ie)
-        {
-            Thread.currentThread().interrupt();
-        }
+        h.awaitTermination(1000);
     }
 
     @Test

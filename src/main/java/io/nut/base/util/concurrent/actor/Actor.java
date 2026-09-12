@@ -750,6 +750,9 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     /**
      * Blocks until this Actor is idle (no pending messages, no temporary workers
      * active).
+     * <p>
+     * Not responsive to interruption: an interrupt leaves this method waiting
+     * until the Actor is idle and does not restore the interrupt flag.
      *
      * @return this Actor, for fluent chaining
      */
@@ -758,16 +761,17 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     {
         synchronized (lock)
         {
-            try
+            while (!isIdle())
             {
-                while (!isIdle())
+                try
                 {
                     lock.wait();
                 }
-            }
-            catch (InterruptedException ex)
-            {
-                Thread.currentThread().interrupt();
+                catch (InterruptedException ex)
+                {
+                    // Ignored by contract: keep waiting until idle. The interrupt
+                    // flag is deliberately not restored.
+                }
             }
         }
         return this;
@@ -872,6 +876,10 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
 
     /**
      * Blocks until the Actor is terminated or the timeout elapses.
+     * <p>
+     * Not responsive to interruption: an interrupt leaves this method waiting
+     * (until the deadline or termination) and does not restore the interrupt
+     * flag.
      *
      * @param millis maximum time to wait
      * @return {@code true} if terminated within the timeout
@@ -884,6 +892,9 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
 
     /**
      * Blocks until this Actor is terminated.
+     * <p>
+     * Not responsive to interruption: an interrupt leaves this method waiting
+     * until termination and does not restore the interrupt flag.
      *
      * @return this Actor, for fluent chaining
      */
@@ -897,6 +908,10 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     /**
      * Blocks until the Actor is terminated or the absolute deadline (in
      * nanoseconds) is reached.
+     * <p>
+     * Not responsive to interruption: an interrupt leaves this method waiting
+     * (until the deadline or termination) and does not restore the interrupt
+     * flag.
      *
      * @param untilNanos the absolute deadline
      * @return {@code true} if terminated within the deadline
@@ -918,9 +933,9 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
                 }
                 catch (InterruptedException ex)
                 {
-                    Thread.currentThread().interrupt();
-                    handleException(ex);
-                    return false;
+                    // Ignored by contract: keep waiting until the deadline or
+                    // termination. The interrupt flag is deliberately not
+                    // restored.
                 }
             }
             return true;

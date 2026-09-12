@@ -36,14 +36,7 @@ class FilterActorTest
     void tearDown()
     {
         actorHub.shutdown();
-        try
-        {
-            actorHub.awaitTermination(2000);
-        }
-        catch (InterruptedException ie)
-        {
-            Thread.currentThread().interrupt();
-        }
+        actorHub.awaitTermination(2000);
     }
 
     @Test

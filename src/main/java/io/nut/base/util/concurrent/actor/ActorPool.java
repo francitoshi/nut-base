@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.actor;
 
+import io.nut.base.math.Nums;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
@@ -21,8 +22,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Phaser;
@@ -787,24 +786,53 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Blocks the calling thread until the pool has terminated or the timeout
      * elapses.
+     * <p>
+     * Not responsive to interruption: an interrupt leaves this method waiting
+     * (until the deadline or termination) and does not restore the interrupt
+     * flag.
      *
      * @param millis maximum time to wait, in milliseconds
      * @return {@code true} if the pool terminated within the timeout
-     * @throws InterruptedException if interrupted while waiting
      */
-    public boolean awaitTermination(int millis) throws InterruptedException
+    public boolean awaitTermination(int millis)
     {
-        return synchronous ? true : threadPoolExecutor.awaitTermination(millis, TimeUnit.MILLISECONDS);
+        if (synchronous)
+        {
+            return true;
+        }
+        long untilNanos = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
+        while (true)
+        {
+            long remainingNanos = untilNanos - System.nanoTime();
+            if (remainingNanos <= 0)
+            {
+                return threadPoolExecutor.isTerminated();
+            }
+            try
+            {
+                if (threadPoolExecutor.awaitTermination(remainingNanos, TimeUnit.NANOSECONDS))
+                {
+                    return true;
+                }
+            }
+            catch (InterruptedException ex)
+            {
+                // Ignored by contract: keep waiting until the deadline or
+                // termination. The interrupt flag is deliberately not restored.
+            }
+        }
     }
 
     /**
      * Blocks until the pool has terminated.
+     * <p>
+     * Not responsive to interruption: an interrupt leaves this method waiting
+     * until termination and does not restore the interrupt flag.
      *
      * @return this ActorPool, for fluent chaining
-     * @throws InterruptedException if interrupted while waiting
      */
     @Override
-    public ActorPool awaitTermination() throws InterruptedException
+    public ActorPool awaitTermination()
     {
         awaitTermination(Integer.MAX_VALUE);
         return this;
@@ -866,14 +894,7 @@ public class ActorPool implements ActorLifecycle, Executor
     @Override
     public void close()
     {
-        try
-        {
-            this.shutdown();
-            this.awaitTermination(Integer.MAX_VALUE);
-        }
-        catch (InterruptedException ex)
-        {
-            Logger.getLogger(ActorPool.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        this.shutdown();
+        this.awaitTermination(Integer.MAX_VALUE);
     }
 }
