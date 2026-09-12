@@ -313,10 +313,4 @@ class PipelineActorTest
 
         assertThrows(IllegalStateException.class, () -> pipeline.accept(1));
     }
-
-    private static <T> boolean assertFalse(boolean condition)
-    {
-        assertTrue(!condition);
-        return !condition;
-    }
 }

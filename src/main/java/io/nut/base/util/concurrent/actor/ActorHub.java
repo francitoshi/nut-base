@@ -6,7 +6,6 @@
 package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.math.Nums;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
