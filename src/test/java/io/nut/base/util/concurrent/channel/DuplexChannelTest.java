@@ -5,6 +5,9 @@
  */
 package io.nut.base.util.concurrent.channel;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,5 +53,37 @@ public class DuplexChannelTest
 
         assertThrows(NullPointerException.class, () -> Channel.duplex(null, inChan));
         assertThrows(NullPointerException.class, () -> Channel.duplex(outChan, null));
+    }
+
+    @Test
+    public void testIsInterruptedPropagatesFromDelegates() throws Exception
+    {
+        CloseableUnbufferedChannel<String> inChan = new CloseableUnbufferedChannel<>();
+        CloseableUnbufferedChannel<String> outChan = new CloseableUnbufferedChannel<>();
+        DuplexChannel<String> duplex = Channel.duplex(inChan, outChan);
+        assertFalse(duplex.isInterrupted());
+
+        CountDownLatch started = new CountDownLatch(1);
+        AtomicReference<Thread> consumerThread = new AtomicReference<>();
+        AtomicReference<String> result = new AtomicReference<>();
+
+        // interrupt a get() blocked on the in() delegate → inChan is marked
+        Thread consumer = new Thread(() ->
+        {
+            consumerThread.set(Thread.currentThread());
+            started.countDown();
+            result.set(duplex.get());
+        });
+        consumer.start();
+        assertTrue(started.await(5, TimeUnit.SECONDS));
+        Thread.sleep(100);
+        assertNull(result.get());
+
+        consumerThread.get().interrupt();
+        consumer.join(5000);
+
+        assertNull(result.get());
+        assertTrue(inChan.isInterrupted());
+        assertTrue(duplex.isInterrupted(), "duplex must expose the interrupted state of its delegates");
     }
 }

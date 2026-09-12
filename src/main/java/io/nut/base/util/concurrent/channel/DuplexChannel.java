@@ -58,4 +58,27 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     {
         return true;
     }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * A duplex channel never marks interruptions on itself: every blocking
+     * operation is delegated to the {@code in}/{@code out} channels, so the
+     * interrupted state is that of whichever delegate implements
+     * {@link Channel} (non-{@code Channel} delegates contribute nothing).
+     */
+    @Override
+    public boolean isInterrupted()
+    {
+        boolean interrupted = false;
+        if (in instanceof Channel && ((Channel<?>) in).isInterrupted())
+        {
+            interrupted = true;
+        }
+        if (out instanceof Channel && ((Channel<?>) out).isInterrupted())
+        {
+            interrupted = true;
+        }
+        return interrupted;
+    }
 }
