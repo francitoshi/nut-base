@@ -261,11 +261,7 @@ public class BatchActor<T> extends Actor<T>
     @Override
     protected void receive(T m)
     {
-        List<T> full = addInOrder(m, expectedSeq.get());
-        if (full != null)
-        {
-            forward(full);
-        }
+        receive(m, expectedSeq.get());
     }
 
     /**
