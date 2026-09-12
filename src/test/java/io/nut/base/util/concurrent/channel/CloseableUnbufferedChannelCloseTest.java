@@ -24,9 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Scenario where close() is invoked while a put() is still blocked (rendezvous:
  * no get() is waiting, so the put() blocks inside the SynchronousQueue).
- * Closing aborts the pending put: the blocked put() fails with
- * {@link IllegalStateException} instead of blocking forever, so close() can
- * complete in bounded time without requiring a consumer.
+ * Closing aborts the pending put: the blocked put() returns without throwing
+ * per the interruption contract, so close() can complete in bounded time
+ * without requiring a consumer.
  */
 class CloseableUnbufferedChannelCloseTest
 {

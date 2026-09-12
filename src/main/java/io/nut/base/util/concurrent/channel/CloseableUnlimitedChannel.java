@@ -256,6 +256,15 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             closed = true;
             closeLock.notifyAll();
 
+            // Unblock pending readers even if the write lock below times out:
+            // a reader blocked in take() is only woken by a POISON and, after
+            // closed = true, no real value will ever arrive.
+            int count = gets.get();
+            for (int i = 0; i < count; i++)
+            {
+                queue.put(POISON);
+            }
+
             boolean acquired = rwLock.writeLock().tryLock(timeout, unit);
             if (acquired)
             {
@@ -264,12 +273,6 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             if (!acquired)
             {
                 return false;
-            }
-
-            int count = gets.get();
-            for (int i = 0; i < count; i++)
-            {
-                queue.put(POISON);
             }
 
             return true;

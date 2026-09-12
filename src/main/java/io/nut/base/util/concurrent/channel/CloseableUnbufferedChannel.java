@@ -302,6 +302,14 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
             writer.interrupt();
         }
 
+        // Unblock pending readers even if the close times out waiting for the
+        // writers below: a reader blocked in take() is only woken by a POISON
+        // and, after closed = true, no real value will ever arrive.
+        for (int i = 1; gets.get() > 0; i++)
+        {
+            queue.offer(POISON, Math.min(i, 100), TimeUnit.MILLISECONDS);
+        }
+
         synchronized (lock)
         {
             while (activeWriters > 0)
@@ -318,11 +326,6 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 lock.wait(timeoutMillis);
                 timeoutNanos = deadline - System.nanoTime();
             }
-        }
-
-        for (int i = 1; gets.get() > 0; i++)
-        {
-            queue.offer(POISON, Math.min(i, 100), TimeUnit.MILLISECONDS);
         }
 
         return true;
