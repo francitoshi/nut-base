@@ -58,6 +58,40 @@ class CloseableFanoutChannelTest
     }
 
     @Test
+    void closeAbortsBlockedPutAndDoesNotDeadlock() throws Exception
+    {
+        // Unbuffered target: with no consumer waiting, the broadcast blocks in
+        // target.put(). close() must abort it in bounded time. Regression test
+        // for the old deadlock between an in-flight put() and close().
+        CloseableChannel<String> dest = new CloseableUnbufferedChannel<>();
+        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
+
+        CountDownLatch putStarted = new CountDownLatch(1);
+        AtomicBoolean putReturned = new AtomicBoolean(false);
+        Thread sender = new Thread(() ->
+        {
+            putStarted.countDown();
+            fan.put("hello");
+            putReturned.set(true);
+        });
+        sender.start();
+
+        assertTrue(putStarted.await(2, TimeUnit.SECONDS));
+        Thread.sleep(200); // let the sender reach the blocking target.put()
+
+        assertTrue(fan.close(), "close() must abort the blocked put and complete in bounded time");
+        assertTrue(fan.isClosed());
+
+        // the blocked put() aborts per the interruption contract: it returns.
+        sender.join(2000);
+        assertFalse(sender.isAlive(), "the blocked put() must be aborted and return");
+        assertTrue(putReturned.get(), "the blocked put() must return after the abort");
+
+        // the target was closed by the abort and by close(): drained end-of-data.
+        assertNull(dest.get());
+    }
+
+    @Test
     void closePropagatesToCloseableTargetsOnly() throws InterruptedException
     {
         CloseableChannel<String> closeable = Channel.closeableOf(4);

@@ -399,6 +399,36 @@ public class ChannelConflatedTest
         }
 
         @Test
+        public void testInterruptedGetClosesChannel() throws Exception
+        {
+            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            CountDownLatch started = new CountDownLatch(1);
+            AtomicReference<Integer> result = new AtomicReference<>();
+            AtomicReference<Thread> consumerThread = new AtomicReference<>();
+
+            Thread consumer = new Thread(() ->
+            {
+                consumerThread.set(Thread.currentThread());
+                started.countDown();
+                result.set(ch.get());
+            });
+            consumer.start();
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            Thread.sleep(100);
+            assertNull(result.get());
+            assertFalse(ch.isClosed());
+
+            // interrupting a blocked get() aborts it and closes the channel
+            // (closeIfCloseable() is invoked after the lock is released).
+            consumerThread.get().interrupt();
+            consumer.join(5000);
+
+            assertNull(result.get());
+            assertTrue(ch.isInterrupted());
+            assertTrue(ch.isClosed(), "an interrupted get() must close the channel");
+        }
+
+        @Test
         public void testCloseUnblocksBlockedGetTimeout() throws Exception
         {
             CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
