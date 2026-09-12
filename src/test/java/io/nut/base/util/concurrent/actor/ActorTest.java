@@ -63,13 +63,13 @@ class ActorTest
     }
 
     @Test
-    void sendAfterShutdownReturnsFalseAndIsNotReceived()
+    void sendAfterShutdownThrowsAndIsNotReceived()
     {
         RecordingActor<String> actor = new RecordingActor<>();
         actor.shutdown();
         actor.dryLogger();
         assertTrue(actor.isShutdown());
-        actor.accept("too late");
+        assertThrows(IllegalStateException.class, () -> actor.accept("too late"));
         assertTrue(actor.received.isEmpty());
     }
 

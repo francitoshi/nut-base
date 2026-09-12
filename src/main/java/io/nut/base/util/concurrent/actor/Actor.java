@@ -302,13 +302,13 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     @Override
     public void accept(M message)
     {
+        if (closed)
+        {
+            throw new IllegalStateException("closed");
+        }
+
         try
         {
-            if (closed)
-            {
-                throw new IllegalStateException("closed");
-            }
-
             if (isSynchronous())
             {
                 countProcessed();

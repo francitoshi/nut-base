@@ -304,14 +304,14 @@ class PipelineActorTest
     }
 
     @Test
-    void pipelineSendReturnsFalseAfterHeadIsShutdown()
+    void pipelineSendThrowsAfterHeadIsShutdown()
     {
         PipelineActor<Integer,String> pipeline = actorHub.pipeline((Integer i) -> "v=" + i);
         Actor<Integer> head = pipeline.sink(s -> {});
         head.shutdown();
         head.dryLogger();
 
-        pipeline.accept(1);
+        assertThrows(IllegalStateException.class, () -> pipeline.accept(1));
     }
 
     private static <T> boolean assertFalse(boolean condition)
