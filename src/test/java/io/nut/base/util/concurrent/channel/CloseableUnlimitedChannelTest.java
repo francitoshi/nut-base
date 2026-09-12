@@ -124,7 +124,7 @@ public class CloseableUnlimitedChannelTest
     }
 
     @Test
-    public void testGetInterruptedWhenEmpty_marksInterruptedAndResumes() throws Exception
+    public void testGetInterruptedWhenEmpty_returnsNullAndCloses() throws Exception
     {
         CloseableUnlimitedChannel<Integer> channel = new CloseableUnlimitedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
@@ -140,17 +140,14 @@ public class CloseableUnlimitedChannelTest
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
-        Thread.sleep(200);
-
-        // The channel recorded the interruption request, but the get did NOT
-        // abort: it resumed and stayed blocked (channel not closed yet).
-        assertTrue(channel.isInterrupted());
-        assertSame(MISSING, result.get());
-
-        // Closing lets the resumed get finish draining and return null.
-        assertTrue(channel.close());
         consumer.join(5000);
-        assertNull(result.get());
+
+        // get() aborts returning null and, being closeable, also requests
+        // close() on the channel.
+        assertTrue(channel.isInterrupted());
+        assertTrue(channel.isClosed());
+        assertNull(result.get(), "get must return null after interrupt");
+        assertFalse(consumer.isAlive());
     }
 
     @Test

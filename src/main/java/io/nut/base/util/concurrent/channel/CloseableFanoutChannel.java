@@ -61,6 +61,10 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
     /**
      * Writes {@code value} to every registered target, in registration order.
      * After this channel has been closed, throws {@link IllegalStateException}.
+     * <p>
+     * If the current thread is interrupted while broadcasting, the interrupted
+     * target aborts its {@code put} (closing itself if it is closeable) and the
+     * broadcast returns without completing the remaining destinations.
      *
      * @param value the value to broadcast
      * @throws IllegalStateException if this fan-out has been closed

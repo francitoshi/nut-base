@@ -169,15 +169,16 @@ public class CloseableUnbufferedChannelTest
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
-        assertFalse(channel.close(100, TimeUnit.MILLISECONDS));
+
+        // close() aborts the blocked put and completes in bounded time.
+        assertTrue(channel.close(100, TimeUnit.MILLISECONDS));
         assertTrue(channel.isClosed());
 
-        // The channel is now closed, so the resumed put (after the interrupt)
-        // cannot complete: it gives up with IllegalStateException.
-        producer.interrupt();
+        // The blocked put cannot complete: it is aborted per the interruption
+        // contract and returns without delivering its value.
         producer.join(5000);
-        assertFalse(putReturned.get());
-        assertTrue(putError.get() instanceof IllegalStateException);
+        assertTrue(putReturned.get());
+        assertNull(putError.get());
         assertTrue(channel.isInterrupted());
     }
 

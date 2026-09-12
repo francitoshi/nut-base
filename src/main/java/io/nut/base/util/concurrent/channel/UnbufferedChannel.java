@@ -23,17 +23,14 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        while (true)
+        try
         {
-            try
-            {
-                queue.put(value);
-                break;
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            queue.put(value);
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
         }
     }
 
@@ -42,32 +39,30 @@ public final class UnbufferedChannel<E> extends Channel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
         long deadline = System.nanoTime() + unit.toNanos(timeout);
-        while (true)
+        try
         {
-            try
-            {
-                return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return false;
         }
     }
 
     @Override
     public E get()
     {
-        while (true)
+        try
         {
-            try
-            {
-                return queue.take();
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            return queue.take();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return null;
         }
     }
 
@@ -75,16 +70,15 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public E get(long timeout, TimeUnit unit)
     {
         long deadline = System.nanoTime() + unit.toNanos(timeout);
-        while (true)
+        try
         {
-            try
-            {
-                return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return null;
         }
     }
 }

@@ -107,62 +107,63 @@ public class UnbufferedChannelTest
     }
 
     @Test
-    public void testPutInterrupted_marksInterruptedAndResumes() throws Exception
+    public void testPutInterrupted_marksInterruptedAndAborts() throws Exception
     {
         UnbufferedChannel<Integer> channel = new UnbufferedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
         AtomicBoolean putReturned = new AtomicBoolean(false);
+        AtomicBoolean flagRestored = new AtomicBoolean(true);
 
         Thread producer = new Thread(() ->
         {
             entered.countDown();
             channel.put(1);
             putReturned.set(true);
+            flagRestored.set(Thread.interrupted());
         });
         producer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         producer.interrupt();
-        Thread.sleep(200);
-
-        // The channel recorded the interruption request, but the rendezvous
-        // put did NOT abort: it resumed and kept blocking until a get takes it.
-        assertTrue(channel.isInterrupted());
-        assertFalse(putReturned.get(), "put must resume and stay blocked after interrupt");
-
-        assertEquals(1, channel.get());
         producer.join(5000);
-        assertTrue(putReturned.get());
+
+        // The channel recorded the interruption request, and the rendezvous
+        // put aborted: it returned without delivering the value. The interrupt
+        // flag is consumed by the channel and not re-signaled on the thread.
+        assertTrue(channel.isInterrupted());
+        assertTrue(putReturned.get(), "put must abort and return after interrupt");
+        assertFalse(flagRestored.get(), "interrupt flag must not be re-signaled");
+        assertFalse(producer.isAlive());
     }
 
     @Test
-    public void testGetInterrupted_marksInterruptedAndResumes() throws Exception
+    public void testGetInterrupted_returnsNullAndMarksInterrupted() throws Exception
     {
         UnbufferedChannel<Integer> channel = new UnbufferedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
         AtomicReference<Object> result = new AtomicReference<>(MISSING);
+        AtomicBoolean flagRestored = new AtomicBoolean(true);
 
         Thread consumer = new Thread(() ->
         {
             entered.countDown();
             result.set(channel.get());
+            flagRestored.set(Thread.interrupted());
         });
         consumer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
-        Thread.sleep(200);
-
-        // The channel recorded the interruption request, but the rendezvous
-        // get did NOT abort: it resumed and kept blocking until a put arrives.
-        assertTrue(channel.isInterrupted());
-        assertSame(MISSING, result.get(), "get must resume and stay blocked after interrupt");
-
-        channel.put(42);
         consumer.join(5000);
-        assertEquals(42, result.get());
+
+        // The channel recorded the interruption request and the get aborted
+        // returning null, without re-signaling the interrupt on the thread.
+        assertTrue(channel.isInterrupted());
+        assertNull(result.get(), "get must return null after interrupt");
+        assertFalse(flagRestored.get(), "interrupt flag must not be re-signaled");
+        assertFalse(consumer.isAlive());
     }
 
     @Test

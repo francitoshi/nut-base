@@ -39,31 +39,29 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        while (true)
+        try
         {
-            try
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return;
+        }
+        try
+        {
+            if (closedFlag)
             {
-                lock.lockInterruptibly();
-                try
-                {
-                    if (closedFlag)
-                    {
-                        throw new IllegalStateException("closed");
-                    }
-                    this.value = value;
-                    this.hasValue = true;
-                    notEmpty.signal();
-                    return;
-                }
-                finally
-                {
-                    lock.unlock();
-                }
+                throw new IllegalStateException("closed");
             }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            this.value = value;
+            this.hasValue = true;
+            notEmpty.signal();
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
@@ -71,31 +69,30 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        while (true)
+        try
         {
-            try
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return false;
+        }
+        try
+        {
+            if (closedFlag)
             {
-                lock.lockInterruptibly();
-                try
-                {
-                    if (closedFlag)
-                    {
-                        return false;
-                    }
-                    this.value = value;
-                    this.hasValue = true;
-                    notEmpty.signal();
-                    return true;
-                }
-                finally
-                {
-                    lock.unlock();
-                }
+                return false;
             }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            this.value = value;
+            this.hasValue = true;
+            notEmpty.signal();
+            return true;
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
@@ -103,43 +100,43 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     @Override
     public E get()
     {
-        while (true)
+        try
         {
-            try
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return null;
+        }
+        try
+        {
+            while (!hasValue)
             {
-                lock.lockInterruptibly();
+                if (closedFlag)
+                {
+                    return null;
+                }
                 try
                 {
-                    while (!hasValue)
-                    {
-                        if (closedFlag)
-                        {
-                            return null;
-                        }
-                        try
-                        {
-                            notEmpty.await();
-                        }
-                        catch (InterruptedException ex)
-                        {
-                            handleInterruptedException(ex);
-                            continue;
-                        }
-                    }
-                    E result = (E) this.value;
-                    this.value = null;
-                    hasValue = false;
-                    return result;
+                    notEmpty.await();
                 }
-                finally
+                catch (InterruptedException ex)
                 {
-                    lock.unlock();
+                    handleInterruptedException(ex);
+                    closeIfCloseable();
+                    return null;
                 }
             }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            E result = (E) this.value;
+            this.value = null;
+            hasValue = false;
+            return result;
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
@@ -168,48 +165,48 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         }
 
         long deadline = System.nanoTime() + unit.toNanos(timeout);
-        while (true)
+        try
         {
-            try
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return null;
+        }
+        try
+        {
+            while (!hasValue)
             {
-                lock.lockInterruptibly();
+                if (closedFlag)
+                {
+                    return null;
+                }
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0)
+                {
+                    return null;
+                }
                 try
                 {
-                    while (!hasValue)
-                    {
-                        if (closedFlag)
-                        {
-                            return null;
-                        }
-                        long remaining = deadline - System.nanoTime();
-                        if (remaining <= 0)
-                        {
-                            return null;
-                        }
-                        try
-                        {
-                            notEmpty.await(remaining, TimeUnit.NANOSECONDS);
-                        }
-                        catch (InterruptedException ex)
-                        {
-                            handleInterruptedException(ex);
-                            continue;
-                        }
-                    }
-                    E result = (E) this.value;
-                    this.value = null;
-                    hasValue = false;
-                    return result;
+                    notEmpty.await(remaining, TimeUnit.NANOSECONDS);
                 }
-                finally
+                catch (InterruptedException ex)
                 {
-                    lock.unlock();
+                    handleInterruptedException(ex);
+                    closeIfCloseable();
+                    return null;
                 }
             }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            E result = (E) this.value;
+            this.value = null;
+            hasValue = false;
+            return result;
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 

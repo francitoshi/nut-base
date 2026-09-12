@@ -5,8 +5,11 @@
  */
 package io.nut.base.util.concurrent.channel;
 
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
+
 import io.nut.base.util.tuple.Tuple2;
-import java.util.Objects;
 
 /**
  * Abstract base class for thread-safe communication channels between
@@ -23,11 +26,80 @@ import java.util.Objects;
  *   <li><b>Unlimited</b>: no capacity limit. Suited when the producer may run ahead
  *       without ever blocking (at the cost of unbounded memory).</li>
  * </ul>
+ *
+ * <p><b>Interruption contract.</b> When a channel receives an interruption
+ * request during a blocking operation, the operation aborts: {@link #get()}
+ * returns {@code null} and {@link ChannelWriter#put} returns without
+ * delivering its value. If the channel is closeable, the aborting operation
+ * additionally requests a shutdown via {@link ChannelCloser#close()} (see
+ * {@link #closeIfCloseable()}). The interruption request is marked in the
+ * channel ({@link #isInterrupted()}) but it is not signaled again in the
+ * thread, because it has already been processed by the operation.
+ *
+ * <p><b>Iteration contract.</b> Every channel is an {@link Iterable} that,
+ * on each call to {@link #iterator()}, creates an iterator specific to that
+ * occasion. In non-closeable channels {@link Iterator#hasNext()} always
+ * returns {@code true} and {@link Iterator#next()} is hooked directly to
+ * {@link #get()}. In closeable channels ({@link CloseableChannel})
+ * {@link Iterator#hasNext()} is hooked to {@link #get()}: it returns
+ * {@code false} only when {@code get()} yielded {@code null} while the
+ * channel is closed, and the value obtained is remembered to be returned by
+ * {@link Iterator#next()} regardless of whether it is null or not.
  */
-public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
+public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, Iterable<E>
 {
     private volatile boolean interrupted;
-    private volatile InterruptionPolicy interruptionPolicy = InterruptionPolicy.IGNORE;
+
+    /**
+     * Returns an iterator over the values read from this channel.
+     * Each call creates an iterator specific to that occasion.
+     *
+     * <p>This base implementation gives a non-closeable iteration:
+     * {@link Iterator#hasNext} always returns {@code true} and
+     * {@link Iterator#next} is hooked directly to {@link #get()}, blocking
+     * until the next value is available.
+     *
+     * <p>Closeable channels ({@link CloseableChannel}) override this method to
+     * stop iteration once the channel has been closed.
+     *
+     * @return a new {@code Iterator} reading from this channel
+     */
+    @Override
+    public Iterator<E> iterator()
+    {
+        return new Iterator<E>()
+        {
+            @Override
+            public boolean hasNext()
+            {
+                return true;
+            }
+
+            @Override
+            public E next()
+            {
+                return get();
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link Spliterator} backed by the iterator created by
+     * {@link #iterator()}. Like {@code iterator()}, each call creates a
+     * spliterator specific to that occasion.
+     *
+     * <p>No characteristics are reported: values are delivered blocking one
+     * at a time, their encounter order is not guaranteed (conflated channels
+     * overwrite, they are not FIFO) and, in non-closeable channels, a value
+     * may be {@code null} when the underlying {@link #get()} was interrupted.
+     *
+     * @return a new {@code Spliterator} reading from this channel
+     */
+    @Override
+    public Spliterator<E> spliterator()
+    {
+        return Spliterators.spliteratorUnknownSize(iterator(), 0);
+    }
 
     /**
      * Returns whether an {@link InterruptedException} has ever been raised in
@@ -47,54 +119,29 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>
     }
 
     /**
-     * Establece la política de reacción ante interrupciones de hilos.
+     * Handles an interruption received during a blocking operation.
+     * The interruption request is marked in the channel but it is not
+     * signaled again in the thread, because it has already been processed
+     * by the interrupted operation. Must be invoked by the subclasses inside
+     * their {@code catch (InterruptedException ex)} blocks.
      *
-     * @param policy la política deseada; no debe ser {@code null}
-     */
-    public void setInterruptionPolicy(InterruptionPolicy policy)
-    {
-        this.interruptionPolicy = Objects.requireNonNull(policy, "policy must not be null");
-    }
-
-    /**
-     * Retorna la política de reacción configurada para este canal.
-     *
-     * @return la política actual
-     */
-    public InterruptionPolicy getInterruptionPolicy()
-    {
-        return interruptionPolicy;
-    }
-
-    /**
-     * Evalúa y ejecuta la acción correspondiente según la {@link InterruptionPolicy} configurada.
-     * Debe ser invocado por las subclases dentro de los bloques {@code catch (InterruptedException ex)}.
-     *
-     * @param ex la excepción de interrupción capturada
-     * @throws ChannelInterruptedException si la política es {@link InterruptionPolicy#THROW_EXCEPTION}
-     *                                     o {@link InterruptionPolicy#CLOSE_CHANNEL}
+     * @param ex the caught interruption exception
      */
     protected void handleInterruptedException(InterruptedException ex)
     {
         markInterrupted();
+    }
 
-        switch (interruptionPolicy)
+    /**
+     * Requests the shutdown of the channel if it implements {@link ChannelCloser}.
+     * Does nothing on non-closeable channels. Subclasses must invoke it once
+     * they have released the locks / counters of the interrupted operation.
+     */
+    protected final void closeIfCloseable()
+    {
+        if (this instanceof ChannelCloser)
         {
-            case THROW_EXCEPTION:
-                Thread.currentThread().interrupt();
-                throw new ChannelInterruptedException("Operación interrumpida en el canal", ex);
-
-            case CLOSE_CHANNEL:
-                if (this instanceof ChannelCloser)
-                {
-                    ((ChannelCloser) this).close();
-                }
-                throw new ChannelInterruptedException("Canal cerrado debido a interrupción externa", ex);
-
-            case IGNORE:
-            default:
-                // Continúa la ejecución; la subclase reintentará la operación
-                break;
+            ((ChannelCloser) this).close();
         }
     }
 

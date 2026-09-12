@@ -41,29 +41,6 @@ public class FanoutChannel<E> implements ChannelWriter<E>
 {
     final CopyOnWriteArrayList<ChannelWriter<E>> targets = new CopyOnWriteArrayList<>();
 
-    private volatile boolean interrupted;
-
-    /**
-     * Returns whether an {@link InterruptedException} has ever been raised by
-     * a {@link #put} while broadcasting to one of the registered targets.
-     * <p>
-     * <b>Note:</b> this method is currently a no-op — {@link #put} does not
-     * catch {@code InterruptedException}, so this method always returns
-     * {@code false}. It is reserved for a future enhancement where
-     * interruption tracking may be added.
-     *
-     * @return {@code true} if at least one broadcast was interrupted
-     */
-    public boolean isInterrupted()
-    {
-        return interrupted;
-    }
-
-    final void markInterrupted()
-    {
-        interrupted = true;
-    }
-
     /**
      * Creates a fan-out channel with the given initial destinations.
      *
@@ -111,6 +88,11 @@ public class FanoutChannel<E> implements ChannelWriter<E>
      * If any target's {@link ChannelWriter#put} blocks (e.g. the target is
      * full and bounded), subsequent targets wait until the previous write
      * completes, providing natural back-pressure from the slowest consumer.
+     * <p>
+     * If the current thread is interrupted while broadcasting, the interrupted
+     * target aborts its {@code put} (see the interruption contract of the
+     * concrete channel) and the broadcast returns without completing the
+     * remaining destinations.
      *
      * @param value the value to broadcast; may be {@code null} if the
      *              targets accept {@code null} elements

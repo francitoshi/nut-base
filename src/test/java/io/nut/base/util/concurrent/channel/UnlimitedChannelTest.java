@@ -85,7 +85,7 @@ public class UnlimitedChannelTest
     }
 
     @Test
-    public void testGetInterruptedWhenEmpty_marksInterruptedAndResumes() throws Exception
+    public void testGetInterruptedWhenEmpty_returnsNullAndMarksInterrupted() throws Exception
     {
         UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
@@ -101,16 +101,13 @@ public class UnlimitedChannelTest
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
-        Thread.sleep(200);
-
-        // The channel recorded the interruption request, but the get did NOT
-        // abort: it resumed and kept blocking until a value is available.
-        assertTrue(channel.isInterrupted());
-        assertSame(MISSING, result.get(), "get must resume and stay blocked after interrupt");
-
-        channel.put(42);
         consumer.join(5000);
-        assertEquals(42, result.get());
+
+        // The channel recorded the interruption request and the get aborted
+        // returning null.
+        assertTrue(channel.isInterrupted());
+        assertNull(result.get(), "get must return null after interrupt");
+        assertFalse(consumer.isAlive());
     }
 
     @Test

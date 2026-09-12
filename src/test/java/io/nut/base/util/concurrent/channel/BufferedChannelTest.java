@@ -102,7 +102,7 @@ public class BufferedChannelTest
     }
 
     @Test
-    public void testPutInterruptedWhenFull_marksInterruptedAndResumes() throws Exception
+    public void testPutInterruptedWhenFull_marksInterruptedAndAborts() throws Exception
     {
         BufferedChannel<Integer> channel = new BufferedChannel<>(1);
         channel.put(1);
@@ -120,22 +120,20 @@ public class BufferedChannelTest
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         producer.interrupt();
-        Thread.sleep(200);
-
-        // The channel recorded the interruption request, but the put did NOT
-        // abort: it resumed and kept blocking until there is room.
-        assertTrue(channel.isInterrupted());
-        assertFalse(putReturned.get(), "put must resume and stay blocked after interrupt");
-
-        // Freeing space lets the resumed put complete normally.
-        assertEquals(1, channel.get());
         producer.join(5000);
-        assertTrue(putReturned.get());
-        assertEquals(2, channel.get());
+
+        // The channel recorded the interruption request and the put aborted
+        // without delivering its value.
+        assertTrue(channel.isInterrupted());
+        assertTrue(putReturned.get(), "put must abort and return after interrupt");
+        assertFalse(producer.isAlive());
+
+        // The aborted put did not insert its value.
+        assertEquals(1, channel.get());
     }
 
     @Test
-    public void testGetInterruptedWhenEmpty_marksInterruptedAndResumes() throws Exception
+    public void testGetInterruptedWhenEmpty_returnsNullAndMarksInterrupted() throws Exception
     {
         BufferedChannel<Integer> channel = new BufferedChannel<>(4);
         CountDownLatch entered = new CountDownLatch(1);
@@ -151,16 +149,13 @@ public class BufferedChannelTest
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
         consumer.interrupt();
-        Thread.sleep(200);
-
-        // The channel recorded the interruption request, but the get did NOT
-        // abort: it resumed and kept blocking until a value is available.
-        assertTrue(channel.isInterrupted());
-        assertSame(MISSING, result.get(), "get must resume and stay blocked after interrupt");
-
-        channel.put(42);
         consumer.join(5000);
-        assertEquals(42, result.get());
+
+        // The channel recorded the interruption request and the get aborted
+        // returning null.
+        assertTrue(channel.isInterrupted());
+        assertNull(result.get(), "get must return null after interrupt");
+        assertFalse(consumer.isAlive());
     }
 
     @Test

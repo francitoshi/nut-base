@@ -39,27 +39,25 @@ public final class ConflatedChannel<E> extends Channel<E>
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        while (true)
+        try
         {
-            try
-            {
-                lock.lockInterruptibly();
-                try
-                {
-                    this.value = value;
-                    this.hasValue = true;
-                    notEmpty.signal();
-                    return;
-                }
-                finally
-                {
-                    lock.unlock();
-                }
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return;
+        }
+        try
+        {
+            this.value = value;
+            this.hasValue = true;
+            notEmpty.signal();
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
@@ -67,65 +65,65 @@ public final class ConflatedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        while (true)
+        try
         {
-            try
-            {
-                lock.lockInterruptibly();
-                try
-                {
-                    this.value = value;
-                    this.hasValue = true;
-                    notEmpty.signal();
-                    return true;
-                }
-                finally
-                {
-                    lock.unlock();
-                }
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return false;
+        }
+        try
+        {
+            this.value = value;
+            this.hasValue = true;
+            notEmpty.signal();
+            return true;
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
     @Override
     public E get()
     {
-        while (true)
+        try
         {
-            try
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return null;
+        }
+        try
+        {
+            while (!hasValue)
             {
-                lock.lockInterruptibly();
                 try
                 {
-                    while (!hasValue)
-                    {
-                        try
-                        {
-                            notEmpty.await();
-                        }
-                        catch (InterruptedException ex)
-                        {
-                            handleInterruptedException(ex);
-                        }
-                    }
-                    E result = value;
-                    value = null;
-                    hasValue = false;
-                    return result;
+                    notEmpty.await();
                 }
-                finally
+                catch (InterruptedException ex)
                 {
-                    lock.unlock();
+                    handleInterruptedException(ex);
+                    closeIfCloseable();
+                    return null;
                 }
             }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            E result = value;
+            value = null;
+            hasValue = false;
+            return result;
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
@@ -153,43 +151,44 @@ public final class ConflatedChannel<E> extends Channel<E>
         }
 
         long deadline = System.nanoTime() + unit.toNanos(timeout);
-        while (true)
+        try
         {
-            try
+            lock.lockInterruptibly();
+        }
+        catch (InterruptedException ex)
+        {
+            handleInterruptedException(ex);
+            closeIfCloseable();
+            return null;
+        }
+        try
+        {
+            while (!hasValue)
             {
-                lock.lockInterruptibly();
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0)
+                {
+                    return null;
+                }
                 try
                 {
-                    while (!hasValue)
-                    {
-                        long remaining = deadline - System.nanoTime();
-                        if (remaining <= 0)
-                        {
-                            return null;
-                        }
-                        try
-                        {
-                            notEmpty.await(remaining, TimeUnit.NANOSECONDS);
-                        }
-                        catch (InterruptedException ex)
-                        {
-                            handleInterruptedException(ex);
-                        }
-                    }
-                    E result = value;
-                    value = null;
-                    hasValue = false;
-                    return result;
+                    notEmpty.await(remaining, TimeUnit.NANOSECONDS);
                 }
-                finally
+                catch (InterruptedException ex)
                 {
-                    lock.unlock();
+                    handleInterruptedException(ex);
+                    closeIfCloseable();
+                    return null;
                 }
             }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-            }
+            E result = value;
+            value = null;
+            hasValue = false;
+            return result;
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 }

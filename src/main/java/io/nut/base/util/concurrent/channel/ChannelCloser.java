@@ -12,6 +12,10 @@ package io.nut.base.util.concurrent.channel;
  * elements will be written. Once {@link #close()} is called:
  * <ul>
  *   <li>{@link ChannelWriter#put} throws {@link IllegalStateException}.</li>
+ *   <li>Any {@link ChannelWriter#put} that was blocked at the moment of
+ *       closing is aborted per the interruption contract: the blocking
+ *       variant returns without delivering its value and the timed variant
+ *       returns {@code false}.</li>
  *   <li>{@link ChannelReader#get} drains any remaining buffered elements and
  *       then returns {@code null} (or the timed variant returns {@code null}).</li>
  * </ul>

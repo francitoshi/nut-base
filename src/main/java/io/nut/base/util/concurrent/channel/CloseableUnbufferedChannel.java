@@ -6,11 +6,21 @@
 package io.nut.base.util.concurrent.channel;
 
 import io.nut.base.math.Nums;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Closeable unbuffered (rendezvous) channel.
+ * <p>
+ * {@link #close()} marks the channel as closed, unblocks all pending readers
+ * (they return {@code null}) and aborts any {@link #put} in progress: a
+ * blocked {@code put} returns without delivering its value and the timed
+ * variant returns {@code false}.
+ */
 public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
 {
     private static final Object POISON = new Object();
@@ -24,6 +34,8 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
     private final Object lock = new Object();
 
     private int activeWriters;
+
+    private final Set<Thread> writers = new HashSet<>();
 
     @Override
     public void put(E value)
@@ -39,7 +51,9 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                     throw new IllegalStateException("closed");
                 }
                 activeWriters++;
+                writers.add(Thread.currentThread());
             }
+            boolean interrupted = false;
             try
             {
                 try
@@ -50,6 +64,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
+                    interrupted = true;
                 }
             }
             finally
@@ -57,8 +72,14 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 synchronized (lock)
                 {
                     activeWriters--;
+                    writers.remove(Thread.currentThread());
                     lock.notifyAll();
                 }
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return;
             }
         }
     }
@@ -87,7 +108,9 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                     return false;
                 }
                 activeWriters++;
+                writers.add(Thread.currentThread());
             }
+            boolean interrupted = false;
             try
             {
                 try
@@ -98,6 +121,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
+                    interrupted = true;
                 }
             }
             finally
@@ -105,8 +129,14 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 synchronized (lock)
                 {
                     activeWriters--;
+                    writers.remove(Thread.currentThread());
                     lock.notifyAll();
                 }
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return false;
             }
         }
     }
@@ -123,6 +153,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
             }
 
             gets.incrementAndGet();
+            boolean interrupted = false;
             try
             {
                 if (closed)
@@ -138,11 +169,17 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
+                    interrupted = true;
                 }
             }
             finally
             {
                 gets.decrementAndGet();
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return null;
             }
         }
     }
@@ -170,6 +207,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
             }
 
             gets.incrementAndGet();
+            boolean interrupted = false;
             try
             {
                 if (closed)
@@ -189,11 +227,17 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
+                    interrupted = true;
                 }
             }
             finally
             {
                 gets.decrementAndGet();
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return null;
             }
         }
     }
@@ -235,6 +279,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
+                    return null;
                 }
             }
         }
@@ -245,11 +290,20 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
         long timeoutNanos = unit.toNanos(timeout);
         long deadline = Nums.saturatedAdd(System.nanoTime(), timeoutNanos);
 
+        Thread[] blockedWriters;
         synchronized (lock)
         {
             closed = true;
             lock.notifyAll();
+            blockedWriters = writers.toArray(new Thread[writers.size()]);
+        }
+        for (Thread writer : blockedWriters)
+        {
+            writer.interrupt();
+        }
 
+        synchronized (lock)
+        {
             while (activeWriters > 0)
             {
                 if (timeoutNanos <= 0)

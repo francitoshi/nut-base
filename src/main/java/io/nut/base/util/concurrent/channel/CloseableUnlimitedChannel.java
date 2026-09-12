@@ -38,6 +38,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             }
 
             rwLock.readLock().lock();
+            boolean interrupted = false;
             try
             {
                 if (closed)
@@ -53,11 +54,17 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
+                    interrupted = true;
                 }
             }
             finally
             {
                 rwLock.readLock().unlock();
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return;
             }
         }
     }
@@ -76,6 +83,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             }
 
             rwLock.readLock().lock();
+            boolean interrupted = false;
             try
             {
                 if (closed)
@@ -99,11 +107,17 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
+                    interrupted = true;
                 }
             }
             finally
             {
                 rwLock.readLock().unlock();
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return false;
             }
         }
     }
@@ -120,6 +134,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             }
 
             gets.incrementAndGet();
+            boolean interrupted = false;
             try
             {
                 if (closed)
@@ -133,10 +148,16 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             catch (InterruptedException ex)
             {
                 handleInterruptedException(ex);
+                interrupted = true;
             }
             finally
             {
                 gets.decrementAndGet();
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return null;
             }
         }
     }
@@ -164,6 +185,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             }
 
             gets.incrementAndGet();
+            boolean interrupted = false;
             try
             {
                 if (closed)
@@ -181,10 +203,16 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             catch (InterruptedException ex)
             {
                 handleInterruptedException(ex);
+                interrupted = true;
             }
             finally
             {
                 gets.decrementAndGet();
+            }
+            if (interrupted)
+            {
+                closeIfCloseable();
+                return null;
             }
         }
     }

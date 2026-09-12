@@ -1,0 +1,10 @@
+- When a channel receives an interruption request it returns null; if it is closeable, it additionally requests a shutdown().
+
+- The interruption request is marked in the channel but it is not signaled again in the thread, because it has already been processed.
+
+- Channels implement the Iterable<E> interface: they create an Iterator<E> specific to that occasion to be thread-safe if there are other loops using the channel.
+
+- In non-closeable channels, Iterator<E>.hasNext() always returns true and Iterator<E>.next() is hooked directly to Channel<E>.get().
+
+- In closeable channels, Iterator<E>.hasNext() is hooked to Channel<E>.get(); if the returned value is null and the channel is closed (isClosed()==true) it returns false, otherwise it returns true. Iterator<E>.next() always returns the saved value obtained with Channel<E>.get(),
+regardless of whether it is null or not.

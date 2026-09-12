@@ -11,26 +11,22 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Same scenario as CloseableBufferedChannelCloseTest, adapted to the
- * unbuffered (rendezvous) case. Here a put() blocks naturally whenever no
- * get() is currently waiting to take the value, since SynchronousQueue has
- * zero capacity: every put() must hand off directly to a taker.
- *
- * Before the fix, close(timeout, unit) set "closed = true" even on timeout,
- * and a later close() call would short-circuit to "return true" without
- * ever running the poisoning loop, leaving the blocked put() (and any
- * pending get()s) unresolved while callers believed the channel was
- * cleanly closed.
+ * Scenario where close() is invoked while a put() is still blocked (rendezvous:
+ * no get() is waiting, so the put() blocks inside the SynchronousQueue).
+ * Closing aborts the pending put: the blocked put() fails with
+ * {@link IllegalStateException} instead of blocking forever, so close() can
+ * complete in bounded time without requiring a consumer.
  */
 class CloseableUnbufferedChannelCloseTest
 {
@@ -46,57 +42,51 @@ class CloseableUnbufferedChannelCloseTest
     }
 
     @Test
-    void closeWithShortTimeout_returnsFalse_whenPutIsStillBlocked_andSucceedsOnceUnblocked() throws Exception
+    void close_abortsBlockedPut_andReturnsNullAfterwards() throws Exception
     {
-        executor = Executors.newFixedThreadPool(3);
+        executor = Executors.newFixedThreadPool(2);
 
         CloseableUnbufferedChannel<String> channel = new CloseableUnbufferedChannel<>();
 
-        // No get() is waiting yet, so this put() blocks inside the readLock
-        // section, holding it until some get() rendezvous with it.
+        // No get() is waiting yet, so this put() blocks inside the
+        // SynchronousQueue until some get() rendezvous with it.
         CountDownLatch putStarted = new CountDownLatch(1);
+        AtomicReference<Throwable> putError = new AtomicReference<>();
         AtomicBoolean putReturned = new AtomicBoolean(false);
         Future<?> blockedPut = executor.submit(() ->
         {
             putStarted.countDown();
-            channel.put("handshake"); // blocks until a get() takes it
-            putReturned.set(true);
+            try
+            {
+                channel.put("handshake");
+                putReturned.set(true);
+            }
+            catch (Throwable t)
+            {
+                putError.set(t);
+            }
         });
 
         assertTrue(putStarted.await(2, TimeUnit.SECONDS), "put() thread did not start in time");
         Thread.sleep(200); // give it a moment to actually reach queue.put() and block
 
-        // First close attempt: the writeLock barrier cannot be acquired
-        // because the blocked put() is holding the readLock. Must be honest
-        // about the failure, not silently succeed.
-        boolean firstAttempt = channel.close(300, TimeUnit.MILLISECONDS);
-        assertFalse(firstAttempt, "close() must return false while a put() is still blocked");
-        assertTrue(channel.isClosed(), "isClosed() is true as soon as close() is invoked");
+        // close() aborts the blocked put() and completes in bounded time even
+        // though no consumer will ever rendezvous with the producer.
+        assertTrue(channel.close(), "close() must abort the pending put() and succeed");
+        assertTrue(channel.isClosed());
 
-        // Retrying close() again before unblocking anything must still be
-        // honest and return false (the old code used to short-circuit to
-        // "return true" here instead).
-        boolean secondAttemptStillBlocked = channel.close(200, TimeUnit.MILLISECONDS);
-        assertFalse(secondAttemptStillBlocked, "retry must not lie about success while still blocked");
-
-        // Since the channel is already marked closed, get() takes the
-        // non-blocking drainAfterClose() path, which does a queue.poll():
-        // for a SynchronousQueue this immediately rendezvous with the
-        // producer that is currently parked waiting for a taker, releasing
-        // it and its readLock.
-        String handshakeValue = channel.get();
-        assertEquals("handshake", handshakeValue);
-
+        // the pending put() aborts per the interruption contract: it returns
+        // without throwing and without delivering its value.
         blockedPut.get(2, TimeUnit.SECONDS);
-        assertTrue(putReturned.get(), "the blocked put() should have completed once a get() took it");
-
-        // Now that nothing holds the readLock anymore, close() must be able
-        // to acquire the barrier and finish normally.
-        boolean finalAttempt = channel.close();
-        assertTrue(finalAttempt, "close() must succeed once the blocked put() has released the lock");
+        assertNull(putError.get(), "blocked put() must abort without throwing");
+        assertTrue(putReturned.get(), "blocked put() must return after abort");
+        assertTrue(channel.isInterrupted());
 
         // Channel is closed and empty: get() must return null, not block.
         assertNull(channel.get());
+
+        // puts after close are rejected.
+        assertThrows(IllegalStateException.class, () -> channel.put("later"));
     }
 
     @Test

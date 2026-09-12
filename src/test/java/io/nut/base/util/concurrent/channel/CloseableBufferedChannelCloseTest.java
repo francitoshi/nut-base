@@ -11,26 +11,21 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Reproduces the scenario where close(timeout, unit) times out while a put()
- * is still blocked (buffer full, nobody draining). Before the fix, the
- * "closed" flag was still set to true on timeout, and a *later* close() call
- * would short-circuit on "if (closed) return true" without ever running the
- * poisoning loop, silently lying about success and leaving pending get()
- * calls blocked forever.
- *
- * After the fix, close(timeout, unit) must keep returning false honestly for
- * as long as the barrier cannot be acquired, and must only return true once
- * the poisoning loop has actually run and unblocked all pending get()s.
+ * Scenario where close() is invoked while a put() is still blocked (buffer
+ * full, nobody draining). Closing aborts the pending put: the blocked put()
+ * fails with {@link IllegalStateException} instead of blocking forever, so
+ * close() can complete in bounded time. Buffered elements are still delivered.
  */
 class CloseableBufferedChannelCloseTest
 {
@@ -46,9 +41,9 @@ class CloseableBufferedChannelCloseTest
     }
 
     @Test
-    void closeWithShortTimeout_returnsFalse_whenPutIsStillBlocked_andSucceedsOnceUnblocked() throws Exception
+    void close_abortsBlockedPut_andStillDrainsBufferedElements() throws Exception
     {
-        executor = Executors.newFixedThreadPool(3);
+        executor = Executors.newFixedThreadPool(2);
 
         // Capacity 1: after filling it, any further put() blocks until
         // someone drains an item.
@@ -57,61 +52,49 @@ class CloseableBufferedChannelCloseTest
         // Fill the only slot in the buffer.
         channel.put("first");
 
-        // This put() will block inside the readLock section because the
-        // queue is already full and nothing is consuming yet.
+        // This put() will block inside queue.put() because the queue is
+        // already full and nothing is consuming yet.
         CountDownLatch putStarted = new CountDownLatch(1);
+        AtomicReference<Throwable> putError = new AtomicReference<>();
         AtomicBoolean putReturned = new AtomicBoolean(false);
         Future<?> blockedPut = executor.submit(() ->
         {
             putStarted.countDown();
-            channel.put("second"); // blocks until "first" is taken
-            putReturned.set(true);
+            try
+            {
+                channel.put("second");
+                putReturned.set(true);
+            }
+            catch (Throwable t)
+            {
+                putError.set(t);
+            }
         });
 
-        // Make sure the blocking put() has actually entered the queue.put()
-        // call (holding the readLock) before we attempt to close.
+        // Make sure the blocking put() has actually entered queue.put()
+        // before we attempt to close.
         assertTrue(putStarted.await(2, TimeUnit.SECONDS), "put() thread did not start in time");
         Thread.sleep(200); // give it a moment to actually reach queue.put() and block
 
-        // First close attempt: the writeLock barrier cannot be acquired
-        // because the blocked put() is holding the readLock. This must
-        // honestly report failure, not silently succeed.
-        boolean firstAttempt = channel.close(300, TimeUnit.MILLISECONDS);
-        assertFalse(firstAttempt, "close() must return false while a put() is still blocked");
-
-        // isClosed() is true from the moment close() is called: no new
-        // put()s are accepted from here on, even though the poisoning
-        // barrier has not been confirmed yet.
+        // close() aborts the blocked put() and must complete in bounded time.
+        assertTrue(channel.close(), "close() must abort the pending put() and succeed");
         assertTrue(channel.isClosed());
 
-        // Retrying close() again before unblocking anything must still be
-        // honest and return false (this is exactly what the old code got
-        // wrong: it used to short-circuit to "return true" here).
-        boolean secondAttemptStillBlocked = channel.close(200, TimeUnit.MILLISECONDS);
-        assertFalse(secondAttemptStillBlocked, "retry must not lie about success while still blocked");
-
-        // Now drain the buffered item, which frees a slot and lets the
-        // pending put() finally complete and release the readLock.
-        String firstValue = channel.get();
-        assertEquals("first", firstValue);
-
-        // Give the previously blocked put() a chance to finish.
+        // the pending put() aborts per the interruption contract: it returns
+        // without throwing and without delivering its value.
         blockedPut.get(2, TimeUnit.SECONDS);
-        assertTrue(putReturned.get(), "the blocked put() should have completed once space was freed");
+        assertNull(putError.get(), "blocked put() must abort without throwing");
+        assertTrue(putReturned.get(), "blocked put() must return after abort");
+        assertTrue(channel.isInterrupted());
 
-        // Now that nothing holds the readLock anymore, close() must be able
-        // to acquire the barrier and actually run the poisoning loop.
-        boolean finalAttempt = channel.close();
-        assertTrue(finalAttempt, "close() must succeed once the blocked put() has released the lock");
+        // "first" was buffered before close, so it must still be delivered.
+        assertEquals("first", channel.get());
 
-        // "second" was buffered by the previously blocked put() before the
-        // channel got closed, so it must still be delivered to a reader.
-        String secondValue = channel.get();
-        assertEquals("second", secondValue);
-
-        // After the real values are drained, get() must return null
-        // (poison / closed-and-empty), not block forever.
+        // After the real values are drained, get() must return null, not block.
         assertNull(channel.get());
+
+        // puts after close are rejected.
+        assertThrows(IllegalStateException.class, () -> channel.put("later"));
     }
 
     @Test
