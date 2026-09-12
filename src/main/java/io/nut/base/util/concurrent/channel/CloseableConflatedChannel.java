@@ -174,7 +174,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             }
         }
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         try
         {
             lock.lockInterruptibly();

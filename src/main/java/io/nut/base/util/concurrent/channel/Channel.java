@@ -8,7 +8,9 @@ package io.nut.base.util.concurrent.channel;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.concurrent.TimeUnit;
 
+import io.nut.base.math.Nums;
 import io.nut.base.util.tuple.Tuple2;
 
 /**
@@ -143,6 +145,42 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
         {
             ((ChannelCloser) this).close();
         }
+    }
+
+    /**
+     * Computes the point in time, in {@link System#nanoTime()} space, that is
+     * {@code timeout} away from now, saturating instead of overflowing.
+     * <p>
+     * Both the unit-to-nanos conversion and the addition are clamped so that an
+     * absurdly large timeout behaves as an almost infinite wait rather than
+     * wrapping around and expiring immediately.
+     *
+     * @param timeout the wait duration
+     * @param unit    the time unit of the timeout
+     * @return the saturated deadline in the same space as {@link System#nanoTime()}
+     */
+    static long toDeadline(long timeout, TimeUnit unit)
+    {
+        return Nums.saturatedAdd(System.nanoTime(), toNanosSaturated(timeout, unit));
+    }
+
+    private static long toNanosSaturated(long timeout, TimeUnit unit)
+    {
+        if (timeout == 0 || unit == TimeUnit.NANOSECONDS)
+        {
+            return unit.toNanos(timeout);
+        }
+        long scaleNanos = unit.toNanos(1);
+        long maxTimeout = Long.MAX_VALUE / scaleNanos;
+        if (timeout > maxTimeout)
+        {
+            return Long.MAX_VALUE;
+        }
+        if (timeout < -maxTimeout)
+        {
+            return Long.MIN_VALUE;
+        }
+        return unit.toNanos(timeout);
     }
 
     /**

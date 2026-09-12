@@ -56,7 +56,7 @@ public final class BufferedChannel<E> extends Channel<E>
             return queue.offer(value);
         }
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         try
         {
             return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
@@ -92,7 +92,7 @@ public final class BufferedChannel<E> extends Channel<E>
             return queue.poll();
         }
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         try
         {
             return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);

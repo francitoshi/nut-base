@@ -703,4 +703,53 @@ public class ChannelPutGetTimeoutTest
             }
         }
     }
+
+    // ── Huge (overflowing) timeouts ──────────────────────────────────
+
+    @Nested
+    public class HugeTimeout
+    {
+        @Test
+        public void testGetWithHugeTimeoutWaitsForValue() throws Exception
+        {
+            // Long.MAX_VALUE seconds overflows the unit→nanos conversion; the
+            // deadline must saturate instead of wrapping around and expiring
+            // immediately.
+            BufferedChannel<Integer> ch = new BufferedChannel<>(1);
+            Thread producer = new Thread(() ->
+            {
+                try { Thread.sleep(50); ch.put(7); } catch (Exception e) { Thread.currentThread().interrupt(); }
+            });
+            producer.start();
+            assertEquals(7, ch.get(Long.MAX_VALUE, TimeUnit.SECONDS));
+            producer.join(5000);
+        }
+
+        @Test
+        public void testPutWithHugeTimeoutWaitsForRoom() throws Exception
+        {
+            BufferedChannel<Integer> ch = new BufferedChannel<>(1);
+            assertTrue(ch.put(1, 0, TimeUnit.MILLISECONDS));
+            Thread consumer = new Thread(() ->
+            {
+                try { Thread.sleep(50); ch.get(); } catch (Exception e) { Thread.currentThread().interrupt(); }
+            });
+            consumer.start();
+            assertTrue(ch.put(2, Long.MAX_VALUE, TimeUnit.SECONDS));
+            consumer.join(5000);
+        }
+
+        @Test
+        public void testGetWithHugeTimeoutOnCloseableConflatedWaitsForValue() throws Exception
+        {
+            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            Thread producer = new Thread(() ->
+            {
+                try { Thread.sleep(50); ch.put(9); } catch (Exception e) { Thread.currentThread().interrupt(); }
+            });
+            producer.start();
+            assertEquals(9, ch.get(Long.MAX_VALUE, TimeUnit.SECONDS));
+            producer.join(5000);
+        }
+    }
 }

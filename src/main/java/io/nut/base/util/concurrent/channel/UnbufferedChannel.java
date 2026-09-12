@@ -38,7 +38,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         try
         {
             return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
@@ -69,7 +69,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
     @Override
     public E get(long timeout, TimeUnit unit)
     {
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         try
         {
             return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);

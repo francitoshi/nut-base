@@ -150,7 +150,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             }
         }
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         try
         {
             lock.lockInterruptibly();

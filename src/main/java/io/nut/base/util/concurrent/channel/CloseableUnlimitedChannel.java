@@ -74,7 +74,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         while (true)
         {
             if (closed)
@@ -176,7 +176,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             return drainAfterClosePoll();
         }
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         while (true)
         {
             if (closed)

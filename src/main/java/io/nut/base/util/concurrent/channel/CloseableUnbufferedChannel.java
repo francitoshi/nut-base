@@ -98,7 +98,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
             return queue.offer(value);
         }
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         while (true)
         {
             synchronized (lock)
@@ -198,7 +198,7 @@ public final class CloseableUnbufferedChannel<E> extends CloseableChannel<E>
             return drainAfterClosePoll();
         }
 
-        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        long deadline = toDeadline(timeout, unit);
         while (true)
         {
             if (closed)
