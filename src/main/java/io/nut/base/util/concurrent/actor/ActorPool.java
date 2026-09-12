@@ -587,8 +587,9 @@ public class ActorPool implements AutoCloseable, Executor
         }
         catch (InterruptedException e)
         {
+            // The task was already accepted by the pool in the execute() above
+            // and is guaranteed to run exactly once; only the wait is given up.
             Thread.currentThread().interrupt();
-            this.threadPoolExecutor.execute(wrap(task)); // fallback: do not lose the task
         }
         return this;
     }
