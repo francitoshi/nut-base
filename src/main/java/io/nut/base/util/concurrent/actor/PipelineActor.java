@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.actor;
 
+import io.nut.base.math.Nums;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -227,7 +228,7 @@ public final class PipelineActor<T,R> implements Consumer<T>
     
     public boolean awaitTermination(int millis)
     {
-        long nanos = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(millis);
+        long nanos = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
         boolean ok = true;
         for (Actor<?> stage : collectStages())
         {
