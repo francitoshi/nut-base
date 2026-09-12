@@ -58,7 +58,7 @@ import java.util.concurrent.Phaser;
  * {@link ActorHub} extends {@code ActorPool} and adds the Actor-specific factory methods
  * and the pub/sub registry on top of this execution foundation.
  */
-public class ActorPool implements AutoCloseable, Executor
+public class ActorPool implements ActorLifecycle, Executor
 {    
 
     /**
@@ -408,6 +408,7 @@ public class ActorPool implements AutoCloseable, Executor
      * Blocks the calling thread until all running tasks have finished. If there
      * are no tasks running or queued, returns immediately.
      */
+    @Override
     public ActorPool waitForIdle()
     {
         if(phaser!=null)
@@ -670,6 +671,7 @@ public class ActorPool implements AutoCloseable, Executor
      *
      * @return this ActorPool, for fluent chaining
      */
+    @Override
     public ActorPool shutdown()
     {
         if (synchronous)
@@ -684,8 +686,31 @@ public class ActorPool implements AutoCloseable, Executor
     }
 
     /**
+     * Stops accepting new work, optionally waiting until the pool is idle
+     * first (no tasks pending or running).
+     *
+     * @param waitForIdleFirst if {@code true}, blocks until
+     *                         {@link #waitForIdle()} returns before actually
+     *                         closing admission of new work; if
+     *                         {@code false}, equivalent to {@link #shutdown()}
+     * @return this ActorPool, for fluent chaining
+     * @throws InterruptedException if interrupted while waiting for idle
+     */
+    @Override
+    public ActorPool shutdown(boolean waitForIdleFirst) throws InterruptedException
+    {
+        if (waitForIdleFirst)
+        {
+            waitForIdle();
+        }
+        shutdown();
+        return this;
+    }
+
+    /**
      * @return {@code true} if {@link #shutdown()} has been called
      */
+    @Override
     public boolean isShutdown()
     {
         return synchronous ? shutdown : threadPoolExecutor.isShutdown();
@@ -694,6 +719,7 @@ public class ActorPool implements AutoCloseable, Executor
     /**
      * @return {@code true} if all tasks have completed following a shutdown
      */
+    @Override
     public boolean isTerminated()
     {
         return synchronous ? shutdown : threadPoolExecutor.isTerminated();
@@ -710,6 +736,19 @@ public class ActorPool implements AutoCloseable, Executor
     public boolean awaitTermination(int millis) throws InterruptedException
     {
         return synchronous ? true : threadPoolExecutor.awaitTermination(millis, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * Blocks until the pool has terminated.
+     *
+     * @return this ActorPool, for fluent chaining
+     * @throws InterruptedException if interrupted while waiting
+     */
+    @Override
+    public ActorPool awaitTermination() throws InterruptedException
+    {
+        awaitTermination(Integer.MAX_VALUE);
+        return this;
     }
 
     /**

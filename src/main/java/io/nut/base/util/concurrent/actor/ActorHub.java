@@ -65,7 +65,7 @@ import java.util.logging.Logger;
  * {@link PipeActor}, {@link FilterActor}, {@link BatchActor}, and {@link FanOutActor},
  * blocking until a chain of linked stages has terminated.
  */
-public class ActorHub extends ActorPool implements AutoCloseable, Executor
+public class ActorHub extends ActorPool implements Executor
 {
     public static ActorHub SYNCHRONOUS = new ActorHub(null);
     
@@ -797,7 +797,6 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      *                 {@code null}
      * @return the new subscription, to be closed when no longer needed
      */
-    @SuppressWarnings("unchecked")
     public <T> Subscription<T> sub(String tag, Consumer<T> consumer)
     {
         Objects.requireNonNull(tag, "tag must not be null");
@@ -815,16 +814,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
             delivery = wrapped;
             wrappedActor = wrapped;
         }
-        PubSub<T> pubSub = (PubSub<T>) pubSubRegistry.compute(tag, (key, current) ->
-        {
-            PubSub<T> ps = (PubSub<T>) current;
-            if (ps == null)
-            {
-                ps = new PubSub<>(pubSubRegistry, tag);
-            }
-            ps.addSubscriber(delivery);
-            return ps;
-        });
+        PubSub<T> pubSub = computePubSub(tag, ps -> ps.addSubscriber(delivery));
         return new Subscription<>(tag, consumer, () ->
         {
             pubSub.removeSubscriber(delivery);
@@ -845,21 +835,11 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @param actor the Actor subscriber; must not be {@code null}
      * @return a handle to unsubscribe the Actor
      */
-    @SuppressWarnings("unchecked")
     public <T> Subscription<T> sub(String tag, Actor<T> actor)
     {
         Objects.requireNonNull(tag, "tag must not be null");
         Objects.requireNonNull(actor, "actor must not be null");
-        PubSub<T> pubSub = (PubSub<T>) pubSubRegistry.compute(tag, (key, current) ->
-        {
-            PubSub<T> ps = (PubSub<T>) current;
-            if (ps == null)
-            {
-                ps = new PubSub<>(pubSubRegistry, tag);
-            }
-            ps.addSubscriber(actor);
-            return ps;
-        });
+        PubSub<T> pubSub = computePubSub(tag, ps -> ps.addSubscriber(actor));
         return new Subscription<>(tag, actor, () -> pubSub.removeSubscriber(actor));
     }
 
@@ -878,21 +858,39 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * @param tag the tag name; must not be {@code null}
      * @return a publisher for {@code tag}
      */
-    @SuppressWarnings("unchecked")
     public <T> Publisher<T> pub(String tag)
     {
         Objects.requireNonNull(tag, "tag must not be null");
-        PubSub<T> pubSub = (PubSub<T>) pubSubRegistry.compute(tag, (key, current) ->
+        PubSub<T> pubSub = computePubSub(tag, PubSub::acquire);
+        return new Publisher<>(tag, pubSub);
+    }
+
+    /**
+     * Returns the {@link PubSub} entry for {@code tag}, creating it on demand,
+     * and applies {@code action} to it. Every pub/sub get-or-create access
+     * goes through this single helper.
+     *
+     * @param <T>    the message type
+     * @param tag    the tag name; must not be {@code null}
+     * @param action the operation to apply to the entry; must not be
+     *               {@code null}
+     * @return the {@code PubSub} entry for {@code tag}
+     */
+    @SuppressWarnings("unchecked")
+    private <T> PubSub<T> computePubSub(String tag, Consumer<PubSub<T>> action)
+    {
+        Objects.requireNonNull(tag, "tag must not be null");
+        Objects.requireNonNull(action, "action must not be null");
+        return (PubSub<T>) pubSubRegistry.compute(tag, (key, current) ->
         {
             PubSub<T> ps = (PubSub<T>) current;
             if (ps == null)
             {
                 ps = new PubSub<>(pubSubRegistry, tag);
             }
-            ps.acquire();
+            action.accept(ps);
             return ps;
         });
-        return new Publisher<>(tag, pubSub);
     }
 
     // -------------------------------------------------------------------------
@@ -945,6 +943,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      *
      * @return this ActorHub, for fluent chaining
      */
+    @Override
     public ActorHub shutdown()
     {
         return shutdown(false);
@@ -967,6 +966,7 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      *                      {@code false}, shutdown starts immediately
      * @return this ActorHub, for fluent chaining
      */
+    @Override
     public ActorHub shutdown(boolean onlyWhenEmpty)
     {
         if (onlyWhenEmpty)
@@ -1140,7 +1140,10 @@ public class ActorHub extends ActorPool implements AutoCloseable, Executor
      * If the calling thread is interrupted while waiting, the interrupt status
      * is restored and the interruption is logged at {@link Level#SEVERE}; the
      * method then returns without waiting for termination to complete.
+     *
+     * @return this ActorHub, for fluent chaining
      */
+    @Override
     public ActorHub awaitTermination()
     {
         try

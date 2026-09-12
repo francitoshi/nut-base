@@ -49,7 +49,7 @@ import java.util.logging.Logger;
  *
  * @param <M> the type of messages this Actor processes
  */
-public abstract class Actor<M> implements Consumer<M>, AutoCloseable
+public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
 {
     private static final Logger LOG = Logger.getLogger(Actor.class.getName());
 
@@ -753,6 +753,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
      *
      * @return this Actor, for fluent chaining
      */
+    @Override
     public Actor<M> waitForIdle()
     {
         synchronized (lock)
@@ -778,6 +779,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
      *
      * @return this Actor, for fluent chaining
      */
+    @Override
     public Actor<M> shutdown()
     {
         return shutdown(false);
@@ -786,10 +788,16 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     /**
      * Initiates shutdown. If {@code onlyWhenEmpty}, the channel is closed only
      * once all pending messages have been processed.
+     * <p>
+     * Note that unlike {@link ActorLifecycle#shutdown(boolean)}, which blocks
+     * until the instance is idle before closing, this implementation never
+     * blocks: with {@code onlyWhenEmpty == true} it defers the actual close
+     * until the Actor becomes idle.
      *
      * @param onlyWhenEmpty if {@code true}, defers close until idle
      * @return this Actor, for fluent chaining
      */
+    @Override
     public Actor<M> shutdown(boolean onlyWhenEmpty)
     {
         synchronized (lock)
@@ -845,6 +853,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     /**
      * Returns whether {@link #shutdown()} has been called.
      */
+    @Override
     public boolean isShutdown()
     {
         return closed;
@@ -853,6 +862,7 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     /**
      * Returns whether this Actor has fully terminated.
      */
+    @Override
     public boolean isTerminated()
     {
         return terminated;
@@ -868,6 +878,18 @@ public abstract class Actor<M> implements Consumer<M>, AutoCloseable
     {
         long deadline = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
         return awaitTerminationUntilNanos(deadline);
+    }
+
+    /**
+     * Blocks until this Actor is terminated.
+     *
+     * @return this Actor, for fluent chaining
+     */
+    @Override
+    public Actor<M> awaitTermination()
+    {
+        awaitTermination(Integer.MAX_VALUE);
+        return this;
     }
 
     /**
