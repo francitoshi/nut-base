@@ -107,9 +107,10 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         catch (InterruptedException ex)
         {
             handleInterruptedException(ex);
-            closeIfCloseable();
             return null;
         }
+        boolean interrupted = false;
+        E result = null;
         try
         {
             while (!hasValue)
@@ -125,19 +126,28 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
-                    closeIfCloseable();
-                    return null;
+                    interrupted = true;
+                    break;
                 }
             }
-            E result = (E) this.value;
-            this.value = null;
-            hasValue = false;
-            return result;
+            if (!interrupted)
+            {
+                result = (E) this.value;
+                this.value = null;
+                hasValue = false;
+            }
         }
         finally
         {
             lock.unlock();
         }
+        // The lock is released before requesting the shutdown.
+        if (interrupted)
+        {
+            closeIfCloseable();
+            return null;
+        }
+        return result;
     }
 
     @SuppressWarnings("unchecked")
@@ -175,6 +185,8 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             closeIfCloseable();
             return null;
         }
+        boolean interrupted = false;
+        E result = null;
         try
         {
             while (!hasValue)
@@ -195,19 +207,28 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                 catch (InterruptedException ex)
                 {
                     handleInterruptedException(ex);
-                    closeIfCloseable();
-                    return null;
+                    interrupted = true;
+                    break;
                 }
             }
-            E result = (E) this.value;
-            this.value = null;
-            hasValue = false;
-            return result;
+            if (!interrupted)
+            {
+                result = (E) this.value;
+                this.value = null;
+                hasValue = false;
+            }
         }
         finally
         {
             lock.unlock();
         }
+        // The lock is released before requesting the shutdown.
+        if (interrupted)
+        {
+            closeIfCloseable();
+            return null;
+        }
+        return result;
     }
 
     @Override
