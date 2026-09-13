@@ -70,13 +70,6 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     private final int threads;
 
     /**
-     * When {@code true}, {@link #accept(Object)} invokes {@link #receive(Object)}
-     * directly in the calling thread, bypassing the internal channel and worker
-     * pool entirely. Set when the constructor receives {@code threads == 0}.
-     */
-    private final boolean synchronous;
-
-    /**
      * Permits one worker per free concurrent slot. The permanent worker holds
      * one permit for the whole lifetime of the Actor (re-acquiring it each time
      * it goes back to blocking), and temporary "rush" workers acquire a permit
@@ -156,8 +149,7 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
             throw new IllegalArgumentException("queueSize < 0");
         }
         this.actorHub = actorHub;
-        this.synchronous = threads == 0;
-        if (this.synchronous)
+        if (threads == 0)
         {
             this.threads = 0;
             this.workerSlots = null;
@@ -230,11 +222,7 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
      */
     private boolean isSynchronous()
     {
-        if (synchronous || actorHub == null)
-        {
-            return true;
-        }
-        return actorHub != null && actorHub.isSynchronous();
+        return threads == 0 || actorHub == null || actorHub.isSynchronous();
     }
 
     // -------------------------------------------------------------------------
@@ -642,7 +630,7 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     private void closeNow()
     {
         closed = true;
-        if (synchronous)
+        if (isSynchronous())
         {
             doTerminate();
             return;
