@@ -1,22 +1,7 @@
 /*
- *  BigExponentialMovingAverage.java
- *
- *  Copyright (c) 2024-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.stats;
 
@@ -31,20 +16,13 @@ public class BigExponentialMovingAverage extends BigMovingAverage
     private final BigDecimal oneMinusAlpha;
     private BigDecimal ema;          // Stores the current EMA value
     private BigDecimal avg;
-    private final int decimals;
-    private final RoundingMode roundingMode;
   
     public BigExponentialMovingAverage(int period, int decimals, RoundingMode roundingMode)
     {
-        if (period <= 0)
-        {
-            throw new IllegalArgumentException("period must be positive, but was: " + period);
-        }
+        super(period, decimals, roundingMode);
         // Calculate alpha: 2 / (period + 1)
-        this.alpha = TWO.divide(BigDecimal.valueOf(period + 1), decimals*2, RoundingMode.HALF_UP).stripTrailingZeros();
+        this.alpha = TWO.divide(BigDecimal.valueOf(period + 1), scale*2, RoundingMode.HALF_UP).stripTrailingZeros();
         this.oneMinusAlpha = BigDecimal.ONE.subtract(alpha).stripTrailingZeros();
-        this.decimals = decimals;
-        this.roundingMode = roundingMode;
     }
 
     @Override
@@ -60,10 +38,10 @@ public class BigExponentialMovingAverage extends BigMovingAverage
             // Calculate EMA: EMA = (Value * Alpha) + (EMA_prev * (1 - Alpha))
             ema = value.multiply(alpha)
                     .add(ema.multiply(oneMinusAlpha))
-                    .setScale(decimals*2, roundingMode);
+                    .setScale(scale*2, roundingMode);
         }
         count++;
-        return avg = ema.setScale(decimals, roundingMode);
+        return avg = ema.setScale(scale, roundingMode);
     }
     
     @Override
