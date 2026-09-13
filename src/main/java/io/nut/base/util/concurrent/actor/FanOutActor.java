@@ -179,17 +179,6 @@ public class FanOutActor<T> extends Actor<T>
         }
     }
 
-    /**
-     * {@inheritDoc}
-     * Overridden to return the more specific {@code FanOutActor<T>} type for
-     * fluent chaining.
-     */
-    @Override
-    public FanOutActor<T> shutdown(boolean onlyWhenEmpty)
-    {
-        return (FanOutActor<T>) super.shutdown(onlyWhenEmpty);
-    }
-
     @Override
     public Actor<T> waitForIdle()
     {

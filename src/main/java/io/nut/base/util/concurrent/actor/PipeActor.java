@@ -107,25 +107,4 @@ public class PipeActor<T,R> extends LinkableActor<T,R>
         forward(function.apply(m));
     }
 
-    /**
-     * {@inheritDoc}
-     * Overridden to return the more specific {@code PipeActor<T,R>} type for
-     * fluent chaining.
-     */
-    @Override
-    public PipeActor<T,R> shutdown()
-    {
-        return (PipeActor<T,R>) super.shutdown();
     }
-
-    /**
-     * {@inheritDoc}
-     * Overridden to return the more specific {@code PipeActor<T,R>} type for
-     * fluent chaining.
-     */
-    @Override
-    public PipeActor<T,R> shutdown(boolean onlyWhenEmpty)
-    {
-        return (PipeActor<T,R>) super.shutdown(onlyWhenEmpty);
-    }
-}

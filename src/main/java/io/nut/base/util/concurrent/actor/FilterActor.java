@@ -103,25 +103,4 @@ public class FilterActor<T> extends LinkableActor<T,T>
         }
     }
 
-    /**
-     * {@inheritDoc}
-     * Overridden to return the more specific {@code FilterActor<T>} type for
-     * fluent chaining.
-     */
-    @Override
-    public FilterActor<T> shutdown()
-    {
-        return (FilterActor<T>) super.shutdown();
     }
-
-    /**
-     * {@inheritDoc}
-     * Overridden to return the more specific {@code FilterActor<T>} type for
-     * fluent chaining.
-     */
-    @Override
-    public FilterActor<T> shutdown(boolean onlyWhenEmpty)
-    {
-        return (FilterActor<T>) super.shutdown(onlyWhenEmpty);
-    }
-}
