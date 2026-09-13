@@ -6,16 +6,12 @@
 package io.nut.base.util.concurrent.actor;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 /**
  * A pipeline stage that accumulates individual messages into a pending batch
@@ -38,7 +34,7 @@ import java.util.function.Consumer;
  * <p>
  * The next stage is wired with {@link #linkTo}. Because the output type differs
  * from the input type ({@code List<T>} vs {@code T}), the next stage must be a
- * {@link Consumer}{@code <List<T>>}.
+ * {@link java.util.function.Consumer}{@code <List<T>>}.
  * <p>
  * <strong>Thread safety:</strong> the internal batch and the reordering buffer
  * are guarded by {@code batchLock}, so concurrent calls to
@@ -50,7 +46,7 @@ import java.util.function.Consumer;
  *
  * @param <T> the type of individual messages accumulated into batches
  */
-public class BatchActor<T> extends Actor<T>
+public class BatchActor<T> extends LinkableActor<T,List<T>>
 {
     private final int maxSize;
     private final Object batchLock = new Object();
@@ -66,14 +62,6 @@ public class BatchActor<T> extends Actor<T>
 
     /** Out-of-order arrivals keyed by their acceptance sequence. */
     private final TreeMap<Long, T> buffered = new TreeMap<>();
-
-    /**
-     * The next stage in the chain that will receive each completed batch.
-     * Declared {@code volatile} so that a call to {@link #linkTo} from one
-     * thread is immediately visible to the worker and scheduler threads that
-     * call {@link #forward(List)}.
-     */
-    protected volatile Consumer<List<T>> next;
 
     private final ScheduledExecutorService scheduler;
 
@@ -174,26 +162,6 @@ public class BatchActor<T> extends Actor<T>
         Thread t = new Thread(r, "BatchActor-flush-timer");
         t.setDaemon(true);
         return t;
-    }
-
-    /**
-     * Links this BatchActor to the next stage of the chain (the continuation),
-     * which will be invoked with every completed batch. The returned value is
-     * {@code next} itself, allowing fluent chaining:
-     * <pre>{@code
-     * batchActor.linkTo(pipeOfLists).linkTo(sink);
-     * }</pre>
-     *
-     * @param <S>  the concrete type of the next stage (must extend
-     *             {@link Consumer}{@code <List<T>>})
-     * @param next the stage that will receive completed batches; must not be
-     *             {@code null}
-     * @return {@code next}, typed as {@code S}, enabling fluent chaining
-     */
-    public <S extends Consumer<List<T>>> S linkTo(S next)
-    {
-        this.next = Objects.requireNonNull(next, "next must not be null");
-        return next;
     }
 
     /**
@@ -312,21 +280,6 @@ public class BatchActor<T> extends Actor<T>
     }
 
     /**
-     * Sends {@code values} to the linked next stage. If no next stage is linked,
-     * the batch is silently discarded.
-     *
-     * @param values the batch to forward; never {@code null}
-     */
-    private void forward(List<T> values)
-    {
-        Consumer<List<T>> n = this.next;
-        if (n != null)
-        {
-            n.accept(values);
-        }
-    }
-
-    /**
      * Flushes any remaining pending batch and shuts down the internal flush
      * scheduler (if one was created). Called automatically by {@link Actor}'s
      * shutdown sequence after the last message has been processed.
@@ -339,11 +292,5 @@ public class BatchActor<T> extends Actor<T>
         {
             scheduler.shutdownNow();
         }
-    }
-
-    @Override
-    public Collection<Consumer<?>> getLinkedTargets()
-    {
-        return next != null ? Collections.singletonList(next) : Collections.emptyList();
     }
 }

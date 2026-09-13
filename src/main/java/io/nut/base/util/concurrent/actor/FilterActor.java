@@ -5,10 +5,7 @@
  */
 package io.nut.base.util.concurrent.actor;
 
-import java.util.Collection;
-import java.util.Collections;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -18,9 +15,9 @@ import java.util.function.Predicate;
  * Like {@link PipeActor}, {@code FilterActor} follows the
  * <em>Continuation-Passing Style</em> (CPS) pattern: {@link #receive(Object)}
  * tests the message against the predicate and, only if the test passes, calls
- * {@link Consumer#accept accept()} on the linked {@code next} stage. The
- * message type is never changed, so {@code next} must be a
- * {@link Consumer}{@code <T>}.
+ * {@link java.util.function.Consumer#accept accept()} on the linked next stage.
+ * The message type is never changed, so the next stage must be a
+ * {@link java.util.function.Consumer}{@code <T>}.
  * <p>
  * Stages are wired together with {@link #linkTo}, which returns the next stage
  * for fluent chaining:
@@ -31,23 +28,15 @@ import java.util.function.Predicate;
  * for (int i = 0; i < 10; i++) evens.accept(i);  // prints 0, 2, 4, 6, 8
  * }</pre>
  * <p>
- * If {@code next} has not been set when a message passes the predicate, that
- * message is silently discarded.
+ * If no stage has been linked when a message passes the predicate, that message
+ * is silently discarded.
  *
  * @param <T> the type of messages this stage receives, tests, and may forward
  *            unchanged
  */
-public class FilterActor<T> extends Actor<T>
+public class FilterActor<T> extends LinkableActor<T,T>
 {
     private final Predicate<T> predicate;
-
-    /**
-     * The next stage in the chain that will receive messages passing the
-     * predicate. Declared {@code volatile} so that a call to {@link #linkTo}
-     * from one thread is immediately visible to worker threads invoking
-     * {@link #receive(Object)}.
-     */
-    protected volatile Consumer<T> next;
 
     /**
      * Full constructor.
@@ -99,29 +88,9 @@ public class FilterActor<T> extends Actor<T>
     }
 
     /**
-     * Links this filter to the next stage of the chain (the continuation),
-     * which is invoked only for messages that pass the predicate. The returned
-     * value is {@code next} itself, allowing fluent chaining:
-     * <pre>{@code
-     * filterA.linkTo(pipeB).linkTo(sink);
-     * }</pre>
-     *
-     * @param <S>  the concrete type of the next stage (must extend
-     *             {@link Consumer}{@code <T>})
-     * @param next the stage that will receive the passing messages; must not be
-     *             {@code null}
-     * @return {@code next}, typed as {@code S}, enabling fluent chaining
-     */
-    public <S extends Consumer<T>> S linkTo(S next)
-    {
-        this.next = Objects.requireNonNull(next, "next must not be null");
-        return next;
-    }
-
-    /**
      * Tests the received message against the predicate. If the test passes,
-     * forwards the message to the linked {@code next} stage unchanged. If the
-     * test fails, or if {@code next} is {@code null}, the message is discarded.
+     * forwards the message to the linked next stage unchanged. If the test
+     * fails, or if no stage is linked, the message is discarded.
      *
      * @param m the message to test and potentially forward
      */
@@ -130,11 +99,7 @@ public class FilterActor<T> extends Actor<T>
     {
         if (predicate.test(m))
         {
-            Consumer<T> n = this.next;
-            if (n != null)
-            {
-                n.accept(m);
-            }
+            forward(m);
         }
     }
 
@@ -158,11 +123,5 @@ public class FilterActor<T> extends Actor<T>
     public FilterActor<T> shutdown(boolean onlyWhenEmpty)
     {
         return (FilterActor<T>) super.shutdown(onlyWhenEmpty);
-    }
-
-    @Override
-    public Collection<Consumer<?>> getLinkedTargets()
-    {
-        return next != null ? Collections.singletonList(next) : Collections.emptyList();
     }
 }
