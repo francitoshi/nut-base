@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.actor;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -202,10 +203,9 @@ public class FanOutActor<T> extends Actor<T>
         return super.waitForIdle();
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public Collection<Consumer<?>> getLinkedTargets()
     {
-        return (Collection) targets;
+        return new ArrayList<>(targets);
     }
 }

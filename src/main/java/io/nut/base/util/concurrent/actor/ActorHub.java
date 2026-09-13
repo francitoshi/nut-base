@@ -930,7 +930,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     public static void waitForIdle(Consumer<?>... stages)
     {
-        Set<Consumer<?>> set = new HashSet();
+        Set<Consumer<?>> set = new HashSet<>();
         for(Consumer<?> s : stages)
         {
             waitForIdle(set, s);
@@ -1096,7 +1096,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public static void awaitTermination(int millis, Consumer<?>... stages)
     {
         long untilNanos = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
-        Set<Consumer<?>> set = new HashSet();
+        Set<Consumer<?>> set = new HashSet<>();
         for(Consumer<?> s : stages)
         {
             awaitTerminationUntilNanos(set, s, untilNanos);
