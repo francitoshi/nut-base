@@ -7,7 +7,6 @@ package io.nut.base.util;
 
 import io.nut.base.time.JavaTime;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -16,6 +15,8 @@ import java.util.logging.Logger;
  */
 public class RequestLimit
 {
+    private static final Logger LOG = Logger.getLogger(RequestLimit.class.getName());
+
     private final Object lock = new Object();
     private final boolean debug = false;
     
@@ -71,7 +72,7 @@ public class RequestLimit
             }
             catch(InterruptedException ex)
             {
-                Logger.getLogger(RequestLimit.class.getName()).log(Level.SEVERE, null, ex);
+                Exceptions.severe(LOG, ex);
             }
         }
     }
@@ -99,7 +100,7 @@ public class RequestLimit
             }
             catch(InterruptedException ex)
             {
-                Logger.getLogger(RequestLimit.class.getName()).log(Level.SEVERE, null, ex);
+                Exceptions.severe(LOG, ex);
             }
         }
     }

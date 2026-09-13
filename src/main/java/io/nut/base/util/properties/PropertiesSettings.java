@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.properties;
 
+import io.nut.base.util.Exceptions;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -16,7 +17,6 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -25,6 +25,8 @@ import java.util.logging.Logger;
  */
 public class PropertiesSettings
 {
+    private static final Logger LOG = Logger.getLogger(PropertiesSettings.class.getName());
+
     private final Object lock = new Object();
     private final File file;
     private final boolean autoset;
@@ -176,7 +178,7 @@ public class PropertiesSettings
         }
         catch (Exception ex)
         {
-            Logger.getLogger(PropertiesSettings.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
         }
     }
     

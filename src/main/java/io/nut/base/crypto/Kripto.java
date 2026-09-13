@@ -10,6 +10,7 @@ import io.nut.base.crypto.kdf.HKDFBC;
 import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.crypto.stego.Steganography;
 import io.nut.base.util.Byter;
+import io.nut.base.util.Exceptions;
 import io.nut.base.util.Strings;
 import io.nut.base.util.Utils;
 import java.io.PrintStream;
@@ -42,7 +43,6 @@ import java.security.spec.X509EncodedKeySpec;
 import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.function.UnaryOperator;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -66,6 +66,7 @@ import javax.crypto.spec.SecretKeySpec;
  */
 public class Kripto
 {
+    private static final Logger LOG = Logger.getLogger(Kripto.class.getName());
 
     ////////////////////////////////////////////////////////////////////////////
     ///// Static Values ////////////////////////////////////////////////////////
@@ -241,7 +242,7 @@ public class Kripto
             }
             catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | InstantiationException | IllegalAccessException ex)
             {
-                Logger.getLogger(Kripto.class.getName()).log(Level.SEVERE, null, ex);
+                Exceptions.severe(LOG, ex);
                 registeredBouncyCastle = false;
             }
         }
@@ -507,8 +508,7 @@ public class Kripto
             }
             catch (NoSuchAlgorithmException ex2)
             {
-                Logger.getLogger(Kripto.class.getName()).log(Level.SEVERE, null, ex2);
-                throw new RuntimeException(ex2.getMessage(), ex2);
+                throw Exceptions.rethrow(LOG, ex2.getMessage(), ex2);
             }
         }
     }

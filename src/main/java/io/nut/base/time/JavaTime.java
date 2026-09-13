@@ -16,11 +16,11 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import io.nut.base.util.Exceptions;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
@@ -51,6 +51,8 @@ import java.util.regex.Pattern;
  */
 public class JavaTime
 {
+    private static final Logger LOG = Logger.getLogger(JavaTime.class.getName());
+
     public static final long NANOS_PER_MILLIS = 1_000_000L;
     public static final long NANOS_PER_SECOND = 1_000_000_000L;
 
@@ -578,7 +580,7 @@ public class JavaTime
             }
             catch(DateTimeParseException ex)
             {
-                Logger.getLogger(JavaTime.class.getName()).log(Level.SEVERE, s, cause);
+                Exceptions.severe(LOG, s, cause);
                 errors++;
                 cause = ex;
             }
@@ -658,7 +660,7 @@ public class JavaTime
             }
             catch (DateTimeParseException ex)
             {
-                Logger.getLogger(JavaTime.class.getName()).log(Level.SEVERE, s, cause);
+                Exceptions.severe(LOG, s, cause);
                 errors++;
                 cause = ex;
             }

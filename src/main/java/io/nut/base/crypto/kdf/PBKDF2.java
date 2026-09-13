@@ -1,22 +1,7 @@
 /*
- *  PBKDF2.java
- *
- *  Copyright (c) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.kdf;
 
@@ -24,13 +9,13 @@ import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.Pbkdf2;
 import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
 import io.nut.base.encoding.Ascii85;
+import io.nut.base.util.Exceptions;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -39,6 +24,8 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class PBKDF2
 {
+    private static final Logger LOG = Logger.getLogger(PBKDF2.class.getName());
+
     private final Kripto kripto;
     private final SecureRandom random = new SecureRandom();
     public final Pbkdf2 algorithm;
@@ -59,8 +46,7 @@ public class PBKDF2
         }
         catch (NoSuchAlgorithmException | InvalidKeySpecException ex)
         {
-            Logger.getLogger(PBKDF2.class.getName()).log(Level.SEVERE, null, ex);
-            throw new RuntimeException(ex);
+            throw Exceptions.rethrow(LOG, ex);
         }
     }
 

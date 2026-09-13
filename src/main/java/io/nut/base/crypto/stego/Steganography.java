@@ -17,6 +17,7 @@ import io.nut.base.util.BitSetWriter;
 import io.nut.base.util.Bits;
 import io.nut.base.util.Empty;
 import io.nut.base.util.Checksums;
+import io.nut.base.util.Exceptions;
 import io.nut.base.util.Strings;
 import io.nut.base.util.Zip;
 import io.nut.base.varint.CompactSize;
@@ -30,7 +31,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Collections;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -44,6 +44,8 @@ import javax.crypto.spec.IvParameterSpec;
  */
 public class Steganography
 {
+    private static final Logger LOG = Logger.getLogger(Steganography.class.getName());
+
     static final Pbkdf2 DERIVATION = Pbkdf2.PBKDF2WithHmacSHA256;
     
     private static final String PARAGRAPHS = "(\r?\n\r?){2,}";
@@ -228,8 +230,7 @@ public class Steganography
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
         {
-            Logger.getLogger(Steganography.class.getName()).log(Level.SEVERE, null, ex);
-            throw new RuntimeException("Cryptography error",ex);
+            throw Exceptions.rethrow(LOG, "Cryptography error", ex);
         }
         return packet;
     }
@@ -243,8 +244,7 @@ public class Steganography
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
         {
-            Logger.getLogger(Steganography.class.getName()).log(Level.SEVERE, null, ex);
-            throw new RuntimeException("Cryptography error",ex);
+            throw Exceptions.rethrow(LOG, "Cryptography error", ex);
         }
         return packet;
     }

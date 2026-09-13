@@ -61,6 +61,8 @@ import java.util.logging.Logger;
  */
 public abstract class Utils
 {    
+    private static final Logger LOG = Logger.getLogger(Utils.class.getName());
+
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
@@ -1050,7 +1052,7 @@ public abstract class Utils
         }
         catch (InterruptedException ex)
         {
-            Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
             return true;
         }
     }
@@ -1074,7 +1076,7 @@ public abstract class Utils
         }
         catch (InterruptedException ex)
         {
-            Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
             return true;
         }
     }
@@ -2034,7 +2036,7 @@ public abstract class Utils
         }
         catch (IOException | UnsupportedFlavorException ex)
         {
-            Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
             return null;
         }
     }
@@ -2156,7 +2158,7 @@ public abstract class Utils
             }
             catch (InterruptedException ex)
             {
-                Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
+                Exceptions.severe(LOG, ex);
             }
         }
     }
@@ -2303,7 +2305,7 @@ public abstract class Utils
         }
         catch (UnknownHostException ex)
         {
-            Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
             return null;
         }
     }
@@ -2316,7 +2318,7 @@ public abstract class Utils
         }
         catch (UnknownHostException ex)
         {
-            Logger.getLogger(Utils.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
             return null;
         }
     }

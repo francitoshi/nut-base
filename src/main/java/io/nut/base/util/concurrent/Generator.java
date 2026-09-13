@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent;
 
+import io.nut.base.util.Exceptions;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -50,6 +51,8 @@ import java.util.logging.Logger;
  */
 public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
 {
+    private static final Logger LOG = Logger.getLogger(Generator.class.getName());
+
     /**
      * Internal wrapper for elements to allow null values and sentinel markers
      * within the BlockingQueue.
@@ -228,7 +231,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                         }
                         catch(IllegalStateException ex)
                         {
-                            Logger.getLogger(Generator.class.getName()).log(Level.INFO, "Generator explicitly stopped", ex);
+                            LOG.log(Level.INFO, "Generator explicitly stopped", ex);
                         }
                         finally
                         {
@@ -242,7 +245,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
                             catch (InterruptedException ex)
                             {
                                 shutdownRequested = terminated = true;
-                                Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
+                                Exceptions.severe(LOG, ex);
                             }
                         }
                     }
@@ -288,7 +291,7 @@ public abstract class Generator<E> implements Iterable<E>, Iterator<E>, Runnable
         }
         catch (InterruptedException ex) 
         {
-            Logger.getLogger(Generator.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
             shutdownRequested = terminated = true;
             return false;
         }

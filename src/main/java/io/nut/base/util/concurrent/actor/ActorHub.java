@@ -6,6 +6,7 @@
 package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.math.Nums;
+import io.nut.base.util.Exceptions;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -21,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -67,6 +67,8 @@ import java.util.logging.Logger;
  */
 public class ActorHub extends ActorPool implements ActorLifecycle, Executor
 {
+    private static final Logger LOG = Logger.getLogger(ActorHub.class.getName());
+
     public static ActorHub SYNCHRONOUS = new ActorHub(null);
     
     /** Active non-synchronous Actors attached to this ActorHub, for coordinated tasks. */
@@ -469,7 +471,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         }
         catch (InterruptedException ex)
         {
-            Logger.getLogger(ActorHub.class.getName()).log(Level.SEVERE, null, ex);
+            Exceptions.severe(LOG, ex);
             Thread.currentThread().interrupt();
         }
     }

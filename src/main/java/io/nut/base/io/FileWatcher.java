@@ -1,22 +1,7 @@
 /*
- *  FileWatcher.java
- *
- *  Copyright (c) 2017-2024 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2017-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.io;
 
@@ -30,7 +15,7 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.logging.Level;
+import io.nut.base.util.Exceptions;
 import java.util.logging.Logger;
 
 /**
@@ -40,6 +25,7 @@ import java.util.logging.Logger;
 public class FileWatcher
 {
     private static final String TAG = FileWatcher.class.getSimpleName();
+    private static final Logger LOG = Logger.getLogger(FileWatcher.class.getName());
     
     public enum EventKind
     {
@@ -147,7 +133,7 @@ public class FileWatcher
             }
             catch(Exception ex) 
             {
-                Logger.getLogger(FileWatcher.class.getName()).log(Level.SEVERE, null, ex);
+                Exceptions.severe(LOG, ex);
                 closed = true;
                 exception = ex;
             }
