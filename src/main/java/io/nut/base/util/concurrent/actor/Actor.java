@@ -113,13 +113,6 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     /** Workers currently running (submitted to the ActorHub pool but not yet done). */
     private final AtomicInteger activeWorkers = new AtomicInteger();
 
-    /**
-     * Temporary ("rush") workers currently running, for {@code threads > 1}.
-     * The permanent worker is not counted here, so an Actor waiting for new
-     * messages on its permanent worker can still report itself idle.
-     */
-    private final AtomicInteger rushWorkers = new AtomicInteger();
-
     /** {@code true} once the permanent worker has been started (threads >= 1). */
     private boolean permanentWorkerStarted;
 
@@ -386,7 +379,6 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     private void startWorker()
     {
         activeWorkers.incrementAndGet();
-        rushWorkers.incrementAndGet();
         try
         {
             Executor h = actorHub;
@@ -397,14 +389,12 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
             else
             {
                 activeWorkers.decrementAndGet();
-                rushWorkers.decrementAndGet();
                 workerSlots.release();
             }
         }
         catch (Exception ex)
         {
             activeWorkers.decrementAndGet();
-            rushWorkers.decrementAndGet();
             workerSlots.release();
             throw ex;
         }
@@ -598,10 +588,6 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
                 boolean last = activeWorkers.decrementAndGet() == 0;
                 if (closed)
                 {
-                    if (permanent)
-                    {
-                        rushWorkers.set(0);
-                    }
                     if (last)
                     {
                         doTerminate();
@@ -627,10 +613,6 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
                     {
                         permanentWorkerStarted = false;
                     }
-                    else
-                    {
-                        rushWorkers.decrementAndGet();
-                    }
                     workerSlots.release();
                     lock.notifyAll();
                     return;
@@ -645,12 +627,7 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
                 closeNow();
                 if (permanent)
                 {
-                    rushWorkers.set(0);
                     permanentWorkerStarted = false;
-                }
-                else
-                {
-                    rushWorkers.decrementAndGet();
                 }
                 synchronized (lock)
                 {
