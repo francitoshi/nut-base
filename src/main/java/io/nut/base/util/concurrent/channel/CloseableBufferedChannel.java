@@ -10,24 +10,31 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Closeable channel with a fixed-capacity buffer.
+ * Closeable channel with a fixed-capacity buffer, or an unbuffered
+ * (rendezvous) channel when created with capacity {@code 0}.
+ * <p>
+ * A capacity of {@code 0} is valid and makes this channel behave as an
+ * unbuffered channel backed by a {@link SynchronousQueue}: a blocked
+ * {@link #put} only completes when a reader calls {@link #get}.
  * <p>
  * {@link #close()} marks the channel as closed, unblocks all pending readers
  * (they drain the remaining buffered elements and then return {@code null})
  * and aborts any {@link #put} in progress: a blocked {@code put} returns
  * without delivering its value and the timed variant returns {@code false}.
  */
-public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
+public class CloseableBufferedChannel<E> extends CloseableChannel<E>
 {
     private static final Object POISON = new Object();
 
     private final AtomicInteger gets = new AtomicInteger();
 
-    private final ArrayBlockingQueue<Object> queue;
+    private final BlockingQueue<Object> queue;
 
     private volatile boolean closed;
 
@@ -37,13 +44,17 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
 
     private final Set<Thread> writers = new HashSet<>();
 
+    /**
+     * @param capacity the buffer capacity, or {@code 0} for an unbuffered
+     *                 (rendezvous) channel; must not be negative
+     */
     public CloseableBufferedChannel(int capacity)
     {
-        if (capacity <= 0)
+        if (capacity < 0)
         {
-            throw new IllegalArgumentException("capacity must be > 0");
+            throw new IllegalArgumentException("capacity must be >= 0");
         }
-        this.queue = new ArrayBlockingQueue<>(capacity);
+        this.queue = capacity>0 ? new ArrayBlockingQueue<>(capacity) : new SynchronousQueue<>();
     }
 
     @Override
@@ -164,16 +175,13 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                     return drainAfterClose();
                 }
 
-                try
-                {
-                    Object item = queue.take();
-                    return item == POISON ? null : (E) item;
-                }
-                catch (InterruptedException ex)
-                {
-                    handleInterruptedException(ex);
-                    interrupted = true;
-                }
+                Object item = queue.take();
+                return item == POISON ? null : (E) item;
+            }
+            catch (InterruptedException ex)
+            {
+                handleInterruptedException(ex);
+                interrupted = true;
             }
             finally
             {
@@ -218,20 +226,17 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                     return drainAfterClosePoll();
                 }
 
-                try
+                Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                if (item == null || item == POISON)
                 {
-                    Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                    if (item == null || item == POISON)
-                    {
-                        return null;
-                    }
-                    return (E) item;
+                    return null;
                 }
-                catch (InterruptedException ex)
-                {
-                    handleInterruptedException(ex);
-                    interrupted = true;
-                }
+                return (E) item;
+            }
+            catch (InterruptedException ex)
+            {
+                handleInterruptedException(ex);
+                interrupted = true;
             }
             finally
             {
@@ -261,7 +266,7 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
     @SuppressWarnings("unchecked")
     private E drainAfterClose()
     {
-        while (true)
+        for(int i=1;;i++)
         {
             Object item = queue.poll();
             if (item != null)
@@ -277,7 +282,7 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 }
                 try
                 {
-                    lock.wait(100);
+                    lock.wait(Math.min(i,100));
                 }
                 catch (InterruptedException ex)
                 {
@@ -291,7 +296,7 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
     public boolean close(long timeout, TimeUnit unit) throws InterruptedException
     {
         long timeoutNanos = unit.toNanos(timeout);
-        long deadline = Nums.saturatedAdd(System.nanoTime(),timeoutNanos);
+        long deadline = Nums.saturatedAdd(System.nanoTime(), timeoutNanos);
 
         Thread[] blockedWriters;
         synchronized (lock)
@@ -321,12 +326,12 @@ public final class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 {
                     return false;
                 }
-                long ms = TimeUnit.NANOSECONDS.toMillis(timeoutNanos);
-                if (ms <= 0)
+                long timeoutMillis = TimeUnit.NANOSECONDS.toMillis(timeoutNanos);
+                if (timeoutMillis <= 0)
                 {
-                    ms = 1;
+                    timeoutMillis = 1;
                 }
-                lock.wait(ms);
+                lock.wait(timeoutMillis);
                 timeoutNanos = deadline - System.nanoTime();
             }
         }

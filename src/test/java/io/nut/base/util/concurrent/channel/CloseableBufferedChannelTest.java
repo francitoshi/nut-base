@@ -39,9 +39,14 @@ public class CloseableBufferedChannelTest
     }
 
     @Test
+    public void testZeroValidCapacity()
+    {
+        assertNotNull(new CloseableBufferedChannel<>(0));
+    }
+
+    @Test
     public void testInvalidCapacity()
     {
-        assertThrows(IllegalArgumentException.class, () -> new CloseableBufferedChannel<>(0));
         assertThrows(IllegalArgumentException.class, () -> new CloseableBufferedChannel<>(-5));
     }
 
