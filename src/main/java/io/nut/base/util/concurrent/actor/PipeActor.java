@@ -126,17 +126,6 @@ public class PipeActor<T,R> extends Actor<T>
     }
 
     /**
-     * Returns the next stage in the chain, or {@code null} if none has been
-     * linked yet.
-     *
-     * @return the linked next stage, or {@code null}
-     */
-    protected Consumer<R> getNext()
-    {
-        return next;
-    }
-
-    /**
      * Applies the configured function to the received message and forwards the
      * result to the linked {@code next} stage. If {@code next} is {@code null},
      * the result is silently discarded.

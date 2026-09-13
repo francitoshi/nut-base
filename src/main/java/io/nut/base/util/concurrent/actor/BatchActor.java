@@ -197,17 +197,6 @@ public class BatchActor<T> extends Actor<T>
     }
 
     /**
-     * Returns the next stage in the chain, or {@code null} if none has been
-     * linked yet.
-     *
-     * @return the linked next stage, or {@code null}
-     */
-    protected Consumer<List<T>> getNext()
-    {
-        return next;
-    }
-
-    /**
      * Adds {@code m} to the pending batch, using its acceptance sequence so
      * that batches are assembled in acceptance order even when {@code receive}
      * is invoked concurrently. If the batch has reached {@code maxSize} after

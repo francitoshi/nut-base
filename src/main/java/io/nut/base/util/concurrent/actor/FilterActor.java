@@ -119,17 +119,6 @@ public class FilterActor<T> extends Actor<T>
     }
 
     /**
-     * Returns the next stage in the chain, or {@code null} if none has been
-     * linked yet.
-     *
-     * @return the linked next stage, or {@code null}
-     */
-    protected Consumer<T> getNext()
-    {
-        return next;
-    }
-
-    /**
      * Tests the received message against the predicate. If the test passes,
      * forwards the message to the linked {@code next} stage unchanged. If the
      * test fails, or if {@code next} is {@code null}, the message is discarded.
