@@ -6,7 +6,6 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -15,51 +14,33 @@ import java.util.Arrays;
  *
  * @author franci
  */
-public class BooleanKey implements Comparable<BooleanKey>, Serializable
+public class BooleanKey extends ArrayKey<boolean[]>
 {
-    protected final boolean[] booleans;
-
     public BooleanKey(boolean[] booleans)
     {
-        this.booleans = booleans;
+        super(booleans);
     }
 
     @Override
-    public int compareTo(BooleanKey other)
+    protected int compareArrays(boolean[] a, boolean[] b)
     {
-        return Utils.compare(this.booleans, other.booleans);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(boolean[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.booleans);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final BooleanKey other = (BooleanKey) obj;
-        return Arrays.equals(this.booleans, other.booleans);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return Arrays.toString(booleans);
+        return Arrays.toString(array);
     }
 
     public boolean[] getBooleans()
     {
-        return booleans.clone();
+        return array.clone();
     }
-
 }

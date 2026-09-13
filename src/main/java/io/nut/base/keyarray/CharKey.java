@@ -6,7 +6,6 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -15,56 +14,38 @@ import java.util.Arrays;
  *
  * @author franci
  */
-public class CharKey implements Comparable<CharKey>, Serializable
+public class CharKey extends ArrayKey<char[]>
 {
-    protected final char[] chars;
-
     public CharKey(char[] chars)
     {
-        this.chars = chars;
+        super(chars);
     }
 
     public CharKey(String value)
     {
-        this.chars = value.toCharArray();
+        super(value.toCharArray());
     }
 
     @Override
-    public int compareTo(CharKey other)
+    protected int compareArrays(char[] a, char[] b)
     {
-        return Utils.compare(this.chars, other.chars);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(char[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.chars);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final CharKey other = (CharKey) obj;
-        return Arrays.equals(this.chars, other.chars);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return new String(chars);
+        return new String(array);
     }
 
     public char[] getChars()
     {
-        return chars.clone();
+        return array.clone();
     }
-
 }

@@ -7,7 +7,6 @@ package io.nut.base.keyarray;
 
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -16,57 +15,38 @@ import java.util.Arrays;
  * 
  * @author franci
  */
-public class ByteKey implements Comparable<ByteKey>, Serializable
+public class ByteKey extends ArrayKey<byte[]>
 {
-    
-    protected final byte[] bytes;
-
     public ByteKey(byte[] bytes)
     {
-        this.bytes = bytes;
+        super(bytes);
     }
 
     public ByteKey(String hex)
     {
-        this.bytes = Hex.decode(hex);
+        super(Hex.decode(hex));
     }
 
     @Override
-    public int compareTo(ByteKey other)
+    protected int compareArrays(byte[] a, byte[] b)
     {
-        return Utils.compare(this.bytes, other.bytes);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(byte[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.bytes);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final ByteKey other = (ByteKey) obj;
-        return Arrays.equals(this.bytes, other.bytes);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return Hex.encode(bytes);
+        return Hex.encode(array);
     }
 
     public byte[] getBytes()
     {
-        return bytes.clone();
+        return array.clone();
     }
-    
 }

@@ -6,7 +6,6 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -15,51 +14,33 @@ import java.util.Arrays;
  *
  * @author franci
  */
-public class LongKey implements Comparable<LongKey>, Serializable
+public class LongKey extends ArrayKey<long[]>
 {
-    protected final long[] longs;
-
     public LongKey(long[] longs)
     {
-        this.longs = longs;
+        super(longs);
     }
 
     @Override
-    public int compareTo(LongKey other)
+    protected int compareArrays(long[] a, long[] b)
     {
-        return Utils.compare(this.longs, other.longs);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(long[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.longs);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final LongKey other = (LongKey) obj;
-        return Arrays.equals(this.longs, other.longs);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return Arrays.toString(longs);
+        return Arrays.toString(array);
     }
 
     public long[] getLongs()
     {
-        return longs.clone();
+        return array.clone();
     }
-
 }

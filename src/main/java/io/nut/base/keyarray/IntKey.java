@@ -6,7 +6,6 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -15,51 +14,33 @@ import java.util.Arrays;
  *
  * @author franci
  */
-public class IntKey implements Comparable<IntKey>, Serializable
+public class IntKey extends ArrayKey<int[]>
 {
-    protected final int[] ints;
-
     public IntKey(int[] ints)
     {
-        this.ints = ints;
+        super(ints);
     }
 
     @Override
-    public int compareTo(IntKey other)
+    protected int compareArrays(int[] a, int[] b)
     {
-        return Utils.compare(this.ints, other.ints);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(int[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.ints);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final IntKey other = (IntKey) obj;
-        return Arrays.equals(this.ints, other.ints);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return Arrays.toString(ints);
+        return Arrays.toString(array);
     }
 
     public int[] getInts()
     {
-        return ints.clone();
+        return array.clone();
     }
-
 }

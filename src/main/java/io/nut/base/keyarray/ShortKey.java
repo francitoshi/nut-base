@@ -6,7 +6,6 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -15,51 +14,33 @@ import java.util.Arrays;
  *
  * @author franci
  */
-public class ShortKey implements Comparable<ShortKey>, Serializable
+public class ShortKey extends ArrayKey<short[]>
 {
-    protected final short[] shorts;
-
     public ShortKey(short[] shorts)
     {
-        this.shorts = shorts;
+        super(shorts);
     }
 
     @Override
-    public int compareTo(ShortKey other)
+    protected int compareArrays(short[] a, short[] b)
     {
-        return Utils.compare(this.shorts, other.shorts);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(short[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.shorts);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final ShortKey other = (ShortKey) obj;
-        return Arrays.equals(this.shorts, other.shorts);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return Arrays.toString(shorts);
+        return Arrays.toString(array);
     }
 
     public short[] getShorts()
     {
-        return shorts.clone();
+        return array.clone();
     }
-
 }

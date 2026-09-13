@@ -63,7 +63,7 @@ test
         if (result.resultType == org.gradle.api.tasks.testing.TestResult.ResultType.SUCCESS)
         {
             long ms = result.endTime - result.startTime
-            if (ms > 9999)
+            if (ms > 7777)
             {
                 println String.format("%6d ms  %s.%s", ms, descriptor.className, descriptor.name)
             }

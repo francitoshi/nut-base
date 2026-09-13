@@ -6,7 +6,6 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -15,51 +14,33 @@ import java.util.Arrays;
  *
  * @author franci
  */
-public class FloatKey implements Comparable<FloatKey>, Serializable
+public class FloatKey extends ArrayKey<float[]>
 {
-    protected final float[] floats;
-
     public FloatKey(float[] floats)
     {
-        this.floats = floats;
+        super(floats);
     }
 
     @Override
-    public int compareTo(FloatKey other)
+    protected int compareArrays(float[] a, float[] b)
     {
-        return Utils.compare(this.floats, other.floats);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(float[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.floats);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final FloatKey other = (FloatKey) obj;
-        return Arrays.equals(this.floats, other.floats);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return Arrays.toString(floats);
+        return Arrays.toString(array);
     }
 
     public float[] getFloats()
     {
-        return floats.clone();
+        return array.clone();
     }
-
 }

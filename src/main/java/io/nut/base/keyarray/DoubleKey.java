@@ -6,7 +6,6 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.util.Utils;
-import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -15,51 +14,33 @@ import java.util.Arrays;
  *
  * @author franci
  */
-public class DoubleKey implements Comparable<DoubleKey>, Serializable
+public class DoubleKey extends ArrayKey<double[]>
 {
-    protected final double[] doubles;
-
     public DoubleKey(double[] doubles)
     {
-        this.doubles = doubles;
+        super(doubles);
     }
 
     @Override
-    public int compareTo(DoubleKey other)
+    protected int compareArrays(double[] a, double[] b)
     {
-        return Utils.compare(this.doubles, other.doubles);
+        return Utils.compare(a, b);
     }
 
     @Override
-    public int hashCode()
+    protected int hashArray(double[] a)
     {
-        int hash = 3;
-        hash = 61 * hash + Arrays.hashCode(this.doubles);
-        return hash;
-    }
-
-    @Override
-    public boolean equals(Object obj)
-    {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        final DoubleKey other = (DoubleKey) obj;
-        return Arrays.equals(this.doubles, other.doubles);
+        return Arrays.hashCode(a);
     }
 
     @Override
     public String toString()
     {
-        return Arrays.toString(doubles);
+        return Arrays.toString(array);
     }
 
     public double[] getDoubles()
     {
-        return doubles.clone();
+        return array.clone();
     }
-
 }
