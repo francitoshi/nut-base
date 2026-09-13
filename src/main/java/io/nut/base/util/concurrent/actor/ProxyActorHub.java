@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * Copyright (C) 2026 francitoshi@gmail.com
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
@@ -17,12 +17,29 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
+ * An {@link ActorHub} that transparently delegates every operation to a real
+ * ActorHub assigned with {@link #setActorHub}. Before the first assignment —
+ * and after {@code setActorHub(null)} — it behaves like a plain synchronous
+ * ActorHub, while Actors created in that window are kept in
+ * {@link #pendingActors} and re-registered into the assigned hub when one is
+ * set.
  *
  * @author franci
  */
 public class ProxyActorHub extends ActorHub implements AutoCloseable
 {
-    private volatile ActorHub actorHub;
+    /**
+     * Synchronous hub used as the delegation target while no real ActorHub has
+     * been assigned ({@link #setActorHub}). It reproduces the behaviour the
+     * inherited synchronous pool of this instance would have had in the
+     * unassigned case. {@link #actorHub} starts here; {@code actorHub == fallback}
+     * therefore means "no real hub assigned yet".
+     */
+    private final ActorHub fallback = new ActorHub(0, 0, 0, false, false);
+
+    /** The hub every operation is delegated to; never {@code null}. */
+    private volatile ActorHub actorHub = fallback;
+
     private final List<Actor<?>> pendingActors = new CopyOnWriteArrayList<>();
 
     public ProxyActorHub()
@@ -30,9 +47,17 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
         super(0, 0, 0, false, false);
     }
 
+    /**
+     * Assigns the ActorHub this proxy delegates to from now on. Any Actor this
+     * proxy created before the assignment (kept in {@link #pendingActors}) is
+     * re-registered into {@code actorHub}. Passing {@code null} unassigns and
+     * reverts to the synchronous fallback.
+     *
+     * @param actorHub the hub to delegate to, or {@code null} to unassign
+     */
     public void setActorHub(ActorHub actorHub)
     {
-        this.actorHub = actorHub;
+        this.actorHub = actorHub != null ? actorHub : fallback;
         if (actorHub != null)
         {
             for (Actor<?> actor : pendingActors)
@@ -43,137 +68,150 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
         }
     }
 
+    // Execution and management operations: forward unconditionally.
+
     @Override
     public void execute(Runnable task)
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            h.execute(task);
-        }
-        else
-        {
-            super.execute(task);
-        }
+        actorHub.execute(task);
     }
 
     @Override
     protected void terminated()
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            h.terminated();
-        }
-        else
-        {
-            super.terminated();
-        }
+        actorHub.terminated();
     }
 
     @Override
     public ActorHub shutdown()
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            h.shutdown();
-        }
-        else
-        {
-            super.shutdown();
-        }
+        actorHub.shutdown();
         return this;
     }
 
     @Override
     public boolean isShutdown()
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.isShutdown();
-        }
-        return super.isShutdown();
+        return actorHub.isShutdown();
     }
 
     @Override
     public boolean isTerminated()
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.isTerminated();
-        }
-        return super.isTerminated();
+        return actorHub.isTerminated();
     }
 
     @Override
     public boolean awaitTermination(int millis)
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.awaitTermination(millis);
-        }
-        return super.awaitTermination(millis);
+        return actorHub.awaitTermination(millis);
     }
 
     @Override
     public int getCorePoolSize()
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.getCorePoolSize();
-        }
-        return super.getCorePoolSize();
+        return actorHub.getCorePoolSize();
     }
 
     @Override
     public int getMaximumPoolSize()
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.getMaximumPoolSize();
-        }
-        return super.getMaximumPoolSize();
+        return actorHub.getMaximumPoolSize();
     }
 
     @Override
     public void setPoolSize(int i)
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            h.setPoolSize(i);
-        }
-        else
-        {
-            super.setPoolSize(i);
-        }
+        actorHub.setPoolSize(i);
     }
 
     @Override
     public void close()
     {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            h.close();
-        }
-        else
-        {
-            super.close();
-        }
+        actorHub.close();
     }
+
+    @Override
+    public ProxyActorHub spawn(Runnable task)
+    {
+        actorHub.spawn(task);
+        return this;
+    }
+
+    @Override
+    public Future<Void> submit(Runnable task)
+    {
+        return actorHub.submit(task);
+    }
+
+    @Override
+    public <U> Future<U> submit(Supplier<U> supplier)
+    {
+        return actorHub.submit(supplier);
+    }
+
+    @Override
+    public <T> void forEach(Iterable<T> iterable, Consumer<? super T> consumer)
+    {
+        actorHub.forEach(iterable, consumer);
+    }
+
+    @Override
+    public ActorHub shutdown(boolean onlyWhenEmpty)
+    {
+        actorHub.shutdown(onlyWhenEmpty);
+        return this;
+    }
+
+    @Override
+    public void close(boolean onlyWhenEmpty)
+    {
+        actorHub.close(onlyWhenEmpty);
+    }
+
+    @Override
+    public boolean isIdle()
+    {
+        return actorHub.isIdle();
+    }
+
+    @Override
+    public ActorHub waitForIdle()
+    {
+        actorHub.waitForIdle();
+        return this;
+    }
+
+    @Override
+    public ActorHub awaitTermination()
+    {
+        actorHub.awaitTermination();
+        return this;
+    }
+
+    @Override
+    public boolean isSynchronous()
+    {
+        return actorHub.isSynchronous();
+    }
+
+    @Override
+    public int getActiveCount()
+    {
+        return actorHub.getActiveCount();
+    }
+
+    // Actor creation: bind the new Actor to the assigned hub, or to this proxy
+    // while unassigned so that it stays pending and migrates on setActorHub.
+    // The explicit fork is required: a shared helper cannot dispatch to the
+    // inherited implementation, and binding to the fallback would detach the
+    // new Actors from this proxy's pending-tracking.
 
     @Override
     public <T, R> PipeActor<T, R> pipe(int threads, int queueSize, Function<T, R> function)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.pipe(threads, queueSize, function);
         }
@@ -184,7 +222,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T> Actor<T> actor(int threads, int queueSize, Consumer<T> consumer)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.actor(threads, queueSize, consumer);
         }
@@ -195,7 +233,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <E> Actor<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.queue(threads, queueSize, queue);
         }
@@ -206,7 +244,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <E> Actor<E> list(int threads, int queueSize, List<E> list)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.list(threads, queueSize, list);
         }
@@ -217,7 +255,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T> Actor<T> set(int threads, int queueSize, Set<T> set)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.set(threads, queueSize, set);
         }
@@ -228,7 +266,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T> FilterActor<T> filter(int threads, int queueSize, Predicate<T> predicate)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.filter(threads, queueSize, predicate);
         }
@@ -239,7 +277,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T> BatchActor<T> batch(int threads, int queueSize, int maxSize, long maxWaitMillis)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.batch(threads, queueSize, maxSize, maxWaitMillis);
         }
@@ -250,7 +288,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T, R> PipelineActor<T, R> pipeline(int threads, int queueSize, Function<T, R> first)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.pipeline(threads, queueSize, first);
         }
@@ -261,7 +299,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T> Subscription<T> sub(String topic, Actor<T> actor)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.sub(topic, actor);
         }
@@ -272,7 +310,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T> Subscription<T> sub(String tag, Consumer<T> consumer)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.sub(tag, consumer);
         }
@@ -283,7 +321,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public <T> Publisher<T> pub(String topic)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.pub(topic);
         }
@@ -291,61 +329,167 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public ProxyActorHub spawn(Runnable task)
+    public <T, R> PipeActor<T, R> pipe(Function<T, R> function)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
-            h.spawn(task);
+            return h.pipe(function);
         }
-        else
-        {
-            super.spawn(task);
-        }
-        return this;
+        return super.pipe(function);
     }
 
     @Override
-    public Future<Void> submit(Runnable task)
+    public <T, R> PipeActor<T, R> pipe(int threads, Function<T, R> function)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
-            return h.submit(task);
+            return h.pipe(threads, function);
         }
-        return super.submit(task);
+        return super.pipe(threads, function);
     }
 
     @Override
-    public <U> Future<U> submit(Supplier<U> supplier)
+    public <T> Actor<T> actor(Consumer<T> consumer)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
-            return h.submit(supplier);
+            return h.actor(consumer);
         }
-        return super.submit(supplier);
+        return super.actor(consumer);
     }
 
     @Override
-    public <T> void forEach(Iterable<T> iterable, Consumer<? super T> consumer)
+    public <T> Actor<T> actor(int threads, Consumer<T> consumer)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
-            h.forEach(iterable, consumer);
+            return h.actor(threads, consumer);
         }
-        else
-        {
-            super.forEach(iterable, consumer);
-        }
+        return super.actor(threads, consumer);
     }
+
+    @Override
+    public <E> Actor<E> queue(BlockingQueue<E> queue)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.queue(queue);
+        }
+        return super.queue(queue);
+    }
+
+    @Override
+    public <E> Actor<E> list(List<E> list)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.list(list);
+        }
+        return super.list(list);
+    }
+
+    @Override
+    public <E> Actor<E> list(int threads, List<E> list)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.list(threads, list);
+        }
+        return super.list(threads, list);
+    }
+
+    @Override
+    public <T> Actor<T> set(Set<T> set)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.set(set);
+        }
+        return super.set(set);
+    }
+
+    @Override
+    public <T> Actor<T> set(int threads, Set<T> set)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.set(threads, set);
+        }
+        return super.set(threads, set);
+    }
+
+    @Override
+    public <T> FilterActor<T> filter(Predicate<T> predicate)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.filter(predicate);
+        }
+        return super.filter(predicate);
+    }
+
+    @Override
+    public <T> FilterActor<T> filter(int threads, Predicate<T> predicate)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.filter(threads, predicate);
+        }
+        return super.filter(threads, predicate);
+    }
+
+    @Override
+    public <T, R> PipelineActor<T, R> pipeline(Function<T, R> first)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.pipeline(first);
+        }
+        return super.pipeline(first);
+    }
+
+    @Override
+    public <T, R> PipelineActor<T, R> pipeline(int threads, Function<T, R> first)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.pipeline(threads, first);
+        }
+        return super.pipeline(threads, first);
+    }
+
+    @Override
+    public <T> BatchActor<T> batch(int maxSize, long maxWaitMillis)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.batch(maxSize, maxWaitMillis);
+        }
+        return super.batch(maxSize, maxWaitMillis);
+    }
+
+    // Registration tracking: the assigned hub keeps its own actors, otherwise
+    // they are accumulated here and migrated on setActorHub.
 
     @Override
     void registerActor(Actor<?> actor)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             h.registerActor(actor);
         }
@@ -359,7 +503,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     void unregisterActor(Actor<?> actor)
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             h.unregisterActor(actor);
         }
@@ -373,7 +517,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     public List<Actor<?>> actors()
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.actors();
         }
@@ -381,248 +525,13 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public <T, R> PipeActor<T, R> pipe(Function<T, R> function)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.pipe(function);
-        }
-        return super.pipe(function);
-    }
-
-    @Override
-    public <T, R> PipeActor<T, R> pipe(int threads, Function<T, R> function)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.pipe(threads, function);
-        }
-        return super.pipe(threads, function);
-    }
-
-    @Override
-    public <T> Actor<T> actor(Consumer<T> consumer)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.actor(consumer);
-        }
-        return super.actor(consumer);
-    }
-
-    @Override
-    public <T> Actor<T> actor(int threads, Consumer<T> consumer)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.actor(threads, consumer);
-        }
-        return super.actor(threads, consumer);
-    }
-
-    @Override
-    public <E> Actor<E> queue(BlockingQueue<E> queue)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.queue(queue);
-        }
-        return super.queue(queue);
-    }
-
-    @Override
-    public <E> Actor<E> list(List<E> list)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.list(list);
-        }
-        return super.list(list);
-    }
-
-    @Override
-    public <E> Actor<E> list(int threads, List<E> list)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.list(threads, list);
-        }
-        return super.list(threads, list);
-    }
-
-    @Override
-    public <T> Actor<T> set(Set<T> set)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.set(set);
-        }
-        return super.set(set);
-    }
-
-    @Override
-    public <T> Actor<T> set(int threads, Set<T> set)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.set(threads, set);
-        }
-        return super.set(threads, set);
-    }
-
-    @Override
-    public <T> FilterActor<T> filter(Predicate<T> predicate)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.filter(predicate);
-        }
-        return super.filter(predicate);
-    }
-
-    @Override
-    public <T> FilterActor<T> filter(int threads, Predicate<T> predicate)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.filter(threads, predicate);
-        }
-        return super.filter(threads, predicate);
-    }
-
-    @Override
-    public <T, R> PipelineActor<T, R> pipeline(Function<T, R> first)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.pipeline(first);
-        }
-        return super.pipeline(first);
-    }
-
-    @Override
-    public <T, R> PipelineActor<T, R> pipeline(int threads, Function<T, R> first)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.pipeline(threads, first);
-        }
-        return super.pipeline(threads, first);
-    }
-
-    @Override
-    public <T> BatchActor<T> batch(int maxSize, long maxWaitMillis)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.batch(maxSize, maxWaitMillis);
-        }
-        return super.batch(maxSize, maxWaitMillis);
-    }
-
-    @Override
-    public ActorHub shutdown(boolean onlyWhenEmpty)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.shutdown(onlyWhenEmpty);
-        }
-        return super.shutdown(onlyWhenEmpty);
-    }
-
-    @Override
-    public void close(boolean onlyWhenEmpty)
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            h.close(onlyWhenEmpty);
-        }
-        else
-        {
-            super.close(onlyWhenEmpty);
-        }
-    }
-
-    @Override
     AtomicInteger processedCount()
     {
         ActorHub h = actorHub;
-        if (h != null)
+        if (h != fallback)
         {
             return h.processedCount();
         }
         return super.processedCount();
     }
-
-    @Override
-    public boolean isIdle()
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.isIdle();
-        }
-        return super.isIdle();
-    }
-
-    @Override
-    public ActorHub waitForIdle()
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.waitForIdle();
-        }
-        return super.waitForIdle();
-    }
-
-    @Override
-    public ActorHub awaitTermination()
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.awaitTermination();
-        }
-        return super.awaitTermination();
-    }
-
-    @Override
-    public boolean isSynchronous()
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.isSynchronous();
-        }
-        return super.isSynchronous();
-    }
-
-    @Override
-    public int getActiveCount()
-    {
-        ActorHub h = actorHub;
-        if (h != null)
-        {
-            return h.getActiveCount();
-        }
-        return super.getActiveCount();
-    }
-
 }
