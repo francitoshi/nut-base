@@ -234,8 +234,23 @@ abstract class AsyncActor<M> extends Actor<M>
             }
             finally
             {
-                processing.decrementAndGet();
+                if (processing.decrementAndGet() == 0 && pending.get() == 0)
+                {
+                    notifyIdle();
+                }
             }
+        }
+    }
+
+    /**
+     * Wakes {@link #waitForIdle()} waiters as soon as this actor becomes
+     * idle, without waiting for the permanent worker to exit its idle window.
+     */
+    private void notifyIdle()
+    {
+        synchronized (lock)
+        {
+            lock.notifyAll();
         }
     }
 

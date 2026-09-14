@@ -297,6 +297,24 @@ class ActorHubTest
     }
 
     @Test
+    void waitForIdleReturnsPromptlyAfterABurst()
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        Actor<String> actor = actorHub.actor(sink::add);
+
+        long t0 = System.nanoTime();
+        for (int i = 0; i < 10; i++)
+        {
+            actor.accept("m" + i);
+            actor.waitForIdle();
+        }
+        long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
+
+        assertTrue(elapsed < 200, "waitForIdle lingered " + elapsed + " ms after the burst");
+        assertEquals(10, sink.size());
+    }
+
+    @Test
     void poolSizeGetterAndSetterWork()
     {
         ActorHub h = ActorHub.hub(3);
