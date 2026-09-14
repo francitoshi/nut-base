@@ -17,107 +17,58 @@ import java.util.function.Consumer;
  * A pipeline stage that fans out every received message to a set of downstream
  * target stages, allowing the same input to feed multiple independent chains in
  * parallel.
- * <p>
- * Each message delivered to {@link #receive(Object)} is forwarded — unchanged
- * and in order — to every registered {@link Consumer}{@code <T>} target by
- * calling {@link Consumer#accept accept()} on each of them in turn. Because the
- * targets are invoked from the same worker thread, the fan-out itself is
- * sequential; true parallelism is achieved when each target is backed by its
- * own ActorHub worker.
- * <p>
- * Targets can be supplied at construction time and/or added or removed later
- * with {@link #addTarget(Consumer)} / {@link #removeTarget(Consumer)}. The
- * target list is backed by a {@link CopyOnWriteArrayList}, making concurrent
- * mutation safe without blocking message delivery.
- * <p>
- * <strong>Fan-in</strong> (the inverse pattern, merging several sources into
- * one consumer) needs no dedicated class: any number of producers can simply
- * call {@link Consumer#accept accept()} on the same downstream {@link Actor}.
- * <p>
- * Example:
- * <pre>{@code
- * FanOutActor<String> bc = actorHub.broadcast();
- * bc.addTarget(actorHub.actor(s -> saveToDb(s)));
- * bc.addTarget(actorHub.actor(s -> publishToKafka(s)));
- * bc.accept("hello");  // both targets receive "hello"
- * }</pre>
  *
  * @param <T> the type of messages this FanOutActor receives and forwards
- *            unchanged to every target
  */
-public class FanOutActor<T> extends Actor<T>
+public class FanOutActor<T> implements Consumer<T>, Linkable
 {
-    /**
-     * The list of downstream targets. Using {@link CopyOnWriteArrayList} allows
-     * {@link #addTarget} and {@link #removeTarget} to be called concurrently
-     * with ongoing message delivery without requiring synchronization in
-     * {@link #receive(Object)}.
-     */
+    protected Actor<T> inner;
     protected final List<Consumer<T>> targets = new CopyOnWriteArrayList<>();
 
-    /**
-     * Full constructor.
-     *
-     * @param threads   the maximum number of concurrent worker threads
-     * @param actorHub      the ActorHub thread pool, or {@code null} for synchronous mode
-     * @param queueSize the internal queue capacity (0 = default)
-     * @param targets   zero or more initial downstream stages
-     */
     @SafeVarargs
     public FanOutActor(ActorHub actorHub, int threads, int queueSize, Consumer<T>... targets)
     {
-        super(actorHub, threads, queueSize);
+        ActorHooks<T> hooks = new ActorHooks<T>()
+        {
+            @Override
+            public void receive(T m, long seq)
+            {
+                FanOutActor.this.broadcast(m);
+            }
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+                // Delegated to the inner actor's exception hook chain.
+            }
+        };
+        this.inner = ActorFlavors.create(actorHub, threads, queueSize, hooks);
         addTargets(targets);
     }
 
-    /**
-     * Constructs a FanOutActor attached to the given ActorHub with the default
-     * thread count and queue size.
-     *
-     * @param actorHub    the ActorHub thread pool, or {@code null} for synchronous mode
-     * @param targets zero or more initial downstream stages
-     */
     @SafeVarargs
     public FanOutActor(ActorHub actorHub, Consumer<T>... targets)
     {
-        super(actorHub);
-        addTargets(targets);
+        this(actorHub, 1, ActorPool.CORES, targets);
     }
 
-    /**
-     * Constructs a standalone FanOutActor with the given thread count but no
-     * ActorHub. A ActorHub is attached at construction time and cannot be changed during the lifecycle of the instance.
-     *
-     * @param threads the maximum number of concurrent worker threads
-     * @param targets zero or more initial downstream stages
-     */
     @SafeVarargs
     public FanOutActor(int threads, int queueSize, Consumer<T>... targets)
     {
-        super(threads, queueSize);
-        addTargets(targets);
+        this(null, threads, queueSize, targets);
     }
 
-    /**
-     * Constructs a standalone FanOutActor with the default thread count and no
-     * ActorHub. A ActorHub is attached at construction time and cannot be changed during the lifecycle of the instance.
-     *
-     * @param targets zero or more initial downstream stages
-     */
     @SafeVarargs
     public FanOutActor(Consumer<T>... targets)
     {
-        super();
-        addTargets(targets);
+        this(null, 1, ActorPool.CORES, targets);
     }
 
-    /**
-     * Bulk-adds an array of targets, used by all constructors to initialise the
-     * target list.
-     *
-     * @param array the targets to register; individual elements must not be
-     *              {@code null}
-     */
     private void addTargets(Consumer<T>[] array)
     {
         for (Consumer<T> target : array)
@@ -126,52 +77,23 @@ public class FanOutActor<T> extends Actor<T>
         }
     }
 
-    /**
-     * Registers a new target that will receive every message from this point
-     * forward.
-     *
-     * @param target the downstream stage to add; must not be {@code null}
-     * @return this FanOutActor, for fluent chaining of additions
-     */
     public FanOutActor<T> addTarget(Consumer<T> target)
     {
         this.targets.add(Objects.requireNonNull(target, "target must not be null"));
         return this;
     }
 
-    /**
-     * Removes a previously registered target so that it stops receiving
-     * messages.
-     *
-     * @param target the downstream stage to remove
-     * @return {@code true} if the target was present and has been removed;
-     *         {@code false} if it was not found
-     */
     public boolean removeTarget(Consumer<T> target)
     {
         return this.targets.remove(target);
     }
 
-    /**
-     * Returns an unmodifiable snapshot view of the current target list.
-     *
-     * @return an unmodifiable {@code List} of the registered downstream stages
-     */
     public List<Consumer<T>> getTargets()
     {
         return Collections.unmodifiableList(targets);
     }
 
-    /**
-     * Forwards {@code m} to every registered target by calling
-     * {@link Consumer#accept accept(m)} on each in turn. Targets added or removed
-     * concurrently during this call are handled safely by the underlying
-     * {@link CopyOnWriteArrayList}.
-     *
-     * @param m the message to broadcast
-     */
-    @Override
-    protected void receive(T m)
+    private void broadcast(T m)
     {
         for (Consumer<T> target : targets)
         {
@@ -180,16 +102,104 @@ public class FanOutActor<T> extends Actor<T>
     }
 
     @Override
-    public Actor<T> waitForIdle()
+    public void accept(T message)
+    {
+        inner.accept(message);
+    }
+
+    // -----------------------------------------------------------------
+    // Linkable
+    // -----------------------------------------------------------------
+
+    @Override
+    public FanOutActor<T> waitForIdle()
     {
         for (Consumer<T> target : targets)
         {
-            if(target instanceof Actor)
+            if (target instanceof Linkable)
             {
-                ((Actor<T>)target).waitForIdle();
+                ((Linkable) target).waitForIdle();
             }
         }
-        return super.waitForIdle();
+        inner.waitForIdle();
+        return this;
+    }
+
+    @Override
+    public FanOutActor<T> shutdown()
+    {
+        inner.shutdown();
+        return this;
+    }
+
+    @Override
+    public FanOutActor<T> shutdown(boolean onlyWhenEmpty)
+    {
+        inner.shutdown(onlyWhenEmpty);
+        return this;
+    }
+
+    @Override
+    public boolean isShutdown()
+    {
+        return inner.isShutdown();
+    }
+
+    @Override
+    public boolean isTerminated()
+    {
+        return inner.isTerminated();
+    }
+
+    @Override
+    public boolean isIdle()
+    {
+        return inner.isIdle();
+    }
+
+    @Override
+    public ActorLifecycle awaitTermination()
+    {
+        inner.awaitTermination();
+        return this;
+    }
+
+    @Override
+    public void close()
+    {
+        inner.close();
+    }
+
+    public boolean awaitTermination(int millis)
+    {
+        return inner.awaitTermination(millis);
+    }
+
+    @Override
+    public boolean awaitTerminationUntilNanos(long untilNanos)
+    {
+        return inner.awaitTerminationUntilNanos(untilNanos);
+    }
+
+    public Exception getException()
+    {
+        return inner.getException();
+    }
+
+    public FanOutActor<T> dryLogger()
+    {
+        inner.dryLogger();
+        return this;
+    }
+
+    public int getPendingCount()
+    {
+        return inner.getPendingCount();
+    }
+
+    public ActorHub getActorHub()
+    {
+        return inner.getActorHub();
     }
 
     @Override

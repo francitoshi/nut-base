@@ -208,7 +208,7 @@ class ActorHubTest
     void pipelineFactoryBuildsChainedHeadActor() throws InterruptedException
     {
         List<String> sink = new CopyOnWriteArrayList<>();
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> i + 1)
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> i + 1)
                                  .then(i -> "v" + i)
                                  .sink(sink::add);
 
@@ -253,17 +253,17 @@ class ActorHubTest
         RecordingActor<Integer> async2 = new RecordingActor<>(actorHub);
         RecordingActor<Integer> sync = new RecordingActor<>(actorHub, 0, 0);
 
-        assertTrue(actorHub.actors().contains(async1));
-        assertTrue(actorHub.actors().contains(async2));
-        assertFalse(actorHub.actors().contains(sync));
+        assertTrue(actorHub.actors().contains(async1.inner()));
+        assertTrue(actorHub.actors().contains(async2.inner()));
+        assertFalse(actorHub.actors().contains(sync.inner()));
 
         async1.shutdown().awaitTermination(50);
 
-        assertFalse(actorHub.actors().contains(async1));
-        assertTrue(actorHub.actors().contains(async2));
+        assertFalse(actorHub.actors().contains(async1.inner()));
+        assertTrue(actorHub.actors().contains(async2.inner()));
 
         async2.shutdown().awaitTermination(50);
-        assertFalse(actorHub.actors().contains(async2));
+        assertFalse(actorHub.actors().contains(async2.inner()));
     }
 
     @Test

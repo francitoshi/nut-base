@@ -11,69 +11,42 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
- * An {@link Actor} stage that forwards every produced value to a single
- * downstream stage linked with {@link #linkTo}. This is the shared base of the
- * <em>Continuation-Passing Style</em> (CPS) stages {@link PipeActor},
- * {@link FilterActor}, and {@link BatchActor}: each of them defines only its
- * {@link Actor#receive(Object)} transformation and hands the produced value to
- * {@link #forward(Object)}, which delivers it to the currently linked {@code next}
- * stage (or silently discards it when none is linked).
+ * Wrapper stage that holds an inner flavor actor and forwards every
+ * produced value to a single downstream stage linked with {@link #linkTo}.
+ * This is the shared base of {@link PipeActor}, {@link FilterActor}, and
+ * {@link BatchActor}.
  * <p>
- * The receive type {@code I} and the forwarded type {@code F} are independent so
- * that a stage may change the message type (e.g. {@link BatchActor} receives
- * {@code T} and forwards {@code List<T>}).
+ * Subclasses pass {@code null} for {@code inner} to the constructor and
+ * set the field in their own constructor body after creating the hooks.
  *
  * @param <I> the type of messages this stage receives
  * @param <F> the type of messages this stage produces and forwards
  */
-public abstract class LinkableActor<I,F> extends Actor<I>
+public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
 {
-    /**
-     * Delegates to {@link Actor#Actor(ActorHub, int, int)}.
-     *
-     * @param actorHub  the ActorHub thread pool, or {@code null} for synchronous mode
-     * @param threads   the maximum number of concurrent worker threads
-     * @param queueSize the internal queue capacity (0 = default)
-     */
-    protected LinkableActor(ActorHub actorHub, int threads, int queueSize)
-    {
-        super(actorHub, threads, queueSize);
-    }
+    protected Actor<I> inner;
 
-    /**
-     * The next stage in the chain that will receive the forwarded values.
-     * Declared {@code volatile} so that a call to {@link #linkTo} from one
-     * thread is immediately visible to worker threads invoking
-     * {@link #forward(Object)}.
-     */
     protected volatile Consumer<F> next;
 
-    /**
-     * Links this stage to the next stage of the chain (the continuation).
-     * The returned value is {@code next} itself, so multiple {@code linkTo}
-     * calls can be chained without intermediate variables:
-     * <pre>{@code
-     * pipeA.linkTo(pipeB).linkTo(pipeC).linkTo(sink);
-     * }</pre>
-     *
-     * @param <S>  the concrete type of the next stage (must extend
-     *             {@link Consumer}{@code <F>})
-     * @param next the stage that will receive the forwarded values; must not be
-     *             {@code null}
-     * @return {@code next}, typed as {@code S}, enabling fluent chaining
-     */
+    private volatile Exception ex;
+
+    protected LinkableActor(Actor<I> inner)
+    {
+        this.inner = inner;
+    }
+
+    @Override
+    public void accept(I message)
+    {
+        inner.accept(message);
+    }
+
     public <S extends Consumer<F>> S linkTo(S next)
     {
         this.next = Objects.requireNonNull(next, "next must not be null");
         return next;
     }
 
-    /**
-     * Delivers {@code value} to the linked {@code next} stage. If no stage is
-     * linked, the value is silently discarded.
-     *
-     * @param value the value to forward; never {@code null}
-     */
     protected void forward(F value)
     {
         Consumer<F> n = this.next;
@@ -81,6 +54,100 @@ public abstract class LinkableActor<I,F> extends Actor<I>
         {
             n.accept(value);
         }
+    }
+
+    // -----------------------------------------------------------------
+    // Linkable
+    // -----------------------------------------------------------------
+
+    @Override
+    public LinkableActor<I,F> waitForIdle()
+    {
+        inner.waitForIdle();
+        return this;
+    }
+
+    @Override
+    public LinkableActor<I,F> shutdown()
+    {
+        inner.shutdown();
+        return this;
+    }
+
+    @Override
+    public LinkableActor<I,F> shutdown(boolean onlyWhenEmpty)
+    {
+        inner.shutdown(onlyWhenEmpty);
+        return this;
+    }
+
+    @Override
+    public boolean isShutdown()
+    {
+        return inner.isShutdown();
+    }
+
+    @Override
+    public boolean isTerminated()
+    {
+        return inner.isTerminated();
+    }
+
+    @Override
+    public boolean isIdle()
+    {
+        return inner.isIdle();
+    }
+
+    @Override
+    public ActorLifecycle awaitTermination()
+    {
+        inner.awaitTermination();
+        return this;
+    }
+
+    @Override
+    public void close()
+    {
+        inner.close();
+    }
+
+    public boolean awaitTermination(int millis)
+    {
+        return inner.awaitTermination(millis);
+    }
+
+    @Override
+    public boolean awaitTerminationUntilNanos(long untilNanos)
+    {
+        return inner.awaitTerminationUntilNanos(untilNanos);
+    }
+
+    public Exception getException()
+    {
+        Exception own = this.ex;
+        return own != null ? own : inner.getException();
+    }
+
+    protected void handleException(Exception ex)
+    {
+        this.ex = ex;
+    }
+
+    public LinkableActor<I,F> dryLogger()
+    {
+        inner.dryLogger();
+        return this;
+    }
+
+    public int getPendingCount()
+    {
+        return inner.getPendingCount();
+    }
+
+    public ActorHub getActorHub()
+    {
+        return inner.getActorHub();
     }
 
     @Override

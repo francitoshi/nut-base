@@ -6,195 +6,56 @@
 package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.math.Nums;
-import io.nut.base.util.concurrent.channel.Channel;
-import io.nut.base.util.concurrent.channel.CloseableChannel;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.concurrent.Executor;
-import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * The fundamental building block of the ActorHub concurrency framework.
- * A {@code Actor<M>} is an asynchronous message-processing stage: it accepts
- * messages via {@link #accept(Object)}, buffers them in a
- * {@link CloseableChannel}, and dispatches them to
- * {@link #receive(Object)} on a worker thread supplied by an attached
- * {@link ActorHub}.
+ * Abstract base for all actor flavors ({@link SynchronousActor},
+ * {@link SingleActor}, {@link MultiActor}).
  * <p>
- * When no {@link ActorHub} is attached, or when constructed with
- * {@code threads == 0}, {@link #accept(Object)} executes
- * {@link #receive(Object)} synchronously in the calling thread.
- * <p>
- * <strong>Worker model</strong>: when an ActorHub is attached and {@code threads > 0},
- * the first accepted message starts a single <em>permanent</em> worker that
- * stays alive for the entire lifetime of the Actor, blocking on the internal
- * channel waiting for new messages and processing them as they arrive; it only
- * exits when the Actor is shut down. With {@code threads == 1} that is the only
- * worker. With {@code threads > 1}, additional temporary "rush" workers are
- * started as messages arrive (up to the configured maximum) and return to the
- * pool whenever there is nothing left to drain, so the Actor can process
- * messages in parallel.
- * <p>
- * <strong>Lifecycle</strong>: an Actor starts active. {@link #shutdown()} (or
- * {@link #shutdown(boolean)}) closes the internal channel; messages buffered
- * before the close are still delivered. Once the channel is drained and every
- * worker has returned, {@link #terminate()} is invoked and the Actor is
- * terminated. {@link #awaitTermination(int)} blocks until that point.
+ * Provides common lifecycle state, exception handling, and the
+ * {@link Linkable} / {@link ActorLifecycle} contract.
  *
- * @param <M> the type of messages this Actor processes
+ * @param <M> the type of messages this actor processes
  */
-public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
+public abstract class Actor<M> implements Consumer<M>, Linkable
 {
     private static final Logger LOG = Logger.getLogger(Actor.class.getName());
 
-    private static final int DEFAULT_QUEUE_SIZE = Short.MAX_VALUE;
-
-    /**
-     * How long the permanent worker waits for the next message before giving
-     * its thread back to the pool. Bounded so that an idle permanent worker
-     * never holds a pool thread forever (which would saturate the pool and
-     * deadlock bounded pipelines under the pool's CallerRuns policy); a
-     * subsequent {@link #accept(Object)} re-submits it cheaply.
-     */
-    private static final long PERMANENT_WAIT_MILLIS = 400;
-
-    private final CloseableChannel<M> channel;
-
-    /** Maximum number of concurrently running workers. */
-    private final int threads;
-
-    /**
-     * Permits one worker per free concurrent slot. The permanent worker holds
-     * one permit for the whole lifetime of the Actor (re-acquiring it each time
-     * it goes back to blocking), and temporary "rush" workers acquire a permit
-     * (atomically, so no {@link #lock} is needed) before starting and hold it
-     * until they have drained everything and are about to return. This provides
-     * a reliable bound on the number of concurrently running workers.
-     */
-    private final Semaphore workerSlots;
-
     // All lifecycle / scheduling decisions are made under this monitor.
-    private final Object lock = new Object();
-
-    /** Messages accepted but not yet received. */
-    private final AtomicInteger pending = new AtomicInteger();
-
-    /**
-     * Messages currently being processed by a worker, i.e. pulled from the
-     * channel but not yet returned from {@link #receive(Object, long)}. Used
-     * by {@link #isIdle()} so an Actor whose permanent worker is mid-{@code receive}
-     * is never reported idle, even though {@code pending} is already back to
-     * zero for that message.
-     */
-    private final AtomicInteger processing = new AtomicInteger();
-
-    /**
-     * Monotonic position assigned to messages as they are pulled from the
-     * channel, so subclasses that care about arrival order (e.g. classes that
-     * re-assemble ordered output from parallel workers) can reconstruct it:
-     * the channel is FIFO, so the {@code k}-th successful pull corresponds to
-     * the {@code k}-th accepted message.
-     */
-    private final AtomicLong sequenceCounter = new AtomicLong();
-
-    /** Workers currently running (submitted to the ActorHub pool but not yet done). */
-    private final AtomicInteger activeWorkers = new AtomicInteger();
-
-    /** {@code true} once the permanent worker has been started (threads >= 1). */
-    private boolean permanentWorkerStarted;
+    protected final Object lock = new Object();
 
     /** {@code true} once the internal channel has been closed. */
-    private volatile boolean closed;
-
-    /** {@code true} when {@link #shutdown(boolean)} was asked to close only once idle. */
-    private boolean shutdownWhenEmpty;
-
-    /** Messages this Actor has processed (each invocation of {@link #receive}). */
-    private final AtomicInteger processedCount = new AtomicInteger();
+    protected volatile boolean closed;
 
     /** {@code true} after {@link #terminate()} has run. */
-    private boolean terminated;
+    protected boolean terminated;
 
-    private volatile boolean allowLogger = true;
-    private final ActorHub actorHub;
-    private volatile Exception ex;
+    protected volatile boolean allowLogger = true;
+    protected volatile Exception ex;
 
-    // -------------------------------------------------------------------------
-    // Constructors
-    // -------------------------------------------------------------------------
+    /** Messages this actor has processed (each invocation of receive). */
+    protected final AtomicInteger processedCount = new AtomicInteger();
 
-    /**
-     * @param threads   the maximum number of concurrent worker threads;
-     *                  {@code 0} enables synchronous mode (no channel, no
-     *                  workers; {@link #accept} calls {@link #receive} directly)
-     * @param actorHub      the ActorHub thread pool, or {@code null} for synchronous mode
-     * @param queueSize buffer capacity of the internal channel; {@code <= 0}
-     *                  means unbounded; ignored when {@code threads == 0}
-     * @throws IllegalArgumentException if {@code threads < 0} or {@code queueSize < 0}
-     */
-    public Actor(ActorHub actorHub, int threads, int queueSize)
+    protected final ActorHub actorHub;
+
+    // -----------------------------------------------------------------
+    // Constructor
+    // -----------------------------------------------------------------
+
+    protected Actor(ActorHub actorHub)
     {
-        if (threads < 0)
-        {
-            throw new IllegalArgumentException("threads < 0");
-        }
-        if (queueSize < 0)
-        {
-            throw new IllegalArgumentException("queueSize < 0");
-        }
         this.actorHub = actorHub;
-        if (threads == 0)
-        {
-            this.threads = 0;
-            this.workerSlots = null;
-            this.channel = null;
-        }
-        else
-        {
-            this.threads = threads;
-            this.workerSlots = new Semaphore(this.threads);
-            this.channel = queueSize > 0 ? Channel.closeableBuffered(queueSize) : Channel.closeableBuffered(ActorPool.CORES);
-            registerActorHub();
-        }
     }
 
-    /**
-     * Registers this (non-synchronous) Actor into the {@link ActorHub} it is attached
-     * to, so the ActorHub can track all its active stages. Actors without an attached
-     * ActorHub (or constructed with {@code threads == 0}) are not registered.
-     */
-    private void registerActorHub()
-    {
-        if (actorHub != null)
-        {
-            actorHub.registerActor(this);
-        }
-    }
-
-    public Actor(ActorHub actorHub)
-    {
-        this(actorHub, 1, DEFAULT_QUEUE_SIZE);
-    }
-
-    public Actor(int threads, int queueSize)
-    {
-        this(null, threads, queueSize);
-    }
-
-    public Actor()
-    {
-        this(null, 1, DEFAULT_QUEUE_SIZE);
-    }
-
-    // -------------------------------------------------------------------------
+    // -----------------------------------------------------------------
     // Configuration
-    // -------------------------------------------------------------------------
+    // -----------------------------------------------------------------
 
     public Actor<M> dryLogger()
     {
@@ -212,43 +73,25 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
         return actorHub;
     }
 
-    /**
-     * Returns whether this Actor runs synchronously: either it was constructed
-     * with {@code threads == 0}, no ActorHub is attached, or the attached ActorHub is
-     * itself synchronous (constructed with
-     * {@code corePoolSize == 0}).
-     *
-     * @return {@code true} if {@link #accept} runs {@link #receive} directly
-     */
-    private boolean isSynchronous()
-    {
-        return threads == 0 || actorHub == null || actorHub.isSynchronous();
-    }
-
-    // -------------------------------------------------------------------------
+    // -----------------------------------------------------------------
     // Message API
-    // -------------------------------------------------------------------------
+    // -----------------------------------------------------------------
 
     /**
-     * Called once for each message delivered to this Actor. Must be implemented
-     * by subclasses.
+     * Sends a message to this actor for processing.
      *
-     * @param m the message to process
+     * @param message the message to deliver
+     */
+    @Override
+    public abstract void accept(M message);
+
+    /**
+     * Called once for each message delivered to this actor.
      */
     protected abstract void receive(M m);
 
     /**
-     * Ordered variant of {@link #receive(Object)}: {@code seq} is the
-     * acceptance position of the message (1-based, in {@link #accept} order)
-     * supplied by this Actor when running with an attached ActorHub. The default
-     * implementation ignores the sequence and delegates to
-     * {@link #receive(Object)}; subclasses that must preserve arrival order
-     * (such as {@code BatchActor}) can override this to reassemble ordered
-     * output even when {@code receive} is invoked concurrently by several
-     * workers.
-     *
-     * @param m   the message to process
-     * @param seq the 1-based acceptance position of {@code m}
+     * Ordered variant; default delegates to {@link #receive(Object)}.
      */
     protected void receive(M m, long seq)
     {
@@ -256,430 +99,24 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     }
 
     /**
-     * Called once after the channel is closed and drained, as the final step
-     * of the shutdown sequence. Subclasses may override to release resources.
+     * Called once after the channel is closed and drained.
      */
     protected void terminate()
     {
     }
 
     /**
-     * Called whenever an unhandled exception escapes from {@link #receive(Object)}
-     * or from a lifecycle hook. The exception is also stored in
-     * {@link #getException()} and, unless suppressed by {@link #dryLogger()},
-     * logged at {@code SEVERE} level.
-     *
-     * @param ex the exception that was thrown
+     * Called when an unhandled exception escapes from receive.
      */
     protected void exception(Exception ex)
     {
     }
 
-    /**
-     * Sends a message to this Actor for processing.
-     *
-     * @param message the message to deliver
-     */
-    @Override
-    public void accept(M message)
-    {
-        if (closed)
-        {
-            throw new IllegalStateException("closed");
-        }
+    // -----------------------------------------------------------------
+    // Internal helpers
+    // -----------------------------------------------------------------
 
-        try
-        {
-            if (isSynchronous())
-            {
-                countProcessed();
-                receive(message);
-                return;
-            }
-
-            // Enqueue without holding the lock: channel.put may block on a full
-            // bounded queue, and holding the lock here would deadlock with the
-            // workers that need the same lock to drain the queue.
-            pending.incrementAndGet();
-            boolean queued = false;
-            try
-            {
-                channel.put(message);
-                queued = true;
-            }
-            finally
-            {
-                if (!queued)
-                {
-                    pending.decrementAndGet();
-                }
-            }
-
-            if (queued)
-            {
-                // Start the permanent worker on the first message. It holds one
-                // worker permit for the whole lifetime of the Actor.
-                initPermanentWorker();
-                // When threads > 1, additional temporary "rush" workers may be
-                // started in parallel. The short critical section guarantees
-                // that a worker about to release its slot will not abandon a
-                // message we have just enqueued: the release and this tryAcquire
-                // both happen under the lock, so a slot freed here is always
-                // observed. When threads == 1 the permanent worker already holds
-                // the only permit, so no rush worker can start.
-                if (threads > 1)
-                {
-                    synchronized (lock)
-                    {
-                        if (workerSlots.tryAcquire())
-                        {
-                            try
-                            {
-                                startWorker();
-                            }
-                            catch (Exception ex)
-                            {
-                                workerSlots.release();
-                                throw ex;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            handleException(ex);
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Worker
-    // -------------------------------------------------------------------------
-
-    /**
-     * Submits a worker to the ActorHub pool. Must be called only after a worker
-     * permit has been acquired from {@link #workerSlots}; the worker keeps the
-     * permit for its entire {@link #workerLoop()} (or {@link #permanentWorkerLoop()}).
-     * If the submission fails (or there is no ActorHub to submit to), the permit is
-     * returned.
-     */
-    private void startWorker()
-    {
-        activeWorkers.incrementAndGet();
-        try
-        {
-            Executor h = actorHub;
-            if (h != null)
-            {
-                h.execute(this::workerLoop);
-            }
-            else
-            {
-                activeWorkers.decrementAndGet();
-                workerSlots.release();
-            }
-        }
-        catch (Exception ex)
-        {
-            activeWorkers.decrementAndGet();
-            workerSlots.release();
-            throw ex;
-        }
-    }
-
-    /**
-     * Starts the single permanent worker for this Actor, if it has not been
-     * started yet. The permanent worker is started lazily on the first accepted
-     * message, holds one worker permit for the lifetime of the Actor while it is
-     * active, and waits up to {@link #PERMANENT_WAIT_MILLIS} for new messages
-     * between bursts so it is not destroyed and recreated per message; once the
-     * Actor has been idle for that window it yields its thread back to the pool
-     * (a later {@link #accept(Object)} re-submits it). Used when
-     * {@code threads >= 1}; the {@code threads == 1} case has only this
-     * permanent worker, while {@code threads > 1} adds temporary "rush" workers
-     * on top of it.
-     * <p>
-     * The task is submitted to the ActorHub pool <em>outside</em> the {@link #lock}:
-     * {@link Executor#execute} can block (e.g. under the pool's CallerRunsPolicy
-     * when the pool is saturated) and the permanent worker waits for messages,
-     * so running it while holding the lock would deadlock every other thread that
-     * needs the lock (they would wait on the lock never released by the caller
-     * that is hijacked to drain).
-     */
-    private void initPermanentWorker()
-    {
-        synchronized (lock)
-        {
-            if (permanentWorkerStarted || closed || terminated)
-            {
-                return;
-            }
-            permanentWorkerStarted = true;
-            if (!workerSlots.tryAcquire())
-            {
-                permanentWorkerStarted = false;
-                return;
-            }
-            activeWorkers.incrementAndGet();
-        }
-        try
-        {
-            actorHub.execute(this::permanentWorkerLoop);
-        }
-        catch (Exception ex)
-        {
-            synchronized (lock)
-            {
-                permanentWorkerStarted = false;
-                activeWorkers.decrementAndGet();
-                workerSlots.release();
-            }
-            throw ex;
-        }
-    }
-
-    /**
-     * Drains every available message into {@link #receive(Object)}, returns to
-     * the pool, and hands the scheduling decision back to {@link #workerDone()}.
-     * The worker permit acquired from {@link #workerSlots} is kept for the whole
-     * call and released by {@link #workerDone()} once the worker truly returns,
-     * so the configured {@code threads} limit is respected even while draining
-     * inline.
-     */
-    private void workerLoop()
-    {
-        try
-        {
-            drain(0);
-        }
-        finally
-        {
-            workerDone(false);
-        }
-    }
-
-    /**
-     * The permanent worker loop: keeps a thread alive across bursts of messages,
-     * waiting up to {@link #PERMANENT_WAIT_MILLIS} for new work, and processing
-     * messages as they arrive. It yields its thread back to the pool once the
-     * Actor has been idle for the wait window and only truly exits on shutdown.
-     */
-    private void permanentWorkerLoop()
-    {
-        try
-        {
-            drain(PERMANENT_WAIT_MILLIS);
-        }
-        finally
-        {
-            workerDone(true);
-        }
-    }
-
-    /**
-     * Records that this Actor is about to process one message: bumps the per-Actor
-     * counter and, unless it aliases the per-Actor counter (an Actor without an
-     * attached {@link ActorHub}, where {@link #globalProcessedCount} falls back to
-     * this Actor's own counter), the ActorHub-wide counter shared with peer Actors.
-     */
-    private void countProcessed()
-    {
-        processedCount.incrementAndGet();
-        if (actorHub != null)
-        {
-            actorHub.processedCount().incrementAndGet();
-        }
-    }
-
-    /**
-     * Processes every message available on the channel, one at a time. With
-     * {@code timeoutMillis == 0} only messages currently buffered are drained;
-     * a positive timeout additionally waits up to that long for the next
-     * message, keeping a worker thread alive across bursts of messages while
-     * still yielding it once the Actor has been quiet (or closed) for the wait
-     * window. The channel is closed (drain-only) during shutdown, so an explicit
-     * call with a zero timeout guarantees that buffered messages are received
-     * even if no worker could be submitted to the pool.
-     */
-    private void drain(long timeoutMillis)
-    {
-        M m;
-        while ((m = channel.get(timeoutMillis, TimeUnit.MILLISECONDS)) != null)
-        {
-            pending.decrementAndGet();
-            long seq = sequenceCounter.incrementAndGet();
-            processing.incrementAndGet();
-            countProcessed();
-            try
-            {
-                receive(m, seq);
-            }
-            catch (Exception ex)
-            {
-                handleException(ex);
-            }
-            finally
-            {
-                processing.decrementAndGet();
-            }
-        }
-    }
-
-    /**
-     * Runs when a worker returns: drains anything that arrived while it was
-     * processing, closes or terminates the Actor when required, and finally hands
-     * back its worker permit. Must be race-free: the permit is released under
-     * {@link #lock}, matching the {@code tryAcquire} in {@link #accept(Object)},
-     * so a worker that frees a slot is never missed by a producer that has just
-     * enqueued a message.
-     * <p>
-     * The drain runs deliberately <em>outside</em> the lock: {@link #receive(Object)}
-     * may forward messages to other Actors and block on their full channels, and
-     * holding this Actor's lock across such a block would park every other worker
-     * and producer of this Actor on that lock, stalling the whole ActorHub once the
-     * pool is exhausted.
-     *
-     * @param permanent {@code true} for the Actor's single permanent worker,
-     *                  {@code false} for temporary "rush" workers
-     */
-    private void workerDone(boolean permanent)
-    {
-        while (true)
-        {
-            // Drains every message that is pending while still holding this
-            // worker's permit, without the lock. A producer that enqueues while
-            // the drain is running cannot acquire the permit (see accept), so it
-            // does not start a worker; the loop below only exits once pending is
-            // zero under the lock, guaranteeing those messages are not abandoned.
-            while (pending.get() > 0)
-            {
-                drain(0);
-            }
-
-            boolean close = false;
-            synchronized (lock)
-            {
-                if (pending.get() > 0)
-                {
-                    // A message arrived between the drain and the lock: keep the
-                    // permit and drain again.
-                    continue;
-                }
-                // Count the worker out only now, when it truly stops running. A
-                // worker that is still looping (draining, forwarding to other
-                // actors) must keep isIdle() from reporting this actor idle:
-                // otherwise shutdown(true) could close the actor and terminate it
-                // while a worker was still delivering downstream, silently
-                // dropping those messages. Terminating also races in-flight
-                // forwards being cut off at the next stage.
-                boolean last = activeWorkers.decrementAndGet() == 0;
-                if (closed)
-                {
-                    if (last)
-                    {
-                        doTerminate();
-                    }
-                    workerSlots.release();
-                    lock.notifyAll();
-                    return;
-                }
-                if (shutdownWhenEmpty)
-                {
-                    close = true;
-                }
-                else
-                {
-                    // Both the permanent and the rush worker give their thread
-                    // back to the pool once the Actor has no pending work. The
-                    // permanent worker has already waited up to
-                    // PERMANENT_WAIT_MILLIS in drainBlocking, so it is "sticky"
-                    // across bursts but never holds a pool thread indefinitely:
-                    // a later accept() re-submits it cheaply. Resetting
-                    // permanentWorkerStarted lets accept() restart it.
-                    if (permanent)
-                    {
-                        permanentWorkerStarted = false;
-                    }
-                    workerSlots.release();
-                    lock.notifyAll();
-                    return;
-                }
-            }
-
-            // Closes on behalf of an empty-when-shutdown request. Runs outside
-            // the lock because closeNow may drain, and drain's receive may block
-            // forwarding to a full downstream Actor.
-            if (close)
-            {
-                closeNow();
-                if (permanent)
-                {
-                    permanentWorkerStarted = false;
-                }
-                synchronized (lock)
-                {
-                    workerSlots.release();
-                    lock.notifyAll();
-                }
-                return;
-            }
-        }
-    }
-
-    private void closeNow()
-    {
-        closed = true;
-        if (isSynchronous())
-        {
-            doTerminate();
-            return;
-        }
-        channel.close();
-        if (activeWorkers.get() == 0)
-        {
-            drain(0);
-            doTerminate();
-        }
-    }
-
-    private void doTerminate()
-    {
-        // Now reachable without holding the lock (workerDone closes outside
-        // the lock), so the once-only guarantee is enforced here.
-        synchronized (lock)
-        {
-            if (terminated)
-            {
-                return;
-            }
-            terminated = true;
-            unregisterFromActorHub();
-            try
-            {
-                terminate();
-            }
-            catch (Exception ex)
-            {
-                handleException(ex);
-            }
-            lock.notifyAll();
-        }
-    }
-
-    /**
-     * Removes this Actor from the {@link ActorHub} instance list it was registered
-     * in, if any.
-     */
-    private void unregisterFromActorHub()
-    {
-        if (actorHub instanceof ActorHub)
-        {
-            ((ActorHub) actorHub).unregisterActor(this);
-        }
-    }
-
-    private void handleException(Exception ex)
+    protected void handleException(Exception ex)
     {
         this.ex = ex;
         if (allowLogger)
@@ -689,180 +126,77 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
         exception(ex);
     }
 
-    // -------------------------------------------------------------------------
-    // Idle / lifecycle
-    // -------------------------------------------------------------------------
-
-    /**
-     * Returns the number of messages accepted but not yet received, plus the
-     * number of active worker threads.
-     *
-     * @return approximate pending work count
-     */
-    public int getPendingCount()
+    protected void countProcessed()
     {
-        return pending.get() + activeWorkers.get();
-    }
-
-    /**
-     * Returns {@code true} if no messages are pending or being processed. 
-     */
-    public boolean isIdle()
-    {
-        return pending.get() <= 0 && processing.get() == 0;
-    }
-
-    /**
-     * Blocks until this Actor is idle (no pending messages, no temporary workers
-     * active).
-     * <p>
-     * Not responsive to interruption: an interrupt leaves this method waiting
-     * until the Actor is idle and does not restore the interrupt flag.
-     *
-     * @return this Actor, for fluent chaining
-     */
-    @Override
-    public Actor<M> waitForIdle()
-    {
-        synchronized (lock)
+        processedCount.incrementAndGet();
+        if (actorHub != null)
         {
-            while (!isIdle())
-            {
-                try
-                {
-                    lock.wait();
-                }
-                catch (InterruptedException ex)
-                {
-                    // Ignored by contract: keep waiting until idle. The interrupt
-                    // flag is deliberately not restored.
-                }
-            }
+            actorHub.processedCount().incrementAndGet();
         }
+    }
+
+    // -----------------------------------------------------------------
+    // Pub/Sub
+    // -----------------------------------------------------------------
+
+    @SuppressWarnings("unchecked")
+    public Actor<M> sub(String topic)
+    {
+        if (this.actorHub == null)
+        {
+            throw new IllegalStateException("No ActorHub attached.");
+        }
+        this.actorHub.sub(topic, this);
         return this;
     }
 
-    /**
-     * Closes the internal channel, causing workers to finish and exit. No new
-     * messages can be accepted after this call.
-     * <p>
-     * Never blocks: the channel is closed immediately and messages already
-     * buffered are still received before the Actor terminates.
-     *
-     * @return this Actor, for fluent chaining
-     */
+    // -----------------------------------------------------------------
+    // Idle / lifecycle
+    // -----------------------------------------------------------------
+
+    public int getPendingCount()
+    {
+        return 0;
+    }
+
+    public boolean isIdle()
+    {
+        return true;
+    }
+
+    @Override
+    public Actor<M> waitForIdle()
+    {
+        return this;
+    }
+
     @Override
     public Actor<M> shutdown()
     {
         return shutdown(false);
     }
 
-    /**
-     * Initiates shutdown. If {@code onlyWhenEmpty}, the channel is closed only
-     * once all pending messages have been processed and the call returns
-     * immediately; otherwise the channel is closed immediately. In both forms
-     * this method never blocks: it returns as soon as the close is ordered,
-     * and messages already buffered are still received before the Actor
-     * terminates.
-     *
-     * @param onlyWhenEmpty if {@code true}, defers close until idle
-     * @return this Actor, for fluent chaining
-     */
     @Override
-    public Actor<M> shutdown(boolean onlyWhenEmpty)
-    {
-        synchronized (lock)
-        {
-            if (!closed && !terminated)
-            {
-                if (onlyWhenEmpty)
-                {
-                    if (isIdle())
-                    {
-                        closeNow();
-                    }
-                    else
-                    {
-                        shutdownWhenEmpty = true;
-                    }
-                }
-                else
-                {
-                    closeNow();
-                }
-            }
-            lock.notifyAll();
-        }
-        return this;
-    }
+    public abstract Actor<M> shutdown(boolean onlyWhenEmpty);
 
-    /**
-     * Shuts down this Actor and blocks until it has terminated. Equivalent to
-     * {@link #close(boolean) close(false)}.
-     */
     @Override
     public void close()
     {
         close(false);
     }
 
-    /**
-     * Shuts down this Actor and blocks until it has terminated. Provides a
-     * {@code boolean} variant of {@link #close()} for symmetry with
-     * {@link #shutdown(boolean)}.
-     *
-     * @param onlyWhenEmpty if {@code true}, defers close until idle (see
-     *                      {@link #shutdown(boolean)}); if {@code false}, closes
-     *                      immediately
-     */
     public void close(boolean onlyWhenEmpty)
     {
         shutdown(onlyWhenEmpty);
         awaitTermination(Integer.MAX_VALUE);
     }
 
-    /**
-     * Returns whether {@link #shutdown()} has been called.
-     */
-    @Override
-    public boolean isShutdown()
-    {
-        return closed;
-    }
-
-    /**
-     * Returns whether this Actor has fully terminated.
-     */
-    @Override
-    public boolean isTerminated()
-    {
-        return terminated;
-    }
-
-    /**
-     * Blocks until the Actor is terminated or the timeout elapses.
-     * <p>
-     * Not responsive to interruption: an interrupt leaves this method waiting
-     * (until the deadline or termination) and does not restore the interrupt
-     * flag.
-     *
-     * @param millis maximum time to wait
-     * @return {@code true} if terminated within the timeout
-     */
     public boolean awaitTermination(int millis)
     {
         long deadline = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
         return awaitTerminationUntilNanos(deadline);
     }
 
-    /**
-     * Blocks until this Actor is terminated.
-     * <p>
-     * Not responsive to interruption: an interrupt leaves this method waiting
-     * until termination and does not restore the interrupt flag.
-     *
-     * @return this Actor, for fluent chaining
-     */
     @Override
     public Actor<M> awaitTermination()
     {
@@ -870,17 +204,7 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
         return this;
     }
 
-    /**
-     * Blocks until the Actor is terminated or the absolute deadline (in
-     * nanoseconds) is reached.
-     * <p>
-     * Not responsive to interruption: an interrupt leaves this method waiting
-     * (until the deadline or termination) and does not restore the interrupt
-     * flag.
-     *
-     * @param untilNanos the absolute deadline
-     * @return {@code true} if terminated within the deadline
-     */
+    @Override
     public boolean awaitTerminationUntilNanos(long untilNanos)
     {
         synchronized (lock)
@@ -898,9 +222,7 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
                 }
                 catch (InterruptedException ex)
                 {
-                    // Ignored by contract: keep waiting until the deadline or
-                    // termination. The interrupt flag is deliberately not
-                    // restored.
+                    // Ignored by contract.
                 }
             }
             return true;
@@ -908,33 +230,29 @@ public abstract class Actor<M> implements Consumer<M>, ActorLifecycle
     }
 
     /**
-     * Returns a collection of downstream target consumers linked to this stage.
-     * The default implementation returns an empty collection.
-     *
-     * @return the collection of downstream target consumers
+     * Returns the number of worker threads this actor needs from the pool
+     * (used by {@link ActorHub} for pool sizing). Synchronous actors report 0.
      */
+    int threadDemand()
+    {
+        return 0;
+    }
+
+    @Override
     public Collection<Consumer<?>> getLinkedTargets()
     {
         return Collections.emptyList();
     }
 
-    /**
-     * Subscribes this Actor to {@code topic} on the attached {@link ActorHub}.
-     * The Actor is registered directly (it is not wrapped in another Actor), so
-     * delivery preserves its asynchronous semantics.
-     *
-     * @param topic the topic name
-     * @return this Actor, for fluent chaining
-     * @throws IllegalStateException if no ActorHub has been attached
-     */
-    @SuppressWarnings("unchecked")
-    public Actor<M> sub(String topic)
+    @Override
+    public boolean isShutdown()
     {
-        if (!(this.actorHub instanceof ActorHub))
-        {
-            throw new IllegalStateException("No ActorHub attached.");
-        }
-        ((ActorHub) this.actorHub).sub(topic, this);
-        return this;
+        return closed;
+    }
+
+    @Override
+    public boolean isTerminated()
+    {
+        return terminated;
     }
 }

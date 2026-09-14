@@ -7,7 +7,6 @@ package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.math.Nums;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -17,120 +16,66 @@ import java.util.function.Function;
 /**
  * A fluent, type-safe builder for linear chains of {@link PipeActor} stages all
  * attached to the same {@link ActorHub}, created via {@link ActorHub#pipeline}.
- * <p>
- * It hides the manual {@link PipeActor#linkTo} wiring that would otherwise be
- * needed to build a long chain by hand, while still type-checking every stage
- * at compile time — something a flat, heterogeneous varargs call like
- * {@code pipeline(f1, f2, f3, sink)} cannot do in Java, since each function in
- * such a chain has a different, incompatible {@code Function<?,?>} type.
- * <p>
- * <strong>Usage:</strong>
- * <pre>{@code
- * Actor<Integer> head = actorHub.pipeline((Integer i) -> i * 2)
- *                         .then(i -> "value=" + i)
- *                         .then(String::toUpperCase)
- *                         .sink(System.out::println);
- * head.accept(21);  // prints "VALUE=42"
- * }</pre>
- * Each {@link #then(Function)} call appends one more {@link PipeActor} stage to
- * the chain and returns a new {@code PipelineActor} view with the same head but
- * an updated "current output type", so further {@code then}/{@link #sink}/
- * {@link #to} calls are type-checked against it. The chain is not ready for
- * {@link #accept(Object)} until it is closed with {@link #sink(Consumer)} or
- * {@link #to(Consumer)}.
  *
- * @param <T> the type of message accepted by the first stage of the chain (the head)
- * @param <R> the type currently produced by the last stage added so far (the tail)
+ * @param <T> the type of message accepted by the first stage of the chain
+ * @param <R> the type currently produced by the last stage added so far
  */
 public final class PipelineActor<T,R> implements Consumer<T>
 {
     private final ActorHub actorHub;
-    private final Actor<T> head;
+    private final PipeActor<T,?> head;
     private final PipeActor<?,R> tail;
+    private final List<Linkable> owned;
 
-    /**
-     * Package-private constructor used by {@link ActorHub#pipeline} and by
-     * {@link #then} to build successive views of the same chain.
-     *
-     * @param actorHub the ActorHub to which all stages in this chain are attached
-     * @param head the first stage; messages are sent to it via {@link #accept}
-     * @param tail the last stage added so far; new stages are linked to it
-     */
-    PipelineActor(ActorHub actorHub, Actor<T> head, PipeActor<?,R> tail)
+    PipelineActor(ActorHub actorHub, PipeActor<T,?> head, PipeActor<?,R> tail)
     {
         this.actorHub = actorHub;
         this.head = head;
         this.tail = tail;
+        this.owned = new ArrayList<>();
+        this.owned.add(head);
     }
 
-    /**
-     * Appends a new transformation stage to the chain, wired to the previous
-     * stage's output, using the ActorHub's default thread count and queue size for
-     * the new stage.
-     *
-     * @param <S>      the output type of the new stage
-     * @param function the transformation applied by the new stage; must not be
-     *                 {@code null}
-     * @return a new {@code PipelineActor} view with the same head but an updated
-     *         current output type {@code S}
-     */
+    private PipelineActor(ActorHub actorHub, PipeActor<T,?> head, PipeActor<?,R> tail, List<Linkable> owned)
+    {
+        this.actorHub = actorHub;
+        this.head = head;
+        this.tail = tail;
+        this.owned = owned;
+    }
+
     public <S> PipelineActor<T,S> then(Function<R,S> function)
     {
         PipeActor<R,S> next = actorHub.pipe(function);
         tail.linkTo(next);
-        return new PipelineActor<>(actorHub, head, next);
+        List<Linkable> newOwned = new ArrayList<>(owned);
+        newOwned.add(next);
+        return new PipelineActor<>(actorHub, head, next, newOwned);
     }
 
-    /**
-     * Appends a new transformation stage with the specified thread count.
-     *
-     * @param <S>      the output type of the new stage
-     * @param threads  the maximum number of concurrent worker threads for the
-     *                 new stage
-     * @param function the transformation applied by the new stage; must not be
-     *                 {@code null}
-     * @return a new {@code PipelineActor} view with the updated output type
-     */
     public <S> PipelineActor<T,S> then(int threads, Function<R,S> function)
     {
         PipeActor<R,S> next = actorHub.pipe(threads, function);
         tail.linkTo(next);
-        return new PipelineActor<>(actorHub, head, next);
+        List<Linkable> newOwned = new ArrayList<>(owned);
+        newOwned.add(next);
+        return new PipelineActor<>(actorHub, head, next, newOwned);
     }
 
-    /**
-     * Appends a new transformation stage with the specified thread count and
-     * internal queue size.
-     *
-     * @param <S>       the output type of the new stage
-     * @param threads   the maximum number of concurrent worker threads for the
-     *                  new stage
-     * @param queueSize the internal queue capacity for the new stage
-     * @param function  the transformation applied by the new stage; must not be
-     *                  {@code null}
-     * @return a new {@code PipelineActor} view with the updated output type
-     */
     public <S> PipelineActor<T,S> then(int threads, int queueSize, Function<R,S> function)
     {
         PipeActor<R,S> next = actorHub.pipe(threads, queueSize, function);
         tail.linkTo(next);
-        return new PipelineActor<>(actorHub, head, next);
+        List<Linkable> newOwned = new ArrayList<>(owned);
+        newOwned.add(next);
+        return new PipelineActor<>(actorHub, head, next, newOwned);
     }
 
     /**
      * Closes the chain with a terminal {@link Consumer}{@code <R>} and returns
-     * the head of the fully-wired chain, ready for use.
-     * <p>
-     * After this call, the chain is complete: messages sent to the returned
-     * {@link Actor} travel through every intermediate stage and are ultimately
-     * consumed by {@code consumer}.
-     *
-     * @param consumer the terminal action applied to each fully-transformed
-     *                 value; must not be {@code null}
-     * @return the head {@link Actor}{@code <T>} of the chain — the entry point
-     *         for {@link Consumer#accept} and {@link Actor#shutdown}
+     * the head wrapper of the fully-wired chain.
      */
-    public Actor<T> sink(Consumer<R> consumer)
+    public PipeActor<T,?> sink(Consumer<R> consumer)
     {
         Actor<R> terminal = actorHub.actor(consumer);
         tail.linkTo(terminal);
@@ -139,76 +84,26 @@ public final class PipelineActor<T,R> implements Consumer<T>
 
     /**
      * Closes the chain by linking it to an already-built
-     * {@link Consumer}{@code <R>} and returns the head of the fully-wired
-     * chain. The {@code next} argument can be any {@link Consumer}{@code <R>} —
-     * another pipeline's head, a {@link Actor} created directly via
-     * {@code actorHub.actor(...)}, a {@link FanOutActor}, and so on.
-     *
-     * @param next the downstream stage that will receive the final values;
-     *             must not be {@code null}
-     * @return the head {@link Actor}{@code <T>} of the chain
+     * {@link Consumer}{@code <R>} and returns the head wrapper.
      */
-    public Actor<T> to(Consumer<R> next)
+    public PipeActor<T,?> to(Consumer<R> next)
     {
         tail.linkTo(Objects.requireNonNull(next, "next must not be null"));
         return head;
     }
 
     /**
-     * Returns the head {@link Actor}{@code <T>} of the chain built so far — the
-     * same instance that {@link #accept(Object)} delegates to. The head can be
-     * used to initiate shutdown of the whole chain via {@link Actor#shutdown()}.
-     *
-     * @return the head Actor of the chain
+     * Returns the head {@link PipeActor}{@code <T,?>} of the chain built so far.
      */
-    public Actor<T> head()
+    public PipeActor<T,?> head()
     {
         return head;
     }
 
-    /**
-     * Sends a message into the head of the chain.
-     * <p>
-     * Note that messages sent before the chain has been fully wired (i.e.
-     * before {@link #sink(Consumer)} or {@link #to(Consumer)} is called) will
-     * reach the last-built stage but go no further, since that stage is not yet
-     * linked to a downstream consumer. Finish building the chain before sending.
-     *
-     * @param message the message to deliver to the head stage
-     */
     @Override
     public void accept(T message)
     {
         head.accept(message);
-    }
-
-    /**
-     * Collects every stage owned by this pipeline: the head, all intermediate
-     * stages added with {@code then}, and the tail. The traversal follows the
-     * {@code next} links exposed by {@link Actor#getLinkedTargets()} in
-     * upstream-to-downstream order and stops before the first downstream
-     * consumer that is not a {@link PipeActor} (i.e. the terminal consumer
-     * wired with {@link #sink(Consumer)}/{@link #to(Consumer)}), which is not
-     * owned by the pipeline.
-     *
-     * @return the owned stages of the chain, in delivery order
-     */
-    private List<Actor<?>> collectStages()
-    {
-        List<Actor<?>> stages = new ArrayList<>();
-        Actor<?> cursor = head;
-        while (cursor != null)
-        {
-            stages.add(cursor);
-            Collection<Consumer<?>> targets = cursor.getLinkedTargets();
-            if (targets.isEmpty())
-            {
-                break;
-            }
-            Consumer<?> next = targets.iterator().next();
-            cursor = (next instanceof PipeActor) ? (PipeActor<?,?>) next : null;
-        }
-        return stages;
     }
 
     public PipelineActor<T,R> shutdown()
@@ -218,23 +113,21 @@ public final class PipelineActor<T,R> implements Consumer<T>
 
     public PipelineActor<T,R> shutdown(boolean onlyWhenEmpty)
     {
-        for (Actor<?> stage : collectStages())
+        for (Linkable stage : owned)
         {
             stage.shutdown(onlyWhenEmpty);
         }
         return this;
     }
 
-    
     public boolean awaitTermination(int millis)
     {
         long nanos = Nums.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
         boolean ok = true;
-        for (Actor<?> stage : collectStages())
+        for (Linkable stage : owned)
         {
             ok = stage.awaitTerminationUntilNanos(nanos) && ok;
         }
         return ok;
     }
-    
 }

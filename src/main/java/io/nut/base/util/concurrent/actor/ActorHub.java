@@ -72,10 +72,14 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public static ActorHub SYNCHRONOUS = new ActorHub(null);
     
     /** Active non-synchronous Actors attached to this ActorHub, for coordinated tasks. */
-    private final List<Actor<?>> actors = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<Actor<?>> actors = new CopyOnWriteArrayList<>();
 
-    /** O(1) count of registered Actors, used to size the pool as Actors come and go. */
-    private final AtomicInteger actorCount = new AtomicInteger();
+    /**
+     * Sum of the {@link Actor#threadDemand()} of every registered Actor,
+     * used to size the pool {code max(initialCorePoolSize, demand)}
+     * as Actors come and go. Synchronous Actors report 0 demand.
+     */
+    private final AtomicInteger threadDemand = new AtomicInteger();
 
     /** Shared count of messages processed by all Actors attached to this ActorHub. */
     private final AtomicInteger processedCount = new AtomicInteger();
@@ -268,9 +272,11 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     void registerActor(Actor<?> actor)
     {
-        actors.add(actor);
-        actorCount.incrementAndGet();
-        adjustPoolToActors();
+        if (actors.addIfAbsent(actor))
+        {
+            threadDemand.addAndGet(actor.threadDemand());
+            adjustPoolToActors();
+        }
     }
 
     /**
@@ -283,18 +289,19 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     {
         if (actors.remove(actor))
         {
-            actorCount.decrementAndGet();
+            threadDemand.addAndGet(-actor.threadDemand());
             adjustPoolToActors();
             maybeShutdownPool();
         }
     }
 
     /**
-     * Adjusts the pool's core and maximum sizes together to match the number
-     * of registered Actors. Both are set to {@code max(initialCorePoolSize,
-     * actorCount)}, so the pool stays symmetric (core == maximum, as with
-     * {@link ActorPool}) and simply grows one thread per registered Actor beyond
-     * the initial core size. Sizing scales down again as Actors terminate.
+     * Adjists the pool's core and maximum sizes together to match the total
+     * thread demand of the registered Actors. Both are set to
+     * {@code max(initialCorePoolSize, threadDemand)}, so the pool stays
+     * symmetric (core == maximum, as with {@link ActorPool}) and simply grows
+     * one thread per additionally demanded Actor thread beyond the initial core
+     * size. Sizing scales down again as Actors terminate.
      * <p>
      * ThreadPoolExecutor requires {@code maximumPoolSize &ge; corePoolSize};
      * since core and maximum are always set to the same value this invariant
@@ -306,7 +313,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         {
             return;
         }
-        int size = Math.max(initialCorePoolSize, actorCount.get());
+        int size = Math.max(initialCorePoolSize, threadDemand.get());
         setPoolSize(size);
     }
 
@@ -411,14 +418,27 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <T> Actor<T> actor(int threads, int queueSize, Consumer<T> consumer)
     {
         Objects.requireNonNull(consumer, "consumer must not be null");
-        return new Actor<T>(this, threads, queueSize)
+        ActorHooks<T> hooks = new ActorHooks<T>()
         {
             @Override
-            protected void receive(T m)
+            public void receive(T m, long seq)
             {
                 consumer.accept(m);
             }
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+            }
         };
+        Actor<T> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        registerActor(actor);
+        return actor;
     }
 
     /**
@@ -448,14 +468,27 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <E> Actor<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
         Objects.requireNonNull(queue, "queue must not be null");
-        return new Actor<E>(this, threads, queueSize)
+        ActorHooks<E> hooks = new ActorHooks<E>()
         {
             @Override
-            protected void receive(E m)
+            public void receive(E m, long seq)
             {
                 putIntoQueue(queue, m);
             }
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+            }
         };
+        Actor<E> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        registerActor(actor);
+        return actor;
     }
 
     /**
@@ -521,14 +554,27 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <E> Actor<E> list(int threads, int queueSize, List<E> list)
     {
         Objects.requireNonNull(list, "list must not be null");
-        return new Actor<E>(this, threads, queueSize)
+        ActorHooks<E> hooks = new ActorHooks<E>()
         {
             @Override
-            protected void receive(E m)
+            public void receive(E m, long seq)
             {
                 list.add(m);
             }
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+            }
         };
+        Actor<E> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        registerActor(actor);
+        return actor;
     }
 
     /**
@@ -575,14 +621,27 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <T> Actor<T> set(int threads, int queueSize, Set<T> set)
     {
         Objects.requireNonNull(set, "set must not be null");
-        return new Actor<T>(this, threads, queueSize)
+        ActorHooks<T> hooks = new ActorHooks<T>()
         {
             @Override
-            protected void receive(T m)
+            public void receive(T m, long seq)
             {
                 set.add(m);
             }
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+            }
         };
+        Actor<T> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        registerActor(actor);
+        return actor;
     }
 
     /**
@@ -917,6 +976,15 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
                 waitForIdle(set, target);
             }
         }
+        else if (stage instanceof Linkable)
+        {
+            Linkable link = (Linkable) stage;
+            link.waitForIdle();
+            for (Consumer<?> target : link.getLinkedTargets())
+            {
+                waitForIdle(set, target);
+            }
+        }
     }
     
     /**
@@ -1031,7 +1099,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     {
         synchronized (shutdownLock)
         {
-            if (shutdownWhenEmpty && actorCount.get() > 0)
+            if (shutdownWhenEmpty && threadDemand.get() > 0)
             {
                 return;
             }
@@ -1051,7 +1119,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     {
         synchronized (shutdownLock)
         {
-            if (shutdownWhenEmpty && actorCount.get() == 0)
+            if (shutdownWhenEmpty && threadDemand.get() == 0)
             {
                 shutdownWhenEmpty = false;
                 if (!isShutdown())
@@ -1076,6 +1144,15 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
             Actor<?> actor = (Actor<?>) stage;
             actor.awaitTerminationUntilNanos(nanos);
             for (Consumer<?> target : actor.getLinkedTargets())
+            {
+                awaitTerminationUntilNanos(set, target, nanos);
+            }
+        }
+        else if (stage instanceof Linkable)
+        {
+            Linkable link = (Linkable) stage;
+            link.awaitTerminationUntilNanos(nanos);
+            for (Consumer<?> target : link.getLinkedTargets())
             {
                 awaitTerminationUntilNanos(set, target, nanos);
             }

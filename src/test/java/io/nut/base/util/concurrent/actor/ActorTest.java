@@ -158,10 +158,10 @@ class ActorTest
     {
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch gate = new CountDownLatch(1);
-        Actor<String> actor = new Actor<String>(actorHub)
+        ActorHooks<String> hooks = new ActorHooks<String>()
         {
             @Override
-            protected void receive(String m)
+            public void receive(String m, long seq)
             {
                 started.countDown();
                 try
@@ -173,7 +173,18 @@ class ActorTest
                     Thread.currentThread().interrupt();
                 }
             }
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+            }
         };
+        Actor<String> actor = ActorFlavors.create(actorHub, 1, 0, hooks);
         actor.accept("block");
 
         assertTrue(started.await(1, TimeUnit.SECONDS));
@@ -205,10 +216,10 @@ class ActorTest
     {
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch gate = new CountDownLatch(1);
-        Actor<String> actor = new Actor<String>(actorHub)
+        ActorHooks<String> hooks = new ActorHooks<String>()
         {
             @Override
-            protected void receive(String m)
+            public void receive(String m, long seq)
             {
                 started.countDown();
                 try
@@ -220,7 +231,18 @@ class ActorTest
                     Thread.currentThread().interrupt();
                 }
             }
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+            }
         };
+        Actor<String> actor = ActorFlavors.create(actorHub, 1, 0, hooks);
         actor.accept("block");
 
         assertTrue(started.await(1, TimeUnit.SECONDS));
@@ -395,10 +417,10 @@ class ActorTest
             for (int i = 0; i < actorsCount; i++)
             {
                 final int index = i;
-                actors[index] = new Actor<Long>(bigActorHub, index + 1, queueSize)
+                ActorHooks<Long> hooks = new ActorHooks<Long>()
                 {
                     @Override
-                    protected void receive(Long m)
+                    public void receive(Long m, long seq)
                     {
                         processed.incrementAndGet();
                         // every actor forwards the message to the next two, except the last ones
@@ -411,7 +433,19 @@ class ActorTest
                             actors[index + 2].accept(m);
                         }
                     }
-                }.dryLogger();
+
+                    @Override
+                    public void terminate()
+                    {
+                    }
+
+                    @Override
+                    public void exception(Exception ex)
+                    {
+                    }
+                };
+                Actor<Long> actor = ActorFlavors.create(bigActorHub, index + 1, queueSize, hooks);
+                actors[index] = actor.dryLogger();
             }
 
             long start = System.nanoTime();

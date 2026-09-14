@@ -307,13 +307,23 @@ class PubSubTest
     @Test
     void actorSub_noActorHub_throwsIllegalState()
     {
-        Actor<String> detached = new Actor<String>()   // constructed without ActorHub
+        Actor<String> detached = ActorFlavors.create(null, 0, 0, new ActorHooks<String>()
         {
             @Override
-            protected void receive(String m)
+            public void receive(String m, long seq)
             {
             }
-        };
+
+            @Override
+            public void terminate()
+            {
+            }
+
+            @Override
+            public void exception(Exception ex)
+            {
+            }
+        });
 
         assertThrows(IllegalStateException.class, () -> detached.sub("any"));
     }

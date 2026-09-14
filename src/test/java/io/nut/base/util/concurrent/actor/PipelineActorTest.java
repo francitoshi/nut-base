@@ -45,7 +45,7 @@ class PipelineActorTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> i * 2)
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> i * 2)
                                  .then(i -> "value=" + i)
                                  .then(String::toUpperCase)
                                  .sink(result::add);
@@ -63,7 +63,7 @@ class PipelineActorTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> i + 1)
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> i + 1)
                                  .then((Integer i) -> i * 2)
                                  .then((Integer i) -> "n=" + i)
                                  .sink(result::add);
@@ -104,7 +104,7 @@ class PipelineActorTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Actor<String> head = actorHub.pipeline((String s) -> s)
+        PipeActor<String,?> head = actorHub.pipeline((String s) -> s)
                                  .sink(result::add);
 
         head.accept("msg");
@@ -122,7 +122,7 @@ class PipelineActorTest
         BlockingQueue<String> q = new LinkedBlockingQueue<>();
         Actor<String> b = actorHub.queue(q);
 
-        Actor<String> head = actorHub.pipeline((String s) -> s.toUpperCase()).to(b);
+        PipeActor<String,?> head = actorHub.pipeline((String s) -> s.toUpperCase()).to(b);
 
         head.accept("hello");
 
@@ -143,7 +143,7 @@ class PipelineActorTest
     @Test
     void headReturnsTheFirstActorOfTheChain()
     {
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> i)
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> i)
                                  .then((Integer i) -> i)
                                  .head();
 
@@ -156,7 +156,7 @@ class PipelineActorTest
         List<String> result = new CopyOnWriteArrayList<>();
 
         PipelineActor<Integer,String> pipeline = actorHub.pipeline(i -> "v=" + i);
-        Actor<Integer> unused = pipeline.sink(result::add);
+        PipeActor<Integer,?> unused = pipeline.sink(result::add);
 
         pipeline.accept(42);
 
@@ -172,7 +172,7 @@ class PipelineActorTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> i + 1)           // Integer -> Integer
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> i + 1)           // Integer -> Integer
                                  .then(i -> i * 2)                       // Integer -> Integer
                                  .then(i -> (double) i / 3)             // Integer -> Double
                                  .then(d -> String.format("%.2f", d))  // Double -> String
@@ -193,7 +193,7 @@ class PipelineActorTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> "n=" + i)
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> "n=" + i)
                                  .sink(s -> result.add(s));
 
         FilterActor<Integer> filter = actorHub.filter(i -> i > 5);
@@ -214,7 +214,7 @@ class PipelineActorTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Actor<Integer> head = actorHub.pipeline(2, (Integer i) -> "v=" + i)
+        PipeActor<Integer,?> head = actorHub.pipeline(2, (Integer i) -> "v=" + i)
                                  .then(s -> s.toUpperCase())
                                  .sink(result::add);
 
@@ -232,7 +232,7 @@ class PipelineActorTest
     {
         List<String> result = new CopyOnWriteArrayList<>();
 
-        Actor<Integer> head = actorHub.pipeline(2, 10, (Integer i) -> "v=" + i)
+        PipeActor<Integer,?> head = actorHub.pipeline(2, 10, (Integer i) -> "v=" + i)
                                  .sink(result::add);
 
         head.accept(99);
@@ -251,7 +251,7 @@ class PipelineActorTest
 
         PipelineActor<Integer,Integer> p1 = actorHub.pipeline(i -> i * 2);
         PipelineActor<Integer,String> p2 = p1.then(2, i -> "v=" + i); // different thread count
-        Actor<Integer> head = p2.sink(result::add);
+        PipeActor<Integer,?> head = p2.sink(result::add);
 
         head.accept(5);
 
@@ -268,10 +268,11 @@ class PipelineActorTest
         List<String> a = new CopyOnWriteArrayList<>();
         List<String> b = new CopyOnWriteArrayList<>();
 
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> "v=" + i).head();
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> "v=" + i).head();
         FanOutActor<String> broadcaster = actorHub.fanout(actorHub.actor(a::add), actorHub.actor(b::add));
 
-        PipeActor<Integer,String> pipe = (PipeActor<Integer,String>) head;
+        @SuppressWarnings("unchecked")
+        PipeActor<Integer,String> pipe = (PipeActor<Integer,String>) (PipeActor<?,?>) head;
         pipe.linkTo(broadcaster);
 
         pipe.accept(5);
@@ -289,7 +290,7 @@ class PipelineActorTest
     {
         RecordingActor<String> collector = new RecordingActor<>(actorHub);
 
-        Actor<Integer> head = actorHub.pipeline((Integer i) -> "v=" + i)
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> "v=" + i)
                                  .then((String s) -> s.toUpperCase())
                                  .to(collector);
 
@@ -307,7 +308,7 @@ class PipelineActorTest
     void pipelineSendThrowsAfterHeadIsShutdown()
     {
         PipelineActor<Integer,String> pipeline = actorHub.pipeline((Integer i) -> "v=" + i);
-        Actor<Integer> head = pipeline.sink(s -> {});
+        PipeActor<Integer,?> head = pipeline.sink(s -> {});
         head.shutdown();
         head.dryLogger();
 
