@@ -267,6 +267,36 @@ class ActorHubTest
     }
 
     @Test
+    void factoryCreatedSynchronousActorsAreRegisteredUntilShutdown()
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        Actor<String> actor = actorHub.actor(0, sink::add);
+        Actor<String> listActor = actorHub.list(0, 0, new CopyOnWriteArrayList<>());
+        Actor<String> setActor = actorHub.set(0, 0, ConcurrentHashMap.newKeySet());
+        Actor<String> queueActor = actorHub.queue(0, 0, new LinkedBlockingQueue<>());
+
+        assertTrue(actorHub.actors().contains(actor));
+        assertTrue(actorHub.actors().contains(listActor));
+        assertTrue(actorHub.actors().contains(setActor));
+        assertTrue(actorHub.actors().contains(queueActor));
+
+        actor.accept("m");
+        assertEquals(Collections.singletonList("m"), sink);
+        assertTrue(actor.isTerminated() == false);
+
+        actor.shutdown();
+        listActor.shutdown();
+        setActor.shutdown();
+        queueActor.shutdown();
+
+        assertTrue(actor.isShutdown() && actor.isTerminated());
+        assertFalse(actorHub.actors().contains(actor));
+        assertFalse(actorHub.actors().contains(listActor));
+        assertFalse(actorHub.actors().contains(setActor));
+        assertFalse(actorHub.actors().contains(queueActor));
+    }
+
+    @Test
     void poolSizeGetterAndSetterWork()
     {
         ActorHub h = ActorHub.hub(3);
