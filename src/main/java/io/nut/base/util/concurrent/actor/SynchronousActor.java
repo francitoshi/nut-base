@@ -9,7 +9,7 @@ package io.nut.base.util.concurrent.actor;
  * Synchronous actor flavor: executes {@link #receive} directly in the
  * calling thread, with no channel or worker threads.
  * <p>
- * Selected when {@code threads <= 0}, no hub is attached, or the hub
+ * Selected when {@code threads == 0}, no hub is attached, or the hub
  * is synchronous.
  *
  * @param <M> the message type
@@ -70,6 +70,7 @@ class SynchronousActor<M> extends Actor<M>
             {
                 closed = true;
                 terminated = true;
+                unregisterFromActorHub();
                 try
                 {
                     hooks.terminate();
@@ -82,5 +83,13 @@ class SynchronousActor<M> extends Actor<M>
             }
         }
         return this;
+    }
+
+    private void unregisterFromActorHub()
+    {
+        if (actorHub instanceof ActorHub)
+        {
+            ((ActorHub) actorHub).unregisterActor(this);
+        }
     }
 }

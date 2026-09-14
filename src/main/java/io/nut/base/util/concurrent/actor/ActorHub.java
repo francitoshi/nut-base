@@ -71,7 +71,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
 
     public static ActorHub SYNCHRONOUS = new ActorHub(null);
     
-    /** Active non-synchronous Actors attached to this ActorHub, for coordinated tasks. */
+    /** Active Actors attached to this ActorHub, for coordinated tasks. */
     private final CopyOnWriteArrayList<Actor<?>> actors = new CopyOnWriteArrayList<>();
 
     /**
@@ -265,8 +265,12 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Registers a non-synchronous Actor attached to this ActorHub so its lifecycle
-     * can be tracked. Called by {@link Actor} on construction.
+     * Registers an Actor attached to this ActorHub so its lifecycle
+     * can be tracked. Called by {@link AsyncActor} on construction and
+     * by the factory methods ({@link #actor}, {@link #queue}, {@link #list},
+     * {@link #set}, {@link #filter}, {@link #batch}).
+     * Synchronous Actors ({@code threads == 0}) are unregistered on
+     * shutdown.
      *
      * @param actor the Actor to register
      */
@@ -318,9 +322,11 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Returns the list of active non-synchronous Actors attached to this ActorHub.
-     * Actors are removed from this list once they terminate (on shutdown), and
-     * synchronous Actors (constructed with {@code threads == 0}) are never added.
+     * Returns the list of active Actors attached to this ActorHub.
+     * Actors are removed from this list once they terminate (on shutdown).
+     * Synchronous Actors ({@code threads == 0}) are unregistered at
+     * shutdown time; before that, factory-created synchronous Actors
+     * may appear in this list.
      *
      * @return the list of active Actors attached to this ActorHub
      */
@@ -1021,9 +1027,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Initiates a graceful shutdown on every Actor registered with this ActorHub;
-     * synchronous Actors ({@code threads == 0}) are not registered and are
-     * unaffected.
+     * Initiates a graceful shutdown on every Actor registered with this ActorHub.
      * <p>
      * When {@code onlyWhenEmpty} is {@code true} the ActorHub first drains the
      * whole graph: it waits until every registered Actor is idle, repeating the

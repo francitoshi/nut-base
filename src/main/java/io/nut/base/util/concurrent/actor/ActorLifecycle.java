@@ -105,8 +105,9 @@ public interface ActorLifecycle extends AutoCloseable
     ActorLifecycle awaitTermination();
 
     /**
-     * @return {@code true} if {@link #shutdown()} (in either form) has been
-     *         called
+     * @return {@code true} if this instance has actually closed admission of
+     *         new work: immediately for {@link #shutdown()}, or once idle for
+     *         the deferred form {@link #shutdown(boolean) shutdown(true)}
      */
     boolean isShutdown();
 

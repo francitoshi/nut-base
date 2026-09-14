@@ -9,9 +9,10 @@ package io.nut.base.util.concurrent.actor;
  * Factory that selects the appropriate actor flavor based on the
  * requested thread count and hub configuration.
  * <p>
- * Selects {@link SynchronousActor} when {@code threads <= 0}, the hub is
+ * Selects {@link SynchronousActor} when {@code threads == 0}, the hub is
  * {@code null}, or the hub itself is synchronous; {@link SingleActor} when
  * {@code threads == 1}; {@link MultiActor} when {@code threads >= 2}.
+ * Throws {@link IllegalArgumentException} for negative thread counts.
  */
 final class ActorFlavors
 {

@@ -6,10 +6,10 @@
 package io.nut.base.util.concurrent.actor;
 
 /**
- * Single-threaded async actor flavor: one permanent worker that stays
- * alive for the lifetime of the actor, polling the channel with a
- * {@link #PERMANENT_WAIT_MILLIS} timeout so it is not destroyed and
- * recreated per message.
+ * Single-threaded async actor flavor: uses a single worker that drains the
+ * channel with a {@link #PERMANENT_WAIT_MILLIS} idle window, yielding its
+ * thread back to the pool once the window expires. Re-submitted on the next
+ * {@link #accept} if a new message arrives.
  * <p>
  * Thread demand: 1.
  *
@@ -23,8 +23,9 @@ class SingleActor<M> extends AsyncActor<M>
     }
 
     /**
-     * The permanent worker loops forever, polling the channel with a
-     * timeout. It only exits when the channel is closed.
+     * Drains the channel once with a {@link #PERMANENT_WAIT_MILLIS} idle
+     * window, then yields the thread back to the pool so it can be
+     * reused by other work. Re-started on the next {@link #accept}.
      */
     @Override
     protected void permanentLoop()

@@ -44,7 +44,8 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
             @Override
             public void exception(Exception ex)
             {
-                // Delegated to the inner actor's exception hook chain.
+                // No-op: exceptions from targets are already recorded by
+                // the inner flavor via Actor.handleException.
             }
         };
         this.inner = ActorFlavors.create(actorHub, threads, queueSize, hooks);
