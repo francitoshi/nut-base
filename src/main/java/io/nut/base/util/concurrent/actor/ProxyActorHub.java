@@ -10,7 +10,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -525,7 +525,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    AtomicInteger processedCount()
+    LongAdder processedCount()
     {
         ActorHub h = actorHub;
         if (h != fallback)

@@ -9,7 +9,6 @@ import io.nut.base.math.Nums;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -38,9 +37,6 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
 
     protected volatile boolean allowLogger = true;
     protected volatile Exception ex;
-
-    /** Messages this actor has processed (each invocation of receive). */
-    protected final AtomicInteger processedCount = new AtomicInteger();
 
     protected final ActorHub actorHub;
 
@@ -128,10 +124,9 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
 
     protected void countProcessed()
     {
-        processedCount.incrementAndGet();
         if (actorHub != null)
         {
-            actorHub.processedCount().incrementAndGet();
+            actorHub.processedCount().increment();
         }
     }
 

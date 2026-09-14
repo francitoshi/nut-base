@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.actor;
 
+import io.nut.base.util.concurrent.atomic.AtomicCounterPair;
 import io.nut.base.util.concurrent.channel.Channel;
 import io.nut.base.util.concurrent.channel.CloseableChannel;
 import java.util.concurrent.Executor;
@@ -28,8 +29,15 @@ abstract class AsyncActor<M> extends Actor<M>
     protected final CloseableChannel<M> channel;
     protected final int threads;
     protected final Semaphore workerSlots;
-    protected final AtomicInteger pending = new AtomicInteger();
-    protected final AtomicInteger processing = new AtomicInteger();
+
+    /**
+     * Messages queued in the channel (first) and messages currently being
+     * processed (second), packed into a single word so that moving a message
+     * from "queued" to "processing" and detecting that both reached zero are
+     * single, race-free atomic operations.
+     */
+    protected final AtomicCounterPair counters = new AtomicCounterPair();
+
     protected final AtomicLong sequenceCounter = new AtomicLong();
     protected final AtomicInteger activeWorkers = new AtomicInteger();
     protected boolean permanentWorkerStarted;
@@ -88,7 +96,7 @@ abstract class AsyncActor<M> extends Actor<M>
         try
         {
             initPermanentWorker();
-            pending.incrementAndGet();
+            counters.incrementFirst();
             boolean queued = false;
             try
             {
@@ -99,7 +107,7 @@ abstract class AsyncActor<M> extends Actor<M>
             {
                 if (!queued)
                 {
-                    pending.decrementAndGet();
+                    counters.decrementFirst();
                 }
             }
 
@@ -220,9 +228,8 @@ abstract class AsyncActor<M> extends Actor<M>
         M m;
         while ((m = channel.get(timeoutMillis, TimeUnit.MILLISECONDS)) != null)
         {
-            pending.decrementAndGet();
+            counters.addFirstToSecond(1);
             long seq = sequenceCounter.incrementAndGet();
-            processing.incrementAndGet();
             countProcessed();
             try
             {
@@ -234,7 +241,7 @@ abstract class AsyncActor<M> extends Actor<M>
             }
             finally
             {
-                if (processing.decrementAndGet() == 0 && pending.get() == 0)
+                if (counters.decrementSecondAndAllZero())
                 {
                     notifyIdle();
                 }
@@ -262,7 +269,7 @@ abstract class AsyncActor<M> extends Actor<M>
     {
         while (true)
         {
-            while (pending.get() > 0)
+            while (counters.getFirst() > 0)
             {
                 drain(0);
             }
@@ -270,7 +277,7 @@ abstract class AsyncActor<M> extends Actor<M>
             boolean close = false;
             synchronized (lock)
             {
-                if (pending.get() > 0)
+                if (counters.getFirst() > 0)
                 {
                     continue;
                 }
@@ -370,13 +377,13 @@ abstract class AsyncActor<M> extends Actor<M>
     @Override
     public int getPendingCount()
     {
-        return pending.get() + activeWorkers.get();
+        return counters.getFirst() + activeWorkers.get();
     }
 
     @Override
     public boolean isIdle()
     {
-        return pending.get() <= 0 && processing.get() == 0;
+        return counters.isZero();
     }
 
     @Override

@@ -19,6 +19,7 @@ import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -81,8 +82,14 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     private final AtomicInteger threadDemand = new AtomicInteger();
 
-    /** Shared count of messages processed by all Actors attached to this ActorHub. */
-    private final AtomicInteger processedCount = new AtomicInteger();
+    /**
+     * Shared count of messages processed by all Actors attached to this
+     * ActorHub. A count shared by every worker thread is a contention hotspot,
+     * so it is kept as a {@link LongAdder} (stripe-cached, contention-free on
+     * the hot path); the {@code sum()} used for quiescence detection in
+     * {@link #shutdown(boolean)} is comparatively rare.
+     */
+    private final LongAdder processedCount = new LongAdder();
 
     /** Guards the deferred-shutdown handshake between {@link #shutdown(boolean)}
      *  and {@link #unregisterActor(Actor)}. */
@@ -259,7 +266,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *
      * @return the shared processed-message counter
      */
-    AtomicInteger processedCount()
+    LongAdder processedCount()
     {
         return processedCount;
     }
@@ -1062,14 +1069,14 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
             // the counter of a peer Actor, so the repeated pass catches in-flight
             // forwards; only when the counter stops moving is the whole graph
             // quiescent and safe to close.
-            long last = processedCount.get();
+            long last = processedCount.sum();
             while (true)
             {
                 for (Actor<?> actor : actors)
                 {
                     actor.waitForIdle();
                 }
-                long now = processedCount.get();
+                long now = processedCount.sum();
                 if (now == last)
                 {
                     break;
