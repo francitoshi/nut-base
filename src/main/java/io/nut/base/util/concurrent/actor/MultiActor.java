@@ -30,7 +30,7 @@ class MultiActor<M> extends AsyncActor<M>
     {
         try
         {
-            drain(PERMANENT_WAIT_MILLIS);
+            drain(this.actorHub.getPermanentWaitMillis());
         }
         finally
         {

@@ -23,9 +23,6 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 abstract class AsyncActor<M> extends Actor<M>
 {
-    /** How long the permanent worker waits before giving its thread back. */
-    static final long PERMANENT_WAIT_MILLIS = 400;
-
     protected final CloseableChannel<M> channel;
     protected final int threads;
     protected final Semaphore workerSlots;

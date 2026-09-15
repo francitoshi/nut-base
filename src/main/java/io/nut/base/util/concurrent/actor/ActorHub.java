@@ -70,8 +70,22 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
 {
     private static final Logger LOG = Logger.getLogger(ActorHub.class.getName());
 
-    public static ActorHub SYNCHRONOUS = new ActorHub(null);
-    
+    /**
+     * Default length, in milliseconds, of the idle window a permanent worker
+     * keeps its thread alive waiting for the next message before yielding it
+     * back to the pool. Configurable per ActorHub with
+     * {@link #setPermanentWaitMillis(long)}.
+     */
+    public static final long DEFAULT_PERMANENT_WAIT_MILLIS = 1000;
+
+    /**
+     * Length, in milliseconds, of the idle window a permanent worker keeps its
+     * thread alive waiting for the next message. Shared, {@code volatile}, and
+     * configurable per ActorHub, so every Actor attached to this hub observes
+     * the same value without a per-message read fence.
+     */
+    private volatile long permanentWaitMillis = DEFAULT_PERMANENT_WAIT_MILLIS;
+
     /** Active Actors attached to this ActorHub, for coordinated tasks. */
     private final CopyOnWriteArrayList<Actor<?>> actors = new CopyOnWriteArrayList<>();
 
@@ -271,13 +285,48 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         return processedCount;
     }
 
+    // -----------------------------------------------------------------
+    // Permanent worker idle window
+    // -----------------------------------------------------------------
+
+    /**
+     * Returns the length, in milliseconds, of the idle window a permanent
+     * worker keeps its thread alive waiting for the next message before
+     * yielding it back to the pool.
+     *
+     * @return the permanent worker idle window, in milliseconds
+     */
+    public long getPermanentWaitMillis()
+    {
+        return permanentWaitMillis;
+    }
+
+    /**
+     * Sets the length, in milliseconds, of the idle window a permanent worker
+     * keeps its thread alive waiting for the next message. The value is shared
+     * by every Actor attached to this ActorHub ({@code volatile}, so it is
+     * observed immediately); a value of {@code 0} makes permanent workers poll
+     * continuously.
+     *
+     * @param millis the new idle window, in milliseconds; must not be negative
+     * @return this ActorHub, for fluent chaining
+     * @throws IllegalArgumentException if {@code millis} is negative
+     */
+    public ActorHub setPermanentWaitMillis(long millis)
+    {
+        if (millis < 0)
+        {
+            throw new IllegalArgumentException("permanent wait must be >= 0, got " + millis);
+        }
+        this.permanentWaitMillis = millis;
+        return this;
+    }
+
     /**
      * Registers an Actor attached to this ActorHub so its lifecycle
-     * can be tracked. Called by {@link AsyncActor} on construction and
-     * by the factory methods ({@link #actor}, {@link #queue}, {@link #list},
-     * {@link #set}, {@link #filter}, {@link #batch}).
-     * Synchronous Actors ({@code threads == 0}) are unregistered on
-     * shutdown.
+     * can be tracked. Called by the actor flavors ({@link AsyncActor} and
+     * {@link SynchronousActor}) on construction, exactly once per Actor.
+     * Synchronous Actors ({@code threads == 0}) are unregistered on shutdown.
      *
      * @param actor the Actor to register
      */
