@@ -5,7 +5,6 @@
  */
 package io.nut.base.util.concurrent.actor;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -206,6 +205,11 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
     @Override
     public Collection<Consumer<?>> getLinkedTargets()
     {
-        return new ArrayList<>(targets);
+        // No defensive copy: {@code targets} is already a CopyOnWriteArrayList,
+        // so concurrent readers always observe a consistent snapshot without a
+        // per-call allocation. Wrapping it in an unmodifiable view (as
+        // {@link #getTargets()} does) blocks mutation by callers at zero copy
+        // cost.
+        return Collections.<Consumer<?>>unmodifiableList(targets);
     }
 }
