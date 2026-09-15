@@ -55,10 +55,7 @@ abstract class AsyncActor<M> extends Actor<M>
             this.channel = Channel.closeableBuffered(queueSize);
         }
         this.workerSlots = new Semaphore(threads);
-        if (actorHub instanceof ActorHub)
-        {
-            ((ActorHub) actorHub).registerActor(this);
-        }
+        this.actorHub.registerActor(this);
     }
 
     @Override
@@ -361,10 +358,7 @@ abstract class AsyncActor<M> extends Actor<M>
 
     private void unregisterFromActorHub()
     {
-        if (actorHub instanceof ActorHub)
-        {
-            ((ActorHub) actorHub).unregisterActor(this);
-        }
+        actorHub.unregisterActor(this);
     }
 
     // -----------------------------------------------------------------

@@ -124,10 +124,7 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
 
     protected void countProcessed()
     {
-        if (actorHub != null)
-        {
-            actorHub.processedCount().increment();
-        }
+        actorHub.processedCount().increment();
     }
 
     // -----------------------------------------------------------------
@@ -137,10 +134,6 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
     @SuppressWarnings("unchecked")
     public Actor<M> sub(String topic)
     {
-        if (this.actorHub == null)
-        {
-            throw new IllegalStateException("No ActorHub attached.");
-        }
         this.actorHub.sub(topic, this);
         return this;
     }
