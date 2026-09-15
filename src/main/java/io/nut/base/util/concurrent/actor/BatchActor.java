@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit;
  * An explicit {@link #flush()} forces the current partial batch out.
  * <p>
  * The owning hub is never {@code null}: when constructed without a hub, this
- * stage creates (and later closes) its own single-thread daemon hub, so the
+ * stage creates (and later closes) its own single-thread hub, so the
  * single worker always has an executor to run on, whether the stage is
  * attached to a hub or used stand-alone.
  *
@@ -47,7 +47,8 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
      *                     this stage create its own single-thread hub
      * @param threads      the requested thread count; {@code 0} selects the
      *                     synchronous flavor, any value {@code >= 1} selects a
-     *                     single worker thread
+     *                     single worker thread (unless the hub is synchronous,
+     *                     in which case the stage stays synchronous)
      * @param queueSize    the internal queue capacity (0 = rendezvous)
      * @param maxSize      the batch size that triggers an immediate flush
      * @param maxWaitMillis the maximum time a partial batch is held before it

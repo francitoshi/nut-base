@@ -12,7 +12,8 @@ package io.nut.base.util.concurrent.actor;
  * Selects {@link SynchronousActor} when {@code threads == 0}, the hub is
  * {@code null}, or the hub itself is synchronous; {@link SingleActor} when
  * {@code threads == 1}; {@link MultiActor} when {@code threads >= 2}.
- * Throws {@link IllegalArgumentException} for negative thread counts.
+ * Throws {@link IllegalArgumentException} for negative thread counts and
+ * negative queue sizes.
  */
 final class ActorFlavors
 {

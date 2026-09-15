@@ -331,10 +331,14 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Registers an Actor attached to this ActorHub so its lifecycle
-     * can be tracked. Called by the actor flavors ({@link AsyncActor} and
-     * {@link SynchronousActor}) on construction, exactly once per Actor.
-     * Synchronous Actors ({@code threads == 0}) are unregistered on shutdown.
+     * Registers an Actor attached to this ActorHub so its lifecycle can be
+     * tracked and its thread demand counts towards pool sizing. Called by the
+     * {@link AsyncActor} constructor for async flavors and explicitly by the
+     * terminal actor factories ({@link #actor}, {@link #queue}, {@link #list},
+     * {@link #set}) for the actors they create; {@code addIfAbsent} makes a
+     * repeated registration a no-op, so demand is counted exactly once per
+     * Actor. Synchronous Actors ({@code threads == 0}) are unregistered on
+     * shutdown.
      *
      * @param actor the Actor to register
      */
