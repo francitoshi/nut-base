@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.actor;
 
+import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -76,12 +77,8 @@ final class PubSub<T>
     {
         synchronized (lock)
         {
-            Consumer<?>[] current = subscribers;
-            int n = current.length;
-            Consumer<?>[] next = new Consumer<?>[n + 1];
-            System.arraycopy(current, 0, next, 0, n);
-            next[n] = subscriber;
-            subscribers = next;
+            subscribers = Arrays.copyOf(subscribers, subscribers.length + 1);
+            subscribers[subscribers.length - 1] = subscriber;
         }
     }
 
@@ -134,8 +131,7 @@ final class PubSub<T>
         {
             return -1;
         }
-        Consumer<?>[] next = new Consumer<?>[current.length - 1];
-        System.arraycopy(current, 0, next, 0, index);
+        Consumer<?>[] next = Arrays.copyOf(current, current.length - 1);
         System.arraycopy(current, index + 1, next, index, current.length - index - 1);
         subscribers = next;
         return index;
