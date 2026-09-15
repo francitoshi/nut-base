@@ -16,6 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -52,12 +53,13 @@ class BatchActorTest
 
         batch.accept(1);
         batch.accept(2);
+        // Worker accumulates asynchronously: wait for both to be pending.
+        assertTrue(awaitInt(() -> batch.pending(), 2, 2000));
         assertEquals(0, batches.size());
-        assertEquals(2, batch.pending());
 
         batch.accept(3);
         // Batch should be full now, flushed immediately
-        assertEquals(1, batches.size());
+        assertTrue(awaitInt(() -> batches.size(), 1, 2000));
         assertEquals(0, batch.pending());
         assertEquals(Arrays.asList(1, 2, 3), batches.get(0));
     }
@@ -71,11 +73,11 @@ class BatchActorTest
 
         batch.accept(1);
         batch.accept(2);
-        assertEquals(1, batches.size());
+        assertTrue(awaitInt(() -> batches.size(), 1, 2000));
 
         batch.accept(3);
         batch.accept(4);
-        assertEquals(2, batches.size());
+        assertTrue(awaitInt(() -> batches.size(), 2, 2000));
 
         assertEquals(Arrays.asList(1, 2), batches.get(0));
         assertEquals(Arrays.asList(3, 4), batches.get(1));
@@ -90,15 +92,15 @@ class BatchActorTest
 
         batch.accept("a");
         batch.accept("b");
-        assertEquals(2, batch.pending());
+        assertTrue(awaitInt(() -> batch.pending(), 2, 2000));
 
         batch.accept("c");
         batch.accept("d");
         batch.accept("e");
-        assertEquals(0, batch.pending()); // flushed when size reached 5
+        assertTrue(awaitInt(() -> batch.pending(), 0, 2000)); // flushed when size reached 5
 
         batch.accept("f");
-        assertEquals(1, batch.pending());
+        assertTrue(awaitInt(() -> batch.pending(), 1, 2000));
     }
 
     @Test
@@ -143,7 +145,7 @@ class BatchActorTest
 
         batch.accept(1);
         assertEquals(0, batches.size());
-        assertEquals(1, batch.pending());
+        assertTrue(awaitInt(() -> batch.pending(), 1, 2000));
 
         // Wait for the time window to trigger
         assertTrue(awaitTrue(() -> batches.size() > 0, 500));
@@ -165,7 +167,7 @@ class BatchActorTest
         batch.accept(2);
 
         // Size threshold is reached, no need to wait for the time window
-        assertEquals(1, batches.size());
+        assertTrue(awaitInt(() -> batches.size(), 1, 2000));
         assertEquals(Arrays.asList(1, 2), batches.get(0));
     }
 
@@ -222,7 +224,7 @@ class BatchActorTest
         batch.accept(2);
         batch.accept(3);
 
-        assertEquals(0, batch.pending()); // should be flushed
+        assertTrue(awaitInt(() -> batch.pending(), 0, 2000)); // should be flushed
     }
 
     @Test
@@ -296,7 +298,7 @@ class BatchActorTest
         batch.accept(3);
         batch.accept(4);
 
-        assertEquals(2, batches.size());
+        assertTrue(awaitInt(() -> batches.size(), 2, 2000));
         assertTrue(batches.get(0) instanceof ArrayList);
         assertTrue(batches.get(1) instanceof ArrayList);
     }
@@ -325,5 +327,31 @@ class BatchActorTest
             }
         }
         return condition.getAsBoolean();
+    }
+
+    /**
+     * Polls the given value supplier every 5ms until it returns the expected
+     * value or the timeout elapses, returning the last observed result.
+     */
+    static boolean awaitInt(IntSupplier supplier, int expected, long timeoutMillis)
+    {
+        long deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
+        while (System.nanoTime() < deadline)
+        {
+            if (supplier.getAsInt() == expected)
+            {
+                return true;
+            }
+            try
+            {
+                Thread.sleep(5);
+            }
+            catch (InterruptedException ie)
+            {
+                Thread.currentThread().interrupt();
+                return supplier.getAsInt() == expected;
+            }
+        }
+        return supplier.getAsInt() == expected;
     }
 }
