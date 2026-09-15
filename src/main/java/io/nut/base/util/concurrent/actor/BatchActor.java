@@ -5,6 +5,7 @@
  */
 package io.nut.base.util.concurrent.actor;
 
+import io.nut.base.math.Nums;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -275,7 +276,7 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
                     long deadline;
                     synchronized (pending)
                     {
-                        deadline = batchStartNanos + maxWaitNanos;
+                        deadline = Nums.saturatedAdd(batchStartNanos, maxWaitNanos);
                     }
                     while (batchSize < maxSize)
                     {
