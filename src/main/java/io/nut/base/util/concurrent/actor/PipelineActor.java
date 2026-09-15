@@ -48,27 +48,24 @@ public final class PipelineActor<T,R> implements Consumer<T>
     {
         PipeActor<R,S> next = actorHub.pipe(function);
         tail.linkTo(next);
-        List<Linkable> newOwned = new ArrayList<>(owned);
-        newOwned.add(next);
-        return new PipelineActor<>(actorHub, head, next, newOwned);
+        owned.add(next);
+        return new PipelineActor<>(actorHub, head, next, owned);
     }
 
     public <S> PipelineActor<T,S> then(int threads, Function<R,S> function)
     {
         PipeActor<R,S> next = actorHub.pipe(threads, function);
         tail.linkTo(next);
-        List<Linkable> newOwned = new ArrayList<>(owned);
-        newOwned.add(next);
-        return new PipelineActor<>(actorHub, head, next, newOwned);
+        owned.add(next);
+        return new PipelineActor<>(actorHub, head, next, owned);
     }
 
     public <S> PipelineActor<T,S> then(int threads, int queueSize, Function<R,S> function)
     {
         PipeActor<R,S> next = actorHub.pipe(threads, queueSize, function);
         tail.linkTo(next);
-        List<Linkable> newOwned = new ArrayList<>(owned);
-        newOwned.add(next);
-        return new PipelineActor<>(actorHub, head, next, newOwned);
+        owned.add(next);
+        return new PipelineActor<>(actorHub, head, next, owned);
     }
 
     /**
