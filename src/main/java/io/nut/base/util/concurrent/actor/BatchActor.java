@@ -330,12 +330,13 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
             forward(batch);
             for (int i = 0; i < batch.size(); i++)
             {
-                if (counters.decrementSecondAndAllZero())
+                counters.decrementSecond();
+            }
+            if (counters.isZero())
+            {
+                synchronized (lock)
                 {
-                    synchronized (lock)
-                    {
-                        lock.notifyAll();
-                    }
+                    lock.notifyAll();
                 }
             }
         }
