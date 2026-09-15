@@ -46,7 +46,7 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
 
     protected Actor(ActorHub actorHub)
     {
-        this.actorHub = actorHub;
+        this.actorHub = actorHub != null ? actorHub : ActorHub.SYNCHRONOUS;
     }
 
     // -----------------------------------------------------------------

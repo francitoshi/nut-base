@@ -87,9 +87,9 @@ class SynchronousActor<M> extends Actor<M>
 
     private void unregisterFromActorHub()
     {
-        if (actorHub instanceof ActorHub)
+        if (actorHub != null)
         {
-            ((ActorHub) actorHub).unregisterActor(this);
+            actorHub.unregisterActor(this);
         }
     }
 }

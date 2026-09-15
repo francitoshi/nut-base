@@ -303,15 +303,17 @@ class PubSubTest
         assertEquals(expected, sink);
     }
 
-    /** Actor.sub throws IllegalStateException when no ActorHub is attached. */
+    /** Actor.sub on a detached actor subscribes via the shared synchronous hub. */
     @Test
-    void actorSub_noActorHub_throwsIllegalState()
+    void actorSub_noActorHub_subscribesOnSynchronousHub()
     {
-        Actor<String> detached = ActorFlavors.create(null, 0, 0, new ActorHooks<String>()
+        List<String> received = new CopyOnWriteArrayList<>();
+        Actor<String> detached = ActorFlavors.create(ActorHub.SYNCHRONOUS, 0, 0, new ActorHooks<String>()
         {
             @Override
             public void receive(String m, long seq)
             {
+                received.add(m);
             }
 
             @Override
@@ -325,7 +327,12 @@ class PubSubTest
             }
         });
 
-        assertThrows(IllegalStateException.class, () -> detached.sub("any"));
+        assertSame(detached, detached.sub("any"));
+
+        Publisher<String> publisher = ActorHub.SYNCHRONOUS.pub("any");
+        publisher.accept("hello");
+
+        assertEquals(Collections.singletonList("hello"), received);
     }
 
     // -------------------------------------------------------------------------

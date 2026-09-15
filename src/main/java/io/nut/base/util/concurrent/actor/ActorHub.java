@@ -79,6 +79,14 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public static final long DEFAULT_PERMANENT_WAIT_MILLIS = 1000;
 
     /**
+     * Shared synchronous hub used as the fallback for {@link Actor}s created
+     * without an explicit hub, so {@link Actor#actorHub} is never {@code null}.
+     * Runs every task in the calling thread ({@code corePoolSize == 0}, no
+     * backing pool).
+     */
+    static final ActorHub SYNCHRONOUS = new ActorHub(0, 0, 0, false, false);
+
+    /**
      * Length, in milliseconds, of the idle window a permanent worker keeps its
      * thread alive waiting for the next message. Shared, {@code volatile}, and
      * configurable per ActorHub, so every Actor attached to this hub observes
