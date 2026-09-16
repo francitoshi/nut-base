@@ -8,7 +8,7 @@ package io.nut.base.util.concurrent.pool;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Base class for objects that can be pooled by an {@link ObjectPool}.
+ * Base class for objects that can be pooled by the {@link PoolablePool}.
  *
  * <p>Subclasses must implement {@link #reset()} to clear the object's internal
  * state, so that a recycled instance can be safely handed out again. Once the

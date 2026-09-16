@@ -16,24 +16,17 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("ObjectPool<T>")
 class ObjectPoolTest
 {
-    static class Item extends Poolable<Item>
+    static class Item
     {
-        final AtomicInteger resetCount = new AtomicInteger();
         final AtomicBoolean busy = new AtomicBoolean();
         int value;
-
-        @Override
-        public void reset()
-        {
-            value = 0;
-            busy.set(false);
-            resetCount.incrementAndGet();
-        }
     }
 
     static Supplier<Item> countingFactory(AtomicInteger created)
@@ -49,7 +42,7 @@ class ObjectPoolTest
     @DisplayName("rejects a null factory")
     void testNullFactory()
     {
-        assertThrows(NullPointerException.class, () -> new ObjectPool<Item>(null, 4));
+        assertThrows(NullPointerException.class, () -> new ObjectPool<>(null, 4));
     }
 
     @Test
@@ -79,7 +72,7 @@ class ObjectPoolTest
         AtomicInteger created = new AtomicInteger();
         ObjectPool<Item> pool = new ObjectPool<>(countingFactory(created), 4);
         Item first = pool.acquire();
-        first.recycle();
+        pool.recycle(first);
         assertEquals(1, pool.idleCount());
 
         Item second = pool.acquire();
@@ -89,38 +82,37 @@ class ObjectPoolTest
     }
 
     @Test
-    @DisplayName("resets the object before it is placed back in the pool")
-    void testRecycleResetsObject()
+    @DisplayName("does not touch the object when it is recycled")
+    void testRecycleLeavesObjectUntouched()
     {
         ObjectPool<Item> pool = new ObjectPool<>(Item::new, 4);
         Item item = pool.acquire();
         item.value = 42;
-        item.recycle();
-        assertEquals(1, item.resetCount.get());
-        assertEquals(0, item.value);
+        pool.recycle(item);
+        assertEquals(42, item.value, "clearing state is the caller's responsibility");
+
+        Item again = pool.acquire();
+        assertSame(item, again);
     }
 
     @Test
-    @DisplayName("a second recycle() of the same object is a no-op")
-    void testDoubleRecycleIsNoOp()
+    @DisplayName("supports extended reuse without creating new instances")
+    void testExtendedReuse()
     {
-        ObjectPool<Item> pool = new ObjectPool<>(Item::new, 4);
+        AtomicInteger created = new AtomicInteger();
+        ObjectPool<Item> pool = new ObjectPool<>(countingFactory(created), 4);
         Item item = pool.acquire();
-        item.recycle();
-        item.recycle();
-        assertEquals(1, pool.idleCount());
-    }
-
-    @Test
-    @DisplayName("an object returns to the pool it was acquired from")
-    void testRecycleReturnsToOwningPool()
-    {
-        ObjectPool<Item> poolA = new ObjectPool<>(Item::new, 4);
-        ObjectPool<Item> poolB = new ObjectPool<>(Item::new, 4);
-        Item item = poolA.acquire();
-        item.recycle();
-        assertEquals(1, poolA.idleCount());
-        assertEquals(0, poolB.idleCount());
+        for (int i = 0; i < 1000; i++)
+        {
+            item.busy.set(true);
+            item.value = i;
+            Item previous = item;
+            item.busy.set(false);
+            pool.recycle(item);
+            item = pool.acquire();
+            assertSame(previous, item, "the recycled object must be handed out again");
+        }
+        assertEquals(1, created.get());
     }
 
     @Test
@@ -135,10 +127,10 @@ class ObjectPoolTest
         Item d = pool.acquire();
         assertEquals(4, created.get());
 
-        a.recycle();
-        b.recycle();
-        c.recycle();
-        d.recycle();
+        pool.recycle(a);
+        pool.recycle(b);
+        pool.recycle(c);
+        pool.recycle(d);
 
         assertEquals(2, pool.idleCount());
 
@@ -155,22 +147,60 @@ class ObjectPoolTest
     }
 
     @Test
-    @DisplayName("supports extended reuse without creating new instances")
-    void testExtendedReuse()
+    @DisplayName("setReset returns the same pool instance")
+    void testSetResetReturnsThis()
     {
-        AtomicInteger created = new AtomicInteger();
-        ObjectPool<Item> pool = new ObjectPool<>(countingFactory(created), 4);
+        ObjectPool<Item> pool = new ObjectPool<>(Item::new, 4);
+        assertSame(pool, pool.setReset(item -> {}));
+    }
+
+    @Test
+    @DisplayName("recycle applies the reset consumer when one is set")
+    void testRecycleCallsResetConsumer()
+    {
+        AtomicReference<Item> seen = new AtomicReference<>();
+        ObjectPool<Item> pool = new ObjectPool<>(Item::new, 4)
+                .setReset(seen::set);
         Item item = pool.acquire();
-        for (int i = 0; i < 1000; i++)
-        {
-            item.busy.set(true);
-            item.value = i;
-            item.recycle();
-            item = pool.acquire();
-            assertFalse(item.busy.get(), "recycled object must come back reset");
-        }
-        assertEquals(1, created.get());
-        assertEquals(1000, item.resetCount.get());
+        item.value = 42;
+
+        pool.recycle(item);
+
+        assertSame(item, seen.get());
+        assertEquals(42, seen.get().value, "reset consumer is the one responsible for clearing state");
+        assertEquals(1, pool.idleCount());
+    }
+
+    @Test
+    @DisplayName("recycle skips reset when no consumer is set")
+    void testRecycleSkipsResetWhenNull()
+    {
+        ObjectPool<Item> pool = new ObjectPool<>(Item::new, 4)
+                .setReset(null);
+        Item item = pool.acquire();
+        item.value = 42;
+
+        pool.recycle(item);
+
+        assertEquals(42, item.value, "object must be untouched");
+        assertEquals(1, pool.idleCount());
+    }
+
+    @Test
+    @DisplayName("setReset replaces the previously configured consumer")
+    void testSetResetReplacesConsumer()
+    {
+        AtomicReference<Item> first = new AtomicReference<>();
+        AtomicReference<Item> second = new AtomicReference<>();
+        ObjectPool<Item> pool = new ObjectPool<>(Item::new, 4)
+                .setReset(first::set)
+                .setReset(second::set);
+
+        Item item = pool.acquire();
+        pool.recycle(item);
+
+        assertNull(first.get(), "old consumer must not be invoked");
+        assertSame(item, second.get());
     }
 
     @Test
@@ -207,7 +237,8 @@ class ObjectPoolTest
                             doubleAcquire.incrementAndGet();
                         }
                         item.value = i;
-                        item.recycle();
+                        item.busy.set(false);
+                        pool.recycle(item);
                     }
                 });
             }
