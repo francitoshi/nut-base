@@ -10,9 +10,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Map;
 import java.util.NavigableSet;
-import java.util.Random;
 import java.util.TreeSet;
 import java.util.WeakHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * QuickSelect — gets the k-th element (0-indexed, ascending order) of an array
@@ -67,11 +67,6 @@ public final class QuickSelect
     {
     }
 
-    private static final Random RANDOM = new Random();
-
-    /**
-     * array (by identity) -&gt; ordered set of already confirmed indices.
-     */
     private static final Map<Object,NavigableSet<Integer>> CONFIRMED = Collections.synchronizedMap(new WeakHashMap<Object,NavigableSet<Integer>>());
 
     private static NavigableSet<Integer> confirmedFor(Object array)
@@ -161,7 +156,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex);
             confirmed.add(p);
             if (k == p)
@@ -352,7 +347,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex);
             confirmed.add(p);
             if (k == p)
@@ -543,7 +538,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex);
             confirmed.add(p);
             if (k == p)
@@ -734,7 +729,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex);
             confirmed.add(p);
             if (k == p)
@@ -925,7 +920,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex);
             confirmed.add(p);
             if (k == p)
@@ -1116,7 +1111,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex);
             confirmed.add(p);
             if (k == p)
@@ -1307,7 +1302,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex);
             confirmed.add(p);
             if (k == p)
@@ -1585,7 +1580,7 @@ public final class QuickSelect
                 confirmed.add(lo);
                 return a[lo];
             }
-            int pivotIndex = lo + RANDOM.nextInt(hi - lo + 1);
+            int pivotIndex = lo + ThreadLocalRandom.current().nextInt(hi - lo + 1);
             int p = partition(a, lo, hi, pivotIndex, comparator);
             confirmed.add(p);
             if (k == p)
