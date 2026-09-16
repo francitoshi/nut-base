@@ -8,9 +8,7 @@ package io.nut.base.gauge;
 import io.nut.base.time.JavaTime;
 import io.nut.base.time.JavaTime.Resolution;
 
-import java.text.NumberFormat;
 import java.time.Duration;
-import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,18 +44,10 @@ public abstract class AbstractGauge implements Gauge, AutoCloseable
     private volatile boolean showPrev = false;
     private volatile boolean showNext = true;
     private volatile boolean showFull = false;
-    static final NumberFormat fmt = NumberFormat.getPercentInstance(Locale.US);
     
     static final int FMT_TIME_MIN_ELEMENTS = 1;
     static final int FMT_TIME_MAX_ELEMENTS = 3;
     static final Resolution FMT_TIME_RES = Resolution.S;
-    
-    static
-    {
-        fmt.setMinimumIntegerDigits(2);
-        fmt.setMinimumFractionDigits(2);
-        fmt.setMaximumFractionDigits(2);
-    }
 
     @Override
     public String getPrefix()
