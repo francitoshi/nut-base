@@ -5,8 +5,9 @@
  */
 package io.nut.base.util.concurrent.pool;
 
+import java.util.ArrayDeque;
 import java.util.Objects;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Supplier;
 
@@ -25,9 +26,13 @@ import java.util.function.Supplier;
  */
 public final class ObjectPool<T extends Poolable<T>> implements PoolOwner<T>
 {
+    private static final int STASH_CAP = 8;
+
     private final Supplier<T> factory;
     private final int maxIdle;
-    private final ConcurrentLinkedDeque<T> idle = new ConcurrentLinkedDeque<>();
+    private final int stashCap;
+    private final ArrayBlockingQueue<T> idle;
+    private final ThreadLocal<ArrayDeque<T>> localStash = ThreadLocal.withInitial(ArrayDeque::new);
     private final AtomicInteger idleCount = new AtomicInteger();
 
     /**
@@ -48,6 +53,8 @@ public final class ObjectPool<T extends Poolable<T>> implements PoolOwner<T>
             throw new IllegalArgumentException("maxIdle must not be negative");
         }
         this.maxIdle = maxIdle;
+        this.stashCap = Math.min(maxIdle, STASH_CAP);
+        this.idle = new ArrayBlockingQueue<>(Math.max(1, maxIdle));
     }
 
     /**
@@ -58,28 +65,42 @@ public final class ObjectPool<T extends Poolable<T>> implements PoolOwner<T>
      */
     public T acquire()
     {
-        T obj = idle.poll();
+        ArrayDeque<T> stash = localStash.get();
+        T obj = stash.pollLast();
         if (obj == null)
         {
-            obj = factory.get();
-            obj.attach(this);
+            obj = idle.poll();
+            if (obj == null)
+            {
+                obj = factory.get();
+            }
+            else
+            {
+                idleCount.decrementAndGet();
+            }
         }
         else
         {
             idleCount.decrementAndGet();
-            obj.attach(this);
         }
+        obj.attach(this);
         return obj;
     }
 
     public void recycle(T obj)
     {
         obj.reset();
-        if (idleCount.incrementAndGet() <= maxIdle)
+        if (idleCount.incrementAndGet() > maxIdle)
         {
-            idle.addLast(obj);
+            idleCount.decrementAndGet();
+            return;
         }
-        else
+        ArrayDeque<T> stash = localStash.get();
+        if (stash.size() < stashCap)
+        {
+            stash.addLast(obj);
+        }
+        else if (!idle.offer(obj))
         {
             idleCount.decrementAndGet();
         }
