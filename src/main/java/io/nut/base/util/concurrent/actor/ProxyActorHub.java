@@ -391,6 +391,39 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
+    public <T> Actor<T> actor(Consumer<T> consumer, Runnable onTerminate, Consumer<Exception> onException)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.actor(consumer, onTerminate, onException);
+        }
+        return super.actor(consumer, onTerminate, onException);
+    }
+
+    @Override
+    public <T> Actor<T> actor(int threads, Consumer<T> consumer, Runnable onTerminate, Consumer<Exception> onException)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.actor(threads, consumer, onTerminate, onException);
+        }
+        return super.actor(threads, consumer, onTerminate, onException);
+    }
+
+    @Override
+    public <T> Actor<T> actor(int threads, int queueSize, Consumer<T> consumer, Runnable onTerminate, Consumer<Exception> onException)
+    {
+        ActorHub h = actorHub;
+        if (h != fallback)
+        {
+            return h.actor(threads, queueSize, consumer, onTerminate, onException);
+        }
+        return super.actor(threads, queueSize, consumer, onTerminate, onException);
+    }
+
+    @Override
     public <E> Actor<E> queue(BlockingQueue<E> queue)
     {
         ActorHub h = actorHub;

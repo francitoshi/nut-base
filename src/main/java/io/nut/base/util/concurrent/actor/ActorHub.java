@@ -510,6 +510,63 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     public <T> Actor<T> actor(int threads, int queueSize, Consumer<T> consumer)
     {
+        return actor(threads, queueSize, consumer, null, null);
+    }
+
+    /**
+     * Creates a new terminal {@link Actor}{@code <T>} attached to this ActorHub
+     * with lifecycle callbacks for termination and exception handling.
+     *
+     * @param <T>        the message type
+     * @param consumer   the action to perform for each message; must not be
+     *                   {@code null}
+     * @param onTerminate action to perform once after the channel is closed
+     *                    and drained, or {@code null} for no-op
+     * @param onException action to perform when an unhandled exception escapes
+     *                    from receive, or {@code null} for no-op
+     * @return a new terminal Actor attached to this ActorHub
+     */
+    public <T> Actor<T> actor(Consumer<T> consumer, Runnable onTerminate, Consumer<Exception> onException)
+    {
+        return actor(1, 0, consumer, onTerminate, onException);
+    }
+
+    /**
+     * Creates a new terminal {@link Actor} with the specified thread count
+     * and lifecycle callbacks.
+     *
+     * @param <T>        the message type
+     * @param threads    the maximum number of concurrent worker threads
+     * @param consumer   the action to perform for each message; must not be
+     *                   {@code null}
+     * @param onTerminate action to perform once after the channel is closed
+     *                    and drained, or {@code null} for no-op
+     * @param onException action to perform when an unhandled exception escapes
+     *                    from receive, or {@code null} for no-op
+     * @return a new terminal Actor attached to this ActorHub
+     */
+    public <T> Actor<T> actor(int threads, Consumer<T> consumer, Runnable onTerminate, Consumer<Exception> onException)
+    {
+        return actor(threads, 0, consumer, onTerminate, onException);
+    }
+
+    /**
+     * Creates a new terminal {@link Actor} with the specified thread count,
+     * internal queue size, and lifecycle callbacks.
+     *
+     * @param <T>        the message type
+     * @param threads    the maximum number of concurrent worker threads
+     * @param queueSize  the internal queue capacity
+     * @param consumer   the action to perform for each message; must not be
+     *                   {@code null}
+     * @param onTerminate action to perform once after the channel is closed
+     *                    and drained, or {@code null} for no-op
+     * @param onException action to perform when an unhandled exception escapes
+     *                    from receive, or {@code null} for no-op
+     * @return a new terminal Actor attached to this ActorHub
+     */
+    public <T> Actor<T> actor(int threads, int queueSize, Consumer<T> consumer, Runnable onTerminate, Consumer<Exception> onException)
+    {
         Objects.requireNonNull(consumer, "consumer must not be null");
         ActorHooks<T> hooks = new ActorHooks<T>()
         {
@@ -522,11 +579,19 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
             @Override
             public void terminate()
             {
+                if (onTerminate != null)
+                {
+                    onTerminate.run();
+                }
             }
 
             @Override
             public void exception(Exception ex)
             {
+                if (onException != null)
+                {
+                    onException.accept(ex);
+                }
             }
         };
         Actor<T> actor = ActorFlavors.create(this, threads, queueSize, hooks);
