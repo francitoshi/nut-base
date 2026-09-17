@@ -12,7 +12,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Abstract async actor flavor: provides the shared channel, worker
@@ -35,7 +34,6 @@ abstract class AsyncActor<M> extends Actor<M>
      */
     protected final AtomicCounterPair counters = new AtomicCounterPair();
 
-    protected final AtomicLong sequenceCounter = new AtomicLong();
     protected final AtomicInteger activeWorkers = new AtomicInteger();
     protected boolean permanentWorkerStarted;
     protected boolean shutdownWhenEmpty;
@@ -223,11 +221,10 @@ abstract class AsyncActor<M> extends Actor<M>
         while ((m = channel.get(timeoutMillis, TimeUnit.MILLISECONDS)) != null)
         {
             counters.addFirstToSecond(1);
-            long seq = sequenceCounter.incrementAndGet();
             countProcessed();
             try
             {
-                hooks.receive(m, seq);
+                hooks.receive(m);
             }
             catch (Exception ex)
             {
@@ -261,11 +258,10 @@ abstract class AsyncActor<M> extends Actor<M>
         while ((m = channel.get()) != null)
         {
             counters.addFirstToSecond(1);
-            long seq = sequenceCounter.incrementAndGet();
             countProcessed();
             try
             {
-                hooks.receive(m, seq);
+                hooks.receive(m);
             }
             catch (Exception ex)
             {

@@ -311,7 +311,7 @@ class PubSubTest
         Actor<String> detached = ActorFlavors.create(ActorHub.SYNCHRONOUS, 0, 0, new ActorHooks<String>()
         {
             @Override
-            public void receive(String m, long seq)
+            public void receive(String m)
             {
                 received.add(m);
             }

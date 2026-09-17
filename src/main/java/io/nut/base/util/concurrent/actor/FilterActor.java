@@ -25,7 +25,7 @@ public class FilterActor<T> extends LinkableActor<T,T>
         ActorHooks<T> hooks = new ActorHooks<T>()
         {
             @Override
-            public void receive(T m, long seq)
+            public void receive(T m)
             {
                 if (predicate.test(m))
                 {

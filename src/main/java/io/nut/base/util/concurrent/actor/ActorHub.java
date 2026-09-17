@@ -566,7 +566,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         ActorHooks<T> hooks = new ActorHooks<T>()
         {
             @Override
-            public void receive(T m, long seq)
+            public void receive(T m)
             {
                 consumer.accept(m);
             }
@@ -624,7 +624,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         ActorHooks<E> hooks = new ActorHooks<E>()
         {
             @Override
-            public void receive(E m, long seq)
+            public void receive(E m)
             {
                 putIntoQueue(queue, m);
             }
@@ -710,7 +710,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         ActorHooks<E> hooks = new ActorHooks<E>()
         {
             @Override
-            public void receive(E m, long seq)
+            public void receive(E m)
             {
                 list.add(m);
             }
@@ -777,7 +777,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         ActorHooks<T> hooks = new ActorHooks<T>()
         {
             @Override
-            public void receive(T m, long seq)
+            public void receive(T m)
             {
                 set.add(m);
             }

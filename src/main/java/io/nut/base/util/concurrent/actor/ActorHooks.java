@@ -18,10 +18,9 @@ interface ActorHooks<M>
     /**
      * Called for each message delivered by the engine.
      *
-     * @param m   the message
-     * @param seq the 1-based acceptance position
+     * @param m the message
      */
-    void receive(M m, long seq);
+    void receive(M m);
 
     /**
      * Called once after the channel is closed and drained.

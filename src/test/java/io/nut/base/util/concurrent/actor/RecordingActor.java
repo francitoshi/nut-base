@@ -51,7 +51,7 @@ class RecordingActor<M> implements Consumer<M>, Linkable
         return new ActorHooks<M>()
         {
             @Override
-            public void receive(M m, long seq)
+            public void receive(M m)
             {
                 RecordingActor.this.receive(m);
             }

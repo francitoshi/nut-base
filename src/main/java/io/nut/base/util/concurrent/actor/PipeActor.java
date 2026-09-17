@@ -26,7 +26,7 @@ public class PipeActor<T,R> extends LinkableActor<T,R>
         ActorHooks<T> hooks = new ActorHooks<T>()
         {
             @Override
-            public void receive(T m, long seq)
+            public void receive(T m)
             {
                 PipeActor.this.forward(function.apply(m));
             }

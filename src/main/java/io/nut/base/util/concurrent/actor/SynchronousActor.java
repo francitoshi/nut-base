@@ -17,7 +17,6 @@ package io.nut.base.util.concurrent.actor;
 class SynchronousActor<M> extends Actor<M>
 {
     private final ActorHooks<M> hooks;
-    private long sequenceCounter;
 
     SynchronousActor(ActorHub hub, ActorHooks<M> hooks)
     {
@@ -35,7 +34,7 @@ class SynchronousActor<M> extends Actor<M>
         countProcessed();
         try
         {
-            hooks.receive(message, ++sequenceCounter);
+            hooks.receive(message);
         }
         catch (Exception ex)
         {

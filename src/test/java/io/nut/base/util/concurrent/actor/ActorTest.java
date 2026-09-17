@@ -161,7 +161,7 @@ class ActorTest
         ActorHooks<String> hooks = new ActorHooks<String>()
         {
             @Override
-            public void receive(String m, long seq)
+            public void receive(String m)
             {
                 started.countDown();
                 try
@@ -219,7 +219,7 @@ class ActorTest
         ActorHooks<String> hooks = new ActorHooks<String>()
         {
             @Override
-            public void receive(String m, long seq)
+            public void receive(String m)
             {
                 started.countDown();
                 try
@@ -421,7 +421,7 @@ class ActorTest
                 ActorHooks<Long> hooks = new ActorHooks<Long>()
                 {
                     @Override
-                    public void receive(Long m, long seq)
+                    public void receive(Long m)
                     {
                         processed.incrementAndGet();
                         // every actor forwards the message to the next two, except the last ones
