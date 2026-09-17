@@ -77,40 +77,22 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
         final ActorHub hubToUse = this.ownHub != null ? this.ownHub : actorHub;
         this.syncMode = synchronous || hubToUse == null || hubToUse.isSynchronous();
 
-        ActorHooks<T> hooks = new ActorHooks<T>()
+        Runnable onTerminate = () ->
         {
-            @Override
-            public void receive(T m)
+            if (BatchActor.this.ownHub != null)
             {
-                if (syncMode)
-                {
-                    BatchActor.this.accumulate(m);
-                }
-            }
-
-            @Override
-            public void terminate()
-            {
-                if (BatchActor.this.ownHub != null)
-                {
-                    BatchActor.this.ownHub.close(true);
-                }
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-                BatchActor.this.handleException(ex);
+                BatchActor.this.ownHub.close(true);
             }
         };
 
         if (syncMode)
         {
-            this.inner = new SynchronousActor<T>(hubToUse, hooks);
+            this.inner = Actor.create(hubToUse, 0, 0,
+                    m -> BatchActor.this.accumulate(m), onTerminate, ex -> BatchActor.this.handleException(ex));
         }
         else
         {
-            this.inner = new BatchDrainer(hubToUse, queueSize, hooks);
+            this.inner = new BatchDrainer(hubToUse, queueSize);
         }
     }
 
@@ -232,9 +214,36 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
 
     private final class BatchDrainer extends AsyncActor<T>
     {
-        BatchDrainer(ActorHub hub, int queueSize, ActorHooks<T> hooks)
+        BatchDrainer(ActorHub hub, int queueSize)
         {
-            super(hub, 1, queueSize, hooks);
+            super(hub, 1, queueSize);
+        }
+
+        /**
+         * The regular batch loop reads through {@link #push} (which manages the
+         * counters itself), but base drain paths — e.g. {@link #closeNow()}
+         * draining leftovers — still route through the standard receive, so it
+         * accumulates into the pending batch too.
+         */
+        @Override
+        protected void receive(T m)
+        {
+            accumulate(m);
+        }
+
+        @Override
+        protected void terminate()
+        {
+            if (BatchActor.this.ownHub != null)
+            {
+                BatchActor.this.ownHub.close(true);
+            }
+        }
+
+        @Override
+        protected void exception(Exception ex)
+        {
+            BatchActor.this.handleException(ex);
         }
 
         /**

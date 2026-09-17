@@ -563,33 +563,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <T> Actor<T> actor(int threads, int queueSize, Consumer<T> consumer, Runnable onTerminate, Consumer<Exception> onException)
     {
         Objects.requireNonNull(consumer, "consumer must not be null");
-        ActorHooks<T> hooks = new ActorHooks<T>()
-        {
-            @Override
-            public void receive(T m)
-            {
-                consumer.accept(m);
-            }
-
-            @Override
-            public void terminate()
-            {
-                if (onTerminate != null)
-                {
-                    onTerminate.run();
-                }
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-                if (onException != null)
-                {
-                    onException.accept(ex);
-                }
-            }
-        };
-        Actor<T> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        Actor<T> actor = Actor.create(this, threads, queueSize, consumer, onTerminate, onException);
         registerActor(actor);
         return actor;
     }
@@ -621,25 +595,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <E> Actor<E> queue(int threads, int queueSize, BlockingQueue<E> queue)
     {
         Objects.requireNonNull(queue, "queue must not be null");
-        ActorHooks<E> hooks = new ActorHooks<E>()
-        {
-            @Override
-            public void receive(E m)
-            {
-                putIntoQueue(queue, m);
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-            }
-        };
-        Actor<E> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        Actor<E> actor = Actor.create(this, threads, queueSize, m -> putIntoQueue(queue, m), null, null);
         registerActor(actor);
         return actor;
     }
@@ -707,25 +663,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <E> Actor<E> list(int threads, int queueSize, List<E> list)
     {
         Objects.requireNonNull(list, "list must not be null");
-        ActorHooks<E> hooks = new ActorHooks<E>()
-        {
-            @Override
-            public void receive(E m)
-            {
-                list.add(m);
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-            }
-        };
-        Actor<E> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        Actor<E> actor = Actor.create(this, threads, queueSize, m -> list.add(m), null, null);
         registerActor(actor);
         return actor;
     }
@@ -774,25 +712,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public <T> Actor<T> set(int threads, int queueSize, Set<T> set)
     {
         Objects.requireNonNull(set, "set must not be null");
-        ActorHooks<T> hooks = new ActorHooks<T>()
-        {
-            @Override
-            public void receive(T m)
-            {
-                set.add(m);
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-            }
-        };
-        Actor<T> actor = ActorFlavors.create(this, threads, queueSize, hooks);
+        Actor<T> actor = Actor.create(this, threads, queueSize, m -> set.add(m), null, null);
         registerActor(actor);
         return actor;
     }

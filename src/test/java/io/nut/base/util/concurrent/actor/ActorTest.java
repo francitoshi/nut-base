@@ -158,33 +158,19 @@ class ActorTest
     {
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch gate = new CountDownLatch(1);
-        ActorHooks<String> hooks = new ActorHooks<String>()
-        {
-            @Override
-            public void receive(String m)
-            {
-                started.countDown();
-                try
+        Actor<String> actor = Actor.create(actorHub, 1, 0,
+                m ->
                 {
-                    gate.await();
-                }
-                catch (InterruptedException ex)
-                {
-                    Thread.currentThread().interrupt();
-                }
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-            }
-        };
-        Actor<String> actor = ActorFlavors.create(actorHub, 1, 0, hooks);
+                    started.countDown();
+                    try
+                    {
+                        gate.await();
+                    }
+                    catch (InterruptedException ex)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                }, null, null);
         actor.accept("block");
 
         assertTrue(started.await(1, TimeUnit.SECONDS));
@@ -216,33 +202,19 @@ class ActorTest
     {
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch gate = new CountDownLatch(1);
-        ActorHooks<String> hooks = new ActorHooks<String>()
-        {
-            @Override
-            public void receive(String m)
-            {
-                started.countDown();
-                try
+        Actor<String> actor = Actor.create(actorHub, 1, 0,
+                m ->
                 {
-                    gate.await();
-                }
-                catch (InterruptedException ex)
-                {
-                    Thread.currentThread().interrupt();
-                }
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-            }
-        };
-        Actor<String> actor = ActorFlavors.create(actorHub, 1, 0, hooks);
+                    started.countDown();
+                    try
+                    {
+                        gate.await();
+                    }
+                    catch (InterruptedException ex)
+                    {
+                        Thread.currentThread().interrupt();
+                    }
+                }, null, null);
         actor.accept("block");
 
         assertTrue(started.await(1, TimeUnit.SECONDS));
@@ -418,34 +390,20 @@ class ActorTest
             for (int i = 0; i < actorsCount; i++)
             {
                 final int index = i;
-                ActorHooks<Long> hooks = new ActorHooks<Long>()
-                {
-                    @Override
-                    public void receive(Long m)
-                    {
-                        processed.incrementAndGet();
-                        // every actor forwards the message to the next two, except the last ones
-                        if (index + 1 < actors.length)
+                Actor<Long> actor = Actor.create(bigActorHub, index + 1, queueSize,
+                        m ->
                         {
-                            actors[index + 1].accept(m);
-                        }
-                        if (index + 2 < actors.length)
-                        {
-                            actors[index + 2].accept(m);
-                        }
-                    }
-
-                    @Override
-                    public void terminate()
-                    {
-                    }
-
-                    @Override
-                    public void exception(Exception ex)
-                    {
-                    }
-                };
-                Actor<Long> actor = ActorFlavors.create(bigActorHub, index + 1, queueSize, hooks);
+                            processed.incrementAndGet();
+                            // every actor forwards the message to the next two, except the last ones
+                            if (index + 1 < actors.length)
+                            {
+                                actors[index + 1].accept(m);
+                            }
+                            if (index + 2 < actors.length)
+                            {
+                                actors[index + 2].accept(m);
+                            }
+                        }, null, null);
                 actors[index] = actor.dryLogger();
             }
 

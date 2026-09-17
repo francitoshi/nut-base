@@ -27,27 +27,8 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
     @SafeVarargs
     public FanOutActor(ActorHub actorHub, int threads, int queueSize, Consumer<T>... targets)
     {
-        ActorHooks<T> hooks = new ActorHooks<T>()
-        {
-            @Override
-            public void receive(T m)
-            {
-                FanOutActor.this.broadcast(m);
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-                // No-op: exceptions from targets are already recorded by
-                // the inner flavor via Actor.handleException.
-            }
-        };
-        this.inner = ActorFlavors.create(actorHub, threads, queueSize, hooks);
+        this.inner = Actor.create(actorHub, threads, queueSize,
+                m -> FanOutActor.this.broadcast(m), null, null);
         addTargets(targets);
     }
 

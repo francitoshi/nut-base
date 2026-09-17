@@ -8,6 +8,7 @@ package io.nut.base.util.concurrent.actor;
 import io.nut.base.math.Nums;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.logging.Level;
@@ -47,6 +48,134 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
     protected Actor(ActorHub actorHub)
     {
         this.actorHub = actorHub != null ? actorHub : ActorHub.SYNCHRONOUS;
+    }
+
+    // -----------------------------------------------------------------
+    // Static factory
+    // -----------------------------------------------------------------
+
+    /**
+     * Creates the appropriate actor flavor for the requested thread count and
+     * hub configuration, wiring the given callbacks into its message handling.
+     * <p>
+     * Selects {@link SynchronousActor} when {@code threads == 0}, the hub is
+     * {@code null}, or the hub is synchronous; {@link SingleActor} when
+     * {@code threads == 1}; {@link MultiActor} when {@code threads >= 2}.
+     * <p>
+     * The returned actor is a concrete flavor whose {@link #receive} delegates
+     * to {@code onMessage}, {@link #terminate} to {@code onTerminate} (when
+     * not {@code null}), and {@link #exception} to {@code onException} (when
+     * not {@code null}).
+     *
+     * @param <M>       the message type
+     * @param hub       the ActorHub, or {@code null} for synchronous
+     * @param threads   the requested thread count
+     * @param queueSize the channel queue capacity (0 = rendezvous)
+     * @param onMessage the action to perform for each message; must not be
+     *                  {@code null}
+     * @param onTerminate the action to perform once after the channel is
+     *                  closed and drained, or {@code null} for no-op
+     * @param onException the action to perform when an unhandled exception
+     *                  escapes from receive, or {@code null} for no-op
+     * @return a new actor of the selected flavor
+     * @throws IllegalArgumentException if {@code threads} or {@code queueSize}
+     *                  are negative
+     */
+    public static <M> Actor<M> create(ActorHub hub, int threads, int queueSize, Consumer<M> onMessage, Runnable onTerminate, Consumer<Exception> onException)
+    {
+        Objects.requireNonNull(onMessage, "onMessage must not be null");
+        if (threads < 0)
+        {
+            throw new IllegalArgumentException("threads must not be negative");
+        }
+        if (queueSize < 0)
+        {
+            throw new IllegalArgumentException("queueSize must not be negative");
+        }
+        if (threads == 0 || hub == null || hub.isSynchronous())
+        {
+            return new SynchronousActor<M>(hub)
+            {
+                @Override
+                protected void receive(M m)
+                {
+                    onMessage.accept(m);
+                }
+
+                @Override
+                protected void terminate()
+                {
+                    if (onTerminate != null)
+                    {
+                        onTerminate.run();
+                    }
+                }
+
+                @Override
+                protected void exception(Exception ex)
+                {
+                    if (onException != null)
+                    {
+                        onException.accept(ex);
+                    }
+                }
+            };
+        }
+        if (threads == 1)
+        {
+            return new SingleActor<M>(hub, queueSize)
+            {
+                @Override
+                protected void receive(M m)
+                {
+                    onMessage.accept(m);
+                }
+
+                @Override
+                protected void terminate()
+                {
+                    if (onTerminate != null)
+                    {
+                        onTerminate.run();
+                    }
+                }
+
+                @Override
+                protected void exception(Exception ex)
+                {
+                    if (onException != null)
+                    {
+                        onException.accept(ex);
+                    }
+                }
+            };
+        }
+        return new MultiActor<M>(hub, threads, queueSize)
+        {
+            @Override
+            protected void receive(M m)
+            {
+                onMessage.accept(m);
+            }
+
+            @Override
+            protected void terminate()
+            {
+                if (onTerminate != null)
+                {
+                    onTerminate.run();
+                }
+            }
+
+            @Override
+            protected void exception(Exception ex)
+            {
+                if (onException != null)
+                {
+                    onException.accept(ex);
+                }
+            }
+        };
     }
 
     // -----------------------------------------------------------------

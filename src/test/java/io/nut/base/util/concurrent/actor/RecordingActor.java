@@ -33,41 +33,26 @@ class RecordingActor<M> implements Consumer<M>, Linkable
 
     RecordingActor()
     {
-        this.inner = ActorFlavors.create(null, 0, 0, hooks());
+        this.inner = Actor.create(null, 0, 0,
+                m -> RecordingActor.this.receive(m),
+                RecordingActor.this::onTerminate,
+                RecordingActor.this::onException);
     }
 
     RecordingActor(ActorHub actorHub)
     {
-        this.inner = ActorFlavors.create(actorHub, 1, ActorPool.CORES, hooks());
+        this.inner = Actor.create(actorHub, 1, ActorPool.CORES,
+                m -> RecordingActor.this.receive(m),
+                RecordingActor.this::onTerminate,
+                RecordingActor.this::onException);
     }
 
     RecordingActor(ActorHub actorHub, int threads, int queueSize)
     {
-        this.inner = ActorFlavors.create(actorHub, threads, queueSize, hooks());
-    }
-
-    private ActorHooks<M> hooks()
-    {
-        return new ActorHooks<M>()
-        {
-            @Override
-            public void receive(M m)
-            {
-                RecordingActor.this.receive(m);
-            }
-
-            @Override
-            public void terminate()
-            {
-                RecordingActor.this.onTerminate();
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-                RecordingActor.this.onException(ex);
-            }
-        };
+        this.inner = Actor.create(actorHub, threads, queueSize,
+                m -> RecordingActor.this.receive(m),
+                RecordingActor.this::onTerminate,
+                RecordingActor.this::onException);
     }
 
     /**

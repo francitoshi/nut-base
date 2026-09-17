@@ -22,29 +22,14 @@ public class FilterActor<T> extends LinkableActor<T,T>
     {
         super(null);
         this.predicate = Objects.requireNonNull(predicate, "predicate must not be null");
-        ActorHooks<T> hooks = new ActorHooks<T>()
-        {
-            @Override
-            public void receive(T m)
-            {
-                if (predicate.test(m))
+        this.inner = Actor.create(actorHub, threads, queueSize,
+                m ->
                 {
-                    FilterActor.this.forward(m);
-                }
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-                FilterActor.this.handleException(ex);
-            }
-        };
-        this.inner = ActorFlavors.create(actorHub, threads, queueSize, hooks);
+                    if (predicate.test(m))
+                    {
+                        FilterActor.this.forward(m);
+                    }
+                }, null, ex -> FilterActor.this.handleException(ex));
     }
 
     public FilterActor(ActorHub actorHub, Predicate<T> predicate)

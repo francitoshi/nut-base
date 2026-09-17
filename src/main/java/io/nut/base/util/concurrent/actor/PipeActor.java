@@ -23,26 +23,8 @@ public class PipeActor<T,R> extends LinkableActor<T,R>
     {
         super(null);
         this.function = Objects.requireNonNull(function, "function must not be null");
-        ActorHooks<T> hooks = new ActorHooks<T>()
-        {
-            @Override
-            public void receive(T m)
-            {
-                PipeActor.this.forward(function.apply(m));
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-                PipeActor.this.handleException(ex);
-            }
-        };
-        this.inner = ActorFlavors.create(actorHub, threads, queueSize, hooks);
+        this.inner = Actor.create(actorHub, threads, queueSize,
+                m -> PipeActor.this.forward(function.apply(m)), null, ex -> PipeActor.this.handleException(ex));
     }
 
     public PipeActor(ActorHub actorHub, Function<T,R> function)

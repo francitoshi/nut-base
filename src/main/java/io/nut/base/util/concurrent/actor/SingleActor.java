@@ -11,14 +11,28 @@ package io.nut.base.util.concurrent.actor;
  * Actor is shut down.
  * <p>
  * Thread demand: 1.
+ * <p>
+ * Instantiate it as an anonymous or named subclass and implement
+ * {@link #receive(Object)} (and optionally {@link #terminate()} and
+ * {@link #exception(Exception)}), e.g.:
+ * <pre>{@code
+ * Actor<String> a = new SingleActor<String>(hub, 0)
+ * {
+ *     @Override
+ *     protected void receive(String m)
+ *     {
+ *         ...
+ *     }
+ * };
+ * }</pre>
  *
  * @param <M> the message type
  */
-class SingleActor<M> extends AsyncActor<M>
+public abstract class SingleActor<M> extends AsyncActor<M>
 {
-    SingleActor(ActorHub hub, int queueSize, ActorHooks<M> hooks)
+    public SingleActor(ActorHub hub, int queueSize)
     {
-        super(hub, 1, queueSize, hooks);
+        super(hub, 1, queueSize);
     }
 
     /**

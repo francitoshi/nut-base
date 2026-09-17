@@ -17,7 +17,8 @@ import java.util.function.Consumer;
  * {@link BatchActor}.
  * <p>
  * Subclasses pass {@code null} for {@code inner} to the constructor and
- * set the field in their own constructor body after creating the hooks.
+ * set the field in their own constructor body after building the inner
+ * actor.
  *
  * @param <I> the type of messages this stage receives
  * @param <F> the type of messages this stage produces and forwards

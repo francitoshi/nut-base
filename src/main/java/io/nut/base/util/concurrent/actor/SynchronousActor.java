@@ -11,17 +11,28 @@ package io.nut.base.util.concurrent.actor;
  * <p>
  * Selected when {@code threads == 0}, no hub is attached, or the hub
  * is synchronous.
+ * <p>
+ * Instantiate it as an anonymous or named subclass and implement
+ * {@link #receive(Object)} (and optionally {@link #terminate()} and
+ * {@link #exception(Exception)}):
+ * <pre>{@code
+ * Actor<String> a = new SynchronousActor<String>(hub)
+ * {
+ *     @Override
+ *     protected void receive(String m)
+ *     {
+ *         ...
+ *     }
+ * };
+ * }</pre>
  *
  * @param <M> the message type
  */
-class SynchronousActor<M> extends Actor<M>
+public abstract class SynchronousActor<M> extends Actor<M>
 {
-    private final ActorHooks<M> hooks;
-
-    SynchronousActor(ActorHub hub, ActorHooks<M> hooks)
+    public SynchronousActor(ActorHub hub)
     {
         super(hub);
-        this.hooks = hooks;
     }
 
     @Override
@@ -34,24 +45,12 @@ class SynchronousActor<M> extends Actor<M>
         countProcessed();
         try
         {
-            hooks.receive(message);
+            receive(message);
         }
         catch (Exception ex)
         {
             handleException(ex);
         }
-    }
-
-    @Override
-    protected void receive(M m)
-    {
-        // Not called — hooks.receive is used instead.
-    }
-
-    @Override
-    protected void exception(Exception ex)
-    {
-        hooks.exception(ex);
     }
 
     @Override
@@ -72,7 +71,7 @@ class SynchronousActor<M> extends Actor<M>
                 unregisterFromActorHub();
                 try
                 {
-                    hooks.terminate();
+                    terminate();
                 }
                 catch (Exception ex)
                 {

@@ -37,13 +37,11 @@ abstract class AsyncActor<M> extends Actor<M>
     protected final AtomicInteger activeWorkers = new AtomicInteger();
     protected boolean permanentWorkerStarted;
     protected boolean shutdownWhenEmpty;
-    protected final ActorHooks<M> hooks;
 
-    protected AsyncActor(ActorHub actorHub, int threads, int queueSize, ActorHooks<M> hooks)
+    protected AsyncActor(ActorHub actorHub, int threads, int queueSize)
     {
         super(actorHub);
         this.threads = threads;
-        this.hooks = hooks;
         if (queueSize == 0)
         {
             this.channel = Channel.closeableOf(0);
@@ -54,18 +52,6 @@ abstract class AsyncActor<M> extends Actor<M>
         }
         this.workerSlots = new Semaphore(threads);
         this.actorHub.registerActor(this);
-    }
-
-    @Override
-    protected void receive(M m)
-    {
-        // Not called — hooks.receive is used instead.
-    }
-
-    @Override
-    protected void exception(Exception ex)
-    {
-        hooks.exception(ex);
     }
 
     @Override
@@ -224,7 +210,7 @@ abstract class AsyncActor<M> extends Actor<M>
             countProcessed();
             try
             {
-                hooks.receive(m);
+                receive(m);
             }
             catch (Exception ex)
             {
@@ -261,7 +247,7 @@ abstract class AsyncActor<M> extends Actor<M>
             countProcessed();
             try
             {
-                hooks.receive(m);
+                receive(m);
             }
             catch (Exception ex)
             {
@@ -388,7 +374,7 @@ abstract class AsyncActor<M> extends Actor<M>
             unregisterFromActorHub();
             try
             {
-                hooks.terminate();
+                terminate();
             }
             catch (Exception ex)
             {

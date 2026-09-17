@@ -308,24 +308,8 @@ class PubSubTest
     void actorSub_noActorHub_subscribesOnSynchronousHub()
     {
         List<String> received = new CopyOnWriteArrayList<>();
-        Actor<String> detached = ActorFlavors.create(ActorHub.SYNCHRONOUS, 0, 0, new ActorHooks<String>()
-        {
-            @Override
-            public void receive(String m)
-            {
-                received.add(m);
-            }
-
-            @Override
-            public void terminate()
-            {
-            }
-
-            @Override
-            public void exception(Exception ex)
-            {
-            }
-        });
+        Actor<String> detached = Actor.create(ActorHub.SYNCHRONOUS, 0, 0,
+                m -> received.add(m), null, null);
 
         assertSame(detached, detached.sub("any"));
 
