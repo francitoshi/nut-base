@@ -6,9 +6,9 @@
 package io.nut.base.util.concurrent.actor;
 
 /**
- * Single-threaded async actor flavor: uses a single worker that drains the
- * channel with a hub-configured idle window, yielding its thread back to
- * the pool once the window expires. Re-started on the next {@link #accept}.
+ * Single-threaded async actor flavor: uses one permanent worker that parks on
+ * the channel and drains every message it receives, staying ready until the
+ * Actor is shut down.
  * <p>
  * Thread demand: 1.
  *
@@ -22,15 +22,15 @@ class SingleActor<M> extends AsyncActor<M>
     }
 
     /**
-     * The permanent worker drains with a timeout, then yields its thread
-     * back to the pool (restarted on the next {@link #accept}).
+     * The permanent worker drains the channel, blocking between messages so a
+     * live reader is always parked for (possibly rendezvous) channels.
      */
     @Override
     protected void permanentLoop()
     {
         try
         {
-            drain(this.actorHub.getPermanentWaitMillis());
+            drainWhileRegistered();
         }
         finally
         {

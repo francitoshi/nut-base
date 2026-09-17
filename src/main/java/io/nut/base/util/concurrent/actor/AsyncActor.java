@@ -206,10 +206,10 @@ abstract class AsyncActor<M> extends Actor<M>
     }
 
     /**
-     * The permanent worker loop. Subclasses define the exact drain window;
-     * both flavors hand back to {@link #workerDone(boolean)} afterwards so the
-     * thread is yielded to the pool once the Actor has been idle for the
-     * window.
+     * The permanent worker loop. Subclasses drain the channel and hand back to
+     * {@link #workerDone(boolean)} afterwards; the worker stays parked between
+     * messages instead of yielding its thread back to the pool, so the Actor
+     * always has a reader ready.
      */
     protected abstract void permanentLoop();
 
@@ -238,6 +238,52 @@ abstract class AsyncActor<M> extends Actor<M>
                 if (counters.decrementSecondAndAllZero())
                 {
                     notifyIdle();
+                }
+            }
+        }
+    }
+
+    /**
+     * The permanent worker drain: reads messages in a loop that blocks
+     * indefinitely between messages, so it stays parked as a take-ready reader
+     * of (possibly rendezvous) channels for as long as the Actor is registered.
+     * Only {@link #closeNow()} (which closes the channel) ends the loop: yielding
+     * the thread back to the pool after an idle window is what let a
+     * SynchronousQueue hand-off strand, because the just-respawned permanent
+     * worker could time out before the matching {@code put} arrived and no other
+     * reader would ever come. The permanent worker therefore never abandons the
+     * channel between messages; the thread it holds is accounted for by the
+     * pool sizing (one core thread per registered non-synchronous Actor).
+     */
+    protected void drainWhileRegistered()
+    {
+        M m;
+        while ((m = channel.get()) != null)
+        {
+            counters.addFirstToSecond(1);
+            long seq = sequenceCounter.incrementAndGet();
+            countProcessed();
+            try
+            {
+                hooks.receive(m, seq);
+            }
+            catch (Exception ex)
+            {
+                handleException(ex);
+            }
+            finally
+            {
+                if (counters.decrementSecondAndAllZero())
+                {
+                    synchronized (lock)
+                    {
+                        lock.notifyAll();
+                        if (shutdownWhenEmpty)
+                        {
+                            closeNow();
+                            return;
+                        }
+                    }
                 }
             }
         }

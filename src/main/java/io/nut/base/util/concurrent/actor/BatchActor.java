@@ -17,10 +17,11 @@ import java.util.concurrent.TimeUnit;
  * It is a {@link LinkableActor} whose worker is a single-threaded actor (like
  * {@link SingleActor}): a single thread owns the read loop, and the read loop
  * is the one inherited from the async actor machinery, so it reuses the hub's
- * thread-demand semantics and the idle window that lets the thread be yielded
- * back to the pool after {@code maxWaitMillis} of inactivity. No external
- * scheduler or reordering buffer is needed, because a single thread consumes
- * messages in order.
+ * thread-demand semantics. The thread stays parked between batches, keeping a
+ * ready reader on the channel at all times; a timed read only bounds the time
+ * a partial batch is held before {@code maxWaitMillis} of inactivity expires.
+ * No external scheduler or reordering buffer is needed, because a single
+ * thread consumes messages in order.
  * <p>
  * The batch is forwarded when the accumulated count reaches {@code maxSize}
  * or when {@code maxWaitMillis} of inactivity expires, whichever comes first.
@@ -240,8 +241,9 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
          * The permanent worker reads messages and accumulates them until the
          * batch reaches {@code maxSize} items or {@code maxWaitMillis} have
          * elapsed since the first item of the batch, then flushes it and does
-         * the same for the next batch. When the idle window expires with no
-         * message in flight, the thread is yielded back to the pool.
+         * the same for the next batch. It blocks on the channel between batches,
+         * so a ready reader is always parked; only the close of the channel ends
+         * the loop.
          */
         @Override
         protected void permanentLoop()
@@ -258,10 +260,9 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
 
         private void drainBatches()
         {
-            long permanent = actorHub.getPermanentWaitMillis();
             while (true)
             {
-                T m = channel.get(permanent, TimeUnit.MILLISECONDS);
+                T m = channel.get();
                 if (m == null)
                 {
                     if (channel.isClosed())
@@ -339,6 +340,10 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
                 synchronized (lock)
                 {
                     lock.notifyAll();
+                    if (shutdownWhenEmpty)
+                    {
+                        closeNow();
+                    }
                 }
             }
         }

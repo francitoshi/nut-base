@@ -404,13 +404,14 @@ class ActorTest
         System.out.println("actorsCascadeForwarding("+actorsCount+","+queueSize+","+maxSends+")");
 
         AtomicLong processed = new AtomicLong();
-        // A zero-capacity task queue: a LinkedBlockingQueue would let worker tasks
-        // park behind forwarders that are blocked on a full downstream channel,
-        // and a parked worker cannot drain that channel, deadlocking the cascade
-        // once every pool thread is held by a blocked forwarder. This is the same
-        // configuration the ActorPool's default constructor uses to avoid that
-        // deadlock (see ActorPool#ActorPool(int)).
-        ActorHub bigActorHub = ActorHub.hub(100, 0, 10000, false);
+        // The pool has no task queue: a SynchronousQueue hands every worker task
+        // straight to a thread, so a LinkedBlockingQueue-style buffer cannot let
+        // worker tasks park behind forwarders that are blocked on a full
+        // downstream channel — a parked worker cannot drain that channel,
+        // deadlocking the cascade once every pool thread is held by a blocked
+        // forwarder. This is the universal ActorPool configuration (see
+        // ActorPool#ActorPool(int, int, int)).
+        ActorHub bigActorHub = ActorHub.hub(100, 300, 10000, false);
         try
         {
             Actor<Long>[] actors = new Actor[actorsCount];

@@ -53,12 +53,13 @@ import java.util.logging.Logger;
  * implements {@link Executor}, so it can be passed anywhere a plain
  * {@code Executor} is accepted.
  * <p>
- * As with {@link ActorPool}, the pool is configured with a single
- * {@code corePoolSize} that also acts as the initial maximum, and idle core
- * threads are allowed to time out, so the number of threads scales from
- * {@code 0} up to {@code corePoolSize}. When more (non-synchronous) Actors are
- * registered than {@code corePoolSize}, the pool's core and maximum sizes
- * automatically grow to keep one thread available per Actor.
+ * As with {@link ActorPool}, the pool is configured with two independent
+ * thread counts: a {@code coreThreads} floor of permanently alive threads and a
+ * {@code maxThreads} hard ceiling. The pool has no task queue (a
+ * {@link SynchronousQueue} hands work straight to a thread), so when more or
+ * heavier (non-synchronous) Actors are registered the effective core grows to
+ * cover one thread per Actor and the maximum grows to cover the Actors' summed
+ * thread demand, both bounded by {@code maxThreads}.
  * <p>
  * {@link #shutdown(boolean)} and {@link #close(boolean)}
  * shut down every Actor registered with this ActorHub; the static
@@ -71,38 +72,30 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     private static final Logger LOG = Logger.getLogger(ActorHub.class.getName());
 
     /**
-     * Default length, in milliseconds, of the idle window a permanent worker
-     * keeps its thread alive waiting for the next message before yielding it
-     * back to the pool. Configurable per ActorHub with
-     * {@link #setPermanentWaitMillis(long)}.
-     */
-    public static final long DEFAULT_PERMANENT_WAIT_MILLIS = 1000;
-
-    /**
      * Shared synchronous hub used as the fallback for {@link Actor}s created
      * without an explicit hub, so {@link Actor#actorHub} is never {@code null}.
-     * Runs every task in the calling thread ({@code corePoolSize == 0}, no
-     * backing pool).
+     * Runs every task in the calling thread ({@code coreThreads == 0 &&
+     * maxThreads == 0}, no backing pool).
      */
     static final ActorHub SYNCHRONOUS = new ActorHub(0, 0, 0, false, false);
-
-    /**
-     * Length, in milliseconds, of the idle window a permanent worker keeps its
-     * thread alive waiting for the next message. Shared, {@code volatile}, and
-     * configurable per ActorHub, so every Actor attached to this hub observes
-     * the same value without a per-message read fence.
-     */
-    private volatile long permanentWaitMillis = DEFAULT_PERMANENT_WAIT_MILLIS;
 
     /** Active Actors attached to this ActorHub, for coordinated tasks. */
     private final CopyOnWriteArrayList<Actor<?>> actors = new CopyOnWriteArrayList<>();
 
     /**
-     * Sum of the {@link Actor#threadDemand()} of every registered Actor,
-     * used to size the pool {code max(initialCorePoolSize, demand)}
-     * as Actors come and go. Synchronous Actors report 0 demand.
+     * Sum of the {@link Actor#threadDemand()} of every registered Actor, used
+     * to size the pool's maximum as Actors come and go. Synchronous Actors
+     * report 0 demand.
      */
     private final AtomicInteger threadDemand = new AtomicInteger();
+
+    /**
+     * Number of registered Actors with a positive {@link Actor#threadDemand()}
+     * (i.e. non-synchronous Actors that need a worker thread). Each one raises
+     * the effective core size, guaranteeing a permanently alive thread per
+     * Actor.
+     */
+    private final AtomicInteger asyncActorCount = new AtomicInteger();
 
     /**
      * Shared count of messages processed by all Actors attached to this
@@ -125,13 +118,6 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     private boolean shutdownWhenEmpty;
 
     /**
-     * The core pool size as configured at construction. Both the core and the
-     * maximum grow together beyond this value, to one thread per registered
-     * non-synchronous Actor (see {@link #adjustPoolToActors}).
-     */
-    private final int initialCorePoolSize;
-
-    /**
      * Protected constructor used by {@link ProxyActorHub} and subclasses that
      * supply their own pre-built {@link ThreadPoolExecutor}.
      *
@@ -141,20 +127,23 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     protected ActorHub(ThreadPoolExecutor threadPoolExecutor)
     {
         super(threadPoolExecutor);
-        this.initialCorePoolSize = 0;
     }
 
     /**
      * Full constructor with explicit active-task tracking control.
      *
-     * @param corePoolSize      the maximum number of concurrent worker threads;
-     *                          {@code 0} selects the synchronous mode (no pool)
-     * @param queueCapacity     the capacity of the task queue; use {@code 0}
-     *                          for a {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   the keep-alive time for idle threads, in
-     *                          milliseconds; the pool grows from {@code 0} up
-     *                          to {@code corePoolSize} threads (or more, when
-     *                          more Actors demand them) as load demands
+     * @param coreThreads       the minimum number of threads kept permanently
+     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads        the absolute maximum number of live threads; must
+     *                          be &ge; 0; {@code coreThreads == 0 && maxThreads == 0}
+     *                          selects the synchronous mode (no pool)
+     * @param keepAliveMillis   the keep-alive time for the threads above the
+     *                          effective core, in milliseconds; the pool grows,
+     *                          on demand and without a task queue, from one
+     *                          thread per registered async Actor (or
+     *                          {@code coreThreads}, whichever is larger) up to
+     *                          the Actors' summed thread demand, bounded by
+     *                          {@code maxThreads}
      * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
      *                          caller; if {@code false}, the caller runs the
      *                          task itself
@@ -163,68 +152,70 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *                          disabled, which reduces overhead but makes
      *                          {@link ActorPool#waitForIdle()} a no-op
      */
-    public ActorHub(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
-        super(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, avoidTracker);
-        this.initialCorePoolSize = corePoolSize;
+        super(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker);
+        applyActorSizing(0, 0);
     }
 
     /**
      * Full constructor.
      *
-     * @param corePoolSize      the maximum number of concurrent worker threads;
+     * @param coreThreads       the minimum number of threads kept permanently
+     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads        the absolute maximum number of live threads; both
      *                          {@code 0} selects the synchronous mode (no pool)
-     * @param queueCapacity     the capacity of the task queue; use {@code 0}
-     *                          for a {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   the keep-alive time for idle threads, in
-     *                          milliseconds
+     * @param keepAliveMillis   the keep-alive time for the threads above the
+     *                          effective core, in milliseconds
      * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
      *                          caller; if {@code false}, the caller runs the
      *                          task itself
      */
-    public ActorHub(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        this(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
     }
 
     /**
      * Constructs an ActorHub with the {@link ThreadPoolExecutor.CallerRunsPolicy}
      * saturation policy.
      *
-     * @param corePoolSize    the maximum number of concurrent worker threads;
-     *                        {@code 0} selects the synchronous mode (no pool)
-     * @param queueCapacity   the capacity of the task queue (0 = no buffering)
-     * @param keepAliveMillis the keep-alive time for idle threads, in milliseconds
+     * @param coreThreads      the minimum number of threads kept permanently
+     *                         alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads       the absolute maximum number of live threads; both
+     *                         {@code 0} selects the synchronous mode (no pool)
+     * @param keepAliveMillis  the keep-alive time for the threads above the
+     *                         effective core, in milliseconds
      */
-    public ActorHub(int corePoolSize, int queueCapacity, int keepAliveMillis)
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis)
     {
-        this(corePoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, maxThreads, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Constructs an ActorHub with a symmetric pool of {@code corePoolSize} threads,
-     * a task queue of the same capacity, and the default keep-alive time.
-     * When the queue is full, saturated tasks run in the caller under the
-     * {@link ThreadPoolExecutor.CallerRunsPolicy CallerRunsPolicy}.
+     * Constructs an elastic ActorHub with {@code coreThreads} threads kept
+     * permanently alive and a {@code maxThreads} ceiling of {@code 2 * coreThreads}.
+     * With {@code coreThreads == 0} this yields the synchronous mode.
      *
-     * @param corePoolSize the number of threads and queue slots
+     * @param coreThreads the floor of permanently alive threads
      */
-    public ActorHub(int corePoolSize)
+    public ActorHub(int coreThreads)
     {
-        this(corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, coreThreads + coreThreads, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Constructs an ActorHub sized to the number of available CPU cores.
+     * Constructs an elastic ActorHub sized to the number of available CPU cores:
+     * {@code coreThreads = CORES} and {@code maxThreads = 2 * CORES}.
      */
     public ActorHub()
     {
-        this(CORES, CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(CORES, CORES + CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Static factory for an ActorHub with default settings (CPU-core-sized pool).
-     * Equivalent to {@code new ActorHub()}.
+     * Static factory for an ActorHub with default settings (elastic,
+     * CPU-core-sized pool). Equivalent to {@code new ActorHub()}.
      *
      * @return a new default ActorHub
      */
@@ -234,43 +225,47 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Static factory for an ActorHub with a symmetric pool of {@code corePoolSize}
-     * threads.
+     * Static factory for an elastic ActorHub with {@code coreThreads} threads
+     * kept permanently alive ({@code 0} selects the synchronous mode).
      *
-     * @param corePoolSize the number of threads and queue slots
-     * @return a new ActorHub
+     * @param coreThreads the floor of permanently alive threads
+     * @return a new elastic ActorHub
      */
-    public static ActorHub hub(int corePoolSize)
+    public static ActorHub hub(int coreThreads)
     {
-        return new ActorHub(corePoolSize);
+        return new ActorHub(coreThreads);
     }
 
     /**
      * Static factory with full pool configuration.
      *
-     * @param corePoolSize    the maximum number of concurrent worker threads
-     * @param queueCapacity   task queue capacity (0 = no buffering)
-     * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
+     * @param coreThreads      the minimum number of threads kept permanently
+     *                         alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads       the absolute maximum number of live threads
+     * @param keepAliveMillis  keep-alive time for the threads above the
+     *                         effective core, in milliseconds
      * @return a new ActorHub
      */
-    public static ActorHub hub(int corePoolSize, int queueCapacity, int keepAliveMillis)
+    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis)
     {
-        return new ActorHub(corePoolSize, queueCapacity, keepAliveMillis);
+        return new ActorHub(coreThreads, maxThreads, keepAliveMillis);
     }
 
     /**
      * Static factory with full pool configuration and saturation policy choice.
      *
-     * @param corePoolSize      the maximum number of concurrent worker threads
-     * @param queueCapacity     task queue capacity (0 = no buffering)
-     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds
+     * @param coreThreads       the minimum number of threads kept permanently
+     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads        the absolute maximum number of live threads
+     * @param keepAliveMillis   keep-alive time for the threads above the
+     *                          effective core, in milliseconds
      * @param callerWaitsPolicy {@code true} to block the caller when saturated;
      *                          {@code false} to run the task in the caller
      * @return a new ActorHub
      */
-    public static ActorHub hub(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        return new ActorHub(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
+        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy);
     }
 
     @Override
@@ -298,39 +293,6 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     // -----------------------------------------------------------------
 
     /**
-     * Returns the length, in milliseconds, of the idle window a permanent
-     * worker keeps its thread alive waiting for the next message before
-     * yielding it back to the pool.
-     *
-     * @return the permanent worker idle window, in milliseconds
-     */
-    public long getPermanentWaitMillis()
-    {
-        return permanentWaitMillis;
-    }
-
-    /**
-     * Sets the length, in milliseconds, of the idle window a permanent worker
-     * keeps its thread alive waiting for the next message. The value is shared
-     * by every Actor attached to this ActorHub ({@code volatile}, so it is
-     * observed immediately); a value of {@code 0} makes permanent workers poll
-     * continuously.
-     *
-     * @param millis the new idle window, in milliseconds; must not be negative
-     * @return this ActorHub, for fluent chaining
-     * @throws IllegalArgumentException if {@code millis} is negative
-     */
-    public ActorHub setPermanentWaitMillis(long millis)
-    {
-        if (millis < 0)
-        {
-            throw new IllegalArgumentException("permanent wait must be >= 0, got " + millis);
-        }
-        this.permanentWaitMillis = millis;
-        return this;
-    }
-
-    /**
      * Registers an Actor attached to this ActorHub so its lifecycle can be
      * tracked and its thread demand counts towards pool sizing. Called by the
      * {@link AsyncActor} constructor for async flavors and explicitly by the
@@ -346,6 +308,10 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     {
         if (actors.addIfAbsent(actor))
         {
+            if (actor.threadDemand() > 0)
+            {
+                asyncActorCount.incrementAndGet();
+            }
             threadDemand.addAndGet(actor.threadDemand());
             adjustPoolToActors();
         }
@@ -361,6 +327,10 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     {
         if (actors.remove(actor))
         {
+            if (actor.threadDemand() > 0)
+            {
+                asyncActorCount.decrementAndGet();
+            }
             threadDemand.addAndGet(-actor.threadDemand());
             adjustPoolToActors();
             maybeShutdownPool();
@@ -368,25 +338,74 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Adjists the pool's core and maximum sizes together to match the total
-     * thread demand of the registered Actors. Both are set to
-     * {@code max(initialCorePoolSize, threadDemand)}, so the pool stays
-     * symmetric (core == maximum, as with {@link ActorPool}) and simply grows
-     * one thread per additionally demanded Actor thread beyond the initial core
-     * size. Sizing scales down again as Actors terminate.
-     * <p>
-     * ThreadPoolExecutor requires {@code maximumPoolSize &ge; corePoolSize};
-     * since core and maximum are always set to the same value this invariant
-     * is trivially satisfied.
+     * Resizes the pool to the thread demand of the registered Actors, bounded
+     * by the configured {@code coreThreads} floor and {@code maxThreads} ceiling:
+     * <ul>
+     * <li>the effective <strong>core</strong> covers, at least, one permanently
+     *     alive thread per registered non-synchronous Actor:</li>
+     *     {@code core = min(ceiling, max(coreThreads, asyncActorCount))}
+     * <li>the effective <strong>maximum</strong> allows every Actor to run all
+     *     of its declared threads concurrently, but never drops below the
+     *     effective core (ThreadPoolExecutor forbids
+     *     {@code maximumPoolSize < corePoolSize}):</li>
+     *     {@code max = min(ceiling, max(threadDemand, core))}
+     * </ul>
+     * where {@code ceiling} is {@code maxThreads}, except when more
+     * non-synchronous Actors are registered than {@code maxThreads}: then the
+     * pool must still host one thread per Actor and {@code ceiling} is exactly
+     * {@code asyncActorCount}. The pool scales up as Actors register and back
+     * down as they terminate.
      */
     private void adjustPoolToActors()
     {
-        if (isSynchronous())
+        applyActorSizing(asyncActorCount.get(), threadDemand.get());
+    }
+
+    /**
+     * Sets the configured {@code coreThreads} floor and recomputes the pool
+     * sizes: the effective core never drops below one thread per registered
+     * non-synchronous Actor.
+     *
+     * @param coreThreads the new permanently-alive thread floor
+     */
+    @Override
+    public void setCoreThreads(int coreThreads)
+    {
+        if (!isSynchronous())
         {
-            return;
+            if (coreThreads < 0)
+            {
+                throw new IllegalArgumentException("coreThreads must be >= 0, got " + coreThreads);
+            }
+            if (coreThreads > this.maxThreads)
+            {
+                throw new IllegalArgumentException("coreThreads must be <= maxThreads(" + this.maxThreads + "), got " + coreThreads);
+            }
+            this.coreThreads = coreThreads;
+            adjustPoolToActors();
         }
-        int size = Math.max(initialCorePoolSize, threadDemand.get());
-        setPoolSize(size);
+    }
+
+    /**
+     * Sets the configured {@code maxThreads} ceiling and recomputes the pool
+     * sizes: the effective maximum never exceeds this value except when more
+     * non-synchronous Actors are registered than {@code maxThreads}, in which
+     * case the effective maximum is exactly that number of Actors.
+     *
+     * @param maxThreads the new ceiling on live threads
+     */
+    @Override
+    public void setMaxThreads(int maxThreads)
+    {
+        if (!isSynchronous())
+        {
+            if (maxThreads < this.coreThreads)
+            {
+                throw new IllegalArgumentException("maxThreads must be >= coreThreads(" + this.coreThreads + "), got " + maxThreads);
+            }
+            this.maxThreads = maxThreads;
+            adjustPoolToActors();
+        }
     }
 
     /**

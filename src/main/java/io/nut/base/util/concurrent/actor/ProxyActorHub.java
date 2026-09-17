@@ -120,9 +120,27 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public void setPoolSize(int i)
+    public int getCoreThreads()
     {
-        actorHub.setPoolSize(i);
+        return actorHub.getCoreThreads();
+    }
+
+    @Override
+    public int getMaxThreads()
+    {
+        return actorHub.getMaxThreads();
+    }
+
+    @Override
+    public void setCoreThreads(int coreThreads)
+    {
+        actorHub.setCoreThreads(coreThreads);
+    }
+
+    @Override
+    public void setMaxThreads(int maxThreads)
+    {
+        actorHub.setMaxThreads(maxThreads);
     }
 
     @Override

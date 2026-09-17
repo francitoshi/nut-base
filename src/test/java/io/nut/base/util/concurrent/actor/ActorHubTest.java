@@ -318,16 +318,84 @@ class ActorHubTest
     void poolSizeGetterAndSetterWork()
     {
         ActorHub h = ActorHub.hub(3);
+        assertEquals(3, h.getCoreThreads());
+        assertEquals(6, h.getMaxThreads());
+        // with no Actors, the effective maximum is clamped down to the core
         assertEquals(3, h.getCorePoolSize());
         assertEquals(3, h.getMaximumPoolSize());
 
-        h.setPoolSize(5);
+        h.setCoreThreads(5);
 
+        assertEquals(5, h.getCoreThreads());
         assertEquals(5, h.getCorePoolSize());
+        assertEquals(5, h.getMaximumPoolSize());
+
+        h.setMaxThreads(10);
+        assertEquals(10, h.getMaxThreads());
+        // the ceiling only materializes when Actors demand the threads
         assertEquals(5, h.getMaximumPoolSize());
 
         h.shutdown();
         h.awaitTermination(1000);
+    }
+
+    @Test
+    void hubSizesToActorDemand()
+    {
+        try (ActorHub h = ActorHub.hub(1))
+        {
+            assertEquals(1, h.getCoreThreads());
+            assertEquals(2, h.getMaxThreads());
+
+            // one async Actor adds a permanently alive thread to the core
+            Actor<String> a = h.actor(s -> {});
+            assertEquals(1, h.getCorePoolSize());
+            assertEquals(1, h.getMaximumPoolSize());
+
+            // a heavy MultiActor raises the maximum to its summed demand
+            Actor<String> b = h.actor(2, 0, s -> {});
+            assertEquals(2, h.getCorePoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
+
+            // the ceiling is never exceeded
+            assertTrue(h.getMaximumPoolSize() <= h.getMaxThreads());
+        }
+    }
+
+    @Test
+    void hubKeepsTheMaxThreadsCeilingWithinTheAsyncActorCount()
+    {
+        try (ActorHub h = new ActorHub(0, 2, 1000))
+        {
+            // 2 SingleActors demand exactly the ceiling of 2
+            h.actor(s -> {});
+            h.actor(s -> {});
+            assertEquals(2, h.getCorePoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
+        }
+    }
+
+    @Test
+    void hubLiftsTheMaxThreadsCeilingToExactlyTheAsyncActorCount()
+    {
+        try (ActorHub h = new ActorHub(0, 2, 1000))
+        {
+            // 6 SingleActors demand 6 threads: the ceiling rises to exactly the
+            // number of async Actors (never above), not to maxThreads
+            for (int i = 0; i < 6; i++)
+            {
+                h.actor(s -> {});
+            }
+            assertEquals(6, h.getCorePoolSize());
+            assertEquals(6, h.getMaximumPoolSize());
+        }
+    }
+
+    @Test
+    void singleIntHubZeroIsSynchronous()
+    {
+        ActorHub h = ActorHub.hub(0);
+        assertTrue(h.isSynchronous());
     }
 
     @Test

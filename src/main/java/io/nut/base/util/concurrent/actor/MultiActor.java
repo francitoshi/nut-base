@@ -22,15 +22,16 @@ class MultiActor<M> extends AsyncActor<M>
     }
 
     /**
-     * The permanent worker drains with a timeout, then yields its thread
-     * back to the pool (restarted on the next {@link #accept}).
+     * The permanent worker drains the channel, blocking between messages; the
+     * temporary "rush" workers (see the class javadoc) are the ones that start
+     * and stop on demand.
      */
     @Override
     protected void permanentLoop()
     {
         try
         {
-            drain(this.actorHub.getPermanentWaitMillis());
+            drainWhileRegistered();
         }
         finally
         {

@@ -7,14 +7,12 @@ package io.nut.base.util.concurrent.actor;
 
 import io.nut.base.math.Nums;
 import java.util.Objects;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -40,13 +38,23 @@ import java.util.concurrent.Phaser;
  *   <tr><td>parallel + blocking</td><td>{@link #forEach}</td><td>—</td></tr>
  * </table>
  *
- * <p>The pool is sized to a single {@code corePoolSize} value and
- * {@link ThreadPoolExecutor#allowCoreThreadTimeOut} is enabled, so the number
- * of live threads scales from {@code 0} up to {@code corePoolSize} following
- * the load: threads are created on demand and reclaimed once idle for the
- * keep-alive time. Constructing an ActorPool with {@code corePoolSize == 0} enables
- * the synchronous mode, in which every task runs directly in the calling
- * thread and no backing pool exists.
+ * <p>The async pool is configured with two independent thread counts. The
+ * {@code coreThreads} floor is the number of threads kept alive permanently:
+ * they are never reclaimed, no matter the keep-alive time. The {@code maxThreads}
+ * ceiling is the usual maximum number of live threads, never exceeded in
+ * ordinary operation. Because the pool has no task queue (a
+ * {@link SynchronousQueue} hands every submitted task directly to a thread),
+ * worker threads grow on demand from the {@code coreThreads} floor up to
+ * {@code maxThreads}, and the threads above the floor are reclaimed once they
+ * stay idle for the keep-alive time, so the pool never drops below
+ * {@code coreThreads} live threads. Constructing an ActorPool with
+ * {@code coreThreads == 0 && maxThreads == 0} enables the synchronous mode, in
+ * which every task runs directly in the calling thread and no backing pool
+ * exists. The only case where the effective maximum may exceed the configured
+ * {@code maxThreads} is the Actor-driven sizing of {@link ActorHub}: when more
+ * non-synchronous Actors are registered than {@code maxThreads}, the pool must
+ * still be able to host one thread per Actor, so the effective maximum is
+ * lifted to exactly the number of registered Actors (never higher).
  * <p>
  * {@code ActorPool} also implements {@link Executor} (via {@link #execute}) so
  * it can be passed anywhere a plain {@code Executor} is expected.
@@ -61,14 +69,16 @@ public class ActorPool implements ActorLifecycle, Executor
 {    
 
     /**
-     * Number of available processor cores, used as the default pool size.
+     * Number of available processor cores. Used as the default {@code coreThreads}
+     * floor and, doubled, as the default {@code maxThreads} ceiling.
      */
     public static final int CORES = Runtime.getRuntime().availableProcessors();
 
     /**
      * Default keep-alive time for idle threads, in milliseconds (30 s).
-     * Applied to all threads since the pool is symmetric (core always equals
-     * maximum) with {@link ThreadPoolExecutor#allowCoreThreadTimeOut} enabled.
+     * Applies only to the threads above the effective core size: those threads
+     * are reclaimed once idle for this long and the pool then stays at (or
+     * shrinks down to) the core floor. Core threads are never timed out.
      */
     public static final int DEFAULT_KEEP_ALIVE_MILLIS = 30_000;
     public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
@@ -85,7 +95,7 @@ public class ActorPool implements ActorLifecycle, Executor
     private static final CallerWaitsPolicy CALLER_WAITS_POLICY = new CallerWaitsPolicy();
 
     /**
-     * The underlying thread pool.
+     * The underlying thread pool. {@code null} in synchronous mode.
      */
     private final ThreadPoolExecutor threadPoolExecutor;
 
@@ -95,9 +105,27 @@ public class ActorPool implements ActorLifecycle, Executor
      * When {@code true}, all {@code execute}/{@code submit}/{@code spawn}/
      * {@code forEach} invocations run the task synchronously in the calling
      * thread, and there is no backing thread pool. Enabled when the pool is
-     * constructed with {@code corePoolSize == 0}.
+     * constructed with {@code coreThreads == 0 && maxThreads == 0}.
      */
     private final boolean synchronous;
+
+    /**
+     * The configured minimum number of threads that stay permanently alive.
+     * {@code 0} in synchronous mode. May be changed with
+     * {@link #setCoreThreads}; an {@link ActorHub} also recomputes the effective
+     * core to cover one thread per registered async Actor.
+     */
+    protected volatile int coreThreads;
+
+    /**
+     * The configured ceiling on live threads. {@code 0} in synchronous mode.
+     * May be changed with {@link #setMaxThreads}. Bounds every thread count in
+     * ordinary operation; the Actor-driven sizing of {@link ActorHub} may lift
+     * the effective maximum past this value only when more non-synchronous
+     * Actors are registered than {@code maxThreads} (then it is exactly the
+     * number of Actors).
+     */
+    protected volatile int maxThreads;
 
     /**
      * Tracks the shutdown state in synchronous mode (there is no backing pool).
@@ -126,119 +154,120 @@ public class ActorPool implements ActorLifecycle, Executor
         this.threadPoolExecutor = threadPoolExecutor;
         this.synchronous = threadPoolExecutor==null;
         this.phaser = this.synchronous ? null : new Phaser(1);
+        this.coreThreads = 0;
+        this.maxThreads = 0;
     }
 
     /**
      * Full constructor.
      * <p>
-     * The pool is created with {@code corePoolSize} both as the core and the
-     * maximum thread count, and {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
-     * is enabled whenever {@code keepAliveMillis &gt; 0}, so the number of live
-     * threads scales from {@code 0} up to {@code corePoolSize} as demand rises
-     * and falls. Subclasses such as {@link ActorHub} may resize the pool later via
-     * {@link #setPoolSize}.
+     * The backing pool has no task queue: a {@link SynchronousQueue} hands every
+     * submitted task directly to a worker thread, so the pool grows threads on
+     * demand from the {@code coreThreads} floor up to {@code maxThreads} without
+     * parked work. {@link ThreadPoolExecutor#allowCoreThreadTimeOut} is never
+     * enabled, so the core threads stay alive permanently; only the threads above
+     * the floor are reclaimed once idle for {@code keepAliveMillis}. Subclasses
+     * such as {@link ActorHub} may resize the pool later via
+     * {@link #resizePool(int, int)}.
      *
-     * @param corePoolSize      the maximum number of concurrent worker threads;
-     *                          {@code 0} selects the synchronous mode (no pool)
-     * @param queueCapacity     task-queue capacity; {@code 0} for a
-     *                          {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds;
-     *                          must be &ge; 0; when &gt; 0 the core threads are
-     *                          also allowed to time out
+     * @param coreThreads      the minimum number of threads kept permanently
+     *                         alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads       the absolute maximum number of live threads; must
+     *                         be &ge; 0; {@code coreThreads == 0 && maxThreads == 0}
+     *                         selects the synchronous mode (no pool)
+     * @param keepAliveMillis  keep-alive time for the threads above the core
+     *                         floor, in milliseconds; must be &ge; 0
      * @param callerWaitsPolicy {@code true} to block the caller on saturation;
      *                          {@code false} to run the task in the caller
      * @param avoidTracker       {@code true} to disable active-task tracking
-     * @throws IllegalArgumentException if {@code corePoolSize &lt; 0} or
-     *         {@code keepAliveMillis &lt; 0}; the synchronous case
-     *         ({@code corePoolSize == 0}) is exempt from these checks
+     * @throws IllegalArgumentException if {@code coreThreads &lt; 0},
+     *         {@code maxThreads &lt; 0}, {@code coreThreads &gt; maxThreads}, or
+     *         {@code keepAliveMillis &lt; 0}; the synchronous case is exempt from
+     *         these checks
      */
-    public ActorPool(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
-        this.synchronous = corePoolSize == 0;
+        this.synchronous = coreThreads == 0 && maxThreads == 0;
         if (!this.synchronous)
         {
-            if (corePoolSize < 0)
+            if (coreThreads < 0)
             {
-                throw new IllegalArgumentException("corePoolSize must be >= 0, got " + corePoolSize);
+                throw new IllegalArgumentException("coreThreads must be >= 0, got " + coreThreads);
+            }
+            if (coreThreads > maxThreads)
+            {
+                throw new IllegalArgumentException("coreThreads must be <= maxThreads, got " + coreThreads + " > " + maxThreads);
             }
             if (keepAliveMillis < 0)
             {
                 throw new IllegalArgumentException("keepAliveMillis must be >= 0, got " + keepAliveMillis);
             }
         }
+        this.coreThreads = coreThreads;
+        this.maxThreads = maxThreads;
         if (this.synchronous)
         {
             this.threadPoolExecutor = null;
             this.phaser = null;
             return;
         }
-        BlockingQueue<Runnable> queue = queueCapacity == 0
-                ? new SynchronousQueue<>()
-                : new LinkedBlockingQueue<>(queueCapacity);
         this.threadPoolExecutor = new ThreadPoolExecutor(
-                corePoolSize, corePoolSize,
+                coreThreads, maxThreads,
                 keepAliveMillis, TimeUnit.MILLISECONDS,
-                queue,
+                new SynchronousQueue<>(),
                 callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY);
-        if (keepAliveMillis > 0)
-        {
-            this.threadPoolExecutor.allowCoreThreadTimeOut(true);
-        }
         this.phaser = avoidTracker ? null : new Phaser(1);
     }
 
     /**
      * Full constructor with tracking disabled.
      *
-     * @param corePoolSize      the maximum number of concurrent worker threads;
+     * @param coreThreads       the minimum number of threads kept permanently alive
+     * @param maxThreads        the absolute maximum number of live threads; both
      *                          {@code 0} selects the synchronous mode
-     * @param queueCapacity     task-queue capacity; {@code 0} for a
-     *                          {@link SynchronousQueue} (no buffering)
-     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds
+     * @param keepAliveMillis   keep-alive time for the threads above the core
+     *                          floor, in milliseconds
      * @param callerWaitsPolicy {@code true} to block the caller on saturation;
      *                          {@code false} to run the task in the caller
      */
-    public ActorPool(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        this(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
     }
 
     /**
      * Constructs an ActorPool with the {@link ThreadPoolExecutor.CallerRunsPolicy}.
      *
-     * @param corePoolSize    the maximum number of concurrent worker threads;
-     *                        {@code 0} selects the synchronous mode
-     * @param queueCapacity   task-queue capacity (0 = no buffering)
-     * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
+     * @param coreThreads      the minimum number of threads kept permanently alive
+     * @param maxThreads       the absolute maximum number of live threads; both
+     *                         {@code 0} selects the synchronous mode
+     * @param keepAliveMillis  keep-alive time for the threads above the core
+     *                         floor, in milliseconds
      */
-    public ActorPool(int corePoolSize, int queueCapacity, int keepAliveMillis)
+    public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis)
     {
-        this(corePoolSize, queueCapacity, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, maxThreads, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Constructs an ActorPool with a symmetric pool of {@code corePoolSize} threads,
-     * a bounded queue of the same size, and the default keep-alive time.
+     * Constructs an elastic ActorPool with {@code coreThreads} threads kept
+     * permanently alive and a {@code maxThreads} ceiling of {@code 2 * coreThreads}.
+     * With {@code coreThreads == 0} this yields the synchronous mode.
      *
-     * @param corePoolSize number of threads and queue slots
+     * @param coreThreads number of permanently alive threads
      */
-    public ActorPool(int corePoolSize)
+    public ActorPool(int coreThreads)
     {
-        // A bounded queue sized to corePoolSize combined with the
-        // CallerRunsPolicy keeps the pool from ever parking work behind a
-        // saturated pool: submitted tasks run in the calling thread instead of
-        // waiting in the queue for a thread that may never be freed. This is
-        // what keeps Actor pipelines alive when forwarding stages saturate the
-        // pool with blocking channel puts.
-        this(corePoolSize, corePoolSize, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, coreThreads + coreThreads, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     /**
-     * Constructs an ActorPool sized to the number of available CPU cores.
+     * Constructs an elastic ActorPool sized to the number of available CPU cores:
+     * {@code coreThreads = CORES} and {@code maxThreads = 2 * CORES}.
      */
     public ActorPool()
     {
-        this(CORES, CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(CORES, CORES + CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
     }
 
     // -------------------------------------------------------------------------
@@ -246,7 +275,7 @@ public class ActorPool implements ActorLifecycle, Executor
     // -------------------------------------------------------------------------
 
     /**
-     * @return a new ActorPool with default (CPU-core-sized) settings.
+     * @return a new ActorPool with default (elastic, CPU-core-sized) settings.
      */
     public static ActorPool actorPool()
     {
@@ -254,35 +283,38 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * @param corePoolSize number of threads and queue slots
-     * @return a new ActorPool with a symmetric pool of {@code corePoolSize} threads
+     * @param coreThreads the floor of permanently alive threads
+     * @return a new elastic ActorPool with {@code maxThreads = 2 * coreThreads}
+     *         ({@code 0} selects the synchronous mode)
      */
-    public static ActorPool actorPool(int corePoolSize)
+    public static ActorPool actorPool(int coreThreads)
     {
-        return new ActorPool(corePoolSize);
+        return new ActorPool(coreThreads);
     }
 
     /**
-     * @param corePoolSize    the maximum number of concurrent worker threads
-     * @param queueCapacity   task-queue capacity (0 = no buffering)
-     * @param keepAliveMillis keep-alive time for idle threads, in milliseconds
+     * @param coreThreads      the floor of permanently alive threads
+     * @param maxThreads       the absolute maximum number of live threads
+     * @param keepAliveMillis  keep-alive time for the threads above the core
+     *                         floor, in milliseconds
      * @return a new ActorPool with the given pool configuration
      */
-    public static ActorPool actorPool(int corePoolSize, int queueCapacity, int keepAliveMillis)
+    public static ActorPool actorPool(int coreThreads, int maxThreads, int keepAliveMillis)
     {
-        return new ActorPool(corePoolSize, queueCapacity, keepAliveMillis);
+        return new ActorPool(coreThreads, maxThreads, keepAliveMillis);
     }
 
     /**
-     * @param corePoolSize      the maximum number of concurrent worker threads
-     * @param queueCapacity     task-queue capacity (0 = no buffering)
-     * @param keepAliveMillis   keep-alive time for idle threads, in milliseconds
+     * @param coreThreads       the floor of permanently alive threads
+     * @param maxThreads        the absolute maximum number of live threads
+     * @param keepAliveMillis   keep-alive time for the threads above the core
+     *                          floor, in milliseconds
      * @param callerWaitsPolicy {@code true} to block caller on saturation
      * @return a new ActorPool with full pool configuration
      */
-    public static ActorPool actorPool(int corePoolSize, int queueCapacity, int keepAliveMillis, boolean callerWaitsPolicy)
+    public static ActorPool actorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy)
     {
-        return new ActorPool(corePoolSize, queueCapacity, keepAliveMillis, callerWaitsPolicy);
+        return new ActorPool(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy);
     }
 
     // -------------------------------------------------------------------------
@@ -291,7 +323,7 @@ public class ActorPool implements ActorLifecycle, Executor
 
     /**
      * Returns {@code true} if this ActorPool was constructed with
-     * {@code corePoolSize == 0}, in which case every
+     * {@code coreThreads == 0 && maxThreads == 0}, in which case every
      * execution method runs tasks synchronously in the calling thread and no
      * backing pool exists.
      *
@@ -300,6 +332,29 @@ public class ActorPool implements ActorLifecycle, Executor
     public boolean isSynchronous()
     {
         return synchronous;
+    }
+
+    /**
+     * Returns the configured minimum number of threads kept permanently alive.
+     * In an {@link ActorHub} the effective core size may additionally grow to
+     * cover one thread per registered async Actor (see
+     * {@link #getCorePoolSize()}).
+     *
+     * @return the configured {@code coreThreads} value
+     */
+    public int getCoreThreads()
+    {
+        return coreThreads;
+    }
+
+    /**
+     * Returns the configured absolute ceiling on live threads.
+     *
+     * @return the configured {@code maxThreads} value
+     */
+    public int getMaxThreads()
+    {
+        return maxThreads;
     }
 
     // -------------------------------------------------------------------------
@@ -841,9 +896,12 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Returns the core number of threads in the pool.
+     * Returns the number of threads that are kept alive permanently (never
+     * reclaimed, regardless of the keep-alive time). In an {@link ActorHub} this
+     * is the {@link #getCoreThreads()} floor grown to also cover one thread per
+     * registered async Actor.
      *
-     * @return core pool size
+     * @return effective core pool size
      */
     public int getCorePoolSize()
     {
@@ -851,7 +909,8 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Returns the maximum allowed number of threads in the pool.
+     * Returns the maximum allowed number of threads in the pool. Never exceeds
+     * the configured {@link #getMaxThreads()} ceiling.
      *
      * @return maximum pool size
      */
@@ -861,32 +920,134 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Sets the thread pool size, fixing both the core and the maximum to the
-     * same value. ActorPool keeps the pool symmetric (core always equals maximum,
-     * with {@link ThreadPoolExecutor#allowCoreThreadTimeOut} enabled), so a
-     * single size is sufficient and avoids any risk of a maximum below the
-     * core.
+     * Returns the current number of live threads in the pool (running or
+     * parked), or {@code 0} in synchronous mode.
      *
-     * @param pcp new pool size (core and maximum)
+     * @return current live thread count
      */
-    public void setPoolSize(int pcp)
+    public int getPoolSize()
+    {
+        return synchronous ? 0 : threadPoolExecutor.getPoolSize();
+    }
+
+    /**
+     * Sets the configured minimum number of threads kept permanently alive.
+     * <p>
+     * In an {@link ActorHub} this updates the {@code coreThreads} floor and
+     * recomputes the effective pool sizes, so the effective core may exceed the
+     * configured value when more async Actors demand it. In a plain
+     * {@code ActorPool} it is applied to the backing pool directly; the thread
+     * count is never reduced below {@code coreThreads} because core threads are
+     * never timed out.
+     *
+     * @param coreThreads the new permanently-alive thread floor; must be
+     *                    &ge; 0 and &le; {@link #getMaxThreads()}
+     * @throws IllegalArgumentException if {@code coreThreads} is negative or
+     *         greater than the current {@code maxThreads}
+     */
+    public void setCoreThreads(int coreThreads)
     {
         if (!synchronous)
         {
-            // ThreadPoolExecutor forbids maximum < core. When growing set the
-            // maximum first, when shrinking set the core first, so the pool
-            // always satisfies the invariant throughout the resize.
-            if (pcp >= threadPoolExecutor.getCorePoolSize())
+            if (coreThreads < 0)
             {
-                threadPoolExecutor.setMaximumPoolSize(pcp);
-                threadPoolExecutor.setCorePoolSize(pcp);
+                throw new IllegalArgumentException("coreThreads must be >= 0, got " + coreThreads);
+            }
+            if (coreThreads > this.maxThreads)
+            {
+                throw new IllegalArgumentException("coreThreads must be <= maxThreads(" + this.maxThreads + "), got " + coreThreads);
+            }
+            this.coreThreads = coreThreads;
+            threadPoolExecutor.setCorePoolSize(coreThreads);
+        }
+    }
+
+    /**
+     * Sets the configured absolute ceiling on live threads.
+     *
+     * @param maxThreads the new maximum number of live threads; must be
+     *                   &ge; {@link #getCoreThreads()}
+     * @throws IllegalArgumentException if {@code maxThreads} is smaller than the
+     *         current {@code coreThreads}
+     */
+    public void setMaxThreads(int maxThreads)
+    {
+        if (!synchronous)
+        {
+            if (maxThreads < this.coreThreads)
+            {
+                throw new IllegalArgumentException("maxThreads must be >= coreThreads(" + this.coreThreads + "), got " + maxThreads);
+            }
+            this.maxThreads = maxThreads;
+            threadPoolExecutor.setMaximumPoolSize(maxThreads);
+        }
+    }
+
+    /**
+     * Resizes the backing pool to the given effective core and maximum sizes,
+     * keeping the two coherent: the maximum is never left below the core (nor
+     * below 1, which {@link ThreadPoolExecutor} requires), so when growing the
+     * maximum is set first and when shrinking the core is set first. The
+     * configured {@code maxThreads} ceiling has already been applied (or
+     * deliberately lifted to the Actor count) by the caller.
+     *
+     * @param core the new effective core size
+     * @param max the new effective maximum size
+     */
+    protected void resizePool(int core, int max)
+    {
+        if (!synchronous)
+        {
+            if (core > max)
+            {
+                max = core;
+            }
+            // ThreadPoolExecutor requires a positive maximumPoolSize
+            if (max < 1)
+            {
+                max = 1;
+            }
+            if (core >= threadPoolExecutor.getCorePoolSize())
+            {
+                threadPoolExecutor.setMaximumPoolSize(max);
+                threadPoolExecutor.setCorePoolSize(core);
             }
             else
             {
-                threadPoolExecutor.setCorePoolSize(pcp);
-                threadPoolExecutor.setMaximumPoolSize(pcp);
+                threadPoolExecutor.setCorePoolSize(core);
+                threadPoolExecutor.setMaximumPoolSize(max);
             }
         }
+    }
+
+    /**
+     * Applies the Actor-driven sizing of an {@link ActorHub} to the backing pool:
+     * the effective core covers, at least, one permanently alive thread per
+     * registered non-synchronous Actor and the effective maximum allows every
+     * Actor to run all of its declared threads concurrently, both bounded by the
+     * configured {@code maxThreads} ceiling (and the maximum never dropping below
+     * the effective core). The sole exception to the {@code maxThreads} ceiling:
+     * when more non-synchronous Actors are registered than {@code maxThreads},
+     * the pool must be able to host one thread per Actor, so the effective
+     * maximum is lifted to exactly {@code asyncActorCount} (never higher). This
+     * helper is {@code final} and uses only base-class state, so it is safe to
+     * call from constructors of subclasses that override the config getters with
+     * a delegation layer.
+     *
+     * @param asyncActorCount number of registered Actors with a positive thread
+     *                        demand
+     * @param threadDemand    summed thread demand of the registered Actors
+     */
+    protected final void applyActorSizing(int asyncActorCount, int threadDemand)
+    {
+        if (threadPoolExecutor == null)
+        {
+            return;
+        }
+        int ceiling = asyncActorCount > this.maxThreads ? asyncActorCount : this.maxThreads;
+        int core = Math.min(ceiling, Math.max(this.coreThreads, asyncActorCount));
+        int max = Math.min(ceiling, Math.max(threadDemand, core));
+        resizePool(core, max);
     }
 
     /**
