@@ -101,6 +101,56 @@ public class ActorPoolTest
     }
 
     @Test
+    public void setThreadsResizesThePoolOrderIndependently()
+    {
+        try (ActorPool actorPool = new ActorPool(2, 4, 1000, false))
+        {
+            assertEquals(2, actorPool.getCoreThreads());
+            assertEquals(4, actorPool.getMaxThreads());
+            assertEquals(2, actorPool.getCorePoolSize());
+            assertEquals(4, actorPool.getMaximumPoolSize());
+
+            // grow: a single call, no need to raise the maximum first
+            actorPool.setThreads(8, 16);
+            assertEquals(8, actorPool.getCoreThreads());
+            assertEquals(16, actorPool.getMaxThreads());
+            assertEquals(8, actorPool.getCorePoolSize());
+            assertEquals(16, actorPool.getMaximumPoolSize());
+
+            // shrink: a single call, no need to lower the core first
+            actorPool.setThreads(1, 2);
+            assertEquals(1, actorPool.getCoreThreads());
+            assertEquals(2, actorPool.getMaxThreads());
+            assertEquals(1, actorPool.getCorePoolSize());
+            assertEquals(2, actorPool.getMaximumPoolSize());
+
+            // a floor above the ceiling raises the ceiling to match
+            actorPool.setThreads(6, 3);
+            assertEquals(6, actorPool.getCoreThreads());
+            assertEquals(6, actorPool.getMaxThreads());
+            assertEquals(6, actorPool.getCorePoolSize());
+            assertEquals(6, actorPool.getMaximumPoolSize());
+
+            assertThrows(IllegalArgumentException.class, () -> actorPool.setThreads(-1, 4));
+            assertThrows(IllegalArgumentException.class, () -> actorPool.setThreads(2, -1));
+        }
+    }
+
+    @Test
+    public void setThreadsIsANoOpOnSynchronousPools()
+    {
+        try (ActorPool sync = new ActorPool(0, 0, 0))
+        {
+            sync.setThreads(4, 8);
+            assertTrue(sync.isSynchronous());
+            assertEquals(0, sync.getCoreThreads());
+            assertEquals(0, sync.getMaxThreads());
+            assertEquals(0, sync.getCorePoolSize());
+            assertEquals(0, sync.getMaximumPoolSize());
+        }
+    }
+
+    @Test
     public void synchronousActorPoolIsExemptFromValidation()
     {
         ActorPool actorPool = new ActorPool(0, 0, 0, false);

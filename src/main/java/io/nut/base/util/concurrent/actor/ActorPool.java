@@ -112,14 +112,14 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * The configured minimum number of threads that stay permanently alive.
      * {@code 0} in synchronous mode. May be changed with
-     * {@link #setCoreThreads}; an {@link ActorHub} also recomputes the effective
+     * {@link #setThreads}; an {@link ActorHub} also recomputes the effective
      * core to cover one thread per registered async Actor.
      */
     protected volatile int coreThreads;
 
     /**
      * The configured ceiling on live threads. {@code 0} in synchronous mode.
-     * May be changed with {@link #setMaxThreads}. Bounds every thread count in
+     * May be changed with {@link #setThreads}. Bounds every thread count in
      * ordinary operation; the Actor-driven sizing of {@link ActorHub} may lift
      * the effective maximum past this value only when more non-synchronous
      * Actors are registered than {@code maxThreads} (then it is exactly the
@@ -931,56 +931,53 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Sets the configured minimum number of threads kept permanently alive.
+     * Sets both the configured {@code coreThreads} floor and the
+     * {@code maxThreads} ceiling and resizes the pool to them in a single call,
+     * so no particular call order is required whether the pool is grown or
+     * shrunk. The pair is kept coherent: if {@code coreThreads > maxThreads},
+     * the ceiling is raised to the floor. The backing pool has no task queue,
+     * so the threads above the floor come and go on demand; only the core
+     * floor is kept permanently alive.
      * <p>
-     * In an {@link ActorHub} this updates the {@code coreThreads} floor and
-     * recomputes the effective pool sizes, so the effective core may exceed the
-     * configured value when more async Actors demand it. In a plain
-     * {@code ActorPool} it is applied to the backing pool directly; the thread
-     * count is never reduced below {@code coreThreads} because core threads are
-     * never timed out.
+     * In an {@link ActorHub} the effective pool sizes are recomputed from the
+     * registered Actors as well: the effective core never drops below one
+     * thread per registered non-synchronous Actor and the effective maximum
+     * never drops below the summed thread demand, but the configured
+     * {@code maxThreads} ceiling materializes in the live pool immediately
+     * ({@link #getMaximumPoolSize()}), not only when the Actors demand the
+     * threads.
+     * <p>
+     * A no-op on a synchronous pool (constructed with
+     * {@code coreThreads == 0 && maxThreads == 0}), which stays synchronous by
+     * design.
      *
-     * @param coreThreads the new permanently-alive thread floor; must be
-     *                    &ge; 0 and &le; {@link #getMaxThreads()}
-     * @throws IllegalArgumentException if {@code coreThreads} is negative or
-     *         greater than the current {@code maxThreads}
+     * @param coreThreads the new permanently-alive thread floor; must be &ge; 0
+     * @param maxThreads  the new ceiling on live threads; must be &ge;
+     *                    {@code coreThreads} (excess core is not an error:
+     *                    the ceiling is raised to match)
+     * @throws IllegalArgumentException if either value is negative
      */
-    public void setCoreThreads(int coreThreads)
+    public void setThreads(int coreThreads, int maxThreads)
     {
-        if (!synchronous)
+        if (synchronous)
         {
-            if (coreThreads < 0)
-            {
-                throw new IllegalArgumentException("coreThreads must be >= 0, got " + coreThreads);
-            }
-            if (coreThreads > this.maxThreads)
-            {
-                throw new IllegalArgumentException("coreThreads must be <= maxThreads(" + this.maxThreads + "), got " + coreThreads);
-            }
-            this.coreThreads = coreThreads;
-            threadPoolExecutor.setCorePoolSize(coreThreads);
+            return;
         }
-    }
-
-    /**
-     * Sets the configured absolute ceiling on live threads.
-     *
-     * @param maxThreads the new maximum number of live threads; must be
-     *                   &ge; {@link #getCoreThreads()}
-     * @throws IllegalArgumentException if {@code maxThreads} is smaller than the
-     *         current {@code coreThreads}
-     */
-    public void setMaxThreads(int maxThreads)
-    {
-        if (!synchronous)
+        if (coreThreads < 0)
         {
-            if (maxThreads < this.coreThreads)
-            {
-                throw new IllegalArgumentException("maxThreads must be >= coreThreads(" + this.coreThreads + "), got " + maxThreads);
-            }
-            this.maxThreads = maxThreads;
-            threadPoolExecutor.setMaximumPoolSize(maxThreads);
+            throw new IllegalArgumentException("coreThreads must be >= 0, got " + coreThreads);
         }
+        if (maxThreads < 0)
+        {
+            throw new IllegalArgumentException("maxThreads must be >= 0, got " + maxThreads);
+        }
+        if (maxThreads < coreThreads)
+        {
+            maxThreads = coreThreads;
+        }
+        this.coreThreads = coreThreads;
+        this.maxThreads = maxThreads;
+        resizePool(coreThreads, maxThreads);
     }
 
     /**
@@ -1023,16 +1020,15 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Applies the Actor-driven sizing of an {@link ActorHub} to the backing pool:
      * the effective core covers, at least, one permanently alive thread per
-     * registered non-synchronous Actor and the effective maximum allows every
-     * Actor to run all of its declared threads concurrently, both bounded by the
-     * configured {@code maxThreads} ceiling (and the maximum never dropping below
-     * the effective core). The sole exception to the {@code maxThreads} ceiling:
-     * when more non-synchronous Actors are registered than {@code maxThreads},
-     * the pool must be able to host one thread per Actor, so the effective
-     * maximum is lifted to exactly {@code asyncActorCount} (never higher). This
-     * helper is {@code final} and uses only base-class state, so it is safe to
-     * call from constructors of subclasses that override the config getters with
-     * a delegation layer.
+     * registered non-synchronous Actor and the effective maximum covers both the
+     * configured {@code maxThreads} ceiling and all of the Actors' declared
+     * thread demand (the maximum never dropping below the effective core). The
+     * sole exception to the {@code maxThreads} ceiling: when more non-synchronous
+     * Actors are registered than {@code maxThreads}, the pool must be able to
+     * host one thread per Actor, so the effective maximum is lifted to exactly
+     * {@code asyncActorCount} (never higher). This helper is {@code final} and
+     * uses only base-class state, so it is safe to call from constructors of
+     * subclasses that override the config getters with a delegation layer.
      *
      * @param asyncActorCount number of registered Actors with a positive thread
      *                        demand
@@ -1046,7 +1042,7 @@ public class ActorPool implements ActorLifecycle, Executor
         }
         int ceiling = asyncActorCount > this.maxThreads ? asyncActorCount : this.maxThreads;
         int core = Math.min(ceiling, Math.max(this.coreThreads, asyncActorCount));
-        int max = Math.min(ceiling, Math.max(threadDemand, core));
+        int max = Math.min(ceiling, Nums.maxOf(this.maxThreads, threadDemand, core));
         resizePool(core, max);
     }
 

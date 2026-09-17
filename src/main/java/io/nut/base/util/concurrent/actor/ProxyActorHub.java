@@ -132,15 +132,9 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
-    public void setCoreThreads(int coreThreads)
+    public void setThreads(int coreThreads, int maxThreads)
     {
-        actorHub.setCoreThreads(coreThreads);
-    }
-
-    @Override
-    public void setMaxThreads(int maxThreads)
-    {
-        actorHub.setMaxThreads(maxThreads);
+        actorHub.setThreads(coreThreads, maxThreads);
     }
 
     @Override

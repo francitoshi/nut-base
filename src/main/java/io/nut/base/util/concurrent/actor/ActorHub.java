@@ -362,14 +362,26 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Sets the configured {@code coreThreads} floor and recomputes the pool
-     * sizes: the effective core never drops below one thread per registered
-     * non-synchronous Actor.
+     * Sets both the configured {@code coreThreads} floor and the
+     * {@code maxThreads} ceiling and recomputes the pool sizes in a single
+     * call, so no particular call order is required whether the pool is grown
+     * or shrunk. The pair is kept coherent: if {@code coreThreads > maxThreads},
+     * the ceiling is raised to the floor. The configured ceiling materializes
+     * in the live pool immediately; the effective core never drops below one
+     * thread per registered non-synchronous Actor and the effective maximum
+     * never drops below the Actors' summed thread demand. The sole exception to
+     * the {@code maxThreads} ceiling: when more non-synchronous Actors are
+     * registered than {@code maxThreads}, the effective maximum is exactly that
+     * number of Actors.
      *
-     * @param coreThreads the new permanently-alive thread floor
+     * @param coreThreads the new permanently-alive thread floor; must be &ge; 0
+     * @param maxThreads  the new ceiling on live threads; must be &ge;
+     *                    {@code coreThreads} (excess core is not an error:
+     *                    the ceiling is raised to match)
+     * @throws IllegalArgumentException if either value is negative
      */
     @Override
-    public void setCoreThreads(int coreThreads)
+    public void setThreads(int coreThreads, int maxThreads)
     {
         if (!isSynchronous())
         {
@@ -377,32 +389,15 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
             {
                 throw new IllegalArgumentException("coreThreads must be >= 0, got " + coreThreads);
             }
-            if (coreThreads > this.maxThreads)
+            if (maxThreads < 0)
             {
-                throw new IllegalArgumentException("coreThreads must be <= maxThreads(" + this.maxThreads + "), got " + coreThreads);
+                throw new IllegalArgumentException("maxThreads must be >= 0, got " + maxThreads);
+            }
+            if (maxThreads < coreThreads)
+            {
+                maxThreads = coreThreads;
             }
             this.coreThreads = coreThreads;
-            adjustPoolToActors();
-        }
-    }
-
-    /**
-     * Sets the configured {@code maxThreads} ceiling and recomputes the pool
-     * sizes: the effective maximum never exceeds this value except when more
-     * non-synchronous Actors are registered than {@code maxThreads}, in which
-     * case the effective maximum is exactly that number of Actors.
-     *
-     * @param maxThreads the new ceiling on live threads
-     */
-    @Override
-    public void setMaxThreads(int maxThreads)
-    {
-        if (!isSynchronous())
-        {
-            if (maxThreads < this.coreThreads)
-            {
-                throw new IllegalArgumentException("maxThreads must be >= coreThreads(" + this.coreThreads + "), got " + maxThreads);
-            }
             this.maxThreads = maxThreads;
             adjustPoolToActors();
         }

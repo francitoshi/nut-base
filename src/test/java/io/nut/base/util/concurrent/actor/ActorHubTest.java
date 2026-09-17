@@ -315,25 +315,38 @@ class ActorHubTest
     }
 
     @Test
-    void poolSizeGetterAndSetterWork()
+    void poolSizingSetterWorksAndMaterializesTheCeiling()
     {
         ActorHub h = ActorHub.hub(3);
         assertEquals(3, h.getCoreThreads());
         assertEquals(6, h.getMaxThreads());
-        // with no Actors, the effective maximum is clamped down to the core
+        // the configured ceiling materializes immediately (threads only spawn
+        // on demand, so the pool does not preallocate them)
         assertEquals(3, h.getCorePoolSize());
-        assertEquals(3, h.getMaximumPoolSize());
+        assertEquals(6, h.getMaximumPoolSize());
 
-        h.setCoreThreads(5);
+        h.setThreads(5, 10);
 
         assertEquals(5, h.getCoreThreads());
-        assertEquals(5, h.getCorePoolSize());
-        assertEquals(5, h.getMaximumPoolSize());
-
-        h.setMaxThreads(10);
         assertEquals(10, h.getMaxThreads());
-        // the ceiling only materializes when Actors demand the threads
-        assertEquals(5, h.getMaximumPoolSize());
+        assertEquals(5, h.getCorePoolSize());
+        assertEquals(10, h.getMaximumPoolSize());
+
+        // growing the floor above the ceiling raises the ceiling to match
+        h.setThreads(8, 4);
+
+        assertEquals(8, h.getCoreThreads());
+        assertEquals(8, h.getMaxThreads());
+        assertEquals(8, h.getCorePoolSize());
+        assertEquals(8, h.getMaximumPoolSize());
+
+        // shrinking keeps the pair coherent, whichever value is dominant
+        h.setThreads(2, 6);
+
+        assertEquals(2, h.getCoreThreads());
+        assertEquals(6, h.getMaxThreads());
+        assertEquals(2, h.getCorePoolSize());
+        assertEquals(6, h.getMaximumPoolSize());
 
         h.shutdown();
         h.awaitTermination(1000);
@@ -347,10 +360,14 @@ class ActorHubTest
             assertEquals(1, h.getCoreThreads());
             assertEquals(2, h.getMaxThreads());
 
+            // the configured ceiling materializes immediately
+            assertEquals(1, h.getCorePoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
+
             // one async Actor adds a permanently alive thread to the core
             Actor<String> a = h.actor(s -> {});
             assertEquals(1, h.getCorePoolSize());
-            assertEquals(1, h.getMaximumPoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
 
             // a heavy MultiActor raises the maximum to its summed demand
             Actor<String> b = h.actor(2, 0, s -> {});
