@@ -58,7 +58,7 @@ public class PBKDF2SHA512
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try 
         {
-            int hLen = 20;
+            int hLen = 64;
 
             if (dkLen > ((Math.pow(2, 32)) - 1) * hLen) 
             {
