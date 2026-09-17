@@ -87,14 +87,6 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
     protected abstract void receive(M m);
 
     /**
-     * Ordered variant; default delegates to {@link #receive(Object)}.
-     */
-    protected void receive(M m, long seq)
-    {
-        receive(m);
-    }
-
-    /**
      * Called once after the channel is closed and drained.
      */
     protected void terminate()
