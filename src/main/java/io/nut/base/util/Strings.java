@@ -29,6 +29,21 @@ public class Strings
     public static final String HORIZONTAL_ELLIPSIS = "…"; //U+2026
     public static final String VERTICAL_ELLIPSIS   = "⋮";  //U+22EE
 
+    /**
+     * <p>Joins the elements of the given {@code Iterable} into a single String
+     * using the provided delimiter, prefix and suffix. A <code>null</code>
+     * element is replaced by the given <code>nullValue</code>, or represented
+     * by the literal <code>"null"</code> if <code>nullValue</code> is
+     * <code>null</code>.</p>
+     *
+     * @param <T> the type of elements in the list
+     * @param delimiter the delimiter between each element
+     * @param prefix the prefix to prepend to the result
+     * @param suffiex the suffix to append to the result
+     * @param list the values to join together, may not be null
+     * @param nullValue the value to use for {@code null} elements, may be null
+     * @return the joined String
+     */
     public static <T> String join(CharSequence delimiter, CharSequence prefix, CharSequence suffiex, Iterable<T> list, CharSequence nullValue)
     {
         StringJoiner sj = new StringJoiner(delimiter, prefix, suffiex);
@@ -38,25 +53,88 @@ public class Strings
         }
         return sj.toString();
     }
+    /**
+     * <p>Joins the elements of the given {@code Iterable} into a single String
+     * using the provided delimiter, without prefix or suffix.</p>
+     *
+     * <pre>
+     * Strings.join("-", Arrays.asList("a", "b", "c")) = "a-b-c"
+     * </pre>
+     *
+     * @param <T> the type of elements in the list
+     * @param delimiter the delimiter between each element
+     * @param list the values to join together, may not be null
+     * @return the joined String
+     */
     public static <T> String join(CharSequence delimiter, Iterable<T> list)
     {
         return join(delimiter, "", "", list, null);
     }
+    /**
+     * <p>Joins the elements of the given array into a single String using the
+     * provided delimiter, without prefix or suffix. A <code>null</code>
+     * element is replaced by the given <code>nullValue</code>.</p>
+     *
+     * @param <T> the type of elements in the array
+     * @param delimiter the delimiter between each element
+     * @param list the values to join together, may not be null
+     * @param nullValue the value to use for {@code null} elements, may be null
+     * @return the joined String
+     */
     public static <T> String join(CharSequence delimiter, T[] list, String nullValue)
     {
         return join(delimiter, "", "", Arrays.asList(list), nullValue);
     }
+    /**
+     * <p>Joins the elements of the given array into a single String using the
+     * provided delimiter, without prefix or suffix.</p>
+     *
+     * <pre>
+     * Strings.join("-", new String[]{"a", "b", "c"}) = "a-b-c"
+     * </pre>
+     *
+     * @param <T> the type of elements in the array
+     * @param delimiter the delimiter between each element
+     * @param elements the values to join together, may not be null
+     * @return the joined String
+     */
     public static <T> String join(CharSequence delimiter, T[] elements)
     {
         return join(delimiter, "", "", Arrays.asList(elements), null);
     }
     
+    /**
+     * <p>Returns a String consisting of the given character repeated
+     * <code>count</code> times.</p>
+     *
+     * <pre>
+     * Strings.repeat('a', 3) = "aaa"
+     * Strings.repeat('a', 0) = ""
+     * </pre>
+     *
+     * @param c the character to repeat
+     * @param count the number of repetitions, may be zero
+     * @return the repeated String
+     */
     public static String repeat(char c,int count)
     {
         char[] tmp = new char[count];
         Arrays.fill(tmp,c);
         return new String(tmp,0,count);
     }
+    /**
+     * <p>Returns a String consisting of the given String repeated
+     * <code>count</code> times.</p>
+     *
+     * <pre>
+     * Strings.repeat("ab", 3) = "ababab"
+     * Strings.repeat("ab", 0) = ""
+     * </pre>
+     *
+     * @param s the String to repeat, may be null
+     * @param count the number of repetitions, may be zero
+     * @return the repeated String, <code>null</code> if null String input
+     */
     public static String repeat(String s,int count)
     {
         StringBuilder builder = new StringBuilder(s.length()*count);
@@ -86,25 +164,84 @@ public class Strings
         return (s!=null && s.length()!=0) ? new StringBuilder(s).reverse().toString() : s;
     }
     
+    /**
+     * <p>Pad or truncate the given StringBuilder to the given size filling with
+     * the given character.</p>
+     *
+     * <p>If <code>insert</code> is <code>true</code> the padding characters are
+     * inserted at the beginning, otherwise they are appended at the end.
+     * If the builder is already longer than <code>size</code> it is returned
+     * unchanged.</p>
+     *
+     * @param builder the StringBuilder to pad, may not be null
+     * @param c the character to pad with
+     * @param size the target size
+     * @param insert if true the padding is inserted at the beginning
+     * @return the padded StringBuilder
+     */
     public static StringBuilder fill(StringBuilder builder,char c, int size, boolean insert)
     {
         int count = Math.max(size-builder.length(), 0);
         String cc = repeat(c,count);
         return insert?builder.insert(0, cc):builder.append(cc);
     }
+    /**
+     * <p>Pad or truncate the given CharSequence to the given size filling with
+     * the given character.</p>
+     *
+     * <p>If <code>insert</code> is <code>true</code> the padding characters are
+     * inserted at the beginning, otherwise they are appended at the end.
+     * If the CharSequence is already longer than <code>size</code> it is returned
+     * unchanged.</p>
+     *
+     * @param cs the CharSequence to pad, may not be null
+     * @param c the character to pad with
+     * @param size the target size
+     * @param insert if true the padding is inserted at the beginning
+     * @return the padded String
+     */
     public static String fill(CharSequence cs,char c, int size, boolean insert)
     {
         return fill(new StringBuilder(cs),c,size,insert).toString();
     }
+    /**
+     * <p>Pad or truncate the given StringBuilder to the given size filling with
+     * the given character. The padding characters are appended at the end.</p>
+     *
+     * @param builder the StringBuilder to pad, may not be null
+     * @param c the character to pad with
+     * @param size the target size
+     * @return the padded StringBuilder
+     */
     public static StringBuilder fill(StringBuilder builder,char c, int size)
     {
         return fill(builder,c,size,false);
     }
+    /**
+     * <p>Pad or truncate the given CharSequence to the given size filling with
+     * the given character. The padding characters are appended at the end.</p>
+     *
+     * @param cs the CharSequence to pad, may not be null
+     * @param c the character to pad with
+     * @param size the target size
+     * @return the padded String
+     */
     public static String fill(CharSequence cs,char c, int size)
     {
         return fill(new StringBuilder(cs),c,size,false).toString();
     }
 
+    /**
+     * <p>Gets the leftmost <code>count</code> characters of the given String.</p>
+     *
+     * <p>If <code>count</code> is greater than or equal to the String length,
+     * the String itself is returned. A <code>null</code> String returns
+     * <code>null</code>.</p>
+     *
+     * @param s the String to get the leftmost characters from, may be null
+     * @param count the number of characters to return
+     * @return the leftmost <code>count</code> characters, <code>null</code> if null String input
+     */
     public static String left(String s, int count)
     {
         if (s == null)
@@ -114,6 +251,17 @@ public class Strings
         return count >= s.length() ? s : s.substring(0, count);
     }
     
+    /**
+     * <p>Gets the rightmost <code>count</code> characters of the given String.</p>
+     *
+     * <p>If <code>count</code> is greater than or equal to the String length,
+     * the String itself is returned. A <code>null</code> String returns
+     * <code>null</code>.</p>
+     *
+     * @param s the String to get the rightmost characters from, may be null
+     * @param count the number of characters to return
+     * @return the rightmost <code>count</code> characters, <code>null</code> if null String input
+     */
     public static String right(String s, int count)
     {
         if (s == null)
@@ -237,12 +385,49 @@ public class Strings
         return false;
     }
     
-    static final String TRIM = "(^[\\s\u00a0\n]+)|([\\s\u00a0\n]+$)";
+    private static boolean isTrimChar(char c)
+    {
+        return c <= ' ' || c == '\u00a0';
+    }
+    /**
+     * <p>Trims all whitespace characters, including non-breaking spaces and
+     * line separators, from the given String.</p>
+     *
+     * <p>Besides the characters trimmed by {@link String#trim()}, this method
+     * also removes Unicode non-breaking spaces and newline characters. A
+     * <code>null</code> String returns <code>null</code>.</p>
+     *
+     * @param str the String to be trimmed, may be null
+     * @return the trimmed String, <code>null</code> if null String input
+     */
     public static String trimWhitespaces(String str)
     {
-        return str==null ? null : str.trim().replaceAll(TRIM, "");
+        if(str==null)
+        {
+            return null;
+        }
+        int start = 0;
+        int end = str.length();
+        while(start<end && isTrimChar(str.charAt(start)))
+        {
+            start++;
+        }
+        while(end>start && isTrimChar(str.charAt(end-1)))
+        {
+            end--;
+        }
+        return str.substring(start, end);
     }
             
+    /**
+     * <p>Returns the first non-<code>null</code> among the given values,
+     * or <code>null</code> if all of them are <code>null</code>.</p>
+     *
+     * @param first the first candidate, may be null
+     * @param second the second candidate, may be null
+     * @param others further candidates, may be null
+     * @return the first non-<code>null</code> value or <code>null</code> if none
+     */
     public static String firstNonNull(String first, String second, String... others)
     {
         if(first!=null)
@@ -262,6 +447,17 @@ public class Strings
         }
         return null;
     }
+    /**
+     * <p>Returns the {@code toString()} of the first non-<code>null</code>
+     * among the given values, or <code>null</code> if all of them are
+     * <code>null</code>.</p>
+     *
+     * @param <T> the type of the values
+     * @param first the first candidate, may be null
+     * @param second the second candidate, may be null
+     * @param others further candidates, may be null
+     * @return the {@code toString()} of the first non-<code>null</code> value or <code>null</code> if none
+     */
     public static <T> String firstNonNull(T first, T second, T... others)
     {
         if(first!=null)
@@ -281,39 +477,97 @@ public class Strings
         }
         return null;
     }
+    /**
+     * <p>Returns <code>null</code> if the given String is <code>null</code> or
+     * empty (""), otherwise returns the String itself.</p>
+     *
+     * @param value the String to check, may be null
+     * @return the String itself if not empty, <code>null</code> if null or empty input
+     */
     public static String nullForEmpty(String value)
     {
         return (value==null || value.length()==0) ? null : value;
     }
+    /**
+     * <p>Returns the given String, or an empty String ("") if it is
+     * <code>null</code>.</p>
+     *
+     * <pre>
+     * Strings.defaultString(null) = ""
+     * Strings.defaultString("ab") = "ab"
+     * </pre>
+     *
+     * @param s the String to use, may be null
+     * @return the String itself or an empty String if <code>null</code> input
+     */
     public static String defaultString(String s)
     {
         return (s==null) ? "" : s;
     }
     //convierte a string si es posible, evitando NullPointerException si es nulo
+    /**
+     * <p>Returns the {@code toString()} of the given object, or <code>null</code>
+     * if it is <code>null</code>.</p>
+     *
+     * @param value the object to convert, may be null
+     * @return the {@code toString()} or <code>null</code> if the object is null
+     */
     public static String safeToString(Object value)
     {
         return (value!=null) ? value.toString() : null;
     }
+    /**
+     * <p>Returns the {@code toString()} of the given object, or the given
+     * safe value if the object is <code>null</code>.</p>
+     *
+     * @param value the object to convert, may be null
+     * @param safeValue the value to use if the object is null
+     * @return the {@code toString()} or the safe value if the object is null
+     */
     public static String safeToString(Object value, String safeValue)
     {
         return (value!=null) ? value.toString() : safeValue;
     }
+    /**
+     * <p>Counts how many times the given pattern occurs in the given String,
+     * without overlapping matches.</p>
+     *
+     * @param s the String to search in, may not be null
+     * @param pattern the substring to search for, may not be null
+     * @return the number of occurrences
+     */
     public static int ocurrences(String s, String pattern)
     {
         return ocurrences(s, pattern, false, false);
     }
+    /**
+     * <p>Counts how many times the given pattern occurs in the given String,
+     * without overlapping matches.</p>
+     *
+     * @param s the String to search in, may not be null
+     * @param pattern the substring to search for, may not be null
+     * @param ignoreCase if true the comparison is case insensitive
+     * @return the number of occurrences
+     */
     public static int ocurrences(String s, String pattern, boolean ignoreCase)
     {
         return ocurrences(s, pattern, ignoreCase, false);
     }
+    /**
+     * <p>Counts how many times the given pattern occurs in the given String.</p>
+     *
+     * <p>If <code>overlap</code> is <code>true</code>, overlapping matches are
+     * counted (e.g. "aa" in "aaa" gives 2); otherwise matches must not overlap
+     * (e.g. "aa" in "aaa" gives 1).</p>
+     *
+     * @param s the String to search in, may not be null
+     * @param pattern the substring to search for, may not be null
+     * @param ignoreCase if true the comparison is case insensitive
+     * @param overlap if true overlapping matches are counted
+     * @return the number of occurrences
+     */
     public static int ocurrences(String s, String pattern, boolean ignoreCase, boolean overlap)
     {
-        if(ignoreCase)
-        {
-            s = s.toLowerCase();
-            pattern = pattern.toLowerCase();
-        }
-        
         int count=0;
         final int sn = s.length();
         final int pn = pattern.length();
@@ -322,7 +576,7 @@ public class Strings
             final int num=sn-pn;
             for(int i=0;i<=num;)
             {
-                if(s.startsWith(pattern, i))
+                if(ignoreCase ? s.regionMatches(true, i, pattern, 0, pn) : s.startsWith(pattern, i))
                 {
                     count++;
                     i+= overlap?1:pn;
@@ -550,6 +804,16 @@ public class Strings
     {
         return (s!=null) ? s.toLowerCase() : null;
     }
+    /**
+     * <p>Converts a String to lower case using the given <code>Locale</code>
+     * as per {@link String#toLowerCase(Locale)}.</p>
+     *
+     * <p>A <code>null</code> input String returns <code>null</code>.</p>
+     *
+     * @param s the String to lower case, may be null
+     * @param locale the Locale used to change the case
+     * @return the lower cased String, <code>null</code> if null String input
+     */
     public static String toLowerCase(String s, Locale locale)
     {
         return (s!=null) ? s.toLowerCase(locale) : null;
@@ -573,26 +837,78 @@ public class Strings
     {
         return (s!=null) ? s.toUpperCase() : null;
     }
+    /**
+     * <p>Converts a String to upper case using the given <code>Locale</code>
+     * as per {@link String#toUpperCase(Locale)}.</p>
+     *
+     * <p>A <code>null</code> input String returns <code>null</code>.</p>
+     *
+     * @param s the String to upper case, may be null
+     * @param locale the Locale used to change the case
+     * @return the upper cased String, <code>null</code> if null String input
+     */
     public static String toUpperCase(String s, Locale locale)
     {
         return (s!=null) ? s.toUpperCase(locale) : null;
     }
 
+    /**
+     * <p>Replaces the first matching character in the given String, or returns
+     * <code>null</code> if the String input is <code>null</code>.</p>
+     *
+     * @param s the String to process, may be null
+     * @param oldChar the character to search for
+     * @param newChar the character to replace it with
+     * @return the String with the character replaced, <code>null</code> if null String input
+     */
     public static String replace(String s, char oldChar, char newChar)
     {
         return s!=null ? s.replace(oldChar, newChar) : null;
     }
 
+    /**
+     * <p>Replaces the first substring of the given String that matches the
+     * given regular expression with the given replacement, or returns the
+     * String unchanged if the regex or the replacement is <code>null</code>.</p>
+     *
+     * @param s the String to process, may be null
+     * @param regex the regular expression to which the String is to be matched, may be null
+     * @param replacement the String to be substituted for the first match, may be null
+     * @return the String with the first match replaced, <code>null</code> if null String input
+     * @see String#replaceFirst(String, String)
+     */
     public static String replaceFirst(String s, String regex, String replacement)
     {
         return s!=null ? ( (regex!=null && replacement!=null) ? s.replaceFirst(regex, replacement) : s ) : null;
     }
 
+    /**
+     * <p>Replaces every substring of the given String that matches the given
+     * regular expression with the given replacement, or returns the String
+     * unchanged if the regex or the replacement is <code>null</code>.</p>
+     *
+     * @param s the String to process, may be null
+     * @param regex the regular expression to which the String is to be matched, may be null
+     * @param replacement the String to be substituted for each match, may be null
+     * @return the String with the matches replaced, <code>null</code> if null String input
+     * @see String#replaceAll(String, String)
+     */
     public static String replaceAll(String s, String regex, String replacement)
     {
         return s!=null ? ( (regex!=null && replacement!=null) ? s.replaceAll(regex, replacement) : s ) : null;
     }
 
+    /**
+     * <p>Replaces each substring of the given String that matches the literal
+     * target sequence with the literal replacement sequence, or returns the
+     * String unchanged if the target or the replacement is <code>null</code>.</p>
+     *
+     * @param s the String to process, may be null
+     * @param target the sequence that is to be replaced, may be null
+     * @param replacement the replacement sequence, may be null
+     * @return the String with the target replaced, <code>null</code> if null String input
+     * @see String#replace(CharSequence, CharSequence)
+     */
     public static String replace(String s, CharSequence target, CharSequence replacement)
     {
         return s!=null ? ( (target!=null && replacement!=null) ? s.replace(target, replacement) : s ) : null;
@@ -706,6 +1022,15 @@ public class Strings
         return s==null ? EMPTY : s.trim();
     }
     
+    /**
+     * <p>Returns the first non-empty ("" and non-<code>null</code>) among the
+     * given values, or an empty String ("") if all of them are empty or
+     * <code>null</code>.</p>
+     *
+     * @param first the first candidate, may be null
+     * @param others further candidates, may be null
+     * @return the first non-empty value or an empty String if none
+     */
     public static String firstNonEmpty(String first, String... others)
     {
         if(first!=null && first.length()>0)
@@ -722,6 +1047,15 @@ public class Strings
         return "";
     }
     
+    /**
+     * <p>Returns the first non-blank (not empty, not whitespace only and not
+     * <code>null</code>) among the given values, or an empty String ("") if all
+     * of them are blank or <code>null</code>.</p>
+     *
+     * @param first the first candidate, may be null
+     * @param others further candidates, may be null
+     * @return the first non-blank value or an empty String if none
+     */
     public static String firstNonBlank(String first, String... others)
     {
         if(first!=null && !isBlank(first))
@@ -768,57 +1102,141 @@ public class Strings
         return items;
     }
     
+    /**
+     * <p>Builds a hex dump of the given String (using its UTF-8 bytes) and
+     * returns it as a String.</p>
+     *
+     * @param s the String to dump, may not be null
+     * @return the hex dump
+     * @throws IOException if an error occurs while writing
+     * @see #dumpHex(Appendable, byte[])
+     */
     public static String dumpHex(String s) throws IOException
     {
         return dumpHex(new StringBuilder(), s.getBytes()).toString();
     }
+    /**
+     * <p>Builds a hex dump of the given bytes and returns it as a String.</p>
+     *
+     * @param bytes the bytes to dump, may not be null
+     * @return the hex dump
+     * @throws IOException if an error occurs while writing
+     * @see #dumpHex(Appendable, byte[])
+     */
     public static String dumpHex(byte[] bytes) throws IOException
     {
         return dumpHex(new StringBuilder(), bytes).toString();
     }
+    /**
+     * <p>Builds a hex dump of the given String (using its UTF-8 bytes) and
+     * appends it to the given {@code Appendable}.</p>
+     *
+     * @param output the {@code Appendable} to write to, may not be null
+     * @param s the String to dump, may not be null
+     * @return the given {@code Appendable}
+     * @throws IOException if an error occurs while writing
+     * @see #dumpHex(Appendable, byte[])
+     */
     public static Appendable dumpHex(Appendable output, String s) throws IOException
     {
         return dumpHex(output, s.getBytes());
     }
+    /**
+     * <p>Appends a hex dump of the given bytes to the given {@code Appendable}.</p>
+     *
+     * <p>Each line starts with the 8-digit hexadecimal offset of the first byte
+     * of the line, followed by up to 16 bytes in hexadecimal and the printable
+     * ASCII representation of those bytes, non-printable bytes being replaced
+     * by a dot.</p>
+     *
+     * @param output the {@code Appendable} to write to, may not be null
+     * @param bytes the bytes to dump, may not be null
+     * @return the given {@code Appendable}
+     * @throws IOException if an error occurs while writing
+     */
+    private static final String HEX = "0123456789ABCDEF";
     public static Appendable dumpHex(Appendable output, byte[] bytes) throws IOException
     {
         int offset = 0;
+        StringBuilder line = new StringBuilder(80);
         while (offset < bytes.length)
         {
-            output.append(String.format("%08X:", offset)); // Print the current offset in hexadecimal
+            line.setLength(0);
+            appendHexOffset(line, offset);
             int i;
             for (i = 0; i < 16 && offset + i < bytes.length; i++)
             {
-                output.append(String.format(" %02X", bytes[offset + i])); // Print the bytes in hexadecimal
+                appendHexByte(line, bytes[offset + i]); // Print the bytes in hexadecimal
             }
             for (; i < 16; i++)
             {
-                output.append("   "); // Indentation for incomplete lines
+                line.append("   "); // Indentation for incomplete lines
             }
-            output.append("  ");
+            line.append("  ");
             for (i = 0; i < 16 && offset + i < bytes.length; i++)
             {
                 char c = (char) bytes[offset + i]; // Convert the byte to a character
-                if (c >= 32 && c <= 126)
-                {
-                    output.append(c); // Print printable characters
-                }
-                else
-                {
-                    output.append("."); // Print a dot for non-printable characters
-                }
+                line.append((c >= 32 && c <= 126) ? c : '.'); // Printable characters, dots otherwise
             }
-            output.append(System.lineSeparator());
+            output.append(line).append(System.lineSeparator());
             offset += 16; // Move to the next line
         }
         return output;
     }
+    private static void appendHexOffset(StringBuilder sb, int offset)
+    {
+        sb.append(HEX.charAt((offset >>> 28) & 0xF))
+          .append(HEX.charAt((offset >>> 24) & 0xF))
+          .append(HEX.charAt((offset >>> 20) & 0xF))
+          .append(HEX.charAt((offset >>> 16) & 0xF))
+          .append(HEX.charAt((offset >>> 12) & 0xF))
+          .append(HEX.charAt((offset >>> 8) & 0xF))
+          .append(HEX.charAt((offset >>> 4) & 0xF))
+          .append(HEX.charAt(offset & 0xF))
+          .append(':');
+    }
+    private static void appendHexByte(StringBuilder sb, byte b)
+    {
+        sb.append(' ')
+          .append(HEX.charAt((b >>> 4) & 0xF))
+          .append(HEX.charAt(b & 0xF));
+    }
     
     //nos da un resumen y añade una cadena que indica continuidad si se han descartado caracteres
+    /**
+     * <p>Returns a brief summary of the given String, truncating it so that its
+     * length does not exceed <code>max</code> characters.</p>
+     *
+     * <p>If the String is longer than <code>max</code>, the result ends with
+     * the given <code>more</code> String to indicate that characters were
+     * discarded.</p>
+     *
+     * @param s the String to summarize, may not be null
+     * @param max the maximum length of the result
+     * @param more the String appended to indicate truncation, may be null
+     * @return the summarized String
+     * @see #brief(String, int, String, int)
+     */
     public static String brief(String s, int max, String more)
     {
         return brief(s, max, more, Integer.MAX_VALUE);
     }
+    /**
+     * <p>Returns a brief summary of the given String, truncating it so that its
+     * length does not exceed <code>max</code> characters and not exceed the
+     * <code>allowedReturns</code> number of line breaks of the original.</p>
+     *
+     * <p>If the String has more than <code>allowedReturns</code> line breaks,
+     * the truncation is moved back to the last line break before
+     * <code>max</code>, when possible. The result ends with the given
+     * <code>more</code> String if characters were discarded.</p>
+     *
+     * @param s the String to summarize, may not be null
+     * @param max the maximum length of the result
+     * @param more the String appended to indicate truncation, may be null
+     * @param allowedReturns the maximum number of line breaks allowed in the result
+     * @return the summarized String
+     */
     public static String brief(String s, int max, String more, int allowedReturns)
     {
         if(s.length()<=max && s.length()<=allowedReturns)
@@ -841,6 +1259,20 @@ public class Strings
         }
         return left(s,n)+more;
     }
+    /**
+     * <p>Pads the given String on the left with the given character up to the
+     * given size.</p>
+     *
+     * <pre>
+     * Strings.paddingLeft("ab", 5, ' ') = "   ab"
+     * Strings.paddingLeft("abcd", 3, ' ') = "abcd"
+     * </pre>
+     *
+     * @param s the String to pad, may not be null
+     * @param size the target size
+     * @param c the character to pad with
+     * @return the padded String
+     */
     public static String paddingLeft(String s, int size, char c)
     {
         int n = Math.max(0, size-s.length());
@@ -850,6 +1282,20 @@ public class Strings
         }
         return s;
     }
+    /**
+     * <p>Pads the given String on the right with the given character up to the
+     * given size.</p>
+     *
+     * <pre>
+     * Strings.paddingRight("ab", 5, ' ') = "ab   "
+     * Strings.paddingRight("abcd", 3, ' ') = "abcd"
+     * </pre>
+     *
+     * @param s the String to pad, may not be null
+     * @param size the target size
+     * @param c the character to pad with
+     * @return the padded String
+     */
     public static String paddingRight(String s, int size, char c)
     {
         int n = Math.max(0, size-s.length());
@@ -1126,6 +1572,14 @@ public class Strings
         }
         static final Normalizer INSTANCE = new Normalizer();
     }
+    /**
+     * Returns the normalization pattern for the given Locale, looking up its
+     * parent locales if no pattern is registered for it. Falls back to the
+     * ASCII pattern if none is found.
+     *
+     * @param locale the Locale to resolve, may not be null
+     * @return the normalization Pattern for the Locale
+     */
     private static Pattern getNormalizePattern(Locale locale)
     {
         Pattern pattern = Normalizer.INSTANCE.normalizePatterns.get(locale);
@@ -1139,10 +1593,33 @@ public class Strings
         }
         return (pattern!=null) ? pattern : Normalizer.INSTANCE.normalizeAscii;
     }
+    /**
+     * <p>Normalizes the given String replacing its accented and non-ASCII
+     * characters with their closest ASCII equivalent using the default
+     * Locale.</p>
+     *
+     * <p>Characters without an ASCII equivalent are removed. A <code>null</code>
+     * or empty String is returned unchanged.</p>
+     *
+     * @param s the String to normalize, may be null
+     * @return the normalized String, <code>null</code> if null String input
+     */
     public static String normalize(String s)
     {
         return normalize(s, Locale.getDefault());
     }
+    /**
+     * <p>Normalizes the given String replacing its accented and non-ASCII
+     * characters with their closest ASCII equivalent using the given
+     * Locale.</p>
+     *
+     * <p>Characters without an ASCII equivalent are removed. A <code>null</code>
+     * or empty String is returned unchanged.</p>
+     *
+     * @param s the String to normalize, may be null
+     * @param locale the Locale used to select the normalization rules
+     * @return the normalized String, <code>null</code> if null String input
+     */
     public static String normalize(String s, Locale locale)
     {
         if(s==null || s.length()==0) 
@@ -1162,6 +1639,14 @@ public class Strings
         }
         return found ? matcher.appendTail(sb).toString() : s;
     }
+    /**
+     * <p>Replaces every U+FFF0-U+FFFF "ugly" Unicode character in the given
+     * String with a space.</p>
+     *
+     * @param s the String to process, may not be null
+     * @param group if true consecutive ugly characters are replaced as a group
+     * @return the String with the ugly characters replaced
+     */
     public static String normalizeUgly(String s, boolean group)
     {
         String regex = group ? "[\ufff0-\uffff]+" : "[\ufff0-\uffff]";
@@ -1197,15 +1682,45 @@ public class Strings
         return sb.toString();
     }
 
+    /**
+     * <p>Compares two Strings handling <code>null</code>s without exceptions.
+     * Two <code>null</code> references are considered equal.</p>
+     *
+     * @param s1 the first String, may be null
+     * @param s2 the second String, may be null
+     * @return <code>true</code> if the Strings are equal or both <code>null</code>
+     */
     public static boolean equals(String s1, String s2)
     {
         return s1==null ? s2==null : s1.equals(s2);
     }
+    /**
+     * <p>Compares two Strings ignoring case, handling <code>null</code>s
+     * without exceptions. Two <code>null</code> references are considered
+     * equal.</p>
+     *
+     * @param s1 the first String, may be null
+     * @param s2 the second String, may be null
+     * @return <code>true</code> if the Strings are equal ignoring case or both <code>null</code>
+     */
     public static boolean equalsIgnoreCase(String s1, String s2)
     {
         return s1==null ? s2==null : s1.equalsIgnoreCase(s2);
     }
 
+    /**
+     * <p>Splits the given String into chunks of at most <code>cols</code>
+     * characters, returned as an array of rows.</p>
+     *
+     * <pre>
+     * Strings.split("abcdef", 2) = ["ab", "cd", "ef"]
+     * Strings.split("abcde", 2)  = ["ab", "cd", "e"]
+     * </pre>
+     *
+     * @param s the String to split, may not be null
+     * @param cols the maximum size of each chunk
+     * @return an array of chunks
+     */
     public static String[] split(String s, int cols)
     {
         int n = s.length();
@@ -1218,6 +1733,20 @@ public class Strings
         return rows;
     }
     
+    /**
+     * <p>Splits the given String into chunks of at most <code>cols</code>
+     * characters joined back together with the given separator.</p>
+     *
+     * <pre>
+     * Strings.split("abcdef", 2, "-") = "ab-cd-ef"
+     * Strings.split("abcde", 2, "-")  = "ab-cd-e"
+     * </pre>
+     *
+     * @param s the String to split, may not be null
+     * @param cols the maximum size of each chunk
+     * @param sep the separator used to join the chunks
+     * @return the String split and re-joined with the separator
+     */
     public static String split(String s, int cols, String sep)
     {
         int n = s.length();
@@ -1302,6 +1831,17 @@ public class Strings
         return true;
     }
 
+    /**
+     * <p>Compares two Strings lexicographically handling <code>null</code>s
+     * without exceptions. A <code>null</code> String is considered smaller than
+     * any non-<code>null</code> String, and two <code>null</code> references
+     * are considered equal.</p>
+     *
+     * @param a the first String, may be null
+     * @param b the second String, may be null
+     * @return a negative integer, zero or a positive integer as the first
+     *  String is less than, equal to, or greater than the second one
+     */
     public static int compareTo(String a, String b)
     {
         if(a==null && b!=null)
@@ -1318,6 +1858,19 @@ public class Strings
         }
         return 0;
     }
+    /**
+     * <p>Compares two String arrays element by element lexicographically,
+     * handling <code>null</code>s without exceptions.</p>
+     *
+     * <p>A shorter array is considered smaller if all compared elements are
+     * equal.</p>
+     *
+     * @param a the first array, may not be null
+     * @param b the second array, may not be null
+     * @return a negative integer, zero or a positive integer as the first
+     *  array is less than, equal to, or greater than the second one
+     * @see #compareTo(String, String)
+     */
     public static int compareTo(String[] a, String[] b)
     {
         int cmp = 0;
@@ -1332,6 +1885,17 @@ public class Strings
         }
         return cmp;
     }
+    /**
+     * <p>Compares two Strings lexicographically ignoring case, handling
+     * <code>null</code>s without exceptions. A <code>null</code> String is
+     * considered smaller than any non-<code>null</code> String, and two
+     * <code>null</code> references are considered equal.</p>
+     *
+     * @param a the first String, may be null
+     * @param b the second String, may be null
+     * @return a negative integer, zero or a positive integer as the first
+     *  String is less than, equal to, or greater than the second one ignoring case
+     */
     public static int compareToIgnoreCase(String a, String b)
     {
         if(a==null && b!=null)
@@ -1348,6 +1912,19 @@ public class Strings
         }
         return 0;
     }
+    /**
+     * <p>Compares two String arrays element by element lexicographically
+     * ignoring case, handling <code>null</code>s without exceptions.</p>
+     *
+     * <p>A shorter array is considered smaller if all compared elements are
+     * equal.</p>
+     *
+     * @param a the first array, may not be null
+     * @param b the second array, may not be null
+     * @return a negative integer, zero or a positive integer as the first
+     *  array is less than, equal to, or greater than the second one ignoring case
+     * @see #compareToIgnoreCase(String, String)
+     */
     public static int compareToIgnoreCase(String[] a, String[] b)
     {
         int cmp = 0;
@@ -1363,27 +1940,75 @@ public class Strings
         return cmp;
     }
 
+    /**
+     * <p>Joins the elements of the given {@code Collection} into a
+     * comma-separated String, without prefix or suffix. A <code>null</code>
+     * element is replaced by the given <code>nullValue</code>.</p>
+     *
+     * @param <T> the type of elements in the collection
+     * @param list the values to join, may not be null
+     * @param nullValue the value to use for {@code null} elements, may be null
+     * @return the comma-separated String
+     */
     public static <T> String csv(Collection<T> list, String nullValue)
     {
         return join(",", "", "", list, nullValue);
     }
+    /**
+     * <p>Joins the elements of the given {@code Collection} into a
+     * comma-separated String, without prefix or suffix.</p>
+     *
+     * @param <T> the type of elements in the collection
+     * @param list the values to join, may not be null
+     * @return the comma-separated String
+     */
     public static <T> String csv(Collection<T> list)
     {
         return join(",", "", "", list, null);
     }
+    /**
+     * <p>Joins the elements of the given array into a comma-separated String,
+     * without prefix or suffix. A <code>null</code> element is replaced by the
+     * given <code>nullValue</code>.</p>
+     *
+     * @param <T> the type of elements in the array
+     * @param list the values to join, may not be null
+     * @param nullValue the value to use for {@code null} elements, may be null
+     * @return the comma-separated String
+     */
     public static <T> String csv(T[] list, String nullValue)
     {
         return join(",", "", "", Arrays.asList(list), nullValue);
     }
+    /**
+     * <p>Joins the elements of the given array into a comma-separated String,
+     * without prefix or suffix.</p>
+     *
+     * @param <T> the type of elements in the array
+     * @param list the values to join, may not be null
+     * @return the comma-separated String
+     */
     public static <T> String csv(T[] list)
     {
         return join(",", "", "", Arrays.asList(list), null);
     }
 
+    /**
+     * <p>Returns the number of Unicode code points in the given String.</p>
+     *
+     * @param s the String to count, may not be null
+     * @return the number of code points in the String
+     */
     public static int codePointCount(String s)
     {
         return s.codePointCount(0, s.length());
     }
+    /**
+     * <p>Returns an array of the Unicode code points of the given String.</p>
+     *
+     * @param s the String to convert, may be null
+     * @return an array of code points, or <code>null</code> if the String input is null
+     */
     public static int[] codePoints(String s)
     {
         if(s==null)
@@ -1400,23 +2025,53 @@ public class Strings
     }
 
 //     * <pre>
-//     * Strings.capitalize(null)        = null
-//     * Strings.capitalize("")          = ""
-//     * Strings.capitalize("i am FINE") = "I Am FINE"
-//     * </pre>
+    //     * Strings.capitalize(null)        = null
+    //     * Strings.capitalize("")          = ""
+    //     * Strings.capitalize("i am FINE") = "I Am FINE"
+    //     * </pre>
+    /**
+     * <p>Capitalizes each word of the given String, using the space character
+     * as the only delimiter.</p>
+     *
+     * <p>A <code>null</code> or empty String is returned unchanged.</p>
+     *
+     * <pre>
+     * Strings.capitalize("i am fine") = "I Am Fine"
+     * </pre>
+     *
+     * @param s the String to capitalize, may be null
+     * @return the capitalized String, <code>null</code> if null String input
+     * @see #capitalize(String, char...)
+     */
     public static String capitalize(String s) 
     {
         return capitalize(s, null);
     }
     
     private static final char[] defaultDelimiter = {' '};
-//     * <pre>
-//     * Strings.capitalize(null, *)            = null
-//     * Strings.capitalize("", *)              = ""
-//     * Strings.capitalize(*, new char[0])     = *
-//     * Strings.capitalize("i am fine", null)  = "I Am Fine"
-//     * Strings.capitalize("i aM.fine", {'.'}) = "I aM.Fine"
-//     * </pre>    
+    //     * <pre>
+    //     * Strings.capitalize(null, *)            = null
+    //     * Strings.capitalize("", *)              = ""
+    //     * Strings.capitalize(*, new char[0])     = *
+    //     * Strings.capitalize("i am fine", null)  = "I Am Fine"
+    //     * Strings.capitalize("i aM.fine", {'.'}) = "I aM.Fine"
+    //     * </pre>    
+    /**
+     * <p>Capitalizes each word of the given String, using the given characters
+     * as delimiters. If no delimiter is provided, whitespace is used.</p>
+     *
+     * <p>A <code>null</code>, empty String or an empty delimiter array returns
+     * the String unchanged.</p>
+     *
+     * <pre>
+     * Strings.capitalize("i aM.fine", '.') = "I aM.Fine"
+     * </pre>
+     *
+     * @param s the String to capitalize, may be null
+     * @param delimiters the delimiter characters used to separate words,
+     *  whitespace is used if none is provided
+     * @return the capitalized String, <code>null</code> if null String input
+     */
     public static String capitalize(String s, char... delimiters) 
     {
         int delimLen = (delimiters==null ? (delimiters=defaultDelimiter).length : delimiters.length);
@@ -1492,6 +2147,14 @@ public class Strings
         return false;
     }
 
+    /**
+     * <p>Returns a new String containing only the first occurrence of each
+     * Unicode code point in the original String, preserving order.</p>
+     *
+     * @param s the String to process, may not be null
+     * @return a String with only unique code points
+     * @see #uniqueCodepointCount(String)
+     */
     public static String uniqueCodepoints(String s)
     {
         StringBuilder sb = new StringBuilder();
@@ -1507,6 +2170,13 @@ public class Strings
         }
         return sb.toString();
     }
+    /**
+     * <p>Returns the number of unique Unicode code points in the given String.</p>
+     *
+     * @param s the String to analyze, may not be null
+     * @return the number of unique code points
+     * @see #uniqueCodepoints(String)
+     */
     public static int uniqueCodepointCount(String s)
     {
         HashSet<Integer> uniques = new HashSet<>();
@@ -1519,6 +2189,21 @@ public class Strings
         return uniques.size();
     }
     
+    /**
+     * <p>Merges two multi-line Strings side by side, aligning them to the
+     * given number of columns.</p>
+     *
+     * <p>If <code>cols</code> is positive the left column is padded with
+     * spaces before joining. If <code>cols</code> is zero the columns are
+     * just concatenated. If <code>cols</code> is negative the shorter left
+     * rows are replaced by the right rows at the given column offset.</p>
+     *
+     * @param left the left block of text, may not be null
+     * @param right the right block of text, may not be null
+     * @param cols the column alignment, or 0 for no padding
+     * @return the merged text
+     * @see #mergeRows(int, String...)
+     */
     //0 just cat, >0 add n to the bigger column, <0 replace at column -n
     public static String mergeRows(String left, String right, int cols)
     {
@@ -1579,6 +2264,14 @@ public class Strings
         }
         return rows.toString();
     }
+    /**
+     * <p>Merges the given multi-line Strings side by side using
+     * {@link #mergeRows(String, String, int)}.</p>
+     *
+     * @param cols the column alignment passed to each merge, or 0 for no padding
+     * @param rows the blocks of text to merge, may not be null
+     * @return the merged text
+     */
     public static String mergeRows(int cols, String... rows)
     {
         String s = rows.length>0 ? rows[0] : "";
@@ -1588,21 +2281,48 @@ public class Strings
         }
         return s;
     }
+    /**
+     * <p>Returns the size of the longest suffix of <code>start</code> that
+     * matches a prefix of <code>end</code>.</p>
+     *
+     * <p>If either String is <code>null</code> or empty, returns 0.</p>
+     *
+     * @param start the String whose suffix is compared, may be null
+     * @param end the String whose prefix is compared, may be null
+     * @return the number of overlapping characters, possibly zero
+     * @see #overlap(String...)
+     */
     public static int overlapped(String start, String end)
     {
-        if(start==null||end==null||start.isEmpty()||end.isEmpty())
+        return overlapped((CharSequence)start, end);
+    }
+
+    /**
+     * <p>Returns the size of the longest suffix of <code>start</code> that
+     * matches a prefix of <code>end</code>.</p>
+     *
+     * <p>If either sequence is <code>null</code> or empty, returns 0.</p>
+     *
+     * @param start the sequence whose suffix is compared, may be null
+     * @param end the sequence whose prefix is compared, may be null
+     * @return the number of overlapping characters, possibly zero
+     * @see #overlap(String...)
+     */
+    public static int overlapped(CharSequence start, CharSequence end)
+    {
+        if(start==null||end==null||start.length()==0||end.length()==0)
         {
             return 0;
         }
-        char[] s = start.toCharArray();
-        char[] e = end.toCharArray();
-        int at = Math.max(0, s.length-e.length);
+        int sl = start.length();
+        int el = end.length();
+        int at = Math.max(0, sl-el);
         int count = 0;
-        for(int i=at;i<s.length && count==0;i++)
+        for(int i=at;i<sl && count==0;i++)
         {
-            for(int j=i;j<s.length;j++,count++)
+            for(int j=i;j<sl;j++,count++)
             {
-                if(s[j]!=e[count])
+                if(start.charAt(j)!=end.charAt(count))
                 {
                     count = 0;
                     break;
@@ -1611,16 +2331,26 @@ public class Strings
         }
         return count;
     }
+    /**
+     * <p>Concatenates the given Strings overlapping the suffix of each String
+     * with the prefix of the next one when possible.</p>
+     *
+     * <p>For example, concatenating "abc" and "bcd" produces "abcd".</p>
+     *
+     * @param s the Strings to overlap and concatenate, may not be null
+     * @return the concatenated String with the overlaps removed
+     * @see #overlapped(String, String)
+     */
     public static String overlap(String... s)
     {
-        String full = "";
+        StringBuilder full = new StringBuilder();
         
         for(String item : s)
         {
             int count = overlapped(full, item);
-            full += (count==0) ? item : item.substring(count);
+            full.append((count==0) ? item : item.substring(count));
         }
-        return full;
+        return full.toString();
     }
     
     private static final String UNQUOTE = "Q([^Q]+|q[^q]+q)Q";
@@ -1706,16 +2436,44 @@ public class Strings
     }
     
     
+    /**
+     * <p>Splits the given delimiter-separated values into a {@code HashSet}
+     * of Strings.</p>
+     *
+     * <p>The values are split using the given {@code sep} regular expression,
+     * so a {@code null} element is not produced; the resulting set contains all
+     * the resulting tokens.</p>
+     *
+     * @param values the delimiter-separated values, may not be null
+     * @param sep the regular expression used to split the values
+     * @return a {@code HashSet} with the split tokens
+     */
     public static HashSet<String> delimiterSeparatedValuesToSetString(String values, String sep)
     {
         HashSet<String> set = new HashSet<>();
         set.addAll(Arrays.asList(values.split(sep)));
         return set;
     }
+    /**
+     * <p>Splits the given comma-separated values into a {@code HashSet} of
+     * Strings. If <code>trim</code> is <code>true</code> the tokens are trimmed
+     * of surrounding spaces.</p>
+     *
+     * @param values the comma-separated values, may not be null
+     * @param trim if true the resulting tokens are trimmed of spaces
+     * @return a {@code HashSet} with the split tokens
+     */
     public static HashSet<String> commaSeparatedValuesToSetString(String values, boolean trim)
     {
         return delimiterSeparatedValuesToSetString(values, trim?" *, *":",");
     }
+    /**
+     * <p>Splits the given comma-separated values into a {@code HashSet} of
+     * Strings.</p>
+     *
+     * @param values the comma-separated values, may not be null
+     * @return a {@code HashSet} with the split tokens
+     */
     public static HashSet<String> commaSeparatedValuesToSetString(String values)
     {
         return commaSeparatedValuesToSetString(values, false);
@@ -1723,6 +2481,17 @@ public class Strings
     
 
 
+    /**
+     * <p>Collects the Unicode code points of the given String that are not in
+     * the given exclude String, returning them as a new String.</p>
+     *
+     * <p>The code points in <code>exclude</code> are skipped; the remaining
+     * code points of <code>s</code> are returned in their original order.</p>
+     *
+     * @param s the String whose code points are collected, may be null
+     * @param exclude the code points to skip, may be null
+     * @return a String with the collected code points, empty String if s is null
+     */
     public static String collectCodePoints(String s, String exclude)
     {
         HashSet<Integer> set = new HashSet<>();
@@ -1820,6 +2589,18 @@ public class Strings
         return strs[0].substring(0, min);
     }
     
+    /**
+     * <p>Skipping the given number of characters from the beginning of the
+     * given String.</p>
+     *
+     * <p>If <code>n</code> is zero the String is returned unchanged; if
+     * <code>n</code> is greater than or equal to the String length, an empty
+     * String is returned. A <code>null</code> String returns <code>null</code>.</p>
+     *
+     * @param s the String to skip characters from, may be null
+     * @param n the number of characters to skip
+     * @return the String without the first <code>n</code> characters, <code>null</code> if null String input
+     */
     public static String skip(String s, int n)
     {
         if(s==null)

@@ -1025,7 +1025,6 @@ public class StringsTest
             "Hello World!!! This is a Test.",
             "Hello World!!!\nThis is a Test."
         };
-        Appendable sb = System.out;//new StringBuilder();
 
         for(String item: plainText)
         {
