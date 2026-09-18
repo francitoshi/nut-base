@@ -22,6 +22,11 @@ import java.util.function.Consumer;
  * such as {@link #sum()}, {@link #average()}, {@link #peek()} and a no-argument {@link #array()}.
  * All the generic ring-buffer behaviour is inherited from {@link RingQueue}.
  * <p>
+ * <b>Performance:</b> when the capacity is a power of two, index arithmetic uses a
+ * bitmask ({@code index & (capacity - 1)}) instead of the modulo operator, which is
+ * significantly faster for push/pop and for traversals. For arbitrary capacities a
+ * modulo is used instead, so no benefit is obtained.
+ * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
 public class RingQueueBigDecimal extends RingQueue<BigDecimal>
@@ -29,7 +34,9 @@ public class RingQueueBigDecimal extends RingQueue<BigDecimal>
     /**
      * Constructs a new RingQueueBigDecimal with the specified capacity.
      *
-     * @param capacity the maximum number of elements the queue can hold.
+     * @param capacity the maximum number of elements the queue can hold. When it is a
+     *                power of two, operations use a bitmask instead of a modulo,
+     *                which is faster.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
     public RingQueueBigDecimal(int capacity)

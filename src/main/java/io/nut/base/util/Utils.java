@@ -2449,9 +2449,49 @@ public abstract class Utils
         return defaultValue;
     }
 
+    /**
+     * Returns the value mapped to the given item, or the value supplied by
+     * {@code defaultValueSupplier} when no key matches.
+     *
+     * <p>The supplier is only evaluated when there is no match, so an
+     * expensive default value is not computed unless it is needed.</p>
+     *
+     * <p>This method behaves exactly like
+     * {@link #equivalent(Object, Object[], Object[], Object)} except that the
+     * default value is provided lazily. It is named {@code equivalentGet} to
+     * avoid overloading ambiguity with {@link #equivalent(Object, Object[],
+     * Object[], Object)} when the default value is a {@code null} literal.</p>
+     *
+     * @param <K> the type of the keys
+     * @param <V> the type of the values
+     * @param item the value to look up, may be null
+     * @param keys the array of keys, may not be null
+     * @param values the array of values, may not be null
+     * @param defaultValueSupplier the supplier of the value returned when no
+     *  key matches, may not be null
+     * @return the value mapped to the item, or {@code defaultValueSupplier.get()}
+     */
+    public static <K, V> V equivalent(K item, K[] keys, V[] values, Supplier<? extends V> defaultValueSupplier)
+    {
+        boolean equals = !(item instanceof Enum);
+
+        for (int i = 0; i < keys.length && i < values.length; i++)
+        {
+            if (keys[i] == item)
+            {
+                return values[i];
+            }
+            if (equals && keys[i] != null && keys[i].equals(item))
+            {
+                return values[i];
+            }
+        }
+        return defaultValueSupplier==null ? null : defaultValueSupplier.get();
+    }
+
     public static <K, V> V equivalent(K item, K[] keys, V[] values)
     {
-        return equivalent(item, keys, values, null);
+        return equivalent(item, keys, values, (V)null);
     }
 
     public static void log(Logger logger, Level level, Supplier<String> msg)

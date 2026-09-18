@@ -1,28 +1,14 @@
 /*
- *  Args.java
- *
- *  Copyright (c) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
 /**
  * A mutable, ordered collection of string arguments designed for building
@@ -106,6 +92,46 @@ public final class Args
     public String get(int index)
     {
         return items.size()>index ? items.get(index) : null;
+    }
+
+    /**
+     * Returns the argument string at the specified index, or the value
+     * supplied by {@code defaultValue} if the index is out of bounds.
+     *
+     * <p>The supplier is only evaluated when the index is out of bounds, so an
+     * expensive default value is not computed unless it is needed. A
+     * {@code null} supplier returns {@code null} when the index is out of
+     * bounds, behaving like {@link #get(int)}.</p>
+     *
+     * @param index the zero-based index of the argument to retrieve
+     * @param defaultValue the supplier of the value returned when the index is
+     *                     out of bounds; may be {@code null}
+     * @return the argument string at {@code index}, or
+     *         {@code defaultValue.get()} if {@code index >= size()} and the
+     *         supplier is not {@code null}
+     */
+    public String get(int index, Supplier<String> defaultValue)
+    {
+        if(items.size()>index)
+        {
+            return items.get(index);
+        }
+        return defaultValue!=null ? defaultValue.get() : null;
+    }
+
+    /**
+     * Returns the argument string at the specified index, or the given default
+     * value if the index is out of bounds.
+     *
+     * @param index the zero-based index of the argument to retrieve
+     * @param defaultValue the default value returned when the index is out of
+     *                     bounds; may be {@code null}
+     * @return the argument string at {@code index}, or {@code defaultValue} if
+     *         {@code index >= size()}
+     */
+    public String get(int index, String defaultValue)
+    {
+        return items.size()>index ? items.get(index) : defaultValue;
     }
 
     /**

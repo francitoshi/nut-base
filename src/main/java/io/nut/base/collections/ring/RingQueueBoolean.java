@@ -16,12 +16,18 @@ import java.util.function.Consumer;
  * This structure operates with a fixed capacity. When elements are pushed into a full queue,
  * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
+ * <b>Performance:</b> when the capacity is a power of two, index arithmetic uses a
+ * bitmask ({@code index & (capacity - 1)}) instead of the modulo operator, which is
+ * significantly faster for push/pop and for traversals. For arbitrary capacities a
+ * modulo is used instead, so no benefit is obtained.
+ * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  */
 public class RingQueueBoolean
 {
     private final boolean [] buffer;
     private final int capacity;
+    private final int mask;
     private int head;
     private int tail;
     private int size;
@@ -29,7 +35,9 @@ public class RingQueueBoolean
     /**
      * Constructs a new RingQueueByte with the specified capacity.
      *
-     * @param capacity the maximum number of elements the queue can hold.
+     * @param capacity the maximum number of elements the queue can hold. When it is a
+     *                power of two, operations use a bitmask instead of a modulo,
+     *                which is faster.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
     public RingQueueBoolean(int capacity)
@@ -39,6 +47,7 @@ public class RingQueueBoolean
             throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
         }
         this.capacity = capacity;
+        this.mask = (capacity & (capacity - 1)) == 0 ? capacity - 1 : -1;
         this.buffer = new boolean[capacity];
         this.head = 0;
         this.tail = 0;
@@ -53,10 +62,20 @@ public class RingQueueBoolean
             throw new IllegalArgumentException("data cannot be empty");
         }
         this.capacity = data.length;
+        this.mask = (capacity & (capacity - 1)) == 0 ? capacity - 1 : -1;
         this.buffer = data.clone();
         this.head = 0;
         this.tail = 0;
         this.size = data.length;
+    }
+
+    /**
+     * Wraps an index around the buffer, using a bitmask when the capacity is a
+     * power of two and a modulo otherwise.
+     */
+    private int wrap(int index)
+    {
+        return mask >= 0 ? index & mask : index % capacity;
     }
     
     /**
@@ -74,21 +93,43 @@ public class RingQueueBoolean
         if (size == capacity)
         {
             removed = buffer[head];
-            head = (head + 1) % capacity;
+            head = wrap(head + 1);
             size--;
         }
         buffer[tail] = value;
-        tail = (tail + 1) % capacity;
+        tail = wrap(tail + 1);
         size++;
         return removed;
     }
 
     public void pushAll(boolean[] value)
     {
-        for(boolean v : value)
+        int n = value.length;
+        if (n <= 0)
         {
-            push(v);
+            return;
         }
+        int newSize = size + n;
+        int dropped = 0;
+        if (newSize > capacity)
+        {
+            dropped = newSize - capacity;
+            newSize = capacity;
+        }
+        int writePos = tail;
+        if (writePos + n <= capacity)
+        {
+            System.arraycopy(value, 0, buffer, writePos, n);
+        }
+        else
+        {
+            int first = capacity - writePos;
+            System.arraycopy(value, 0, buffer, writePos, first);
+            System.arraycopy(value, first, buffer, 0, n - first);
+        }
+        head = wrap(head + dropped);
+        tail = wrap(writePos + n - dropped);
+        size = newSize;
     }
 
     /**
@@ -126,7 +167,7 @@ public class RingQueueBoolean
             return false;
         }
         boolean value = buffer[head];
-        head = (head + 1) % capacity;
+        head = wrap(head + 1);
         size--;
         return value;
     }
@@ -196,7 +237,7 @@ public class RingQueueBoolean
 
         for (int i = 0; i < elementsToRead; i++)
         {
-            buf[i] = buffer[(head + i) % capacity];
+            buf[i] = buffer[wrap(head + i)];
         }
 
         // Fill remaining positions with false if queue has fewer elements
@@ -261,7 +302,7 @@ public class RingQueueBoolean
         {
             return false;
         }
-        return buffer[(head + n) % capacity];
+        return buffer[wrap(head + n)];
     }
     
     /**
@@ -274,7 +315,7 @@ public class RingQueueBoolean
     {
         for (int i = 0; i < size; i++)
         {
-            consumer.accept(buffer[(head + i) % capacity]);
+            consumer.accept(buffer[wrap(head + i)]);
         }
     }
 
@@ -289,7 +330,7 @@ public class RingQueueBoolean
         boolean[] result = new boolean[size];
         for (int i = 0; i < size; i++)
         {
-            result[i] = buffer[(head + i) % capacity];
+            result[i] = buffer[wrap(head + i)];
         }
         return result;
     }
@@ -334,7 +375,7 @@ public class RingQueueBoolean
         long total = 0;
         for (int i = 0; i < size; i++)
         {
-            total += buffer[(head + i) % capacity] ? 1 : 0;
+            total += buffer[wrap(head + i)] ? 1 : 0;
         }
         return total;
     }
@@ -353,7 +394,7 @@ public class RingQueueBoolean
         boolean minValue = buffer[head];
         for (int i = 1; i < size && minValue; i++)
         {
-            minValue = buffer[(head + i) % capacity];
+            minValue = buffer[wrap(head + i)];
         }
         return minValue;
     }
@@ -372,7 +413,7 @@ public class RingQueueBoolean
         boolean maxValue = buffer[head];
         for (int i = 1; i < size && !maxValue; i++)
         {
-            maxValue = buffer[(head + i) % capacity];
+            maxValue = buffer[wrap(head + i)];
         }
         return maxValue;
     }

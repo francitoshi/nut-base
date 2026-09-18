@@ -20,7 +20,12 @@ import java.util.function.Consumer;
  * This structure operates with a fixed capacity. When elements are pushed into a full queue,
  * the oldest element (head) is automatically removed/overwritten to make room for the new element.
  * <p>
- * This implementation is backed by an {@link ArrayList} acting as a fixed-size buffer.
+ * This implementation is backed by an array acting as a fixed-size buffer.
+ * <p>
+ * <b>Performance:</b> when the capacity is a power of two, index arithmetic uses a
+ * bitmask ({@code index & (capacity - 1)}) instead of the modulo operator, which is
+ * significantly faster for push/pop and for traversals. For arbitrary capacities a
+ * modulo is used instead, so no benefit is obtained.
  * <p>
  * <b>Note:</b> This implementation is not thread-safe.
  *
@@ -28,8 +33,9 @@ import java.util.function.Consumer;
  */
 public class RingQueue<E>
 {
-    private final List<E> buffer;
+    private final E[] buffer;
     private final int capacity;
+    private final int mask;
     private int head;
     private int tail;
     private int size;
@@ -37,9 +43,12 @@ public class RingQueue<E>
     /**
      * Constructs a new RingQueue with the specified capacity.
      *
-     * @param capacity the maximum number of elements the queue can hold.
+     * @param capacity the maximum number of elements the queue can hold. When it is a
+     *                power of two, operations use a bitmask instead of a modulo,
+     *                which is faster.
      * @throws IllegalArgumentException if the capacity is less than or equal to 0.
      */
+    @SuppressWarnings("unchecked")
     public RingQueue(int capacity)
     {
         if (capacity <= 0)
@@ -47,12 +56,8 @@ public class RingQueue<E>
             throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
         }
         this.capacity = capacity;
-        this.buffer = new ArrayList<>(capacity);
-        // Initialize with nulls to fill the underlying array structure
-        for (int i = 0; i < capacity; i++)
-        {
-            this.buffer.add(null);
-        }
+        this.mask = (capacity & (capacity - 1)) == 0 ? capacity - 1 : -1;
+        this.buffer = (E[]) new Object[capacity];
         this.head = 0;
         this.tail = 0;
         this.size = 0;
@@ -66,10 +71,20 @@ public class RingQueue<E>
             throw new IllegalArgumentException("data cannot be empty");
         }
         this.capacity = data.length;
-        this.buffer = Arrays.asList(data.clone());
+        this.mask = (capacity & (capacity - 1)) == 0 ? capacity - 1 : -1;
+        this.buffer = data.clone();
         this.head = 0;
         this.tail = 0;
         this.size = data.length;
+    }
+
+    /**
+     * Wraps an index around the buffer, using a bitmask when the capacity is a
+     * power of two and a modulo otherwise.
+     */
+    private int wrap(int index)
+    {
+        return mask >= 0 ? index & mask : index % capacity;
     }
 
     /**
@@ -86,22 +101,44 @@ public class RingQueue<E>
         E removed = null;
         if (size == capacity)
         {
-            removed = buffer.get(head);
-            head = (head + 1) % capacity;
+            removed = buffer[head];
+            head = wrap(head + 1);
             size--;
         }
-        buffer.set(tail, value);
-        tail = (tail + 1) % capacity;
+        buffer[tail] = value;
+        tail = wrap(tail + 1);
         size++;
         return removed;
     }
 
     public void pushAll(E[] value)
     {
-        for(E v : value)
+        int n = value.length;
+        if (n <= 0)
         {
-            push(v);
+            return;
         }
+        int newSize = size + n;
+        int dropped = 0;
+        if (newSize > capacity)
+        {
+            dropped = newSize - capacity;
+            newSize = capacity;
+        }
+        int writePos = tail;
+        if (writePos + n <= capacity)
+        {
+            System.arraycopy(value, 0, buffer, writePos, n);
+        }
+        else
+        {
+            int first = capacity - writePos;
+            System.arraycopy(value, 0, buffer, writePos, first);
+            System.arraycopy(value, first, buffer, 0, n - first);
+        }
+        head = wrap(head + dropped);
+        tail = wrap(writePos + n - dropped);
+        size = newSize;
     }
 
     /**
@@ -115,9 +152,9 @@ public class RingQueue<E>
         {
             return null;
         }
-        E value = buffer.get(head);
-        buffer.set(head, null); // Helps GC
-        head = (head + 1) % capacity;
+        E value = buffer[head];
+        buffer[head] = null; // Helps GC
+        head = wrap(head + 1);
         size--;
         return value;
     }
@@ -136,7 +173,7 @@ public class RingQueue<E>
         {
             return null;
         }
-        return buffer.get((head + n) % capacity);
+        return buffer[wrap(head + n)];
     }
 
     /**
@@ -149,7 +186,7 @@ public class RingQueue<E>
     {
         for (int i = 0; i < size; i++)
         {
-            consumer.accept(buffer.get((head + i) % capacity));
+            consumer.accept(buffer[wrap(head + i)]);
         }
     }
 
@@ -158,7 +195,7 @@ public class RingQueue<E>
         List<E> result = new ArrayList<>(size);
         for (int i = 0; i < size; i++)
         {
-            result.add(buffer.get((head + i) % capacity));
+            result.add(buffer[wrap(head + i)]);
         }
         return result;
     }
@@ -183,7 +220,7 @@ public class RingQueue<E>
         }
         for (int i = 0; i < size; i++)
         {
-            a[i] = buffer.get((head + i) % capacity);
+            a[i] = buffer[wrap(head + i)];
         }
         return a;
     }
@@ -222,12 +259,12 @@ public class RingQueue<E>
             return null;
         }
 
-        E minValue = buffer.get(head);
+        E minValue = buffer[head];
         Comparable<E> comparable = (Comparable<E>) minValue;
 
         for (int i = 1; i < size; i++)
         {
-            E value = buffer.get((head + i) % capacity);
+            E value = buffer[wrap(head + i)];
             if (comparable.compareTo(value) > 0)
             {
                 minValue = value;
@@ -250,10 +287,10 @@ public class RingQueue<E>
             return null;
         }
 
-        E minValue = buffer.get(head);
+        E minValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            E value = buffer.get((head + i) % capacity);
+            E value = buffer[wrap(head + i)];
             if (comparator.compare(value, minValue) < 0)
             {
                 minValue = value;
@@ -276,12 +313,12 @@ public class RingQueue<E>
             return null;
         }
 
-        E maxValue = buffer.get(head);
+        E maxValue = buffer[head];
         Comparable<E> comparable = (Comparable<E>) maxValue;
 
         for (int i = 1; i < size; i++)
         {
-            E value = buffer.get((head + i) % capacity);
+            E value = buffer[wrap(head + i)];
             if (comparable.compareTo(value) < 0)
             {
                 maxValue = value;
@@ -304,10 +341,10 @@ public class RingQueue<E>
             return null;
         }
 
-        E maxValue = buffer.get(head);
+        E maxValue = buffer[head];
         for (int i = 1; i < size; i++)
         {
-            E value = buffer.get((head + i) % capacity);
+            E value = buffer[wrap(head + i)];
             if (comparator.compare(value, maxValue) > 0)
             {
                 maxValue = value;

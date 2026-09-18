@@ -74,6 +74,37 @@ class RingQueueIntTest
     }
 
     @Test
+    void testPushAll()
+    {
+        RingQueueInt queue = new RingQueueInt(4);
+
+        queue.pushAll(new int[]{1, 2, 3});
+        assertEquals(3, queue.size());
+        assertEquals(1, queue.pop());
+        assertEquals(2, queue.pop());
+        assertEquals(3, queue.pop());
+
+        queue.pushAll(new int[]{4, 5, 6, 7});
+        assertEquals(4, queue.size());
+        assertEquals(4, queue.pop());
+        assertEquals(5, queue.pop());
+
+        queue.pushAll(new int[]{8, 9});
+        assertEquals(4, queue.size());
+        assertEquals(6, queue.pop());
+        assertEquals(7, queue.pop());
+        assertEquals(8, queue.pop());
+        assertEquals(9, queue.pop());
+
+        RingQueueInt odd = new RingQueueInt(3);
+        odd.pushAll(new int[]{1, 2, 3, 4});
+        assertEquals(3, odd.size());
+        assertEquals(2, odd.pop());
+        assertEquals(3, odd.pop());
+        assertEquals(4, odd.pop());
+    }
+
+    @Test
     void testMinMax()
     {
         RingQueueInt queue = new RingQueueInt(3);
