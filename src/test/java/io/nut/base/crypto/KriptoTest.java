@@ -259,9 +259,9 @@ public class KriptoTest
         };
         int[][] keyBits =
         {
-            { 1024, 2048, 4098 },
-            { 1024, 2048, 4098 },
-            { 1024, 2048, 4098 },
+            { 1024, 2048, 4096 },
+            { 1024, 2048, 4096 },
+            { 1024, 2048, 4096 },
         };
         int[][] ivBits =
         {
@@ -272,6 +272,15 @@ public class KriptoTest
 
         Kripto instance = Kripto.getInstance();
 
+        KeyPair[] keyPairs = new KeyPair[keyBits[0].length];
+        for (int j = 0; j < keyPairs.length; j++)
+        {
+            System.out.println("asym=" + keyPairTransformations[0] + " " + keyPairAlgorithms[0] + " " + keyBits[0][j] + " keygen");
+            System.out.flush();
+            KeyPairGenerator alice = instance.getKeyPairGenerator(keyPairAlgorithms[0], keyBits[0][j]);
+            keyPairs[j] = alice.generateKeyPair();
+        }
+
         for (int i = 0; i < keyPairTransformations.length; i++)
         {
             for (int j = 0; j < keyBits[i].length; j++)
@@ -279,8 +288,7 @@ public class KriptoTest
                 System.out.println("asym=" + keyPairTransformations[i] + " " + keyPairAlgorithms[i] + " " + keyBits[i][j] + " " + ivBits[i][j]);
                 System.out.flush();
 
-                KeyPairGenerator alice = instance.getKeyPairGenerator(keyPairAlgorithms[i], keyBits[i][j]);
-                KeyPair aliceKeyPair = alice.generateKeyPair();
+                KeyPair aliceKeyPair = keyPairs[j];
 
                 PrivateKey alicePrivateKey = aliceKeyPair.getPrivate();
                 PublicKey alicePublicKey = aliceKeyPair.getPublic();
@@ -929,17 +937,21 @@ public class KriptoTest
     @Test
     public void testBlumBlumShub() 
     {
-        int[] P = {11, 7, 11};
-        int[] Q = {23, 11,19};
-        int[] S = {3,  64, 3};
+        int[][] cases =
+        {
+            { 11, 23, 3, 10, 26 },
+            { 7, 11, 64, 10, 71 },
+            { 11, 19, 3, 10, 169 },
+        };
 
         long t0 =System.nanoTime();
-        for(int i=0;i<P.length;i++)
+        for(int[] c : cases)
         {
-            BigInteger p = BigInteger.valueOf(P[i]);
-            BigInteger q = BigInteger.valueOf(Q[i]);
-            BigInteger seed = BigInteger.valueOf(S[i]);
-            BigInteger r = Kripto.blumBlumShub(p, q, seed, 20_000_000);
+            BigInteger p = BigInteger.valueOf(c[0]);
+            BigInteger q = BigInteger.valueOf(c[1]);
+            BigInteger seed = BigInteger.valueOf(c[2]);
+            BigInteger r = Kripto.blumBlumShub(p, q, seed, c[3]);
+            assertEquals(BigInteger.valueOf(c[4]), r);
         }
         long t1 =System.nanoTime();
         System.out.printf("%d ms\n",TimeUnit.NANOSECONDS.toMillis(t1-t0));

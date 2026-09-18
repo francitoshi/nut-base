@@ -381,7 +381,7 @@ public class Steganography
         {
             return null;
         }
-        return pbkdf2.deriveSecretKeyAES(passphrase, SALT, ROUNDS, KEY_BITS);
+        return pbkdf2.deriveSecretKeyAES(passphrase, SALT, rounds, KEY_BITS);
     }
 
     public byte[] deriveIV(char[] passphrase) throws InvalidKeySpecException
@@ -390,7 +390,7 @@ public class Steganography
         {
             return null;
         }
-        return pbkdf2.deriveSecretKeyEncoded(passphrase, SALT, ROUNDS, 128); 
+        return pbkdf2.deriveSecretKeyEncoded(passphrase, SALT, rounds, 128); 
     }
 
     public String encode(String text, byte[] msg, char[] passphrase) throws InvalidKeySpecException

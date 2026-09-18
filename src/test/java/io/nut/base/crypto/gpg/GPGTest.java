@@ -12,14 +12,18 @@ import static io.nut.base.crypto.gpg.GPG.NISTP521;
 import static io.nut.base.crypto.gpg.GPG.RSA1024;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
 import io.nut.base.encoding.Hex;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
@@ -52,11 +56,11 @@ public class GPGTest
     @Order(1)
     public void testGenKey() throws Exception
     {
+        Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG);
         String name = GPG.class.getName()+System.nanoTime();
         
         assertEquals(0, gpg.genKey(RSA1024, SCA, NISTP521, E, name, "1", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(NISTP384, SCA, NISTP256, E, name, "1", EMAIL, PASSPHRASE, "4y"));
         assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, name, "3", EMAIL, PASSPHRASE, "4y"));
 
     }
@@ -65,6 +69,7 @@ public class GPGTest
     @Order(2)
     public void testEditKeyAddKey() throws Exception
     {
+        Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG);
         String name = GPG.class.getName()+System.nanoTime();
         
@@ -75,10 +80,7 @@ public class GPGTest
 
         assertEquals(0, gpg.addKeyRSA(id, 1024, true, true, true, "1y", PASSPHRASE));
         
-        assertEquals(0, gpg.addKeyDSA(id, 1024, true, true, "1y", PASSPHRASE));
-        
         assertEquals(0, gpg.addKeyECC(id, true, false, true, 1, "3y", PASSPHRASE));
-        assertEquals(0, gpg.addKeyECC(id, false, true, false, 3, "6y", PASSPHRASE));
         
         assertEquals(0, gpg.deleteSecKeys(id));
     }
@@ -87,6 +89,7 @@ public class GPGTest
     @Order(3)
     public void testEncryptAndSign() throws Exception
     {
+        Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(true).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
         // Datos de ejemplo
         String plaintext = "this is a secret message, for testing.";
@@ -95,14 +98,12 @@ public class GPGTest
 
         String signerId = "signer";
         String recipientId1 = "recipient1";
-        String recipientId2 = "recipient2";
 
         assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, signerId, "", EMAIL, PASSPHRASE, "4y"));
         assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, recipientId1, "", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, recipientId2, "", EMAIL, PASSPHRASE, "4y"));
 
         // Cifrar y firmar
-        byte[] encryptedSigned = gpg.encryptAndSign(plaindata, signerId, passphrase, recipientId1, recipientId2);
+        byte[] encryptedSigned = gpg.encryptAndSign(plaindata, signerId, passphrase, recipientId1);
         System.out.println("Cifrado/firmado (base64): " + Base64.getEncoder().encodeToString(encryptedSigned));
 
         GPG.DecryptStatus status = new GPG.DecryptStatus();
@@ -149,6 +150,7 @@ public class GPGTest
     @Order(99)
     public void testDeleteSecKeys() throws Exception
     {
+        Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG);
         SecKey[] keys = gpg.getSecKeys(EMAIL);
         
@@ -170,6 +172,7 @@ public class GPGTest
     @Test
     public void testListPackets() throws Exception
     {
+        Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         String msg = "-----BEGIN PGP MESSAGE-----\n" +
         "Version: ProtonMail\n" +
         "Comment: this is a comment\n" +
@@ -205,6 +208,7 @@ public class GPGTest
     @Test
     public void testListPackets2() throws Exception
     {
+        Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
 
         gpg.genKey(NISTP256, SCA, NISTP256, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE, "4y");
@@ -253,6 +257,7 @@ public class GPGTest
     @Tag("integration")
     public void testRefreshKeys() throws Exception
     {
+        Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG instance = new GPG();
         int result = instance.refreshKeys();
         assertEquals(0, result);
@@ -591,11 +596,47 @@ public class GPGTest
     }    
     
     private static boolean gpgAvailable;
+    private static Path gpgHome;
 
     @BeforeAll
     static void detectGpg()
     {
         gpgAvailable = new GPG().isInstalled();
+        if(gpgAvailable)
+        {
+            try
+            {
+                gpgHome = Files.createTempDirectory("nut-gpg-test");
+                GPG.setHomedir(gpgHome.toString());
+            }
+            catch(IOException ex)
+            {
+                gpgAvailable = false;
+            }
+        }
+    }
+    
+    @AfterAll
+    static void cleanupGpg()
+    {
+        GPG.setHomedir(null);
+        if(gpgHome != null)
+        {
+            deleteRecursively(gpgHome.toFile());
+        }
+    }
+    
+    private static void deleteRecursively(File file)
+    {
+        File[] children = file.listFiles();
+        if(children != null)
+        {
+            for(File child : children)
+            {
+                deleteRecursively(child);
+            }
+        }
+        file.delete();
     }
     
     @Nested

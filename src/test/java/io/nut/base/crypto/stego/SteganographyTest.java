@@ -97,7 +97,7 @@ public class SteganographyTest
     public void testEncode() throws IOException, InvalidKeySpecException
     {
         {
-            Steganography instance = kripto.getSteganography(72, true, true, false);
+            Steganography instance = new Steganography(72, true, true, false, 10_000);
             String txt11 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus id ultrices ligula. Praesent in sem at turpis sagittis scelerisque. Nunc massa nulla, eleifend ac maximus sit amet, commodo vitae arcu. Etiam et elit vel magna volutpat consectetur ut quis nisi. Etiam dignissim sem vitae consectetur dapibus. Proin molestie eleifend cursus. Mauris ut fermentum neque, aliquam hendrerit felis. Sed nec quam in erat tincidunt mollis quis nec neque. Aliquam venenatis nibh ac commodo congue. Quisque blandit ligula eu dui ultrices ultrices. Suspendisse placerat efficitur ex, pharetra congue magna viverra in.";
             byte[] msg11 = ".".getBytes();
 
@@ -107,7 +107,7 @@ public class SteganographyTest
             assertArrayEquals(msg11, msg2);
         }
         {
-            Steganography instance = kripto.getSteganography(72, true, true, false);
+            Steganography instance = new Steganography(72, true, true, false, 10_000);
             byte[] msg21 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit".getBytes();
             String otrashiervas = FileUtils.readFileAsString(new File("doc", STEGOWINSTEGOYOTRASHIERBASTXT));
             char[] passphrase = "eureka".toCharArray();
@@ -121,7 +121,7 @@ public class SteganographyTest
             assertArrayEquals(msg21, msg3);
         }
         {
-            Steganography instance = kripto.getSteganography(72, true, true, true);
+            Steganography instance = new Steganography(72, true, true, true, 10_000);
             
             byte[] msg1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.".getBytes();
             char[] pass = "eureka".toCharArray();
@@ -137,7 +137,7 @@ public class SteganographyTest
             assertArrayEquals(msg1, msg3);
         }
         {
-            Steganography instance = kripto.getSteganography(72, true, true, true);
+            Steganography instance = new Steganography(72, true, true, true, 10_000);
             String cypherpunk = FileUtils.readFileAsString(new File("doc", "cypherpunk-manifesto.txt"));
 
             byte[] msg1 = "".getBytes();

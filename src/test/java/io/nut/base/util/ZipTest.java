@@ -1,22 +1,7 @@
 /*
- *  ZipTest.java
- *
- *  Copyright (c) 2023-2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
 
@@ -147,7 +132,26 @@ public class ZipTest
         }
 
         Random random = new Random(123456789L);
-        for (int i = 0; i < 3333; i++)
+        for (int i = 0; i <= 1024; i++)
+        {
+            long[] original = new long[i];
+            for (int j = 0; j < original.length; j++)
+            {
+                original[j] = random.nextLong();
+            }
+            byte[] deflated = Zip.deflateLong(original);
+            long[] inflated = Zip.inflateLong(deflated);
+            assertArrayEquals(original, inflated, "a.i=" + i);
+
+            for (int j = 0; j < original.length; j++)
+            {
+                original[j] = (long) (random.nextGaussian() * original.length);
+            }
+            deflated = Zip.deflateLong(original);
+            inflated = Zip.inflateLong(deflated);
+            assertArrayEquals(original, inflated, "b.i=" + i);
+        }
+        for (int i = 2048; i <= 4096; i += 512)
         {
             long[] original = new long[i];
             for (int j = 0; j < original.length; j++)

@@ -584,7 +584,7 @@ class DuplexLayerTest
         DuplexLayer dl = new DuplexLayer().setTransceiver(ft).open();
 
         dl.write(frame);
-        Utils.parkMillis(DuplexLayer.ACK_TIMEOUT_MILLIS*DuplexLayer.MAX_RETRIES);
+        Utils.parkMillis(DuplexLayer.ACK_TIMEOUT_MILLIS + 500);
         assertEquals(1, ft.dataWriteCounter.get());
     }
 

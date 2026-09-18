@@ -112,7 +112,7 @@ public class SignTest
     public void testSpeed() throws Exception
     {
         int LOOPS = 50;
-        int MS_TO_LOOP = 5;
+        int MS_TO_LOOP = 1;
         
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Sign[] sign = new Sign[2];

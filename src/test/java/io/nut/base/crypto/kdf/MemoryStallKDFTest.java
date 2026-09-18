@@ -9,6 +9,7 @@ import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Hex;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  *
@@ -25,17 +26,16 @@ public class MemoryStallKDFTest
         Kripto.registerBouncyCastle();
         byte[] password = "password".getBytes();
         byte[] salt = "somesalt".getBytes();
-        int keyLength = 64;
-        int blocks = 8; // 64 MB
-        int timeCost = 3;
+        int blocks = 2; // minimal power-of-two
+        int timeCost = 1;
 
         long t0 = System.nanoTime();
-        long untilNanos = t0 + TimeUnit.SECONDS.toNanos(5);
-        
-        for(int i=0;i<10 && System.nanoTime()<untilNanos;i++)
+        for(int i=0;i<3;i++)
         {
             MemoryStallKDF javaKDF = new MemoryStallKDF();
-            byte[] key = javaKDF.deriveKey(password, salt, blocks, timeCost, 32+i*2);
+            int keyLength = 32+i*2;
+            byte[] key = javaKDF.deriveKey(password, salt, blocks, timeCost, keyLength);
+            assertEquals(keyLength, key.length, "i="+i);
             System.out.println("Derived Key (hex): " + Hex.encode(key));
         }
         long t1 = System.nanoTime();

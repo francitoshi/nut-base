@@ -138,6 +138,8 @@ public class GPG
     private volatile boolean emitVersion;
     private volatile String comment;
 
+    private static volatile String homedir;
+
     private BufferedReader debugger(BufferedReader src)
     {
         return this.debug ? new VerboseLineReader(src, System.out) : src;
@@ -172,6 +174,11 @@ public class GPG
         public Process start() throws IOException
         {
             final ProcessBuilder pb = new ProcessBuilder("gpg");
+            if(GPG.homedir != null)
+            {
+                pb.command().add("--homedir");
+                pb.command().add(GPG.homedir);
+            }
             pb.command().addAll(args.get());
             pb.redirectErrorStream(mergeOutErr);
 
@@ -254,6 +261,18 @@ public class GPG
     private GnuPG gpg(String... params) throws IOException 
     {
         return new GnuPG(debug, params);
+    }
+    
+    /**
+     * Sets the GnuPG home directory (equivalent to {@code gpg --homedir} or the
+     * {@code GNUPGHOME} environment variable) used by every subsequent GPG
+     * invocation in this JVM.
+     *
+     * @param homedir the home directory path, or {@code null} to use the default
+     */
+    public static void setHomedir(String homedir)
+    {
+        GPG.homedir = homedir;
     }
     
     /**

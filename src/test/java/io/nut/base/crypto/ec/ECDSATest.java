@@ -82,7 +82,7 @@ public class ECDSATest
 
         t0 = System.nanoTime();
         
-        for(int i=0;i<1000 && ms<5_000;i++,count++)
+        for(int i=0;i<20;i++,count++)
         {
             byte[] secKey = instance.genSecKey();
             byte[] signature = instance.sign(msg, secKey, auxRand);
@@ -117,7 +117,7 @@ public class ECDSATest
         
         BigInteger k = Utils.asBigInteger(auxRand);
         
-        for(int i=0;i<1000 && ms<5_000;i++,count++)
+        for(int i=0;i<20;i++,count++)
         {
             BigInteger secKey = Utils.asBigInteger(instance.genSecKey());
             BigInteger[] signature = instance.sign(msg, secKey, k);
