@@ -268,8 +268,7 @@ class FanOutQueueTest
     @Test
     void testRejectsNegativeLimit()
     {
-        assertThrows(IllegalArgumentException.class,
-            () -> new FanOutQueue<>(-1, new LinkedBlockingQueue<Integer>()));
+        assertThrows(IllegalArgumentException.class, () -> new FanOutQueue<>(-1, new LinkedBlockingQueue<Integer>()));
     }
 
     @Test

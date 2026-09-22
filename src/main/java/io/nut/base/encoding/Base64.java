@@ -13,6 +13,8 @@
 // limitations under the License.
 package io.nut.base.encoding;
 
+import java.util.Arrays;
+
 //updated to version 7bc191a004483a1034b758e1df0bda062088d840
 
 // This code was converted from code at http://iharder.sourceforge.net/base64/
@@ -285,6 +287,23 @@ public class Base64
      */
     public static String encode(byte[] source, int off, int len, byte[] alphabet, boolean doPadding)
     {
+        if (alphabet == ALPHABET)
+        {
+            if (doPadding)
+            {
+                return java.util.Base64.getEncoder().encodeToString(slice(source, off, len));
+            }
+        }
+        else if (alphabet == WEBSAFE_ALPHABET)
+        {
+            java.util.Base64.Encoder encoder = java.util.Base64.getUrlEncoder();
+            if (!doPadding)
+            {
+                encoder = encoder.withoutPadding();
+            }
+            return encoder.encodeToString(slice(source, off, len));
+        }
+
         byte[] outBuff = encode(source, off, len, alphabet, Integer.MAX_VALUE);
         int outLen = outBuff.length;
 
@@ -300,6 +319,17 @@ public class Base64
         }
 
         return new String(outBuff, 0, outLen);
+    }
+
+    private static byte[] slice(byte[] source, int off, int len)
+    {
+        if (off == 0 && len == source.length)
+        {
+            return source;
+        }
+        byte[] subset = new byte[len];
+        System.arraycopy(source, off, subset, 0, len);
+        return subset;
     }
 
     /**
@@ -527,6 +557,58 @@ public class Base64
      * @return decoded data
      */
     public static byte[] decode(byte[] source, int off, int len, byte[] decodabet) throws Base64DecoderException
+    {
+        if (decodabet == DECODABET)
+        {
+            return jdkDecode(java.util.Base64.getDecoder(), source, off, len);
+        }
+        if (decodabet == WEBSAFE_DECODABET)
+        {
+            return jdkDecode(java.util.Base64.getUrlDecoder(), source, off, len);
+        }
+        return decodeWithDecodabet(source, off, len, decodabet);
+    }
+
+    private static byte[] jdkDecode(java.util.Base64.Decoder jdk, byte[] source, int off, int len) throws Base64DecoderException
+    {
+        try
+        {
+            if (off == 0 && len == source.length)
+            {
+                return jdk.decode(source);
+            }
+            return jdk.decode(Arrays.copyOfRange(source, off, off + len));
+        }
+        catch (IllegalArgumentException ex)
+        {
+            // the JDK decoder rejects whitespace; strip it and retry
+            byte[] flat = new byte[len];
+            int n = 0;
+            for (int i = off; i < off + len; i++)
+            {
+                byte b = source[i];
+                if (b == ' ' || b == '\t' || b == '\n' || b == '\r')
+                {
+                    continue;
+                }
+                flat[n++] = b;
+            }
+            if (n == len)
+            {
+                throw new Base64DecoderException(ex.getMessage());
+            }
+            try
+            {
+                return jdk.decode(Arrays.copyOf(flat, n));
+            }
+            catch (IllegalArgumentException ex2)
+            {
+                throw new Base64DecoderException(ex2.getMessage());
+            }
+        }
+    }
+
+    private static byte[] decodeWithDecodabet(byte[] source, int off, int len, byte[] decodabet) throws Base64DecoderException
     {
         int len34 = len * 3 / 4;
         byte[] outBuff = new byte[2 + len34]; // Upper limit on size of output

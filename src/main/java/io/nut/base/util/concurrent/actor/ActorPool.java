@@ -704,16 +704,21 @@ public class ActorPool implements ActorLifecycle, Executor
             }
             catch (CompletionException | CancellationException ex)
             {
-                Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                Throwable cause = ex.getCause();
+                if(cause == null)
+                {
+                    cause = ex;
+                }
                 if (!first.compareAndSet(null, cause))
                 {
                     first.get().addSuppressed(cause);
                 }
             }
         });
-        if (first.get() != null)
+        Throwable firstGet = first.get();
+        if (firstGet != null)
         {
-            throw (first.get() instanceof CompletionException)
+            throw (firstGet instanceof CompletionException)
                     ? (CompletionException) first.get()
                     : new CompletionException(first.get());
         }

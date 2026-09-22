@@ -161,8 +161,7 @@ class FanInQueueTest
         assertThrows(UnsupportedOperationException.class, () -> fan.add(1));
         assertThrows(UnsupportedOperationException.class, () -> fan.put(1));
         assertThrows(UnsupportedOperationException.class, () -> fan.offer(1));
-        assertThrows(UnsupportedOperationException.class,
-            () -> fan.offer(1, 1, TimeUnit.SECONDS));
+        assertThrows(UnsupportedOperationException.class, () -> fan.offer(1, 1, TimeUnit.SECONDS));
         assertThrows(UnsupportedOperationException.class, () -> fan.addAll(new ArrayList<>()));
     }
 
@@ -297,10 +296,8 @@ class FanInQueueTest
     @Test
     void testRejectsInvalidLatency()
     {
-        assertThrows(IllegalArgumentException.class,
-            () -> new FanInQueue<Integer>(0, new LinkedBlockingQueue<>()));
-        assertThrows(IllegalArgumentException.class,
-            () -> new FanInQueue<Integer>(-5L, new LinkedBlockingQueue<>()));
+        assertThrows(IllegalArgumentException.class, () -> new FanInQueue<Integer>(0, new LinkedBlockingQueue<>()));
+        assertThrows(IllegalArgumentException.class, () -> new FanInQueue<Integer>(-5L, new LinkedBlockingQueue<>()));
     }
 
     @Test

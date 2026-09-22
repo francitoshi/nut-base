@@ -60,10 +60,7 @@ public final class Partition<T>
             }
         }
 
-        return new Partition<>(
-            Collections.unmodifiableList(accepted),
-            Collections.unmodifiableList(rejected)
-        );
+        return new Partition<>(Collections.unmodifiableList(accepted),Collections.unmodifiableList(rejected));
     }
 
     /**

@@ -1499,7 +1499,7 @@ public class NumsTest
     @Test
     public void testSafePrime()
     {
-        BigInteger p = Nums.safePrime(rnd, 512);
+        BigInteger p = Nums.safePrime(rnd, 500);
         assertTrue(p.isProbablePrime(99));
         BigInteger q = p.subtract(BigInteger.ONE).divide(BIG_INT_TWO);
         assertTrue(q.isProbablePrime(99));

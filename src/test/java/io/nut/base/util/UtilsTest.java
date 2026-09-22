@@ -27,6 +27,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.DisplayName;
@@ -61,6 +62,29 @@ public class UtilsTest
         assertEquals("d", Utils.firstNonNull(null, null, null, "d"));
         assertNull(Utils.firstNonNull(null, null, null, null));
     }
+
+    /**
+     * Test of firstNonNull method with suppliers, of class Utils.
+     */
+    @Test
+    public void testFirstNonNullSuppliers()
+    {
+        assertNull(Utils.firstNonNull(() -> null));
+        assertNull(Utils.firstNonNull(() -> null, () -> null));
+        assertEquals("a", Utils.firstNonNull(() -> "a"));
+        assertEquals("a", Utils.firstNonNull(() -> "a", () -> "b"));
+        assertEquals("b", Utils.firstNonNull(() -> null, () -> "b"));
+        assertNull(Utils.firstNonNull((Supplier<String>) null));
+        assertEquals("a", Utils.firstNonNull((Supplier<String>) null, () -> "a"));
+        assertEquals("a", Utils.firstNonNull(() -> "a", () ->
+        {
+            throw new AssertionError("lazy evaluation violated: later supplier was invoked");
+        }));
+        assertEquals("b", Utils.firstNonNull(() -> null, () -> "b", () ->
+        {
+            throw new AssertionError("lazy evaluation violated: later supplier was invoked");
+        }));
+    }
     
     /**
      * Test of firstNonNullOrEmpty method, of class Utils.
@@ -72,6 +96,26 @@ public class UtilsTest
         assertEquals("", Utils.firstNonNullOrEmpty(null,""));
         assertEquals("5", Utils.firstNonNullOrEmpty(5, "","1"));
         assertEquals("1", Utils.firstNonNullOrEmpty("","1"));
+    }
+
+    /**
+     * Test of firstNonNullOrEmpty method with suppliers, of class Utils.
+     */
+    @Test
+    public void testFirstNonNullOrEmptySuppliers()
+    {
+        assertEquals("", Utils.firstNonNullOrEmpty(() -> null));
+        assertEquals("", Utils.firstNonNullOrEmpty(() -> null, () -> ""));
+        assertEquals("a", Utils.firstNonNullOrEmpty(() -> "a"));
+        assertEquals("a", Utils.firstNonNullOrEmpty(() -> "", () -> "a"));
+        assertEquals("b", Utils.firstNonNullOrEmpty(() -> null, () -> "b"));
+        assertEquals("5", Utils.firstNonNullOrEmpty(() -> 5, () -> "1"));
+        assertEquals("", Utils.firstNonNullOrEmpty((Supplier<String>) null));
+        assertEquals("a", Utils.firstNonNullOrEmpty((Supplier<String>) null, () -> "a"));
+        assertEquals("a", Utils.firstNonNullOrEmpty(() -> "", () -> "a", () ->
+        {
+            throw new AssertionError("lazy evaluation violated: later supplier was invoked");
+        }));
     }
 
     /**

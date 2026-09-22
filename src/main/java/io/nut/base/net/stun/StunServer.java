@@ -169,7 +169,7 @@ public final class StunServer {
             listenerThread.setDaemon(true);
             listenerThread.start();
 
-            LOG.info("STUN server listening on UDP port " + port + " (" + workerThreads + " worker(s))");
+            LOG.log(Level.INFO, "STUN server listening on UDP port {0} ({1} worker(s))", new Object[]{port, workerThreads});
         }
     }
 
@@ -253,7 +253,7 @@ public final class StunServer {
         }
         catch (InvalidStunMessageException e)
         {
-            LOG.fine("Invalid STUN message from " + clientAddr + ":" + clientPort + " — " + e.getMessage());
+            LOG.log(Level.FINE, "Invalid STUN message from {0}:{1} - {2}", new Object[]{clientAddr, clientPort, e.getMessage()});
             // RFC 5389: silently discard unknown/malformed messages
         }
         catch (IOException e)
