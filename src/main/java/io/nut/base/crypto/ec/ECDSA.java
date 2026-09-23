@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto.ec;
 
+import io.nut.base.util.As;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -63,14 +64,14 @@ public class ECDSA extends Sign
         {
             throw new InvalidParameterException("The secKey must be a "+curve.bytes+"-byte array.");
         }
-        BigInteger msgNum = Utils.asBigInteger(msg);
-        BigInteger secKeyNum = Utils.asBigInteger(secKey);
+        BigInteger msgNum = As.bigInteger(msg);
+        BigInteger secKeyNum = As.bigInteger(secKey);
 
         BigInteger[] rs=null;
         while(rs==null)
         {
 //            BigInteger k = Utils.asBigInteger(auxRand=Digest.sha256(msg, secKey,auxRand)).mod(curve.n);
-            BigInteger k = Utils.asBigInteger(auxRand).mod(curve.n);
+            BigInteger k = As.bigInteger(auxRand).mod(curve.n);
             rs = sign(msgNum, secKeyNum, k);
         }
         return DER.encode(rs);
@@ -105,7 +106,7 @@ public class ECDSA extends Sign
         Objects.requireNonNull(pubKey, "pubKey must not be null");
         Objects.requireNonNull(signature, "signature must not be null");
 
-        BigInteger mm = Utils.asBigInteger(msg);
+        BigInteger mm = As.bigInteger(msg);
         Point PK = this.pointPubKey(pubKey);
         
         BigInteger[] rs = DER.decode(signature);
@@ -129,7 +130,7 @@ public class ECDSA extends Sign
     {
         Objects.requireNonNull(secKey, "secKey must not be null");
 
-        Point P = this.getPubKey(Utils.asBigInteger(secKey));
+        Point P = this.getPubKey(As.bigInteger(secKey));
         return compressedPubKey(P.x, P.y);
     }
     

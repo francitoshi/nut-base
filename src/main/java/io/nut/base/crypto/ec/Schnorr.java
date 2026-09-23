@@ -1,27 +1,13 @@
 /*
- *  Schnorr.java
- *
- *  Copyright (C) 2023-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto;
+import io.nut.base.util.As;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
@@ -70,7 +56,7 @@ public class Schnorr extends Sign
         byte[] t = Utils.xor(asBytes(secKey), taggedHash("BIP0340/aux", asBytes(auxRand)));
         //t = xor_bytes(bytes_from_int(d), tagged_hash("BIP0340/aux", aux_rand))
         //k0 = int_from_bytes(tagged_hash("BIP0340/nonce", t + bytes_from_point(P) + msg)) % n
-        BigInteger k0 = Utils.asBigInteger(taggedHash("BIP0340/nonce", Joins.join(t, pxBytes, msgBytes))).mod(curve.n);
+        BigInteger k0 = As.bigInteger(taggedHash("BIP0340/nonce", Joins.join(t, pxBytes, msgBytes))).mod(curve.n);
         if(k0.compareTo(BigInteger.ZERO) == 0)    
         {
             throw new ArithmeticException("Failure. This happens only with negligible probability.");
@@ -82,7 +68,7 @@ public class Schnorr extends Sign
         BigInteger k = R.hasEvenY() ? k0 : curve.n.subtract(k0);
 
         byte[] buf = Joins.join(rbytes,pxBytes, msgBytes);
-        BigInteger e = Utils.asBigInteger(taggedHash("BIP0340/challenge", buf)).mod(curve.n);
+        BigInteger e = As.bigInteger(taggedHash("BIP0340/challenge", buf)).mod(curve.n);
         BigInteger kes = k.add(e.multiply(secKey)).mod(curve.n);
 
         BigInteger r = R.x;
@@ -112,13 +98,13 @@ public class Schnorr extends Sign
         {
             throw new InvalidParameterException("The secKey must be a "+curve.bytes+"-byte array.");
         }
-        BigInteger msgNum = Utils.asBigInteger(msg);
-        BigInteger secKeyNum = Utils.asBigInteger(secKey);
+        BigInteger msgNum = As.bigInteger(msg);
+        BigInteger secKeyNum = As.bigInteger(secKey);
 
         BigInteger[] rs=null;
         for(int i=0;i < Integer.MAX_VALUE && rs==null;i++)
         {
-            BigInteger k = Utils.asBigInteger( i==0 ? auxRand : (auxRand=SHA256.digest(auxRand)));
+            BigInteger k = As.bigInteger( i==0 ? auxRand : (auxRand=SHA256.digest(auxRand)));
             rs = sign(msgNum, secKeyNum, k);
         }
         if(rs == null)
@@ -147,7 +133,7 @@ public class Schnorr extends Sign
             return false;
         }
         //e = int_from_bytes(tagged_hash("BIP0340/challenge", sig[0:32] + pubkey + msg)) % n
-        BigInteger e = Utils.asBigInteger(taggedHash("BIP0340/challenge", Joins.join(asBytes(r), asBytes(pubKey.x), msgBytes)));
+        BigInteger e = As.bigInteger(taggedHash("BIP0340/challenge", Joins.join(asBytes(r), asBytes(pubKey.x), msgBytes)));
         
         Point R = curve.add(curve.mul(curve.G, s), curve.mul(pubKey, curve.n.subtract(e)));
        
@@ -161,7 +147,7 @@ public class Schnorr extends Sign
         Objects.requireNonNull(pubKey, "pubKey must not be null");
         Objects.requireNonNull(signature, "signature must not be null");
 
-        BigInteger message = Utils.asBigInteger(msg);
+        BigInteger message = As.bigInteger(msg);
         Point PK = this.pointPubKey(pubKey);
         if(PK==null)
         {
@@ -197,7 +183,7 @@ public class Schnorr extends Sign
     {
         Objects.requireNonNull(secKey, "secKey must not be null");
 
-        Point P = this.getPubKey(Utils.asBigInteger(secKey));
+        Point P = this.getPubKey(As.bigInteger(secKey));
         return asBytes(P.x);
     }
 }
