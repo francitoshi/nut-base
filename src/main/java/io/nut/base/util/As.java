@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -299,14 +300,18 @@ public class As
     }
 
     /**
-     * Wraps the given items into a fixed, array-backed list.
+     * Wraps the given items into a fixed, array-backed {@link List}.
+     *
+     * <p>The returned list is unmodifiable: any attempt to modify it throws
+     * {@link UnsupportedOperationException}.</p>
      *
      * @param items the items to place in the list; must not be {@code null}
-     * @return a new array-backed {@link List} in the order of {@code items}
+     * @return a new fixed-size, unmodifiable {@link List} in the order of
+     *         {@code items}
      */
     public static <T> List<T> list(T... items)
     {
-        return Arrays.asList(items);
+        return Collections.unmodifiableList(Arrays.asList(items));
     }
 
     /**

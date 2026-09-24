@@ -1,22 +1,7 @@
 /*
- *  Joins.java
- *
- *  Copyright (c) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
 
@@ -32,6 +17,13 @@ import java.util.List;
  */
 public abstract class Joins
 {
+    /**
+     * Concatenates the given {@code byte} arrays into one new array, skipping
+     * any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static byte[] join(byte[]... src)
     {
         int count = 0;
@@ -53,6 +45,13 @@ public abstract class Joins
         return dst.array();
     }
 
+    /**
+     * Concatenates the given {@code int} arrays into one new array, skipping
+     * any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static int[] join(int[]... src)
     {
         int count = 0;
@@ -76,6 +75,13 @@ public abstract class Joins
         return dst;
     }
 
+    /**
+     * Concatenates the given {@code long} arrays into one new array, skipping
+     * any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static long[] join(long[]... src)
     {
         int count = 0;
@@ -99,6 +105,13 @@ public abstract class Joins
         return dst;
     }
 
+    /**
+     * Concatenates the given {@code short} arrays into one new array, skipping
+     * any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static short[] join(short[]... src)
     {
         int count = 0;
@@ -122,6 +135,13 @@ public abstract class Joins
         return dst;
     }
 
+    /**
+     * Concatenates the given {@code char} arrays into one new array, skipping
+     * any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static char[] join(char[]... src)
     {
         int count = 0;
@@ -145,6 +165,13 @@ public abstract class Joins
         return dst;
     }
 
+    /**
+     * Concatenates the given {@code float} arrays into one new array, skipping
+     * any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static float[] join(float[]... src)
     {
         int count = 0;
@@ -168,6 +195,13 @@ public abstract class Joins
         return dst;
     }
 
+    /**
+     * Concatenates the given {@code double} arrays into one new array,
+     * skipping any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static double[] join(double[]... src)
     {
         int count = 0;
@@ -191,6 +225,13 @@ public abstract class Joins
         return dst;
     }
 
+    /**
+     * Concatenates the given {@link String} arrays into one new array,
+     * skipping any {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     public static String[] join(String[]... src)
     {
         int count = 0;
@@ -213,6 +254,16 @@ public abstract class Joins
         }
         return dst;
     }
+    /**
+     * Concatenates the given arrays of type {@code cls} into one new array,
+     * skipping any {@code null} array.
+     *
+     * @deprecated prefer {@link #join(Object[]...)} when the component type can
+     * be inferred from the given arrays
+     * @param cls the component type of the resulting array
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src}
+     */
     @Deprecated
     public static <E> E[] join(Class<E> cls, E[]... src)
     {
@@ -237,6 +288,14 @@ public abstract class Joins
         return dst;
     }
 
+    /**
+     * Concatenates the given arrays into one new array, skipping any
+     * {@code null} array.
+     *
+     * @param src the arrays to concatenate; may contain {@code null} entries
+     * @return a new array with the concatenation of all non-null {@code src},
+     * or {@code null} if {@code src} is null or all the given arrays are null
+     */
     public static <E> E[] join(E[] ... src)
     {
         if (src == null)
@@ -274,6 +333,14 @@ public abstract class Joins
         return dst;
     }
     
+    /**
+     * Concatenates the given {@link String}s, skipping any {@code null}
+     * string.
+     *
+     * @param src the strings to concatenate; may contain {@code null} entries
+     * @return a new {@link String} with the concatenation of all non-null
+     *         {@code src}
+     */
     public static String join(String... src)
     {
         StringBuilder dst = new StringBuilder();
@@ -287,6 +354,14 @@ public abstract class Joins
         return dst.toString();
     }
 
+    /**
+     * Merges the given {@link List}s into one new list, skipping any
+     * {@code null} list.
+     *
+     * @param src the lists to merge; may contain {@code null} entries
+     * @return a new {@link List} with the elements of all non-null
+     *         {@code src}, in order
+     */
     public static <E> List<E> join(List<E>... src)
     {
         List<E> dst = new ArrayList<>();
@@ -299,4 +374,86 @@ public abstract class Joins
         }
         return dst;
     }
+    
+    /**
+     * Concatenate a series of elements to a byte[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static byte[] cat(byte[] src, byte... next)
+    {
+        return Joins.join(src, next);
+    }
+    /**
+     * Concatenate a series of elements to an int[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static int[] cat(int[] src, int... next)
+    {
+        return Joins.join(src, next);
+    }
+    /**
+     * Concatenate a series of elements to a short[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static short[] cat(short[] src, short... next)
+    {
+        return Joins.join(src, next);
+    }
+    /**
+     * Concatenate a series of elements to a char[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static char[] cat(char[] src, char... next)
+    {
+        return Joins.join(src, next);
+    }
+    /**
+     * Concatenate a series of elements to a long[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static long[] cat(long[] src, long... next)
+    {
+        return Joins.join(src, next);
+    }
+    /**
+     * Concatenate a series of elements to a float[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static float[] cat(float[] src, float... next)
+    {
+        return Joins.join(src, next);
+    }
+    /**
+     * Concatenate a series of elements to a double[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static double[] cat(double[] src, double... next)
+    {
+        return Joins.join(src, next);
+    }
+    /**
+     * Concatenate a series of elements to an E[] array.
+     * @param src the starting array
+     * @param next the values to concatenate
+     * @return a new array with the resulting array
+     */
+    public static <E> E[] cat(E[] src, E... next)
+    {
+        return Joins.join(src, next);
+    }
+    
 }

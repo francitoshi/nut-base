@@ -214,16 +214,6 @@ public abstract class Utils
         }
         return ret;
     }
-
-
-
-    //----------------------------------------------------------------------------------------------
-    public static <E> List<E> listOf(E... e)
-    {
-        ArrayList<E> list = new ArrayList<>(e.length);
-        Collections.addAll(list, e);
-        return Collections.unmodifiableList(list);
-    }
     
     //java9 Arrays.compare(byte[] a, int aFromIndex, int aToIndex, byte[] b, int bFromIndex, int bToIndex)
     public static int compare(byte[] a, int aFrom, int aTo, byte[] b, int bFrom, int bTo)

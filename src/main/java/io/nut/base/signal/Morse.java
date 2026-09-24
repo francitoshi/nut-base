@@ -7,6 +7,7 @@ package io.nut.base.signal;
 
 import io.nut.base.math.Nums;
 import io.nut.base.collections.ring.RingQueueInt;
+import io.nut.base.util.As;
 import io.nut.base.util.Empty;
 import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
@@ -424,7 +425,7 @@ public class Morse
         this.startGapMillis = startGapMultiplier * this.wordGapMillis;
         
         char[] morse = bold ? TEXTS_BOLD : ( middle ? TEXTS_MIDDLE : TEXTS_ASCII);  
-        List<char[][]> list = Utils.listOf(LETTERS, NUMBERS, PUNCTUATION, ACCENTED_LETTERS);
+        List<char[][]> list = As.list(LETTERS, NUMBERS, PUNCTUATION, ACCENTED_LETTERS);
 
         List<String> letterList = new ArrayList<>();
         List<String> prosignList = new ArrayList<>();

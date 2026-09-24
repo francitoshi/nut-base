@@ -12,7 +12,7 @@ import io.nut.base.crypto.ec.Point;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.crypto.ec.Sign;
 import io.nut.base.encoding.Base58;
-import io.nut.base.util.Concats;
+import io.nut.base.util.Joins;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -268,7 +268,7 @@ public class Bip32
     }
     public final byte[] addr(int[] childNumber, int child) throws InvalidKeyException
     {
-        return addr(Concats.cat(childNumber,child));
+        return addr(Joins.cat(childNumber,child));
     }
     public final byte[] addr(String path) throws InvalidKeyException
     {
