@@ -12,8 +12,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -83,6 +85,7 @@ public class ActorPool implements ActorLifecycle, Executor
     public static final int DEFAULT_KEEP_ALIVE_MILLIS = 30_000;
     public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
     public static final boolean DEFAULT_AVOID_TRACKER = false;
+    public static final boolean DEFAULT_DAEMON = false;
 
     /**
      * Saturation policy: run the overflowing task in the calling thread.
@@ -93,6 +96,25 @@ public class ActorPool implements ActorLifecycle, Executor
      * Saturation policy: block the calling thread until a slot is available.
      */
     private static final CallerWaitsPolicy CALLER_WAITS_POLICY = new CallerWaitsPolicy();
+
+    /**
+     * Wraps {@code delegate}, the thread factory, so that every thread it
+     * creates is a daemon thread. Used when an ActorPool is constructed with
+     * {@code daemon == true}: pool threads then never keep the JVM alive on
+     * their own, so background tasks cannot prolong application exit.
+     *
+     * @param delegate the factory to delegate to; must not be {@code null}
+     * @return a factory producing daemon threads
+     */
+    private static ThreadFactory daemonFactory(ThreadFactory delegate)
+    {
+        return r ->
+        {
+            Thread t = delegate.newThread(r);
+            t.setDaemon(true);
+            return t;
+        };
+    }
 
     /**
      * The underlying thread pool. {@code null} in synchronous mode.
@@ -180,12 +202,23 @@ public class ActorPool implements ActorLifecycle, Executor
      * @param callerWaitsPolicy {@code true} to block the caller on saturation;
      *                          {@code false} to run the task in the caller
      * @param avoidTracker       {@code true} to disable active-task tracking
+     * @param daemon             {@code true} to create the pool's worker threads
+     *                           as daemon threads, so that the pool never keeps
+     *                           the JVM alive on its own when only background
+     *                           tasks are running; {@code false} (the default)
+     *                           to use the framework's ordinary non-daemon
+     *                           worker threads. Only the thread creation is
+     *                           intercepted: each thread still comes from the
+     *                           {@link ThreadPoolExecutor}'s default
+     *                           {@link ThreadFactory}, merely with
+     *                           {@link Thread#setDaemon(boolean) setDaemon(true)}
+     *                           applied
      * @throws IllegalArgumentException if {@code coreThreads &lt; 0},
      *         {@code maxThreads &lt; 0}, {@code coreThreads &gt; maxThreads}, or
      *         {@code keepAliveMillis &lt; 0}; the synchronous case is exempt from
      *         these checks
      */
-    public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
     {
         this.synchronous = coreThreads == 0 && maxThreads == 0;
         if (!this.synchronous)
@@ -215,8 +248,26 @@ public class ActorPool implements ActorLifecycle, Executor
                 coreThreads, maxThreads,
                 keepAliveMillis, TimeUnit.MILLISECONDS,
                 new SynchronousQueue<>(),
+                daemon ? daemonFactory(Executors.defaultThreadFactory()) : Executors.defaultThreadFactory(),
                 callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY);
         this.phaser = avoidTracker ? null : new Phaser(1);
+    }
+
+    /**
+     * Full constructor with tracking disabled.
+     *
+     * @param coreThreads       the minimum number of threads kept permanently alive
+     * @param maxThreads        the absolute maximum number of live threads; both
+     *                          {@code 0} selects the synchronous mode
+     * @param keepAliveMillis   keep-alive time for the threads above the core
+     *                          floor, in milliseconds
+     * @param callerWaitsPolicy {@code true} to block the caller on saturation;
+     *                          {@code false} to run the task in the caller
+     * @param avoidTracker      {@code true} to disable active-task tracking
+     */
+    public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    {
+        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, DEFAULT_DAEMON);
     }
 
     /**

@@ -952,7 +952,7 @@ public class As
      * @return a new {@link String} array of equal length, or {@code null} if
      *         {@code src} is {@code null}
      */
-    public static <T> String[] asStrings(T... src)
+    public static <T> String[] strings(T... src)
     {
         if (src == null)
             return null;
@@ -975,7 +975,7 @@ public class As
      * @return a new {@link String} array of equal size, or {@code null} if
      *         {@code src} is {@code null}
      */
-    public static <T> String[] asStrings(List<T> src)
+    public static <T> String[] strings(List<T> src)
     {
         if (src == null)
             return null;

@@ -5,6 +5,7 @@
  */
 package io.nut.base.math;
 
+import io.nut.base.util.As;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -48,13 +49,13 @@ public class StatsTest
     @Test
     public void testCovariance_longArr_longArr()
     {
-        long[] x = Utils.asLongs(X1);
-        long[] y = Utils.asLongs(Y1);
+        long[] x = As.longs(X1);
+        long[] y = As.longs(Y1);
         double result = Stats.covariance(x, y);
         assertEquals(5.916666667, result, 0.000001);
         
-        x = Utils.asLongs(X2);
-        y = Utils.asLongs(Y2);
+        x = As.longs(X2);
+        y = As.longs(Y2);
         result = Stats.covariance(x, y);
         assertEquals(-0.3, result, 0.000001);
     }
@@ -62,13 +63,13 @@ public class StatsTest
     @Test
     public void testCovariance_floatArr_floatArr()
     {
-        float[] x = Utils.asFloats(X1);
-        float[] y = Utils.asFloats(Y1);
+        float[] x = As.floats(X1);
+        float[] y = As.floats(Y1);
         double result = Stats.covariance(x, y);
         assertEquals(5.916666667, result, 0.000001);
         
-        x = Utils.asFloats(X2);
-        y = Utils.asFloats(Y2);
+        x = As.floats(X2);
+        y = As.floats(Y2);
         result = Stats.covariance(x, y);
         assertEquals(-0.3, result, 0.000001);
     }
@@ -76,13 +77,13 @@ public class StatsTest
     @Test
     public void testCovariance_doubleArr_doubleArr()
     {
-        double[] x = Utils.asDoubles(X1);
-        double[] y = Utils.asDoubles(Y1);
+        double[] x = As.doubles(X1);
+        double[] y = As.doubles(Y1);
         double result = Stats.covariance(x, y);
         assertEquals(5.916666667, result, 0.000001);
         
-        x = Utils.asDoubles(X2);
-        y = Utils.asDoubles(Y2);
+        x = As.doubles(X2);
+        y = As.doubles(Y2);
         result = Stats.covariance(x, y);
         assertEquals(-0.3, result, 0.000001);
     }
@@ -103,7 +104,7 @@ public class StatsTest
     @Test
     public void testStandardDeviation_longArr()
     {
-        long[] x = Utils.asLongs(X3);
+        long[] x = As.longs(X3);
         double result = Stats.standardDeviation(x);
         assertEquals(3.872983346, result, 0.000001);
     }
@@ -114,7 +115,7 @@ public class StatsTest
     @Test
     public void testStandardDeviation_floatArr()
     {
-        float[] x = Utils.asFloats(X3);
+        float[] x = As.floats(X3);
         double result = Stats.standardDeviation(x);
         assertEquals(3.872983346, result, 0.000001);
     }
@@ -125,7 +126,7 @@ public class StatsTest
     @Test
     public void testStandardDeviation_doubleArr()
     {
-        double[] x = Utils.asDoubles(X3);
+        double[] x = As.doubles(X3);
         double result = Stats.standardDeviation(x);
         assertEquals(3.872983346, result, 0.000001);
     }
@@ -148,8 +149,8 @@ public class StatsTest
     @Test
     public void testCorrelationCoefficient_longArr_longArr()
     {
-        long[] x = Utils.asLongs(X1);
-        long[] y = Utils.asLongs(Y1);
+        long[] x = As.longs(X1);
+        long[] y = As.longs(Y1);
         double result = Stats.correlationCoefficient(x, y);
         assertEquals(0.935507141, result, 0.000001);
     }
@@ -160,8 +161,8 @@ public class StatsTest
     @Test
     public void testCorrelationCoefficient_floatArr_floatArr()
     {
-        float[] x = Utils.asFloats(X1);
-        float[] y = Utils.asFloats(Y1);
+        float[] x = As.floats(X1);
+        float[] y = As.floats(Y1);
         double result = Stats.correlationCoefficient(x, y);
         assertEquals(0.935507141, result, 0.000001);
     }
@@ -172,8 +173,8 @@ public class StatsTest
     @Test
     public void testCorrelationCoefficient_doubleArr_doubleArr()
     {
-        double[] x = Utils.asDoubles(X1);
-        double[] y = Utils.asDoubles(Y1);
+        double[] x = As.doubles(X1);
+        double[] y = As.doubles(Y1);
         double result = Stats.correlationCoefficient(x, y);
         assertEquals(0.935507141, result, 0.000001);
     }

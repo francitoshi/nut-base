@@ -7,7 +7,7 @@ package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.util.Utils;
+import io.nut.base.util.As;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
@@ -34,7 +34,7 @@ public class SignTest
          Sign instance = Sign.SECP256K1_ECDSA;
         
         byte[] secKey = instance.genSecKey();
-        BigInteger secKeyNum = Utils.asBigInteger(secKey);
+        BigInteger secKeyNum = As.bigInteger(secKey);
         Point expected = instance.getPubKey(secKeyNum);
         
         byte[] cpk = instance.rawPubKey(expected.x, expected.y);
@@ -54,7 +54,7 @@ public class SignTest
          Sign instance = Sign.SECP256K1_ECDSA;
         
         byte[] secKey = instance.genSecKey();
-        BigInteger secKeyNum = Utils.asBigInteger(secKey);
+        BigInteger secKeyNum = As.bigInteger(secKey);
         Point expected = instance.getPubKey(secKeyNum);
         
         byte[] cpk = instance.compressedPubKey(expected.x, expected.y);
@@ -74,7 +74,7 @@ public class SignTest
          Sign instance = Sign.SECP256K1_ECDSA;
         
         byte[] secKey = instance.genSecKey();
-        BigInteger secKeyNum = Utils.asBigInteger(secKey);
+        BigInteger secKeyNum = As.bigInteger(secKey);
         Point expected = instance.getPubKey(secKeyNum);
         
         byte[] cpk = instance.uncompressedPubKey(expected.x, expected.y);
@@ -94,7 +94,7 @@ public class SignTest
         ECDSA ecdsa = Sign.SECP256K1_ECDSA;
 
         byte[] secKey0 = ecdsa.genSecKey();
-        BigInteger secKey1 = Utils.asBigInteger(secKey0);
+        BigInteger secKey1 = As.bigInteger(secKey0);
         
         byte[] pubKey0 = ecdsa.getPubKey(secKey0);
         Point pubKey1 = ecdsa.pointPubKey(pubKey0);

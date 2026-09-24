@@ -151,11 +151,44 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *                          internal {@link java.util.concurrent.Phaser} is
      *                          disabled, which reduces overhead but makes
      *                          {@link ActorPool#waitForIdle()} a no-op
+     * @param daemon            if {@code true}, the pool's worker threads are
+     *                          created as daemon threads: each one still comes
+     *                          from the {@link ThreadPoolExecutor}'s default
+     *                          {@link java.util.concurrent.ThreadFactory},
+     *                          merely with
+     *                          {@link Thread#setDaemon(boolean) setDaemon(true)}
+     *                          applied. The hub then never keeps the JVM alive
+     *                          on its own, so background Actors alone cannot
+     *                          prolong application exit. If {@code false} (the
+     *                          default), the ordinary non-daemon worker threads
+     *                          are used
+     */
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
+    {
+        super(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon);
+        applyActorSizing(0, 0);
+    }
+
+    /**
+     * Full constructor.
+     *
+     * @param coreThreads       the minimum number of threads kept permanently
+     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads        the absolute maximum number of live threads; both
+     *                          {@code 0} selects the synchronous mode (no pool)
+     * @param keepAliveMillis   the keep-alive time for the threads above the
+     *                          effective core, in milliseconds
+     * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
+     *                          caller; if {@code false}, the caller runs the
+     *                          task itself
+     * @param avoidTracker      if {@code true}, active-task tracking via the
+     *                          internal {@link java.util.concurrent.Phaser} is
+     *                          disabled, which reduces overhead but makes
+     *                          {@link ActorPool#waitForIdle()} a no-op
      */
     public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
     {
-        super(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker);
-        applyActorSizing(0, 0);
+        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, DEFAULT_DAEMON);
     }
 
     /**
@@ -266,6 +299,33 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy)
     {
         return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy);
+    }
+
+    /**
+     * Static factory with full pool configuration and daemon-thread control.
+     *
+     * @param coreThreads       the minimum number of threads kept permanently
+     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads        the absolute maximum number of live threads
+     * @param keepAliveMillis   keep-alive time for the threads above the
+     *                          effective core, in milliseconds
+     * @param callerWaitsPolicy {@code true} to block the caller when saturated;
+     *                          {@code false} to run the task in the caller
+     * @param avoidTracker      {@code true} to disable the internal active-task
+     *                          tracker
+     * @param daemon            {@code true} to create the hub's worker threads
+     *                          as daemon threads via the
+     *                          {@link ThreadPoolExecutor}'s default
+     *                          {@link java.util.concurrent.ThreadFactory}, so
+     *                          the hub never keeps the JVM alive on its own
+     *                          when only background Actors are running;
+     *                          {@code false} (the default) to use ordinary
+     *                          non-daemon worker threads
+     * @return a new ActorHub
+     */
+    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
+    {
+        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon);
     }
 
     @Override

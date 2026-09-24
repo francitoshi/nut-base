@@ -8,6 +8,7 @@ package io.nut.base.crypto.ec;
 import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Hex;
+import io.nut.base.util.As;
 import io.nut.base.util.Utils;
 import io.nut.base.util.concurrent.actor.ActorHub;
 import io.nut.base.util.concurrent.actor.PipelineActor;
@@ -360,7 +361,7 @@ public class SchnorrTest
         Sign instance = Sign.SECP256K1_SCHNORR;
         
         String helloWorld = "Hello World!!!";
-        BigInteger msg = Utils.asBigInteger(SHA256.digest(helloWorld.getBytes()));
+        BigInteger msg = As.bigInteger(SHA256.digest(helloWorld.getBytes()));
         long t0;
         long t1;
         long ms = 0;
@@ -371,11 +372,11 @@ public class SchnorrTest
 
         t0 = System.nanoTime();
         
-        BigInteger k = Utils.asBigInteger(auxRand);
+        BigInteger k = As.bigInteger(auxRand);
         
         for(int i=0;i<LOOPS && ms<MS_TO_LOOP;i++,count++)
         {
-            BigInteger secKey = Utils.asBigInteger(instance.genSecKey());
+            BigInteger secKey = As.bigInteger(instance.genSecKey());
             BigInteger[] signature = instance.sign(msg, secKey, k);
             Point pubKey = instance.getPubKey(secKey);
             
@@ -402,9 +403,9 @@ public class SchnorrTest
         byte[] seckey = Hex.decode("0000000000000000000000000000000000000000000000000000000000000003");
         byte[] aux_rand = Hex.decode("0000000000000000000000000000000000000000000000000000000000000000");
         
-        BigInteger msgNum = Utils.asBigInteger(msg);
-        BigInteger seckeyNum = Utils.asBigInteger(seckey);
-        BigInteger aux_randNum = Utils.asBigInteger(aux_rand);
+        BigInteger msgNum = As.bigInteger(msg);
+        BigInteger seckeyNum = As.bigInteger(seckey);
+        BigInteger aux_randNum = As.bigInteger(aux_rand);
         
         BigInteger[] rs = schnorr.sign(msgNum, seckeyNum, aux_randNum);
 
@@ -430,9 +431,9 @@ public class SchnorrTest
         byte[] seckey = Hex.decode("b7e151628aed2a6abf7158809cf4f3c762e7160f38b4da56a784d9045190cfef");
         byte[] aux_rand = Hex.decode("0000000000000000000000000000000000000000000000000000000000000001");
         
-        BigInteger msgNum = Utils.asBigInteger(msg);
-        BigInteger seckeyNum = Utils.asBigInteger(seckey);
-        BigInteger aux_randNum = Utils.asBigInteger(aux_rand);
+        BigInteger msgNum = As.bigInteger(msg);
+        BigInteger seckeyNum = As.bigInteger(seckey);
+        BigInteger aux_randNum = As.bigInteger(aux_rand);
         
         BigInteger[] rs = schnorr.sign(msgNum, seckeyNum, aux_randNum);
 
@@ -459,9 +460,9 @@ public class SchnorrTest
         byte[] seckey = Hex.decode("c90fdaa22168c234c4c6628b80dc1cd129024e088a67cc74020bbea63b14e5c9");
         byte[] aux_rand = Hex.decode("c87aa53824b4d7ae2eb035a2b5bbbccc080e76cdc6d1692c4b0b62d798e6d906");
         
-        BigInteger msgNum = Utils.asBigInteger(msg);
-        BigInteger seckeyNum = Utils.asBigInteger(seckey);
-        BigInteger aux_randNum = Utils.asBigInteger(aux_rand);
+        BigInteger msgNum = As.bigInteger(msg);
+        BigInteger seckeyNum = As.bigInteger(seckey);
+        BigInteger aux_randNum = As.bigInteger(aux_rand);
         
         BigInteger[] rs = schnorr.sign(msgNum, seckeyNum, aux_randNum);
 

@@ -257,5 +257,37 @@ public class ActorPoolTest
             assertEquals(4, actorPool.getMaxThreads());
         }
     }
+
+    @Test
+    public void daemonFlagMakesWorkerThreadsDaemon()
+    {
+        assertEquals(false, ActorPool.DEFAULT_DAEMON);
+        assertPoolThreadDaemon(false);
+        assertPoolThreadDaemon(true);
+    }
+
+    private void assertPoolThreadDaemon(boolean daemon)
+    {
+        CountDownLatch running = new CountDownLatch(1);
+        AtomicInteger captured = new AtomicInteger();
+        try (ActorPool actorPool = new ActorPool(1, 1, 1000, false, false, daemon))
+        {
+            actorPool.execute(() ->
+            {
+                captured.set(Thread.currentThread().isDaemon() ? 1 : 0);
+                running.countDown();
+            });
+            try
+            {
+                assertTrue(running.await(5, TimeUnit.SECONDS));
+                assertEquals(daemon, captured.get() == 1);
+            }
+            catch (InterruptedException ex)
+            {
+                Thread.currentThread().interrupt();
+                fail("interrupted while waiting for the pool thread");
+            }
+        }
+    }
     
 }

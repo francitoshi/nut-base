@@ -46,6 +46,7 @@ import static io.nut.base.math.Nums.BIG_INT_YOBI;
 import static io.nut.base.math.Nums.BIG_INT_YOTTA;
 import static io.nut.base.math.Nums.BIG_INT_ZEBI;
 import static io.nut.base.math.Nums.BIG_INT_ZETTA;
+import io.nut.base.util.As;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -673,8 +674,8 @@ public class NumsTest
     static final int[] FIBONACCI = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169};
     static final int[] FIBO13_21 = {13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169};
 
-    static final BigInteger[] FIBONACCI_BIG = Utils.asBigIntegers(FIBONACCI);
-    static final BigInteger[] FIBO13_21_BIG = Utils.asBigIntegers(FIBO13_21);
+    static final BigInteger[] FIBONACCI_BIG = As.bigIntegers(FIBONACCI);
+    static final BigInteger[] FIBO13_21_BIG = As.bigIntegers(FIBO13_21);
     
     /**
      * Test of fibonacci method, of class FastMath.
@@ -1572,8 +1573,8 @@ public class NumsTest
         assertEquals(1155L, Nums.lcm(3L, 5L, 7L, 11L));
     }
 
-    static long[] FIBONACCI_LONG = Utils.asLongs(FIBONACCI);
-    static long[] FIBO13_21_LONG = Utils.asLongs(FIBO13_21);
+    static long[] FIBONACCI_LONG = As.longs(FIBONACCI);
+    static long[] FIBO13_21_LONG = As.longs(FIBO13_21);
     
     /**
      * Test of fibonacci method, of class Nums.

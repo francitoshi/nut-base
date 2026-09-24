@@ -7,6 +7,7 @@ package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
 import io.nut.base.crypto.Kripto.MessageDigestAlgorithm;
+import io.nut.base.util.As;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -104,7 +105,7 @@ public class ECDSATest
         SecureRandom secureRandom = SecureRandom.getInstanceStrong();
         Sign instance = Sign.SECP256K1_ECDSA;
         String helloWorld = "Hello World!!!";
-        BigInteger msg = Utils.asBigInteger(SHA256.digest(helloWorld.getBytes()));
+        BigInteger msg = As.bigInteger(SHA256.digest(helloWorld.getBytes()));
         long t0;
         long t1;
         long ms = 0;
@@ -115,11 +116,11 @@ public class ECDSATest
 
         t0 = System.nanoTime();
         
-        BigInteger k = Utils.asBigInteger(auxRand);
+        BigInteger k = As.bigInteger(auxRand);
         
         for(int i=0;i<20;i++,count++)
         {
-            BigInteger secKey = Utils.asBigInteger(instance.genSecKey());
+            BigInteger secKey = As.bigInteger(instance.genSecKey());
             BigInteger[] signature = instance.sign(msg, secKey, k);
             Point pubKey = instance.getPubKey(secKey);
 

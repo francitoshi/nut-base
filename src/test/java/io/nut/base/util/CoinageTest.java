@@ -1,22 +1,7 @@
 /*
- *  CoinageTest.java
- *
- *  Copyright (c) 2024 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
 
@@ -204,14 +189,14 @@ public class CoinageTest
     public void testGetPairOrCoin()
     {
         Coinage instance = Coinage.getDefaultInstance();
-        assertArrayEquals( Utils.asStrings("BTC"), instance.getPairOrCoin("BTC"));
-        assertArrayEquals( Utils.asStrings("EUR"), instance.getPairOrCoin("EUR"));
-        assertArrayEquals( Utils.asStrings("LTC"), instance.getPairOrCoin("LTC"));
-        assertArrayEquals( Utils.asStrings("USD"), instance.getPairOrCoin("USD"));
-        assertArrayEquals( Utils.asStrings("USDT"), instance.getPairOrCoin("USDT"));
-        assertArrayEquals( Utils.asStrings("BTC","EUR"), instance.getPairOrCoin("BTCEUR"));
-        assertArrayEquals( Utils.asStrings("ZEC","EUR"), instance.getPairOrCoin("ZECEUR"));
-        assertArrayEquals( Utils.asStrings("ZEC","BTC"), instance.getPairOrCoin("ZECBTC"));
+        assertArrayEquals( As.strings("BTC"), instance.getPairOrCoin("BTC"));
+        assertArrayEquals( As.strings("EUR"), instance.getPairOrCoin("EUR"));
+        assertArrayEquals( As.strings("LTC"), instance.getPairOrCoin("LTC"));
+        assertArrayEquals( As.strings("USD"), instance.getPairOrCoin("USD"));
+        assertArrayEquals( As.strings("USDT"), instance.getPairOrCoin("USDT"));
+        assertArrayEquals( As.strings("BTC","EUR"), instance.getPairOrCoin("BTCEUR"));
+        assertArrayEquals( As.strings("ZEC","EUR"), instance.getPairOrCoin("ZECEUR"));
+        assertArrayEquals( As.strings("ZEC","BTC"), instance.getPairOrCoin("ZECBTC"));
     }
 
     /**
