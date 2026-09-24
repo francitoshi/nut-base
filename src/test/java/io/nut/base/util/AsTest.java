@@ -1,22 +1,7 @@
 /*
- *  AsTest.java
- *
- *  Copyright (c) 2024-2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.util;
 
@@ -305,6 +290,40 @@ public class AsTest
     }
 
     /**
+     * Test of asShortArray method, of class ArrayUtils.
+     */
+    @Test
+    public void testAsShort_byteArr()
+    {
+        {
+            byte[] src = null;
+            assertNull(As.shorts(src));
+        }
+        {
+            byte[] src = {-1, 0, +1, Byte.MAX_VALUE};
+            short[] expResult = {-1, 0, +1, Byte.MAX_VALUE};
+            assertArrayEquals(expResult, As.shorts(src));
+        }
+    }
+
+    /**
+     * Test of asIntArray method, of class ArrayUtils.
+     */
+    @Test
+    public void testAsInt_charArr()
+    {
+        {
+            char[] src = null;
+            assertNull(As.ints(src));
+        }
+        {
+            char[] src = {'a','b','c'};
+            int[] expResult = {'a','b','c'};
+            assertArrayEquals(expResult, As.ints(src));
+        }
+    }
+
+    /**
      * Test of asIntArray method, of class ArrayUtils.
      */
     @Test
@@ -355,6 +374,23 @@ public class AsTest
     {
         assertArrayEquals(null, As.longs((short[])null));
         assertArrayEquals(longArray, As.longs(shortArray));
+    }
+
+    /**
+     * Test of asLongArray method, of class ArrayUtils.
+     */
+    @Test
+    public void testAsLong_charArr()
+    {
+        {
+            char[] src = null;
+            assertNull(As.longs(src));
+        }
+        {
+            char[] src = {'x','y','z'};
+            long[] expResult = {'x','y','z'};
+            assertArrayEquals(expResult, As.longs(src));
+        }
     }
 
     /**

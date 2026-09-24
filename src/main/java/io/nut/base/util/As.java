@@ -378,6 +378,27 @@ public class As
     }
 
     /**
+     * Converts an array of {@code byte}s to an array of {@code short}s.
+     *
+     * @param src the source array; may be {@code null}
+     * @return a new {@code short} array holding the same values, or
+     *         {@code null} if {@code src} is {@code null}
+     */
+    public static short[] shorts(byte[] src)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        short[] dst = new short[src.length];
+        for (int i = 0; i < src.length; i++)
+        {
+            dst[i] = src[i];
+        }
+        return dst;
+    }
+
+    /**
      * Converts an array of {@code byte}s to an array of {@code int}s.
      *
      * @param src the source array; may be {@code null}
@@ -406,6 +427,27 @@ public class As
      *         if {@code src} is {@code null}
      */
     public static int[] ints(short[] src)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        int[] dst = new int[src.length];
+        for (int i = 0; i < src.length; i++)
+        {
+            dst[i] = src[i];
+        }
+        return dst;
+    }
+
+    /**
+     * Converts an array of {@code char}s to an array of {@code int}s.
+     *
+     * @param src the source array; may be {@code null}
+     * @return a new {@code int} array holding the same values, or {@code null}
+     *         if {@code src} is {@code null}
+     */
+    public static int[] ints(char[] src)
     {
         if (src == null)
         {
@@ -556,6 +598,27 @@ public class As
      *         {@code null} if {@code src} is {@code null}
      */
     public static long[] longs(short[] src)
+    {
+        if (src == null)
+        {
+            return null;
+        }
+        long[] dst = new long[src.length];
+        for (int i = 0; i < src.length; i++)
+        {
+            dst[i] = src[i];
+        }
+        return dst;
+    }
+
+    /**
+     * Converts an array of {@code char}s to an array of {@code long}s.
+     *
+     * @param src the source array; may be {@code null}
+     * @return a new {@code long} array holding the same values, or
+     *         {@code null} if {@code src} is {@code null}
+     */
+    public static long[] longs(char[] src)
     {
         if (src == null)
         {
