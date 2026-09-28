@@ -1,0 +1,530 @@
+/*
+ * Copyright (C) 2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.nut.base.concurrent.actor;
+
+import io.nut.base.util.Utils;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+/**
+ * Unit tests for {@link ActorHub}: the thread-pool lifecycle, the static
+ * factories, {@code add}/{@code execute}, every Actor-factory method
+ * ({@code pipe}, {@code actor}, {@code queue}, {@code list}, {@code set},
+ * {@code filter}, {@code broadcast}, {@code batch}, {@code pipeline}),
+ * and {@code async}/{@code lazy}.
+ */
+class ActorHubTest
+{
+    private ActorHub actorHub;
+
+    @BeforeEach
+    void setUp()
+    {
+        actorHub = ActorHub.hub(2);
+    }
+
+    @AfterEach
+    void tearDown()
+    {
+        actorHub.shutdown();
+        actorHub.awaitTermination(2000);
+    }
+
+    @Test
+    void coresConstantMatchesAvailableProcessors()
+    {
+        assertEquals(Runtime.getRuntime().availableProcessors(), ActorHub.CORES);
+    }
+
+    @Test
+    void staticFactoryMethodsCreateUsableActorHubs() throws Exception
+    {
+        runsATaskOn(ActorHub.hub());
+        runsATaskOn(ActorHub.hub(2));
+        runsATaskOn(ActorHub.hub(2, 2, 1000));
+        runsATaskOn(ActorHub.hub(2, 2, 1000, true));
+    }
+
+    private void runsATaskOn(ActorHub h) throws Exception
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        h.execute(latch::countDown);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
+
+        h.waitForIdle().shutdown().awaitTermination(1000);
+    }
+
+    @Test
+    void executeRunsTaskOnThePool() throws InterruptedException
+    {
+        CountDownLatch latch = new CountDownLatch(1);
+        actorHub.execute(latch::countDown);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void executeRejectsNullTask()
+    {
+        assertThrows(NullPointerException.class, () -> actorHub.execute(null));
+    }
+
+    @Test
+    void pipeFactoryCreatesAttachedTransformingStage() throws InterruptedException
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        PipeActor<Integer,String> stage = actorHub.pipe(i -> "n" + i);
+        stage.linkTo(actorHub.actor(sink::add));
+
+        stage.accept(5);
+        stage.waitForIdle().shutdown().awaitTermination(25);
+        actorHub.close(true);
+
+        assertEquals(Collections.singletonList("n5"), sink);
+    }
+
+    @Test
+    void beeFactoryCreatesAttachedConsumerActor() throws InterruptedException
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        Actor<String> b = actorHub.actor(sink::add);
+
+        b.accept("hi");
+        actorHub.close(true);
+
+        assertEquals(Collections.singletonList("hi"), sink);
+    }
+
+    @Test
+    void queueFactoryCreatesAttachedQueueActor() throws InterruptedException
+    {
+        BlockingQueue<Integer> q = new LinkedBlockingQueue<>();
+        Actor<Integer> b = actorHub.queue(q);
+
+        b.accept(1);
+        b.accept(2);
+        actorHub.close(true);
+
+        assertEquals(2, q.size());
+        assertEquals(Integer.valueOf(1), q.take());
+    }
+
+    @Test
+    void listFactoryCreatesAttachedListActor() throws InterruptedException
+    {
+        List<String> list = new ArrayList<>();
+        Actor<String> actor = actorHub.list(list);
+
+        actor.accept("a");
+        actor.accept("b");
+        actorHub.close(true);
+
+        assertEquals(Arrays.asList("a", "b"), list);
+    }
+
+    @Test
+    void setFactoryCreatesAttachedSetActor()
+    {
+        Set<String> s = new HashSet<>();
+        Actor<String> b = actorHub.set(s);
+
+        b.accept("x");
+        b.accept("x");
+        b.accept("y");
+        actorHub.close(true);
+
+        assertEquals(new HashSet<>(Arrays.asList("x", "y")), new HashSet<>(s));
+    }
+
+    @Test
+    void filterFactoryCreatesAttachedFilterActor()
+    {
+        List<Integer> sink = new CopyOnWriteArrayList<>();
+        FilterActor<Integer> filter = actorHub.filter(i -> i > 0);
+        filter.linkTo(actorHub.actor(sink::add));
+
+        filter.accept(-1);
+        filter.accept(2);
+        filter.waitForIdle().shutdown(true).awaitTermination(1);
+        actorHub.close(true);
+
+        assertEquals(Collections.singletonList(2), sink);
+    }
+
+    @Test
+    void broadcastFactoryCreatesAttachedFanOutActorWithGivenTargets()
+    {
+        List<String> a = new CopyOnWriteArrayList<>();
+        List<String> b = new CopyOnWriteArrayList<>();
+        FanOutActor<String> bc = actorHub.fanout(actorHub.actor(a::add), actorHub.actor(b::add));
+
+        bc.accept("m");
+
+        bc.waitForIdle().shutdown().awaitTermination(25);
+        actorHub.close(true);
+
+        assertEquals(Collections.singletonList("m"), a);
+        assertEquals(Collections.singletonList("m"), b);
+    }
+
+    @Test
+    void batchFactoryCreatesAttachedBatchActor()
+    {
+        List<List<Integer>> sink = new CopyOnWriteArrayList<>();
+        BatchActor<Integer> batch = actorHub.batch(2, 0L);
+        batch.linkTo(actorHub.actor(sink::add));
+
+        batch.accept(1);
+        batch.accept(2);
+        
+        batch.waitForIdle().shutdown().awaitTermination(25);
+        actorHub.close(true);
+
+        assertEquals(Collections.singletonList(Arrays.asList(1, 2)), sink);
+    }
+
+    @Test
+    void pipelineFactoryBuildsChainedHeadActor() throws InterruptedException
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        PipeActor<Integer,?> head = actorHub.pipeline((Integer i) -> i + 1)
+                                 .then(i -> "v" + i)
+                                 .sink(sink::add);
+
+        head.accept(4);
+        
+        Utils.parkMillis(25);
+        actorHub.close(true);
+
+        assertEquals(Collections.singletonList("v5"), sink);
+    }
+
+    @Test
+    void shutdownStopsThePool() throws InterruptedException
+    {
+        assertFalse(actorHub.isShutdown());
+        actorHub.shutdown();
+
+        assertTrue(actorHub.isShutdown());
+        assertTrue(actorHub.awaitTermination(2000));
+        assertTrue(actorHub.isTerminated());
+    }
+
+    @Test
+    void closeDrainsActorsThenStopsThePool() throws InterruptedException
+    {
+        RecordingActor<Integer> actor = new RecordingActor<>(actorHub);
+        actor.accept(1);
+        actor.accept(2);
+
+        actorHub.close(true);
+        actorHub.shutdown().awaitTermination(1);
+
+        assertTrue(actor.isTerminated());
+        assertEquals(2, actor.received.size());
+        assertTrue(actorHub.isTerminated());
+    }
+
+    @Test
+    void actorsListTracksActiveNonSynchronousActorsAndRemovesOnShutdown()
+    {
+        RecordingActor<Integer> async1 = new RecordingActor<>(actorHub);
+        RecordingActor<Integer> async2 = new RecordingActor<>(actorHub);
+        RecordingActor<Integer> sync = new RecordingActor<>(actorHub, 0, 0);
+
+        assertTrue(actorHub.actors().contains(async1.inner()));
+        assertTrue(actorHub.actors().contains(async2.inner()));
+        assertFalse(actorHub.actors().contains(sync.inner()));
+
+        async1.shutdown().awaitTermination(50);
+
+        assertFalse(actorHub.actors().contains(async1.inner()));
+        assertTrue(actorHub.actors().contains(async2.inner()));
+
+        async2.shutdown().awaitTermination(50);
+        assertFalse(actorHub.actors().contains(async2.inner()));
+    }
+
+    @Test
+    void factoryCreatedSynchronousActorsAreRegisteredUntilShutdown()
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        Actor<String> actor = actorHub.actor(0, sink::add);
+        Actor<String> listActor = actorHub.list(0, 0, new CopyOnWriteArrayList<>());
+        Actor<String> setActor = actorHub.set(0, 0, ConcurrentHashMap.newKeySet());
+        Actor<String> queueActor = actorHub.queue(0, 0, new LinkedBlockingQueue<>());
+
+        assertTrue(actorHub.actors().contains(actor));
+        assertTrue(actorHub.actors().contains(listActor));
+        assertTrue(actorHub.actors().contains(setActor));
+        assertTrue(actorHub.actors().contains(queueActor));
+
+        actor.accept("m");
+        assertEquals(Collections.singletonList("m"), sink);
+        assertTrue(actor.isTerminated() == false);
+
+        actor.shutdown();
+        listActor.shutdown();
+        setActor.shutdown();
+        queueActor.shutdown();
+
+        assertTrue(actor.isShutdown() && actor.isTerminated());
+        assertFalse(actorHub.actors().contains(actor));
+        assertFalse(actorHub.actors().contains(listActor));
+        assertFalse(actorHub.actors().contains(setActor));
+        assertFalse(actorHub.actors().contains(queueActor));
+    }
+
+    @Test
+    void waitForIdleReturnsPromptlyAfterABurst()
+    {
+        List<String> sink = new CopyOnWriteArrayList<>();
+        Actor<String> actor = actorHub.actor(sink::add);
+
+        long t0 = System.nanoTime();
+        for (int i = 0; i < 10; i++)
+        {
+            actor.accept("m" + i);
+            actor.waitForIdle();
+        }
+        long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
+
+        assertTrue(elapsed < 200, "waitForIdle lingered " + elapsed + " ms after the burst");
+        assertEquals(10, sink.size());
+    }
+
+    @Test
+    void poolSizingSetterWorksAndMaterializesTheCeiling()
+    {
+        ActorHub h = ActorHub.hub(3);
+        assertEquals(3, h.getCoreThreads());
+        assertEquals(6, h.getMaxThreads());
+        // the configured ceiling materializes immediately (threads only spawn
+        // on demand, so the pool does not preallocate them)
+        assertEquals(3, h.getCorePoolSize());
+        assertEquals(6, h.getMaximumPoolSize());
+
+        h.setThreads(5, 10);
+
+        assertEquals(5, h.getCoreThreads());
+        assertEquals(10, h.getMaxThreads());
+        assertEquals(5, h.getCorePoolSize());
+        assertEquals(10, h.getMaximumPoolSize());
+
+        // growing the floor above the ceiling raises the ceiling to match
+        h.setThreads(8, 4);
+
+        assertEquals(8, h.getCoreThreads());
+        assertEquals(8, h.getMaxThreads());
+        assertEquals(8, h.getCorePoolSize());
+        assertEquals(8, h.getMaximumPoolSize());
+
+        // shrinking keeps the pair coherent, whichever value is dominant
+        h.setThreads(2, 6);
+
+        assertEquals(2, h.getCoreThreads());
+        assertEquals(6, h.getMaxThreads());
+        assertEquals(2, h.getCorePoolSize());
+        assertEquals(6, h.getMaximumPoolSize());
+
+        h.shutdown();
+        h.awaitTermination(1000);
+    }
+
+    @Test
+    void hubSizesToActorDemand()
+    {
+        try (ActorHub h = ActorHub.hub(1))
+        {
+            assertEquals(1, h.getCoreThreads());
+            assertEquals(2, h.getMaxThreads());
+
+            // the configured ceiling materializes immediately
+            assertEquals(1, h.getCorePoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
+
+            // one async Actor adds a permanently alive thread to the core
+            Actor<String> a = h.actor(s -> {});
+            assertEquals(1, h.getCorePoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
+
+            // a heavy MultiActor raises the maximum to its summed demand
+            Actor<String> b = h.actor(2, 0, s -> {});
+            assertEquals(2, h.getCorePoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
+
+            // the ceiling is never exceeded
+            assertTrue(h.getMaximumPoolSize() <= h.getMaxThreads());
+        }
+    }
+
+    @Test
+    void hubKeepsTheMaxThreadsCeilingWithinTheAsyncActorCount()
+    {
+        try (ActorHub h = new ActorHub(0, 2, 1000))
+        {
+            // 2 SingleActors demand exactly the ceiling of 2
+            h.actor(s -> {});
+            h.actor(s -> {});
+            assertEquals(2, h.getCorePoolSize());
+            assertEquals(2, h.getMaximumPoolSize());
+        }
+    }
+
+    @Test
+    void hubLiftsTheMaxThreadsCeilingToExactlyTheAsyncActorCount()
+    {
+        try (ActorHub h = new ActorHub(0, 2, 1000))
+        {
+            // 6 SingleActors demand 6 threads: the ceiling rises to exactly the
+            // number of async Actors (never above), not to maxThreads
+            for (int i = 0; i < 6; i++)
+            {
+                h.actor(s -> {});
+            }
+            assertEquals(6, h.getCorePoolSize());
+            assertEquals(6, h.getMaximumPoolSize());
+        }
+    }
+
+    @Test
+    void singleIntHubZeroIsSynchronous()
+    {
+        ActorHub h = ActorHub.hub(0);
+        assertTrue(h.isSynchronous());
+    }
+
+    @Test
+    void closeShutsDownAndAwaitsTermination() throws Exception
+    {
+        ActorHub h = ActorHub.hub(2);
+        CountDownLatch latch = new CountDownLatch(1);
+        h.execute(latch::countDown);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
+
+        h.close();
+
+        assertTrue(h.isTerminated());
+    }
+    
+    @Test
+    void directSendAddsMessageToTheSet()
+    {
+        Set<String> set = new HashSet<>();
+        Actor<String> sb = actorHub.set(set);
+
+        sb.accept("hello");
+
+        sb.waitForIdle();
+        assertEquals(1, set.size());
+        assertTrue(set.contains("hello"));
+    }
+
+    @Test
+    void duplicatesAreRejectedByTheUnderlyingSet()
+    {
+        Set<String> set = ConcurrentHashMap.newKeySet();
+        Actor<String> actor = actorHub.set(set);
+
+        actor.accept("a");
+        actor.accept("a");
+        actor.accept("b");
+
+        actor.waitForIdle();
+        
+        assertEquals(2, set.size());
+        assertTrue(set.contains("a"));
+        assertTrue(set.contains("b"));
+    }
+
+    @Test
+    void iteratorTraversesAllElements() throws InterruptedException
+    {
+        Set<String> set = ConcurrentHashMap.newKeySet();
+        Actor<String> actor = actorHub.set(set);
+
+        actor.accept("a");
+        actor.accept("b");
+        actor.accept("c");
+
+        actor.waitForIdle();
+        
+        Set<String> traversed = new HashSet<>();
+        for (String s : set)
+        {
+            traversed.add(s);
+        }
+        
+        assertEquals(set, traversed);
+    }
+
+    @Test
+    void proxyActorHubCorrectlyDelegatesAllCalls() throws InterruptedException
+    {
+        ProxyActorHub proxy = new ProxyActorHub();
+        proxy.setActorHub(actorHub);
+
+        List<String> list = new ArrayList<>();
+        Actor<String> actorList = proxy.list(list);
+        actorList.accept("test-list");
+
+        Set<String> set = new HashSet<>();
+        Actor<String> actorSet = proxy.set(set);
+        actorSet.accept("test-set");
+
+        CountDownLatch latch = new CountDownLatch(1);
+        proxy.execute(latch::countDown);
+        assertTrue(latch.await(1, TimeUnit.SECONDS));
+
+        actorHub.close(true);
+
+        assertEquals(Collections.singletonList("test-list"), list);
+        assertEquals(Collections.singleton("test-set"), set);
+    }
+
+    @Test
+    void proxyActorHubAccumulatesNoActorHubAndMigratesOnSetActorHub()
+    {
+        ProxyActorHub proxy = new ProxyActorHub();
+
+        List<String> list1 = new ArrayList<>();
+        Actor<String> actor1 = proxy.list(list1);
+        List<String> list2 = new ArrayList<>();
+        Actor<String> actor2 = proxy.list(list2);
+
+        assertTrue(proxy.actors().contains(actor1));
+        assertTrue(proxy.actors().contains(actor2));
+        assertFalse(actorHub.actors().contains(actor1));
+        assertFalse(actorHub.actors().contains(actor2));
+
+        proxy.setActorHub(actorHub);
+
+        assertTrue(actorHub.actors().contains(actor1));
+        assertTrue(actorHub.actors().contains(actor2));
+        assertTrue(proxy.actors().contains(actor1));
+        assertTrue(proxy.actors().contains(actor2));
+
+        actorHub.close(true);
+    }
+}

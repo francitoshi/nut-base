@@ -17,7 +17,7 @@ import io.nut.base.util.BitSetWriter;
 import io.nut.base.util.Bits;
 import io.nut.base.lang.Empty;
 import io.nut.base.util.Checksums;
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import io.nut.base.lang.Strings;
 import io.nut.base.util.Zip;
 import io.nut.base.varint.CompactSize;

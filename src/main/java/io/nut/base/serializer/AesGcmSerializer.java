@@ -7,7 +7,7 @@ package io.nut.base.serializer;
 
 import io.nut.base.crypto.AesGcmBytesCipher;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import javax.crypto.SecretKey;
 import java.util.logging.Logger;
 

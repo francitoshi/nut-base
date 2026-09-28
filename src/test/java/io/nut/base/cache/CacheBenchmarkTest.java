@@ -8,7 +8,7 @@ package io.nut.base.cache;
 import io.nut.base.profile.Profiler;
 import io.nut.base.time.JavaTime;
 import io.nut.base.util.Utils;
-import io.nut.base.util.concurrent.actor.ActorHub;
+import io.nut.base.concurrent.actor.ActorHub;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import org.junit.jupiter.api.Test;

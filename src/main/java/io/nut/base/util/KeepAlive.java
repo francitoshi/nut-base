@@ -5,6 +5,7 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.lang.Exceptions;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 

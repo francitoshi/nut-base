@@ -5,7 +5,7 @@
  */
 package io.nut.base.signal;
 
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.DelayQueue;
 import java.util.concurrent.Delayed;

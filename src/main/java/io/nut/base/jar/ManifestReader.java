@@ -5,7 +5,7 @@
  */
 package io.nut.base.jar;
 
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import java.io.IOException;
 import java.net.JarURLConnection;
 import java.net.URL;

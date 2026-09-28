@@ -5,6 +5,7 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.lang.Exceptions;
 import io.nut.base.encoding.Base64DecoderException;
 import io.nut.base.encoding.Encoding;
 import io.nut.base.varint.CompactSize;

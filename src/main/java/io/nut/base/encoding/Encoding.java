@@ -5,7 +5,7 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Logger;

@@ -5,7 +5,7 @@
  */
 package io.nut.base.util.properties;
 
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;

@@ -9,7 +9,7 @@ import io.nut.base.crypto.AesSivCtrBytesCipher;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.serializer.Serializer;
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import javax.crypto.SecretKey;
 import java.util.logging.Logger;
 

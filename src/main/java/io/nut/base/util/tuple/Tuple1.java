@@ -5,7 +5,7 @@
  */
 package io.nut.base.util.tuple;
 
-import io.nut.base.util.concurrent.Lazy;
+import io.nut.base.concurrent.Lazy;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;

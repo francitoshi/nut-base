@@ -13,7 +13,7 @@ import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
 import io.nut.base.signal.Morse;
 import io.nut.base.signal.Transceiver;
-import io.nut.base.util.Exceptions;
+import io.nut.base.lang.Exceptions;
 import java.io.IOException;
 import java.util.logging.Logger;
 import javax.sound.sampled.AudioInputStream;
