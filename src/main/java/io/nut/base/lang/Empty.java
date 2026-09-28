@@ -30,20 +30,20 @@ import java.util.TreeSet;
 public abstract class Empty
 {
     // Common primitive arrays
-    public static final byte[] BYTES = new byte[0];
-    public static final int[] INTS = new int[0];
-    public static final long[] LONGS = new long[0];
-    public static final char[] CHARS = new char[0];
-    public static final boolean[] BOOLEANS = new boolean[0];
-    public static final short[] SHORTS = new short[0];
-    public static final float[] FLOATS = new float[0];
-    public static final double[] DOUBLES = new double[0];
+    public static final byte[] BYTES = {};
+    public static final int[] INTS = {};
+    public static final long[] LONGS = {};
+    public static final char[] CHARS = {};
+    public static final boolean[] BOOLEANS = {};
+    public static final short[] SHORTS = {};
+    public static final float[] FLOATS = {};
+    public static final double[] DOUBLES = {};
 
     // Standard objects
-    public static final Object[] OBJECTS = new Object[0];
-    public static final String[] STRINGS = new String[0];
-    public static final Class<?>[] CLASSES = new Class<?>[0];
-    public static final Throwable[] THROWABLES = new Throwable[0];
+    public static final Object[] OBJECTS = {};
+    public static final String[] STRINGS = {};
+    public static final Class<?>[] CLASSES = {};
+    public static final Throwable[] THROWABLES = {};
 
     // Common immutable collections
     public static final Collection<?> COLLECTION = Collections.emptyList();

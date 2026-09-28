@@ -5,7 +5,7 @@
  */
 package io.nut.base.lang;
 
-import io.nut.base.util.Locales;
+import io.nut.base.i18n.Locales;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;

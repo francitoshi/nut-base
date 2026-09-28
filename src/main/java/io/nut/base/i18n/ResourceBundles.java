@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.resources;
+package io.nut.base.i18n;
 
 import io.nut.base.io.IO;
 import java.io.IOException;

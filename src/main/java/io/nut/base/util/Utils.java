@@ -27,10 +27,8 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.InvalidKeyException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,19 +65,9 @@ public abstract class Utils
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     /**
-     * An empty immutable {@code boolean} array.
-     */
-    public static final boolean[] EMPTY_BOOLEAN_ARRAY = {};
-
-    /**
      * An empty immutable {@link Boolean} array.
      */
     public static final Boolean[] EMPTY_BOOLEAN_OBJECT_ARRAY = {};
-
-    /**
-     * An empty immutable {@code byte} array.
-     */
-    public static final byte[] EMPTY_BYTE_ARRAY = {};
 
     /**
      * An empty immutable {@link Byte} array.
@@ -87,19 +75,9 @@ public abstract class Utils
     public static final Byte[] EMPTY_BYTE_OBJECT_ARRAY = {};
 
     /**
-     * An empty immutable {@code char} array.
-     */
-    public static final char[] EMPTY_CHAR_ARRAY = {};
-
-    /**
      * An empty immutable {@link Character} array.
      */
     public static final Character[] EMPTY_CHARACTER_OBJECT_ARRAY = {};
-
-    /**
-     * An empty immutable {@code double} array.
-     */
-    public static final double[] EMPTY_DOUBLE_ARRAY = {};
 
     /**
      * An empty immutable {@link Double} array.
@@ -107,29 +85,14 @@ public abstract class Utils
     public static final Double[] EMPTY_DOUBLE_OBJECT_ARRAY = {};
 
     /**
-     * An empty immutable {@code float} array.
-     */
-    public static final float[] EMPTY_FLOAT_ARRAY = {};
-
-    /**
      * An empty immutable {@link Float} array.
      */
     public static final Float[] EMPTY_FLOAT_OBJECT_ARRAY = {};
 
     /**
-     * An empty immutable {@code int} array.
-     */
-    public static final int[] EMPTY_INT_ARRAY = {};
-
-    /**
      * An empty immutable {@link Integer} array.
      */
     public static final Integer[] EMPTY_INTEGER_OBJECT_ARRAY = {};
-
-    /**
-     * An empty immutable {@code long} array.
-     */
-    public static final long[] EMPTY_LONG_ARRAY = {};
 
     /**
      * An empty immutable {@link Long} array.
@@ -140,11 +103,6 @@ public abstract class Utils
      * An empty immutable {@link Object} array.
      */
     public static final Object[] EMPTY_OBJECT_ARRAY = {};
-
-    /**
-     * An empty immutable {@code short} array.
-     */
-    public static final short[] EMPTY_SHORT_ARRAY = {};
 
     /**
      * An empty immutable {@link Short} array.

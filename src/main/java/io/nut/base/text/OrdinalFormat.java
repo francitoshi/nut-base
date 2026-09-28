@@ -5,7 +5,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.resources.ResourceBundles;
+import io.nut.base.i18n.ResourceBundles;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Locale;
