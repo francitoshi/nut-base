@@ -20,7 +20,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import java.util.Locale;
 import java.util.regex.Pattern;
 

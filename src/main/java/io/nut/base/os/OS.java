@@ -21,7 +21,7 @@
  */
 package io.nut.base.os;
 
-import io.nut.base.util.Java;
+import io.nut.base.lang.Java;
 import java.util.Locale;
 
 public class OS

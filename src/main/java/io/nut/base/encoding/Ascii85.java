@@ -5,7 +5,7 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.util.Empty;
+import io.nut.base.lang.Empty;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 

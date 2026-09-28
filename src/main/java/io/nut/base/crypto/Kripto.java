@@ -11,7 +11,7 @@ import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.crypto.stego.Steganography;
 import io.nut.base.util.Byter;
 import io.nut.base.util.Exceptions;
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import io.nut.base.util.Utils;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;

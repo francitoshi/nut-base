@@ -20,7 +20,7 @@
  */
 package io.nut.base.io;
 
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;

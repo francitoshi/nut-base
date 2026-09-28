@@ -5,7 +5,7 @@
  */
 package io.nut.base.os;
 
-import io.nut.base.util.Java;
+import io.nut.base.lang.Java;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

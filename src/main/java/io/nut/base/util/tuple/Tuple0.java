@@ -5,7 +5,7 @@
  */
 package io.nut.base.util.tuple;
 
-import io.nut.base.util.Empty;
+import io.nut.base.lang.Empty;
 import java.util.Collections;
 import java.util.List;
 

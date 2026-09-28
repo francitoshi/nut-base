@@ -22,7 +22,7 @@ package io.nut.base.signal;
 
 import io.nut.base.audio.AudioMorseTransceiver;
 import io.nut.base.audio.Wave;
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import io.nut.base.util.Utils;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.*;

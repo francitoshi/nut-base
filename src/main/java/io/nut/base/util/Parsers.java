@@ -20,6 +20,7 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.lang.Strings;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.logging.Level;

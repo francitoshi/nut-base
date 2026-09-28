@@ -20,7 +20,7 @@
  */
 package io.nut.base.logging;
 
-import io.nut.base.util.Java;
+import io.nut.base.lang.Java;
 import io.nut.base.util.Utils;
 import java.io.File;
 import java.io.IOException;

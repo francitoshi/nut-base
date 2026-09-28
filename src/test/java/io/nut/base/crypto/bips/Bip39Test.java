@@ -23,7 +23,7 @@ package io.nut.base.crypto.bips;
 import io.nut.base.crypto.bips.Bip39.MnemonicChecksumException;
 import io.nut.base.crypto.bips.Bip39.MnemonicWordException;
 import io.nut.base.encoding.Hex;
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;

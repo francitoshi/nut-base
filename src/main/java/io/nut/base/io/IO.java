@@ -8,7 +8,7 @@ package io.nut.base.io;
 import static io.nut.base.io.FileUtils.getParentFiles;
 import static io.nut.base.io.FileUtils.isParentOf;
 import io.nut.base.util.CharSets;
-import io.nut.base.util.Java;
+import io.nut.base.lang.Java;
 import io.nut.base.util.Sorts;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;

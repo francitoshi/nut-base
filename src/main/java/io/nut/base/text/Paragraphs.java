@@ -5,8 +5,8 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.util.Empty;
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Empty;
+import io.nut.base.lang.Strings;
 import java.util.ArrayList;
 
 /**

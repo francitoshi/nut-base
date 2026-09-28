@@ -18,8 +18,9 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.lang;
 
+import io.nut.base.lang.Require;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.DisplayName;

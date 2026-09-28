@@ -5,7 +5,7 @@
  */
 package io.nut.base.options;
 
-import io.nut.base.util.Empty;
+import io.nut.base.lang.Empty;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 

@@ -21,7 +21,7 @@
 package io.nut.base.crypto.pake;
 
 import io.nut.base.encoding.Hex;
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import java.math.BigInteger;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

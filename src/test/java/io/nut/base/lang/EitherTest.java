@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.util;
+package io.nut.base.lang;
 
+import io.nut.base.lang.Either;
+import io.nut.base.util.As;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

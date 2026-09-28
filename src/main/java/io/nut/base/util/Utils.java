@@ -5,6 +5,7 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.lang.Java;
 import io.nut.base.compat.ByteBufferCompat;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;

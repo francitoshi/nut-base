@@ -16,7 +16,7 @@
 
 package io.nut.base.encoding;
 
-import io.nut.base.util.Empty;
+import io.nut.base.lang.Empty;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;

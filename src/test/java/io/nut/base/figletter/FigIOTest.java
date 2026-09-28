@@ -20,7 +20,7 @@
  */
 package io.nut.base.figletter;
 
-import io.nut.base.util.Java;
+import io.nut.base.lang.Java;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

@@ -18,8 +18,9 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.lang;
 
+import io.nut.base.lang.Java;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;

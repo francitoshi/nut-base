@@ -5,7 +5,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import io.nut.base.util.Utils;
 
 /**

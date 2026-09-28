@@ -29,7 +29,7 @@ import io.nut.base.crypto.Kripto.SignatureAlgorithm;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
-import io.nut.base.util.Joins;
+import io.nut.base.lang.Joins;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;

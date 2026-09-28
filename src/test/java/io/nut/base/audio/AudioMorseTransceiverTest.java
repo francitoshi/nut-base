@@ -21,7 +21,7 @@
 package io.nut.base.audio;
 
 import io.nut.base.signal.Frame;
-import io.nut.base.util.Strings;
+import io.nut.base.lang.Strings;
 import io.nut.base.util.Utils;
 import java.nio.charset.StandardCharsets;
 import javax.sound.sampled.LineUnavailableException;

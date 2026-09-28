@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto.vdf;
 
-import io.nut.base.util.Joins;
+import io.nut.base.lang.Joins;
 import java.math.BigInteger;
 import java.security.SecureRandom;
 import org.junit.jupiter.api.Test;

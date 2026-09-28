@@ -4,7 +4,7 @@ package io.nut.base.encoding;
     from Drongo library in SparrowWallet
 */
 
-import io.nut.base.util.Empty;
+import io.nut.base.lang.Empty;
 import java.nio.charset.StandardCharsets;
 
 public class Base43
