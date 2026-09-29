@@ -12,6 +12,7 @@ import io.nut.base.crypto.stego.Steganography;
 import io.nut.base.util.Byter;
 import io.nut.base.lang.Exceptions;
 import io.nut.base.lang.Strings;
+import io.nut.base.util.Comparators;
 import io.nut.base.util.Utils;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
@@ -1484,7 +1485,7 @@ public class Kripto
     public byte[][] deriveMutualAuthProof(byte[] ownFp, byte[] otherFp, byte[] sharedSecret, UnaryOperator<byte[]> strengthener)
     {
         // Determine alphabetical order by comparing the fingerprints
-        int cmp = Utils.compare(ownFp, otherFp);
+        int cmp = Comparators.compare(ownFp, otherFp);
 
         byte[] f1stFp;
         byte[] s2ndFp;

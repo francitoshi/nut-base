@@ -853,7 +853,8 @@ public class Nums
      * @param x the angle in radians.
      * @return the cosine of x.
      */
-    public static BigDecimal cosine(BigDecimal x) {
+    public static BigDecimal cosine(BigDecimal x) 
+    {
 
         BigDecimal currentValue = BigDecimal.ONE;
         BigDecimal lastVal      = currentValue.add(BigDecimal.ONE);
@@ -862,7 +863,8 @@ public class Nums
         BigDecimal denominator  = BigDecimal.ONE;
         int        i            = 0;
 
-        while (lastVal.compareTo(currentValue) != 0) {
+        while (lastVal.compareTo(currentValue) != 0)
+        {
             lastVal = currentValue;
 
             int z = 2 * i + 2;
@@ -873,9 +875,12 @@ public class Nums
 
             BigDecimal term = numerator.divide(denominator, SCALE + 5, ROUNDING_MODE);
 
-            if (i % 2 == 0) {
+            if (i % 2 == 0) 
+            {
                 currentValue = currentValue.subtract(term);
-            } else {
+            } 
+            else 
+            {
                 currentValue = currentValue.add(term);
             }
             i++;
@@ -890,7 +895,8 @@ public class Nums
      * @param x the angle in radians.
      * @return the sine of x.
      */
-    public static BigDecimal sine(BigDecimal x) {
+    public static BigDecimal sine(BigDecimal x) 
+    {
         BigDecimal lastVal      = x.add(BigDecimal.ONE);
         BigDecimal currentValue = x;
         BigDecimal xSquared     = x.multiply(x);
@@ -898,7 +904,8 @@ public class Nums
         BigDecimal denominator  = BigDecimal.ONE;
         int        i            = 0;
 
-        while (lastVal.compareTo(currentValue) != 0) {
+        while (lastVal.compareTo(currentValue) != 0) 
+        {
             lastVal = currentValue;
 
             int z = 2 * i + 3;
@@ -909,9 +916,12 @@ public class Nums
 
             BigDecimal term = numerator.divide(denominator, SCALE + 5, ROUNDING_MODE);
 
-            if (i % 2 == 0) {
+            if (i % 2 == 0) 
+            {
                 currentValue = currentValue.subtract(term);
-            } else {
+            } 
+            else 
+            {
                 currentValue = currentValue.add(term);
             }
 
@@ -941,7 +951,8 @@ public class Nums
      * @return the base-10 logarithm of b.
      * @throws ArithmeticException if b is zero or negative.
      */
-    public static BigDecimal log10(BigDecimal b) {
+    public static BigDecimal log10(BigDecimal b) 
+    {
         final int NUM_OF_DIGITS = SCALE + 2;
             // need to add one to get the right number of dp
             //  and then add one again to get the next number
@@ -952,14 +963,19 @@ public class Nums
         // log(-x) -> exception
         // log(1) == 0 exactly;
         // log of a number lessthan one = -log(1/x)
-        if(b.signum() <= 0) {
+        if(b.signum() <= 0) 
+        {
                 throw new ArithmeticException("log of a negative number! (or zero)");
-            }
-        else if(b.compareTo(BigDecimal.ONE) == 0) {
-                return BigDecimal.ZERO;
-            } else if(b.compareTo(BigDecimal.ONE) < 0) {
-                return (log10((BigDecimal.ONE).divide(b,mc))).negate();
-            }
+        
+        }
+        else if (b.compareTo(BigDecimal.ONE) == 0)
+        {
+            return BigDecimal.ZERO;
+        }
+        else if (b.compareTo(BigDecimal.ONE) < 0)
+        {
+            return (log10((BigDecimal.ONE).divide(b, mc))).negate();
+        }
     
         StringBuilder sb = new StringBuilder();
         //number of digits on the left of the decimal point
@@ -970,7 +986,8 @@ public class Nums
     
         //this is the algorithm outlined in the webpage
         int n = 0;
-        while (n < NUM_OF_DIGITS) {
+        while (n < NUM_OF_DIGITS)
+        {
             b = (b.movePointLeft(leftDigits - 1)).pow(10, mc);
             leftDigits = b.precision() - b.scale();
             sb.append(leftDigits - 1);
@@ -1763,9 +1780,15 @@ public class Nums
      */
     public static int log2(long n, boolean ceil)
     {
-        if (n <= 0) return -1; // o lo que definas para el caso inválido
+        if (n <= 0)
+        {
+            return -1; // or what it defines for the invalid case
+        }
         int floor = 63 - Long.numberOfLeadingZeros(n);
-        if (ceil && (n & (n - 1)) != 0) floor++; // no es potencia exacta de 2
+        if (ceil && (n & (n - 1)) != 0)
+        {
+            floor++; // It is not an exact power of 2
+        }
         return floor;
     }
     
@@ -3122,185 +3145,6 @@ public class Nums
     }
 
     /**
-     * Returns the sum of a and b, saturating at Integer.MAX_VALUE or Integer.MIN_VALUE on overflow.
-     *
-     * @param a the first addend.
-     * @param b the second addend.
-     * @return the sum of a and b, or Integer.MAX_VALUE if the result overflows, or Integer.MIN_VALUE if it underflows.
-     */
-    public static int saturatedAdd(int a, int b)
-    {
-        int r = a + b;
-
-        if (b > 0 && r < a)
-        {
-            return Integer.MAX_VALUE;
-        }
-        if (b < 0 && r > a)
-        {
-            return Integer.MIN_VALUE;
-        }
-
-        return r;
-    }
-
-    /**
-     * Returns the sum of a and b, saturating at Long.MAX_VALUE or Long.MIN_VALUE on overflow.
-     *
-     * @param a the first addend.
-     * @param b the second addend.
-     * @return the sum of a and b, or Long.MAX_VALUE if the result overflows, or Long.MIN_VALUE if it underflows.
-     */
-    public static long saturatedAdd(long a, long b)
-    {
-        long r = a + b;
-
-        if (b > 0 && r < a)
-        {
-            return Long.MAX_VALUE;
-        }
-        if (b < 0 && r > a)
-        {
-            return Long.MIN_VALUE;
-        }
-
-        return r;
-    }
-
-    /**
-     * Returns the difference of a and b, saturating at Integer.MAX_VALUE or Integer.MIN_VALUE on overflow.
-     *
-     * @param a the minuend.
-     * @param b the subtrahend.
-     * @return the difference of a and b, or Integer.MAX_VALUE if the result overflows, or Integer.MIN_VALUE if it underflows.
-     */
-    public static int saturatedSubtract(int a, int b)
-    {
-        int r = a - b;
-
-        if (b < 0 && r < a)
-        {
-            return Integer.MAX_VALUE;
-        }
-        if (b > 0 && r > a)
-        {
-            return Integer.MIN_VALUE;
-        }
-
-        return r;
-    }
-
-    /**
-     * Returns the difference of a and b, saturating at Long.MAX_VALUE or Long.MIN_VALUE on overflow.
-     *
-     * @param a the minuend.
-     * @param b the subtrahend.
-     * @return the difference of a and b, or Long.MAX_VALUE if the result overflows, or Long.MIN_VALUE if it underflows.
-     */
-    public static long saturatedSubtract(long a, long b)
-    {
-        long r = a - b;
-
-        if (b < 0 && r < a)
-        {
-            return Long.MAX_VALUE;
-        }
-        if (b > 0 && r > a)
-        {
-            return Long.MIN_VALUE;
-        }
-
-        return r;
-    }
-    /**
-     * Returns the product of a and b, saturating at Integer.MAX_VALUE or Integer.MIN_VALUE on overflow.
-     *
-     * @param a the first factor.
-     * @param b the second factor.
-     * @return the product of a and b, or Integer.MAX_VALUE if the result overflows, or Integer.MIN_VALUE if it underflows.
-     */
-    public static int saturatedMultiply(int a, int b)
-    {
-        if (a == 0 || b == 0)
-        {
-            return 0;
-        }
-
-        if (a == -1 && b == Integer.MIN_VALUE)
-        {
-            return Integer.MAX_VALUE;
-        }
-        if (b == -1 && a == Integer.MIN_VALUE)
-        {
-            return Integer.MAX_VALUE;
-        }
-
-        int r = a * b;
-
-        if (r / b != a)
-        {
-            return ((a ^ b) < 0) ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-        }
-
-        return r;
-    }
-    
-    /**
-     * Returns the product of a and b, saturating at Long.MAX_VALUE or Long.MIN_VALUE on overflow.
-     *
-     * @param a the first factor.
-     * @param b the second factor.
-     * @return the product of a and b, or Long.MAX_VALUE if the result overflows, or Long.MIN_VALUE if it underflows.
-     */
-    public static long saturatedMultiply(long a, long b)
-    {
-        if (a == 0 || b == 0)
-        {
-            return 0;
-        }
-
-        if (a == -1 && b == Long.MIN_VALUE)
-        {
-            return Long.MAX_VALUE;
-        }
-        if (b == -1 && a == Long.MIN_VALUE)
-        {
-            return Long.MAX_VALUE;
-        }
-
-        long r = a * b;
-
-        if (r / b != a)
-        {
-            return ((a ^ b) < 0) ? Long.MIN_VALUE : Long.MAX_VALUE;
-        }
-
-        return r;
-    }    
-    
-    /**
-     * Returns the negation of a, saturating at Integer.MAX_VALUE if a is Integer.MIN_VALUE.
-     *
-     * @param a the value to negate.
-     * @return the negation of a, or Integer.MAX_VALUE if a is Integer.MIN_VALUE.
-     */
-    public static int saturatedNegate(int a)
-    {
-        return a == Integer.MIN_VALUE ? Integer.MAX_VALUE : -a;
-    }
-
-    /**
-     * Returns the absolute value of a, saturating at Integer.MAX_VALUE if a is Integer.MIN_VALUE.
-     *
-     * @param a the value.
-     * @return the absolute value of a, or Integer.MAX_VALUE if a is Integer.MIN_VALUE.
-     */
-    public static int saturatedAbs(int a)
-    {
-        return a == Integer.MIN_VALUE ? Integer.MAX_VALUE : Math.abs(a);
-    }
-
-    /**
      * Returns the smallest integer value that is greater than or equal to the result of a / b.
      *
      * @param a the dividend.
@@ -3324,28 +3168,6 @@ public class Nums
         }
 
         return q;
-    }
-
-    /**
-     * Returns the negation of a, saturating at Long.MAX_VALUE if a is Long.MIN_VALUE.
-     *
-     * @param a the value to negate.
-     * @return the negation of a, or Long.MAX_VALUE if a is Long.MIN_VALUE.
-     */
-    public static long saturatedNegate(long a)
-    {
-        return a == Long.MIN_VALUE ? Long.MAX_VALUE : -a;
-    }
-
-    /**
-     * Returns the absolute value of a, saturating at Long.MAX_VALUE if a is Long.MIN_VALUE.
-     *
-     * @param a the value.
-     * @return the absolute value of a, or Long.MAX_VALUE if a is Long.MIN_VALUE.
-     */
-    public static long saturatedAbs(long a)
-    {
-        return a == Long.MIN_VALUE ? Long.MAX_VALUE : Math.abs(a);
     }
 
     /**

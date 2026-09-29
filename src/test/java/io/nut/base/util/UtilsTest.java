@@ -5,7 +5,6 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.encoding.Encoding;
 import io.nut.base.math.Nums;
 import io.nut.base.time.JavaTime;
 import java.math.BigDecimal;
@@ -164,281 +163,6 @@ public class UtilsTest
         assertArrayEquals(abc, Utils.nonNull("a","b","c",null));
         assertArrayEquals(abc, Utils.nonNull(null, "a","b","c",null));
         assertArrayEquals(abc, Utils.nonNull(null, "a",null, "b", null, "c",null));
-    }
-
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompare_byteArr_byteArr()
-    {
-        
-        byte[] b0 = {};
-        byte[] b1 = {1};
-        byte[] b2 = {2};
-        byte[] c2 = {2};
-        byte[] b11 = {1,1};
-        byte[] b20 = {2,0};
-
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
-        
-    }
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompare_intArr_intArr()
-    {
-        
-        int[] b0 = {};
-        int[] b1 = {1};
-        int[] b2 = {2};
-        int[] c2 = {2};
-        int[] b11 = {1,1};
-        int[] b20 = {2,0};
-        
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
-        
-    }
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompareLong()
-    {
-        long[] b0 = {};
-        long[] b1 = {1};
-        long[] b2 = {2};
-        long[] c2 = {2};
-        long[] b11 = {1,1};
-        long[] b20 = {2,0};
-        
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
-    }
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompareDouble()
-    {
-        
-        double[] b0 = {};
-        double[] b1 = {1};
-        double[] b2 = {2};
-        double[] c2 = {2};
-        double[] b11 = {1,1};
-        double[] b20 = {2,0};
-        
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
-        
-    }
-
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompareChar()
-    {
-        char[] b0 = {};
-        char[] b1 = {'a'};
-        char[] b2 = {'b'};
-        char[] c2 = {'b'};
-        char[] b11 = {'a','a'};
-        char[] b20 = {'b','a'};
-        
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
-    }
-
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompareShort()
-    {
-        short[] b0 = {};
-        short[] b1 = {1};
-        short[] b2 = {2};
-        short[] c2 = {2};
-        short[] b11 = {1,1};
-        short[] b20 = {2,0};
-        
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
-    }
-
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompareFloat()
-    {
-        float[] b0 = {};
-        float[] b1 = {1};
-        float[] b2 = {2};
-        float[] c2 = {2};
-        float[] b11 = {1,1};
-        float[] b20 = {2,0};
-        
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
-    }
-
-    /**
-     * Test of compare method, of class Utils.
-     */
-    @Test
-    public void testCompareBoolean()
-    {
-        boolean[] b0 = {};
-        boolean[] b1 = {false};
-        boolean[] b2 = {true};
-        boolean[] c2 = {true};
-        boolean[] b11 = {false,false};
-        boolean[] b20 = {true,false};
-        
-        //test compare with itself
-        assertTrue(Utils.compare(b0, b0)==0);
-        assertTrue(Utils.compare(b1, b1)==0);
-        assertTrue(Utils.compare(b11, b11)==0);
-        assertTrue(Utils.compare(b20, b20)==0);
-
-        //test arrays of different size
-        assertTrue(Utils.compare(b0, b1)<0);
-        assertTrue(Utils.compare(b1, b0)>0);
-        
-        assertTrue(Utils.compare(b1, b2)<0);
-        assertTrue(Utils.compare(b2, b1)>0);
-        assertTrue(Utils.compare(b2, c2)==0);
-        
-        assertTrue(Utils.compare(b11, b20)<0);
-        assertTrue(Utils.compare(b20, b11)>0);
-        
-        assertTrue(Utils.compare(b2, b11)>0);
-        assertTrue(Utils.compare(b11, b2)<0);
     }
 
     /**
@@ -1362,45 +1086,6 @@ public class UtilsTest
     }
 
 
-
-    /**
-     * Test of equals method, of class Utils.
-     */
-    @Test
-    public void testEquals_2args_1()
-    {
-        Object e1 = 1;
-        Object e2 = 2;
-        Object e22 = 2;
-        
-        assertFalse(Utils.equals(e1, e2));
-        assertTrue(Utils.equals(e2, e22));
-        
-        Object en1 = null;
-        Object en2 = null;
-        assertTrue(Utils.equals(en1, en2));
-
-        assertFalse(Utils.equals(e1, en1));
-        assertFalse(Utils.equals(en1, e1));
-    }
-
-    enum Dummy{ A, B, C};
-    /**
-     * Test of equals method, of class Utils.
-     */
-    @Test
-    public void testEquals_2args_2()
-    {
-        Dummy dummyNull = null;
-        assertTrue(Utils.equals(dummyNull, dummyNull));
-        assertTrue(Utils.equals(Dummy.A, Dummy.A));
-        
-        assertFalse(Utils.equals(Dummy.A, dummyNull));
-        assertFalse(Utils.equals(dummyNull, Dummy.A));
-        assertFalse(Utils.equals(Dummy.A, Dummy.B));
-    }
-
-
     /**
      * Test of iso method, of class Utils.
      */
@@ -1446,56 +1131,6 @@ public class UtilsTest
     }
 
 
-    /**
-     * Test of equivalent method, of class Utils.
-     */
-    @Test
-    public void testEquivalent_4args()
-    {
-        Integer[] keys = {1,2,3,4,5, null};
-        String[] values = {"1","2","3","4","5","null"};
-
-        assertNull(Utils.equivalent(0, keys, values, null));
-        assertEquals("0", Utils.equivalent(0, keys, values, "0"));
-        assertEquals("1", Utils.equivalent(1, keys, values, "0"));
-        assertEquals("2", Utils.equivalent(2, keys, values, "0"));
-        assertEquals("null", Utils.equivalent(null, keys, values, "0"));
-        
-        String[] values2 = {"16","32","43","58","58c","64","91"};
-
-        assertEquals("16", Utils.equivalent(Encoding.Type.Base16, Encoding.Type.values(), values2, "0"));
-        assertEquals("32", Utils.equivalent(Encoding.Type.Base32, Encoding.Type.values(), values2, "0"));
-        assertEquals("43", Utils.equivalent(Encoding.Type.Base43, Encoding.Type.values(), values2, "0"));
-        assertEquals("58", Utils.equivalent(Encoding.Type.Base58, Encoding.Type.values(), values2, "0"));
-        assertEquals("58c", Utils.equivalent(Encoding.Type.Base58Check, Encoding.Type.values(), values2, "0"));
-        assertEquals("64", Utils.equivalent(Encoding.Type.Base64, Encoding.Type.values(), values2, "0"));
-        assertEquals("91", Utils.equivalent(Encoding.Type.Base91, Encoding.Type.values(), values2, "0"));
-    }
-
-    /**
-     * Test of equivalent method, of class Utils.
-     */
-    @Test
-    public void testEquivalent_3args()
-    {
-        Integer[] keys = {1,2,3,4,5, null};
-        String[] values = {"1","2","3","4","5","null"};
-
-        assertNull(Utils.equivalent(0, keys, values));
-        assertEquals("1", Utils.equivalent(1, keys, values));
-        assertEquals("2", Utils.equivalent(2, keys, values));
-        assertEquals("null", Utils.equivalent(null, keys, values));
-        
-        String[] values2 = {"16","32","43","58","58c","64","91"};
-
-        assertEquals("16", Utils.equivalent(Encoding.Type.Base16, Encoding.Type.values(), values2));
-        assertEquals("43", Utils.equivalent(Encoding.Type.Base43, Encoding.Type.values(), values2));
-        assertEquals("58", Utils.equivalent(Encoding.Type.Base58, Encoding.Type.values(), values2));
-        assertEquals("58c", Utils.equivalent(Encoding.Type.Base58Check, Encoding.Type.values(), values2));
-        assertEquals("64", Utils.equivalent(Encoding.Type.Base64, Encoding.Type.values(), values2));
-        assertEquals("91", Utils.equivalent(Encoding.Type.Base91, Encoding.Type.values(), values2));
-    }
-    
     @Test
     public void testBitSet()
     {
@@ -1638,63 +1273,6 @@ public class UtilsTest
         assertEquals(BigDecimal.ZERO, Utils.firstNonNullOrPoisonLenient(poison, BigDecimal.ZERO, BigDecimal.ONE));
     }
 
-    /**
-     * Test of Comparator fields, of class Utils.
-     */
-    @Test
-    public void testComparators() throws Exception
-    {
-        {
-            List<String> a = Arrays.asList("a");
-            List<String> b = Arrays.asList("a","b");
-            List<String>[] array = new List[]{b,a};
-
-            Arrays.sort(array, Utils.COLLECTION_SIZE_COMPARATOR);
-
-            assertTrue(a==array[0]);
-            assertTrue(b==array[1]);
-        }
-        {
-            String[] a = {"a"};
-            String[] b = {"a","b"};
-            String[][] array = {b,a};
-
-            Arrays.sort(array, Utils.ARRAY_SIZE_COMPARATOR);
-
-            assertTrue(a==array[0]);
-            assertTrue(b==array[1]);
-        }
-        {
-            byte[] a = {1};
-            byte[] b = {1,1};
-            byte[][] array = {b,a};
-
-            Arrays.sort(array, Utils.BYTE_ARRAY_SIZE_COMPARATOR);
-
-            assertTrue(a==array[0]);
-            assertTrue(b==array[1]);
-        }
-        {
-            int[] a = {1};
-            int[] b = {1,1};
-            int[][] array = {b,a};
-
-            Arrays.sort(array, Utils.INT_ARRAY_SIZE_COMPARATOR);
-
-            assertTrue(a==array[0]);
-            assertTrue(b==array[1]);
-        }
-        {
-            long[] a = {1};
-            long[] b = {1,1};
-            long[][] array = {b,a};
-
-            Arrays.sort(array, Utils.LONG_ARRAY_SIZE_COMPARATOR);
-
-            assertTrue(a==array[0]);
-            assertTrue(b==array[1]);
-        }
-    }
 
     @Test
     public void testUnion()
@@ -1708,7 +1286,7 @@ public class UtilsTest
                 sets[i].add(Integer.toString(j));
             }
         }
-        Arrays.sort(sets, Utils.COLLECTION_SIZE_COMPARATOR);
+        Arrays.sort(sets, Comparators.COLLECTION_SIZE_COMPARATOR);
         
         Set<String> result = Utils.union(sets);
         assertEquals(sets.length, result.size());
@@ -1729,7 +1307,7 @@ public class UtilsTest
                 sets[i].add(Integer.toString(j));
             }
         }
-        Arrays.sort(sets, Utils.COLLECTION_SIZE_COMPARATOR);
+        Arrays.sort(sets, Comparators.COLLECTION_SIZE_COMPARATOR);
 
         Set<String> result = Utils.intersection(sets);
         assertEquals(1, result.size());

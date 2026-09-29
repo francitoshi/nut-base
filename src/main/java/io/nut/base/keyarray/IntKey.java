@@ -5,7 +5,7 @@
  */
 package io.nut.base.keyarray;
 
-import io.nut.base.util.Utils;
+import io.nut.base.util.Comparators;
 import java.util.Arrays;
 
 /**
@@ -24,7 +24,7 @@ public class IntKey extends ArrayKey<int[]>
     @Override
     protected int compareArrays(int[] a, int[] b)
     {
-        return Utils.compare(a, b);
+        return Comparators.compare(a, b);
     }
 
     @Override

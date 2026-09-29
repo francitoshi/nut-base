@@ -11,6 +11,7 @@ import io.nut.base.crypto.alt.RIPEMD160;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.encoding.Base58;
 import io.nut.base.util.As;
+import io.nut.base.util.Comparators;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
@@ -74,7 +75,7 @@ public class ExtKey
         byte[] checksum = new byte[4];
         bb.get(checksum);
         byte[] checksum2 = SHA256.digestTwice(bytes82,0,78);
-        if(Utils.compare(checksum, 0, 4, checksum2, 0, 4)!=0)
+        if(Comparators.compare(checksum, 0, 4, checksum2, 0, 4)!=0)
         {
             throw new IllegalArgumentException("invalid checksum");
         }

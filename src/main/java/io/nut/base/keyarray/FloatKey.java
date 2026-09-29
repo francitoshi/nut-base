@@ -5,6 +5,7 @@
  */
 package io.nut.base.keyarray;
 
+import io.nut.base.util.Comparators;
 import io.nut.base.util.Utils;
 import java.util.Arrays;
 
@@ -24,7 +25,7 @@ public class FloatKey extends ArrayKey<float[]>
     @Override
     protected int compareArrays(float[] a, float[] b)
     {
-        return Utils.compare(a, b);
+        return Comparators.compare(a, b);
     }
 
     @Override

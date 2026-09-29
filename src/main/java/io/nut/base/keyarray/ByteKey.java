@@ -6,6 +6,7 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.encoding.Hex;
+import io.nut.base.util.Comparators;
 import io.nut.base.util.Utils;
 import java.util.Arrays;
 
@@ -30,7 +31,7 @@ public class ByteKey extends ArrayKey<byte[]>
     @Override
     protected int compareArrays(byte[] a, byte[] b)
     {
-        return Utils.compare(a, b);
+        return Comparators.compare(a, b);
     }
 
     @Override
