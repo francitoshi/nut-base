@@ -1,0 +1,8 @@
+//nut-base-kernel: layer 0, the java.base of the toolkit.
+//lang, cache, concurrent, i18n, io, os, profile, time, util(tuple) and the dependency-free
+//core of util, math, compat that everything else needs.
+//No dependencies at all, not even on the other nut-base modules.
+dependencies
+{
+    //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
+}

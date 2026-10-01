@@ -1,0 +1,17 @@
+//nut-base-kernel: layer 0, the java.base of the toolkit.
+//lang, cache, concurrent, i18n, io, os, profile, time, util(tuple) and the dependency-free
+//core of util, math, compat that everything else needs.
+//No dependencies at all, not even on the other nut-base modules.
+dependencies
+{
+    api project(':nut-base-commons')
+    
+    compileOnly "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
+    compileOnly "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+
+    testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
+    testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
+    
+}

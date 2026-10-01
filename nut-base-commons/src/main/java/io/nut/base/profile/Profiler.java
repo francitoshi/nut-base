@@ -1,0 +1,365 @@
+/*
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.nut.base.profile;
+
+import io.nut.base.time.JavaTime;
+import java.io.PrintStream;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.StringJoiner;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+
+/**
+ *
+ * @author franci
+ */
+public class Profiler
+{
+    public static class Task
+    {
+        public final String label;
+        private final Object lock = new Object();
+
+        private volatile boolean active;
+
+        private volatile long accumNanos;
+        private volatile long startNanos;
+        private volatile long stopNanos;
+        private volatile long stepNanos;
+        private volatile long counter;
+        private volatile long minNanos = Long.MAX_VALUE;
+        private volatile long maxNanos = 0L;
+
+        public Task(String label)
+        {
+            this.label = label;
+            this.startNanos = this.stopNanos = System.nanoTime();
+        }
+
+        public Task start()
+        {
+            synchronized (lock)
+            {
+                this.startNanos = System.nanoTime();
+                this.active = true;
+            }
+            return this;
+        }
+
+        public Task stop()
+        {
+            synchronized (lock)
+            {
+                this.active = false;
+                this.stopNanos = System.nanoTime();
+                this.stepNanos += this.stopNanos - this.startNanos;
+                this.startNanos = this.stopNanos;
+            }
+            return this;
+        }
+
+        public void count()
+        {
+            synchronized (lock)
+            {
+                if (this.active)
+                {
+                    this.stopNanos = System.nanoTime();
+                    this.stepNanos += this.stopNanos - this.startNanos;
+                    this.startNanos = this.stopNanos;
+                }
+                else
+                {
+                    this.startNanos = this.stopNanos = System.nanoTime();
+                }
+                this.minNanos = Math.min(this.stepNanos, this.minNanos);
+                this.maxNanos = Math.max(this.stepNanos, this.maxNanos);
+                this.accumNanos += this.stepNanos;
+                this.stepNanos = 0L;
+                this.counter++;
+            }
+        }
+        
+        public void count(int steps)
+        {
+            if(steps<=0)
+            {
+                throw new IllegalArgumentException("steps must be >0 but is "+steps);
+            }
+            synchronized (lock)
+            {
+                if (this.active)
+                {
+                    this.stopNanos = System.nanoTime();
+                    this.stepNanos += this.stopNanos - this.startNanos;
+                    this.startNanos = this.stopNanos;
+                }
+                else
+                {
+                    this.startNanos = this.stopNanos = System.nanoTime();
+                }
+                this.minNanos = Math.min(this.stepNanos/steps, this.minNanos);
+                this.maxNanos = Math.max(this.stepNanos/steps, this.maxNanos);
+                this.accumNanos += this.stepNanos;
+                this.stepNanos = 0L;
+                this.counter += steps;
+            }
+        }
+        
+        public long nanos()
+        {
+            synchronized (lock)
+            {
+                return accumNanos + stepNanos + (active ? System.nanoTime() - startNanos : stopNanos - startNanos);
+            }
+        }
+
+        public long averageNanos()
+        {
+            synchronized (lock)
+            {
+                return nanos() / counter;
+            }
+        }
+        
+        public long millis()
+        {
+            return TimeUnit.NANOSECONDS.toMillis(nanos());
+        }
+        
+        public long averageMillis()
+        {
+            return TimeUnit.NANOSECONDS.toMillis(averageNanos());
+        }
+        
+        String[] data(JavaTime.Resolution resolution)
+        {
+            long ns = nanos();
+            return new String[]
+            {
+                label,
+                Long.toString(counter),
+                JavaTime.toString(Duration.ofNanos(ns), 2, resolution), 
+                counter > 0 ? JavaTime.toString(Duration.ofNanos(ns/counter), 2, resolution): "", 
+                counter > 0 ? perSecond(ns, counter) : "",
+                JavaTime.toString(Duration.ofNanos(minNanos), 2, resolution),
+                JavaTime.toString(Duration.ofNanos(maxNanos), 2, resolution)
+            };
+        }
+
+        public String toString(JavaTime.Resolution resolution)
+        {
+            StringJoiner sj = new StringJoiner(" ");
+            for(String item : data(resolution))
+            {
+                sj.add(item);
+            }
+            return sj.toString();
+        }
+
+        @Override
+        public String toString()
+        {
+            return toString(JavaTime.Resolution.MS);
+        }
+
+    }
+
+    private final HashMap<String, Task> map = new HashMap<>();
+    private final JavaTime.Resolution resolution;
+    private final boolean sortByTime;
+
+    public Profiler(JavaTime.Resolution resolution, boolean sortByTime)
+    {
+        this.resolution = resolution;
+        this.sortByTime = sortByTime;
+    }
+    public Profiler(JavaTime.Resolution resolution)
+    {
+        this(resolution, false);
+    }
+
+    public Profiler()
+    {
+        this(JavaTime.Resolution.MS, false);
+    }
+
+    public Task getTask(String label)
+    {
+        Task task = map.getOrDefault(label, null);
+        if(task==null)
+        {
+            map.put(label, task=new Task(label));
+        }
+        return task;
+    }
+
+    private static final String[] COL_NAMES = {"id","count","time","avg","speed","min","max"};
+
+    private static final Comparator<Task> CMP_LABEL = (Task a, Task b) ->
+    {
+        return a.label.compareToIgnoreCase(b.label);
+    };
+
+    private static final Comparator<Task> CMP_TIME = (Task a, Task b) ->
+    {
+        int cmp = Long.compare(a.accumNanos, b.accumNanos);
+        if(cmp==0)
+        {
+            cmp = a.label.compareToIgnoreCase(b.label);
+        }
+        return cmp;
+    };
+
+    public void print(PrintStream out)
+    {
+        Task[] tasks = map.values().toArray(new Task[0]);
+        if(sortByTime)
+        {
+            Arrays.sort(tasks, CMP_TIME);
+        }
+        else
+        {
+            Arrays.sort(tasks, CMP_LABEL);
+        }
+        
+        String[][] cells = new String[tasks.length][];
+        for(int i=0;i<cells.length;i++)
+        {
+            cells[i] = tasks[i].data(resolution);
+        }
+        
+        boolean[] right = new boolean[COL_NAMES.length];
+        for(int col=1;col<right.length;col++)
+        {
+            right[col] = true;
+        }
+        
+        int[] widths = new int[COL_NAMES.length];
+        for(int col=0;col<widths.length;col++)
+        {
+            widths[col] = COL_NAMES[col].length();
+            for(int row=0;row<cells.length;row++)
+            {
+                int len = cells[row][col].length();
+                if(len>widths[col])
+                {
+                    widths[col] = len;
+                }
+            }
+        }
+        
+        BiFunction<String, String, String> border = (left, cross) ->
+        {
+            StringBuilder sb = new StringBuilder(left);
+            for(int col=0;col<widths.length;col++)
+            {
+                if(col>0)
+                {
+                    sb.append(cross);
+                }
+                for(int i=0;i<widths[col]+2;i++)
+                {
+                    sb.append('─');
+                }
+            }
+            return sb.toString();
+        };
+        
+        BiFunction<String[], boolean[], String> format = (values, aligns) ->
+        {
+            StringBuilder sb = new StringBuilder();
+            for(int col=0;col<values.length;col++)
+            {
+                String value = values[col];
+                sb.append("│ ");
+                if(aligns[col])
+                {
+                    for(int i=value.length();i<widths[col];i++)
+                    {
+                        sb.append(' ');
+                    }
+                    sb.append(value);
+                }
+                else
+                {
+                    sb.append(value);
+                    for(int i=value.length();i<widths[col];i++)
+                    {
+                        sb.append(' ');
+                    }
+                }
+                sb.append(' ');
+            }
+            return sb.append('│').toString();
+        };
+        
+        out.println(border.apply("┌", "┬")+"┐");
+        out.println(format.apply(COL_NAMES, right));
+        out.println(border.apply("├", "┼")+"┤");
+        for(int row=0;row<cells.length;row++)
+        {
+            out.println(format.apply(cells[row], right));
+        }
+        out.println(border.apply("└", "┴")+"┘");
+    }
+    
+    public void print()
+    {
+        print(System.out);
+    }
+
+    public static String duration(long nanos)
+    {
+        long[] values = split(nanos);
+
+        for (int i = 0; i < values.length; i++)
+        {
+            long val = values[i];
+            if (val > 99)
+            {
+                return values[i] + UNITS[i];
+            }
+            if (val > 0)
+            {
+                String s = values[i] + UNITS[i];
+                if (i + 1 < values.length && values[i + 1] > 0)
+                {
+                    s += values[i + 1] + UNITS[i + 1];
+                }
+                return s;
+            }
+        }
+        return "0s";
+    }
+
+    private static final long NANOS_PER_SECOND = TimeUnit.SECONDS.toNanos(1);
+
+    public static String perSecond(long nanos, long count)
+    {
+        double n = (count / (double) nanos) * NANOS_PER_SECOND;
+        return String.format("%.3f/s", n);
+    }
+
+    private static final String[] UNITS = { "d", "h", "m", "s", "ms", "ns" };
+    private static final int[] FRACTIONS = { 1, 24, 60, 60, 1000, 1000_000 };
+
+    public static long[] split(long nanos)
+    {
+        long[] values = new long[UNITS.length];
+        long r = nanos;
+        for (int i = UNITS.length - 1; i >= 0; i--)
+        {
+            values[i] = r % FRACTIONS[i];
+            r /= FRACTIONS[i];
+        }
+
+        return values;
+    }
+}

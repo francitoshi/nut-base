@@ -1,94 +1,91 @@
-plugins 
+//NUT Base (NUT Utility Toolkit Base) - generic pure java 8 library
+//This is the root project: it holds no sources, only the configuration shared by the modules.
+
+allprojects
 {
-    id 'java-library'
-    id 'maven-publish'  // for JitPack
+    group = nutGroup
+    version = nutVersion
 }
 
-group = 'com.github.francitoshi'
-
-version = '0.2.1'
-
-//remember to execute 'git tag -a x.x.x -m "Version x.x.x"'
-
-repositories 
+subprojects
 {
-  mavenCentral()
-  maven { url 'https://jitpack.io' }
-}
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'  // for JitPack
 
-def bouncycastleVersion = '1.84'
+    repositories 
+    {
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
 
-dependencies
-{
-    implementation "com.github.francitoshi:nut-base-kernel:${version}"
+    def bouncycastleVersion = '1.84'
 
-    compileOnly "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
-    compileOnly "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
-    
-    //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
+    dependencies
+    {
+        //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
 
-    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.10.3'
 
-    testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
-    testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
+        testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
+        testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
 
-    testImplementation 'org.apache.commons:commons-csv:1.14.1'
-    testImplementation 'ch.obermuhlner:big-math:2.3.2'
-    testImplementation 'org.mapdb:mapdb:3.1.0'
-}
+        testImplementation 'org.apache.commons:commons-csv:1.14.1'
+        testImplementation 'ch.obermuhlner:big-math:2.3.2'
+        testImplementation 'org.mapdb:mapdb:3.1.0'
+    }
 
-java 
-{
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
-    withSourcesJar()
-    withJavadocJar()
+    java 
+    {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+        withSourcesJar()
+        withJavadocJar()
+    }
+
+    test 
+    {
+        useJUnitPlatform()
+        {
+            excludeTags 'slow','integration','benchmark'
+        }
+
+//        testLogging { events 'started' }
+
+        afterTest 
+        { 
+            descriptor, result ->
+            if (result.resultType == org.gradle.api.tasks.testing.TestResult.ResultType.SUCCESS)
+            {
+                long ms = result.endTime - result.startTime
+                if (ms > 7777)
+                {
+                    println String.format("%6d ms  %s.%s", ms, descriptor.className, descriptor.name)
+                }
+            }
+        }
+    }
+
+    tasks.withType(JavaCompile)
+    {
+        options.encoding = 'UTF-8'
+//        options.compilerArgs += ['-Xlint']
+    }
+
+    publishing
+    {
+        publications 
+        {
+            maven(MavenPublication) 
+            {
+                artifactId = project.name
+                from components.java
+            }
+        }
+    }
 }
 
 wrapper 
 {
     gradleVersion = "8.2"
     distributionType = Wrapper.DistributionType.ALL
-}
-
-test 
-{
-    useJUnitPlatform()
-    {
-        excludeTags 'slow','integration','benchmark'
-    }
-
-//    testLogging { events 'started' }
-
-    afterTest 
-    { 
-        descriptor, result ->
-        if (result.resultType == org.gradle.api.tasks.testing.TestResult.ResultType.SUCCESS)
-        {
-            long ms = result.endTime - result.startTime
-            if (ms > 7777)
-            {
-                println String.format("%6d ms  %s.%s", ms, descriptor.className, descriptor.name)
-            }
-        }
-    }
-}
-
-publishing
-{
-    publications 
-    {
-        maven(MavenPublication) 
-        {
-            groupId = 'com.github.francitoshi'
-            artifactId = 'nut-base'
-            version = project.version
-            from components.java
-        }
-    }
-}
-
-tasks.withType(JavaCompile)
-{
-//    options.compilerArgs += ['-Xlint']
 }

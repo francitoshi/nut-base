@@ -1,0 +1,9 @@
+rootProject.name = 'nut-base'
+
+//NUT Base is a multi-project build: one repository, one version, four jars.
+
+include 'nut-base-commons'
+include 'nut-base-crypto'
+include 'nut-base-net'
+include 'nut-base-stats'
+include 'nut-base-util'

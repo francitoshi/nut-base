@@ -1,0 +1,506 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.nut.base.concurrent;
+
+import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
+
+/**
+ * A thread-safe, lazily initialized container with optional time-to-live (TTL)
+ * expiry.
+ *
+ * <p>Two modes of operation are available depending on the constructor used:
+ *
+ * <h2>Permanent mode (classic lazy)</h2>
+ * <p>Created with {@link #Lazy(Supplier)}. The value is computed <em>exactly
+ * once</em> on the first call to {@link #get()} and cached forever. The
+ * supplier is eligible for garbage collection after initialization.
+ *
+ * <pre>{@code
+ * Lazy<DatabaseConnection> conn = new Lazy<>(() -> connectToDatabase());
+ * conn.get().query("SELECT ...");   // initialized on first call, reused forever
+ * }</pre>
+ *
+ * <h2>Ephemeral mode (expiring lazy)</h2>
+ * <p>Created with {@link #Lazy(long, Supplier)} or
+ * {@link #Lazy(long, TimeUnit, Supplier)}. The value is computed on the first
+ * call to {@link #get()} and cached until the TTL elapses; after that the next
+ * call recomputes it. The supplier is <em>kept alive</em> and called again on
+ * every refresh.
+ *
+ * <pre>{@code
+ * // Re-fetch the config file at most once every 5 minutes
+ * Lazy<Config> cfg = new Lazy<>(5, TimeUnit.MINUTES, () -> Config.load());
+ * cfg.get();   // loads and caches
+ * cfg.get();   // returns cached value (if < 5 min have passed)
+ * // … 5+ minutes later …
+ * cfg.get();   // reloads and caches again
+ * }</pre>
+ *
+ * <h2>Wrapping a known value</h2>
+ * <pre>{@code
+ * Lazy<String> greeting = Lazy.of("Hello");
+ * }</pre>
+ *
+ * <h2>Checking state without triggering initialization</h2>
+ * <pre>{@code
+ * if (conn.isInitialized()) {
+ *     conn.get().close();
+ * }
+ * }</pre>
+ *
+ * <h2>Forced invalidation (ephemeral mode only)</h2>
+ * <p>{@link #invalidate()} marks the cached value as stale so that the next
+ * {@link #get()} recomputes it. It returns {@code this} for chaining:
+ *
+ * <pre>{@code
+ * T fresh = cfg.invalidate().get();   // expire and fetch synchronously
+ * }</pre>
+ *
+ * <p>{@code invalidate()} is only available in ephemeral mode; calling it on
+ * a permanent instance throws {@link IllegalStateException}, because permanent
+ * instances guarantee the value is computed exactly once.
+ *
+ * <h2>Asynchronous pre-warming (permanent mode only)</h2>
+ * <p>Call {@link #async()} or {@link #async(Executor)} immediately after
+ * construction to kick off the supplier in a background thread. Subsequent
+ * calls to {@link #get()} return instantly if the background computation has
+ * already finished, or block briefly until it does — exactly as they would
+ * without {@code async()}, just with a head start.
+ *
+ * <pre>{@code
+ * // Start computing in the background right away
+ * Lazy<Config> cfg = new Lazy<>(() -> Config.load()).async();
+ * // … do other work …
+ * cfg.get();   // likely already cached; returns immediately
+ * }</pre>
+ *
+ * <p>{@code async()} is only supported in <em>permanent</em> mode. Calling it
+ * on an ephemeral instance throws {@link IllegalStateException}, because the
+ * TTL semantics (the value should expire and be refreshed on demand) conflict
+ * with eager background computation.
+ *
+ * <h2>Error handling</h2>
+ * <p>If the supplier throws, the exception propagates to the caller and the
+ * {@code Lazy} remains uninitialized (or expired, in ephemeral mode), so a
+ * future call will retry. In async mode, a supplier exception is silently
+ * swallowed by the background thread; the next call to {@link #get()} will
+ * retry synchronously and surface the error to that caller.
+ *
+ * @param <T> the type of the lazily computed value
+ */
+public final class Lazy<T> implements Supplier<T>
+{
+    /** Sentinel meaning "not yet computed / expired". */
+    @SuppressWarnings("rawtypes")
+    private static final Object UNSET = new Object();
+
+    /** {@code Long.MIN_VALUE} means "never computed". */
+    private static final long NEVER = Long.MIN_VALUE;
+
+    /** {@code Long.MAX_VALUE} means "permanent — never expires". */
+    private static final long PERMANENT = Long.MAX_VALUE;
+
+    // ------------------------------------------------------------------ //
+    // State
+    // ------------------------------------------------------------------ //
+
+    private final Object lock = new Object();
+
+    /**
+     * Holds either {@link #UNSET} or the real value (including {@code null}).
+     * AtomicReference provides volatile semantics on the fast path.
+     */
+    private final AtomicReference<Object> ref = new AtomicReference<>(UNSET);
+
+    /**
+     * The delegate used to (re-)compute the value.
+     * Nulled out after permanent initialization to allow GC.
+     */
+    private volatile Supplier<T> supplier;
+
+    /**
+     * TTL in nanoseconds. {@link #PERMANENT} for the permanent mode.
+     */
+    private final long ttlNanos;
+
+    /**
+     * {@code System.nanoTime()} of the last successful computation,
+     * or {@link #NEVER} if never computed.
+     * Only meaningful in ephemeral mode.
+     */
+    private final AtomicLong lastComputedAt = new AtomicLong(NEVER);
+
+    // ------------------------------------------------------------------ //
+    // Constructors
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Creates a <em>permanent</em> {@code Lazy}: the value is computed exactly
+     * once on the first call to {@link #get()} and cached forever.
+     *
+     * @param supplier the factory; must not be {@code null}
+     * @throws NullPointerException if {@code supplier} is {@code null}
+     */
+    public Lazy(Supplier<T> supplier)
+    {
+        this.supplier = Objects.requireNonNull(supplier, "supplier must not be null");
+        this.ttlNanos = PERMANENT;
+    }
+
+    /**
+     * Creates an <em>ephemeral</em> {@code Lazy} with the TTL expressed in
+     * milliseconds: the value is recomputed whenever more than {@code ttlMillis}
+     * milliseconds have elapsed since the last computation.
+     *
+     * @param ttlMillis time-to-live in milliseconds; must be &gt; 0
+     * @param supplier  the factory called on every refresh; must not be
+     *                  {@code null}
+     * @throws IllegalArgumentException if {@code ttlMillis} &le; 0
+     * @throws NullPointerException     if {@code supplier} is {@code null}
+     */
+    public Lazy(long ttlMillis, Supplier<T> supplier)
+    {
+        this(ttlMillis, TimeUnit.MILLISECONDS, supplier);
+    }
+
+    /**
+     * Creates an <em>ephemeral</em> {@code Lazy} with the TTL expressed in the
+     * given {@link TimeUnit}: the value is recomputed whenever more than
+     * {@code ttl} units have elapsed since the last computation.
+     *
+     * @param ttl      time-to-live value; must be &gt; 0
+     * @param timeUnit unit for {@code ttl}; must not be {@code null}
+     * @param supplier the factory called on every refresh; must not be
+     *                 {@code null}
+     * @throws IllegalArgumentException if {@code ttl} &le; 0
+     * @throws NullPointerException     if {@code timeUnit} or {@code supplier}
+     *                                  is {@code null}
+     */
+    public Lazy(long ttl, TimeUnit timeUnit, Supplier<T> supplier)
+    {
+        if (ttl <= 0)
+        {
+            throw new IllegalArgumentException("ttl must be > 0, got: " + ttl);
+        }
+        Objects.requireNonNull(timeUnit, "timeUnit must not be null");
+        this.supplier = Objects.requireNonNull(supplier, "supplier must not be null");
+        this.ttlNanos = timeUnit.toNanos(ttl);
+    }
+
+    // ------------------------------------------------------------------ //
+    // Factory
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Creates an already-initialized <em>permanent</em> {@code Lazy} wrapping
+     * {@code value}.
+     *
+     * @param value the pre-computed value (may be {@code null})
+     * @param <T>   value type
+     * @return an initialized {@code Lazy}
+     */
+    public static <T> Lazy<T> of(T value)
+    {
+        Lazy<T> lazy = new Lazy<>(() -> value);
+        lazy.ref.set(value);
+        lazy.supplier = null;          // allow GC immediately
+        return lazy;
+    }
+
+    // ------------------------------------------------------------------ //
+    // Core API
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Returns the cached value if still valid, or computes (and caches) a new
+     * one by invoking the supplier.
+     *
+     * <ul>
+     *   <li><em>Permanent mode</em>: the supplier is called at most once.</li>
+     *   <li><em>Ephemeral mode</em>: the supplier is called again whenever the
+     *       TTL has elapsed since the previous computation.</li>
+     * </ul>
+     *
+     * <p>If the supplier throws, the exception propagates and the container
+     * remains in its previous state (uninitialized or expired), so the next
+     * call will retry.
+     *
+     * @return the (possibly freshly computed) value; may be {@code null}
+     */
+    @SuppressWarnings("unchecked")
+    public T get()
+    {
+        if (isEphemeral())
+        {
+            // Ephemeral fast path: return cached value if not expired
+            if (!isExpiredEphemeral())
+            {
+                return (T) ref.get();
+            }
+            return refreshEphemeral();
+        }
+
+        // Permanent fast path
+        Object current = ref.get();
+        if (current != UNSET)
+        {
+            return (T) current;
+        }
+        return initializePermanent();
+    }
+
+    /**
+     * Returns {@code true} if the value has been computed and is currently
+     * valid (not expired).
+     *
+     * <ul>
+     *   <li><em>Permanent mode</em>: {@code true} once initialized, forever.</li>
+     *   <li><em>Ephemeral mode</em>: {@code true} only while the cached value
+     *       is within its TTL window.</li>
+     * </ul>
+     */
+    public boolean isInitialized()
+    {
+        if (isEphemeral())
+        {
+            return lastComputedAt.get() != NEVER && !isExpiredEphemeral();
+        }
+        return ref.get() != UNSET;
+    }
+
+    /**
+     * Returns the cached value without triggering initialization or refresh.
+     *
+     * <ul>
+     *   <li><em>Permanent mode</em>: empty if never initialized.</li>
+     *   <li><em>Ephemeral mode</em>: empty if never computed <em>or</em> if the
+     *       cached value has expired.</li>
+     * </ul>
+     *
+     * @return an {@link Optional} containing the cached value, or empty
+     */
+    @SuppressWarnings("unchecked")
+    public Optional<T> getIfInitialized()
+    {
+        if (isEphemeral())
+        {
+            if (lastComputedAt.get() == NEVER || isExpiredEphemeral())
+            {
+                return Optional.empty();
+            }
+            return Optional.ofNullable((T) ref.get());
+        }
+        Object current = ref.get();
+        return current == UNSET ? Optional.empty() : Optional.ofNullable((T) current);
+    }
+
+    /**
+     * Returns {@code true} if this instance was created with a TTL (ephemeral
+     * mode), {@code false} for permanent mode.
+     */
+    public boolean isEphemeral()
+    {
+        return ttlNanos != PERMANENT;
+    }
+
+    // ------------------------------------------------------------------ //
+    // Invalidation
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Forces the next call to {@link #get()} to recompute the value by
+     * resetting the timestamp to {@code NEVER}.
+     *
+     * <p>This method is only supported in <em>ephemeral</em> mode. Permanent
+     * instances guarantee "computed exactly once"; invalidating that guarantee
+     * would contradict the contract. Calling {@code invalidate()} on a permanent
+     * instance throws {@link IllegalStateException}.
+     *
+     * <p>Returns {@code this} so that invalidation can be chained with
+     * {@link #async()} or {@link #async(Executor)} is not applicable here since
+     * {@code async()} is permanent-only — but chaining with {@link #get()} for
+     * an immediate synchronous refresh is idiomatic:
+     *
+     * <pre>{@code
+     * // Expire the cache and fetch the new value right now
+     * T fresh = cfg.invalidate().get();
+     * }</pre>
+     *
+     * @return {@code this}, for chaining
+     * @throws IllegalStateException if called on a permanent instance
+     */
+    public Lazy<T> invalidate()
+    {
+        synchronized (lock)
+        {
+            if (!isEphemeral())
+            {
+                throw new IllegalStateException(
+                        "invalidate() is not supported in permanent mode: " +
+                        "the value is guaranteed to be computed exactly once.");
+            }
+            lastComputedAt.set(NEVER);
+            return this;
+        }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Async pre-warming
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Schedules the supplier to run asynchronously on the
+     * {@link ForkJoinPool#commonPool() common pool}, so that the value is
+     * likely already cached by the time {@link #get()} is first called.
+     *
+     * <p>This method is only supported in <em>permanent</em> mode. Ephemeral
+     * instances have TTL-based expiry semantics that conflict with eager
+     * background computation; calling {@code async()} on them throws
+     * {@link IllegalStateException}.
+     *
+     * <p>If the supplier throws during background execution the exception is
+     * silently discarded; the {@code Lazy} remains uninitialized and the next
+     * call to {@link #get()} will retry synchronously.
+     *
+     * @return {@code this}, for chaining: {@code new Lazy<>(...).async()}
+     * @throws IllegalStateException if called on an ephemeral instance
+     */
+    public Lazy<T> async()
+    {
+        return async(ForkJoinPool.commonPool());
+    }
+
+    /**
+     * Schedules the supplier to run asynchronously on the given
+     * {@link Executor}, so that the value is likely already cached by the time
+     * {@link #get()} is first called.
+     *
+     * <p>This method is only supported in <em>permanent</em> mode. Ephemeral
+     * instances have TTL-based expiry semantics that conflict with eager
+     * background computation; calling {@code async(Executor)} on them throws
+     * {@link IllegalStateException}.
+     *
+     * <p>If the supplier throws during background execution the exception is
+     * silently discarded; the {@code Lazy} remains uninitialized and the next
+     * call to {@link #get()} will retry synchronously.
+     *
+     * <pre>{@code
+     * Executor io = Executors.newCachedThreadPool();
+     * Lazy<Config> cfg = new Lazy<>(() -> Config.load()).async(io);
+     * }</pre>
+     *
+     * @param executor the executor on which to run the supplier; must not be
+     *                 {@code null}
+     * @return {@code this}, for chaining
+     * @throws NullPointerException  if {@code executor} is {@code null}
+     * @throws IllegalStateException if called on an ephemeral instance
+     */
+    public Lazy<T> async(Executor executor)
+    {
+        Objects.requireNonNull(executor, "executor must not be null");
+        if (isEphemeral())
+        {
+            throw new IllegalStateException("async() is not supported in ephemeral mode: TTL-based expiry conflicts with eager background computation.");
+        }
+        executor.execute(() ->
+        {
+            try { get(); }
+            catch (Exception ignored) { /* caller will retry on next get() */ }
+        });
+        return this;
+    }
+
+    // ------------------------------------------------------------------ //
+    // Internal — permanent mode
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Slow path for permanent mode: initializes the value exactly once under a
+     * lock, then nulls out the supplier to allow GC.
+     */
+    @SuppressWarnings("unchecked")
+    private T initializePermanent()
+    {
+        synchronized (lock)
+        {
+            Object current = ref.get();
+            if (current != UNSET)
+            {
+                return (T) current;
+            }
+            T value = supplier.get();   // may throw — ref stays UNSET
+            ref.set(value);
+            supplier = null;            // allow GC of the supplier & captures
+            return value;
+        }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Internal — ephemeral mode
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Returns {@code true} if the cached value has never been computed or its
+     * TTL has elapsed.
+     */
+    private boolean isExpiredEphemeral()
+    {
+        long last = lastComputedAt.get();
+        return last == NEVER || (System.nanoTime() - last) > ttlNanos;
+    }
+
+    /**
+     * Slow path for ephemeral mode: recomputes the value under a lock and
+     * updates the cache and timestamp.
+     */
+    @SuppressWarnings("unchecked")
+    private T refreshEphemeral()
+    {
+        synchronized (lock)
+        {
+            // Re-check: another thread may have already refreshed
+            if (!isExpiredEphemeral())
+            {
+                return (T) ref.get();
+            }
+            T value = supplier.get();   // may throw — state stays expired
+            ref.set(value);
+            lastComputedAt.set(System.nanoTime());
+            return value;
+        }
+    }
+
+    // ------------------------------------------------------------------ //
+    // Object overrides
+    // ------------------------------------------------------------------ //
+
+    /**
+     * Returns a human-readable description of the current state.
+     *
+     * <p>Examples: {@code "Lazy[uninitialized]"}, {@code "Lazy[expired]"},
+     * {@code "Lazy[hello]"}.
+     */
+    @Override
+    public String toString()
+    {
+        if (isEphemeral())
+        {
+            long last = lastComputedAt.get();
+            if (last == NEVER)        return "Lazy[uninitialized]";
+            if (isExpiredEphemeral()) return "Lazy[expired]";
+            return "Lazy[" + ref.get() + "]";
+        }
+        Object current = ref.get();
+        return current == UNSET ? "Lazy[uninitialized]" : "Lazy[" + current + "]";
+    }
+}
