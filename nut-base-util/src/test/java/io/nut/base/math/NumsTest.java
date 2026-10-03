@@ -1834,4 +1834,180 @@ public class NumsTest
         assertEquals(c, Nums.bound(c, z, o));
     }
         
+    /**
+     * Test of increment method, of class Utils.
+     */
+    @Test
+    public void testIncrementByte()
+    {
+        byte[] b   = {0,0,0,0,0};
+        byte[] b01 = {0,0,0,0,1};
+        byte[] b02 = {0,0,0,0,2};
+        byte[] b10 = {0,0,0,1,0};
+        byte[] b11 = {0,0,0,1,1};
+        byte[] b12 = {0,0,0,1,2};
+        byte[] b20 = {0,0,0,2,0};
+        byte[] b21 = {0,0,0,2,1};
+        byte[] bc  = {0,0,0,0,0};
+        
+        byte module = 3;
+        
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b01, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b02, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b10, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b11, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b12, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b20, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b21, b);
+        assertFalse(Nums.inc(b, module));
+        
+        b = new byte[3];
+        
+        for(int i=0;i<0xfff;i++)
+        {
+            assertFalse(Nums.inc(b, (byte)16));
+        }
+        assertTrue(Nums.inc(b, (byte)16));
+        byte[] b0 = new byte[3];
+        assertArrayEquals(b0, b);
+    }
+    /**
+     * Test of increment method, of class Utils.
+     */
+    @Test
+    public void testIncrementShort()
+    {
+        short[] b   = {0,0,0,0,0};
+        short[] b01 = {0,0,0,0,1};
+        short[] b02 = {0,0,0,0,2};
+        short[] b10 = {0,0,0,1,0};
+        short[] b11 = {0,0,0,1,1};
+        short[] b12 = {0,0,0,1,2};
+        short[] b20 = {0,0,0,2,0};
+        short[] b21 = {0,0,0,2,1};
+        short[] bc  = {0,0,0,0,0};
+        
+        short module = 3;
+        
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b01, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b02, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b10, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b11, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b12, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b20, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b21, b);
+        assertFalse(Nums.inc(b, module));
+        
+        b = new short[3];
+        
+        for(int i=0;i<0xfff;i++)
+        {
+            assertFalse(Nums.inc(b, (short)16));
+        }
+        assertTrue(Nums.inc(b, (short)16));
+        short[] b0 = new short[3];
+        assertArrayEquals(b0, b);
+    }
+    /**
+     * Test of increment method, of class Utils.
+     */
+    @Test
+    public void testIncrementInt()
+    {
+        int[] b   = {0,0,0,0,0};
+        int[] b01 = {0,0,0,0,1};
+        int[] b02 = {0,0,0,0,2};
+        int[] b10 = {0,0,0,1,0};
+        int[] b11 = {0,0,0,1,1};
+        int[] b12 = {0,0,0,1,2};
+        int[] b20 = {0,0,0,2,0};
+        int[] b21 = {0,0,0,2,1};
+        int[] bc  = {0,0,0,0,0};
+        
+        byte module = 3;
+        
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b01, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b02, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b10, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b11, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b12, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b20, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b21, b);
+        assertFalse(Nums.inc(b, module));
+        
+        b = new int[3];
+        
+        for(int i=0;i<0xfff;i++)
+        {
+            assertFalse(Nums.inc(b, 16));
+        }
+        assertTrue(Nums.inc(b, 16));
+        int[] b0 = new int[3];
+        assertArrayEquals(b0, b);
+    }
+    /**
+     * Test of increment method, of class Utils.
+     */
+    @Test
+    public void testIncrementLong()
+    {
+        long[] b   = {0,0,0,0,0};
+        long[] b01 = {0,0,0,0,1};
+        long[] b02 = {0,0,0,0,2};
+        long[] b10 = {0,0,0,1,0};
+        long[] b11 = {0,0,0,1,1};
+        long[] b12 = {0,0,0,1,2};
+        long[] b20 = {0,0,0,2,0};
+        long[] b21 = {0,0,0,2,1};
+        long[] bc  = {0,0,0,0,0};
+        
+        long module = 3;
+        
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b01, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b02, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b10, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b11, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b12, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b20, b);
+        assertFalse(Nums.inc(b, module));
+        assertArrayEquals(b21, b);
+        assertFalse(Nums.inc(b, module));
+        
+        b = new long[3];
+        
+        for(int i=0;i<0xfff;i++)
+        {
+            assertFalse(Nums.inc(b, 16));
+        }
+        assertTrue(Nums.inc(b, 16));
+        long[] b0 = new long[3];
+        assertArrayEquals(b0, b);
+    }
 }

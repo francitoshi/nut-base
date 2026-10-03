@@ -513,4 +513,5 @@ public class Maths
         return sum(values) / (double) values.length;
     }
     
+    
 }

@@ -13,5 +13,17 @@ dependencies
 
     testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
     testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
+
+    testImplementation "org.bouncycastle:bcprov-jdk18on:${bouncycastleVersion}"
+    testImplementation "org.bouncycastle:bcpkix-jdk18on:${bouncycastleVersion}"
     
 }
+
+java 
+{
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    withSourcesJar()
+    withJavadocJar()
+}
+

@@ -193,92 +193,6 @@ public class Nums
         return e;
     }
     
-
-    /**
-     * Treats the given byte array as a big-endian counter and increments it by one.
-     * Each element wraps around at the given module value.
-     *
-     * @param b the counter array to increment (modified in place).
-     * @param module the modulus at which each element wraps to 0.
-     * @return true if the counter overflowed (all digits wrapped).
-     */
-    public static boolean inc(byte[] b, byte module)
-    {
-        for (int i = b.length - 1; i >= 0; i--)
-        {
-            if (++b[i] != module)
-            {
-                return false;
-            }
-            b[i] = 0;
-        }
-        return true;
-    }
-
-    /**
-     * Treats the given short array as a big-endian counter and increments it by one.
-     * Each element wraps around at the given module value.
-     *
-     * @param b the counter array to increment (modified in place).
-     * @param module the modulus at which each element wraps to 0.
-     * @return true if the counter overflowed (all digits wrapped).
-     */
-    public static boolean inc(short[] b, short module)
-    {
-        for (int i = b.length - 1; i >= 0; i--)
-        {
-            if (++b[i] != module)
-            {
-                return false;
-            }
-            b[i] = 0;
-        }
-        return true;
-    }
-
-    /**
-     * Treats the given int array as a big-endian counter and increments it by one.
-     * Each element wraps around at the given module value.
-     *
-     * @param b the counter array to increment (modified in place).
-     * @param module the modulus at which each element wraps to 0.
-     * @return true if the counter overflowed (all digits wrapped).
-     */
-    public static boolean inc(int[] b, int module)
-    {
-        for (int i = b.length - 1; i >= 0; i--)
-        {
-            if (++b[i] != module)
-            {
-                return false;
-            }
-            b[i] = 0;
-        }
-        return true;
-    }
-
-    /**
-     * Treats the given long array as a big-endian counter and increments it by one.
-     * Each element wraps around at the given module value.
-     *
-     * @param b the counter array to increment (modified in place).
-     * @param module the modulus at which each element wraps to 0.
-     * @return true if the counter overflowed (all digits wrapped).
-     */
-    public static boolean inc(long[] b, long module)
-    {
-        for (int i = b.length - 1; i >= 0; i--)
-        {
-            if (++b[i] != module)
-            {
-                return false;
-            }
-            b[i] = 0;
-        }
-        return true;
-    }
-    
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ////// https://github.com/javadev/calc/blob/master/src/main/java/com/github/calc/BigDecimalUtil.java ///////////
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -3267,4 +3181,87 @@ public class Nums
         return value;
     }
     
+    /**
+     * Treats the given byte array as a big-endian counter and increments it by one.
+     * Each element wraps around at the given module value.
+     *
+     * @param b the counter array to increment (modified in place).
+     * @param module the modulus at which each element wraps to 0.
+     * @return true if the counter overflowed (all digits wrapped).
+     */
+    public static boolean inc(byte[] b, byte module)
+    {
+        for (int i = b.length - 1; i >= 0; i--)
+        {
+            if (++b[i] != module)
+            {
+                return false;
+            }
+            b[i] = 0;
+        }
+        return true;
+    }
+
+    /**
+     * Treats the given short array as a big-endian counter and increments it by one.
+     * Each element wraps around at the given module value.
+     *
+     * @param b the counter array to increment (modified in place).
+     * @param module the modulus at which each element wraps to 0.
+     * @return true if the counter overflowed (all digits wrapped).
+     */
+    public static boolean inc(short[] b, short module)
+    {
+        for (int i = b.length - 1; i >= 0; i--)
+        {
+            if (++b[i] != module)
+            {
+                return false;
+            }
+            b[i] = 0;
+        }
+        return true;
+    }
+
+    /**
+     * Treats the given int array as a big-endian counter and increments it by one.
+     * Each element wraps around at the given module value.
+     *
+     * @param b the counter array to increment (modified in place).
+     * @param module the modulus at which each element wraps to 0.
+     * @return true if the counter overflowed (all digits wrapped).
+     */
+    public static boolean inc(int[] b, int module)
+    {
+        for (int i = b.length - 1; i >= 0; i--)
+        {
+            if (++b[i] != module)
+            {
+                return false;
+            }
+            b[i] = 0;
+        }
+        return true;
+    }
+
+    /**
+     * Treats the given long array as a big-endian counter and increments it by one.
+     * Each element wraps around at the given module value.
+     *
+     * @param b the counter array to increment (modified in place).
+     * @param module the modulus at which each element wraps to 0.
+     * @return true if the counter overflowed (all digits wrapped).
+     */
+    public static boolean inc(long[] b, long module)
+    {
+        for (int i = b.length - 1; i >= 0; i--)
+        {
+            if (++b[i] != module)
+            {
+                return false;
+            }
+            b[i] = 0;
+        }
+        return true;
+    }
 }

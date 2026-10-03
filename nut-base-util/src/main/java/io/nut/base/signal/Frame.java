@@ -6,7 +6,7 @@
 package io.nut.base.signal;
 
 import io.nut.base.lang.Empty;
-import io.nut.base.util.Checksums;
+import io.nut.base.cache.Checksums;
 
 /**
  * Frame — builds and parses binary frames over a byte stream.

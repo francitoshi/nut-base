@@ -1419,4 +1419,115 @@ class EndianTest
             assertDoesNotThrow(() -> Endian.doubleToLittle(new double[0], new double[0]));
         }
     }
-}
+
+    @Test
+    public void testReadUint16()
+    {
+        assertEquals(258L, Endian.readUint16(new byte[]
+        {
+            2, 1
+        }, 0));
+        assertEquals(258L, Endian.readUint16(new byte[]
+        {
+            2, 1, 3, 4
+        }, 0));
+        assertEquals(772L, Endian.readUint16(new byte[]
+        {
+            1, 2, 4, 3
+        }, 2));
+    }
+
+    @Test
+    public void testReadUint32()
+    {
+        assertEquals(258L, Endian.readUint32(new byte[]
+        {
+            2, 1, 0, 0
+        }, 0));
+        assertEquals(258L, Endian.readUint32(new byte[]
+        {
+            2, 1, 0, 0, 3, 4
+        }, 0));
+        assertEquals(772L, Endian.readUint32(new byte[]
+        {
+            1, 2, 4, 3, 0, 0
+        }, 2));
+    }
+
+    
+    @Test
+    public void testReadInt64()
+    {
+        assertEquals(258L, Endian.readInt64(new byte[]
+        {
+            2, 1, 0, 0, 0, 0, 0, 0
+        }, 0));
+        assertEquals(258L, Endian.readInt64(new byte[]
+        {
+            2, 1, 0, 0, 0, 0, 0, 0, 3, 4
+        }, 0));
+        assertEquals(772L, Endian.readInt64(new byte[]
+        {
+            1, 2, 4, 3, 0, 0, 0, 0, 0, 0
+        }, 2));
+        assertEquals(-1L, Endian.readInt64(new byte[]
+        {
+            -1, -1, -1, -1, -1, -1, -1, -1
+        }, 0));
+    }
+
+    @Test
+    public void testReadUInt32BE()
+    {
+        assertEquals(258L, Endian.readUint32BE(new byte[]
+        {
+            0, 0, 1, 2
+        }, 0));
+        assertEquals(258L, Endian.readUint32BE(new byte[]
+        {
+            0, 0, 1, 2, 3, 4
+        }, 0));
+        assertEquals(772L, Endian.readUint32BE(new byte[]
+        {
+            1, 2, 0, 0, 3, 4
+        }, 2));
+    }
+
+    @Test
+    public void testReadUint16BE()
+    {
+        assertEquals(258L, Endian.readUint16BE(new byte[]
+        {
+            1, 2
+        }, 0));
+        assertEquals(258L, Endian.readUint16BE(new byte[]
+        {
+            1, 2, 3, 4
+        }, 0));
+        assertEquals(772L, Endian.readUint16BE(new byte[]
+        {
+            0, 0, 3, 4
+        }, 2));
+    }
+
+    @Test
+    public void testUnsigned()
+    {
+        int[] items =
+        {
+            0, 1, 255, 256, 32000, 33000, 65000
+        };
+        for (int i : items)
+        {
+            short s = (short) i;
+            int u = Endian.unsigned(s);
+            assertTrue(u >= 0, "u=" + u);
+
+            assertEquals(258L, Endian.readUint16BE(new byte[]
+            {
+                1, 2
+            }, 0));
+
+        }
+    }
+ }
