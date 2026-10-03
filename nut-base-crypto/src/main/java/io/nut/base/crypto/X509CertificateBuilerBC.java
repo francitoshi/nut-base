@@ -38,11 +38,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 /**
- * A Bouncy Castle-based implementation of the {@link X509CertificateBuiler}
+ * A Bouncy Castle-based implementation of the {@link X509CertificateBuilder}
  * interface. This class is responsible for creating self-signed X.509 v3
  * certificates.
  */
-public class X509CertificateBuilerBC implements X509CertificateBuiler
+public class X509CertificateBuilerBC implements X509CertificateBuilder
 {
     
     /**
