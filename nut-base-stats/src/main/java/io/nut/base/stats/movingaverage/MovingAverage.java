@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.stats;
+package io.nut.base.stats.movingaverage;
 
 import java.security.InvalidParameterException;
 
@@ -29,12 +29,11 @@ public abstract class MovingAverage
         this.period = period;
     }
 
-    public enum Type { SMA, WMA, CMA, EMA, DEMA, TEMA, ZLEMA}; 
 
     public abstract double next(double value);
     public abstract double average();
     
-    public static MovingAverage create(Type type, int period)
+    public static MovingAverage create(MovingAverageType type, int period)
     {
         switch(type)
         {

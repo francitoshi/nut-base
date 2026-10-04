@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.Kripto.Hmac;
@@ -27,6 +32,7 @@ public class HMACTest
     
     /**
      * Test of hmacSHA256 method, of class Crypto.
+     * @throws java.io.UnsupportedEncodingException
      */
     @Test
     public void testHmacSHA256() throws UnsupportedEncodingException

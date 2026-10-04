@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.stats;
+package io.nut.base.stats.movingaverage;
 
 import java.util.ArrayList;
 import java.util.List;

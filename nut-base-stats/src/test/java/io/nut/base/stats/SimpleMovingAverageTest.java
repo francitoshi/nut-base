@@ -20,6 +20,7 @@
  */
 package io.nut.base.stats;
 
+import io.nut.base.stats.movingaverage.MovingAverage;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

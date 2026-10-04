@@ -6,7 +6,7 @@
 package io.nut.base.audio;
 
 import io.nut.base.signal.Morse;
-import io.nut.base.stats.MovingAverage;
+import io.nut.base.stats.movingaverage.MovingAverage;
 import io.nut.base.concurrent.Generator;
 import java.io.IOException;
 import java.util.Arrays;

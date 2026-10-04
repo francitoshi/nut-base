@@ -20,6 +20,7 @@
  */
 package io.nut.base.stats;
 
+import io.nut.base.stats.movingaverage.DoubleExponentialMovingAverage;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 

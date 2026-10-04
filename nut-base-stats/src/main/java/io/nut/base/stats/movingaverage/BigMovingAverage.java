@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.stats;
+package io.nut.base.stats.movingaverage;
 
-import static io.nut.base.stats.MovingAverage.Type.DEMA;
-import static io.nut.base.stats.MovingAverage.Type.EMA;
-import static io.nut.base.stats.MovingAverage.Type.SMA;
-import static io.nut.base.stats.MovingAverage.Type.TEMA;
-import static io.nut.base.stats.MovingAverage.Type.WMA;
-import static io.nut.base.stats.MovingAverage.Type.ZLEMA;
+import static io.nut.base.stats.movingaverage.MovingAverageType.DEMA;
+import static io.nut.base.stats.movingaverage.MovingAverageType.EMA;
+import static io.nut.base.stats.movingaverage.MovingAverageType.SMA;
+import static io.nut.base.stats.movingaverage.MovingAverageType.TEMA;
+import static io.nut.base.stats.movingaverage.MovingAverageType.WMA;
+import static io.nut.base.stats.movingaverage.MovingAverageType.ZLEMA;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.security.InvalidParameterException;
@@ -55,7 +55,7 @@ public abstract class BigMovingAverage
         return next(BigDecimal.valueOf(value));
     }
     
-    public static BigMovingAverage create(MovingAverage.Type type, int period, int decimals, RoundingMode roundingMode)
+    public static BigMovingAverage create(MovingAverageType type, int period, int decimals, RoundingMode roundingMode)
     {
         switch(type)
         {

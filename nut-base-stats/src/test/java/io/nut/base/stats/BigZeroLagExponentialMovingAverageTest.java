@@ -20,6 +20,8 @@
  */
 package io.nut.base.stats;
 
+import io.nut.base.stats.movingaverage.BigExponentialMovingAverage;
+import io.nut.base.stats.movingaverage.BigZeroLagExponentialMovingAverage;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;

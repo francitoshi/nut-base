@@ -20,7 +20,8 @@
  */
 package io.nut.base.stats;
 
-import io.nut.base.stats.MovingAverage.Type;
+import io.nut.base.stats.movingaverage.MovingAverage;
+import io.nut.base.stats.movingaverage.MovingAverageType;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -37,9 +38,9 @@ public class MovingAverageTest
     @Test
     public void testNext0()
     {
-        MovingAverage.Type[] types = {Type.SMA, Type.EMA, Type.DEMA, Type.TEMA, Type.WMA, Type.CMA};
+        MovingAverageType[] types = {MovingAverageType.SMA, MovingAverageType.EMA, MovingAverageType.DEMA, MovingAverageType.TEMA, MovingAverageType.WMA, MovingAverageType.CMA};
 
-        for(MovingAverage.Type t : types)
+        for(MovingAverageType t : types)
         {
             for(int p=1;p<10;p++)
             {
@@ -49,7 +50,7 @@ public class MovingAverageTest
                     assertEquals(100.0, instance.next(100), 0.005, "t="+t+" p="+p+" i="+i);
                 }
                 //CMA can't pass this proof
-                if(t!=Type.CMA)
+                if(t!=MovingAverageType.CMA)
                 {
                     for(int i=0;i<100;i++)
                     {

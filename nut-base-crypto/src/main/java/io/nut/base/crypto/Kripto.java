@@ -389,7 +389,7 @@ public class Kripto
         DiffieHellman, ECDH, ECMQV
     }
 
-        public enum MessageDigestAlgorithm
+    public enum MessageDigestAlgorithm
     {
         @Deprecated
         MD5("MD5"),

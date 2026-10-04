@@ -20,6 +20,9 @@
  */
 package io.nut.base.stats;
 
+import io.nut.base.stats.movingaverage.BigCumulativeMovingAverage;
+import io.nut.base.stats.movingaverage.BigMovingAverage;
+import io.nut.base.stats.movingaverage.BigSimpleMovingAverage;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import org.junit.jupiter.api.Test;

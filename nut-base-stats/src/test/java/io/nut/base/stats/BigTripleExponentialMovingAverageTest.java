@@ -5,6 +5,8 @@
  */
 package io.nut.base.stats;
 
+import io.nut.base.stats.movingaverage.BigExponentialMovingAverage;
+import io.nut.base.stats.movingaverage.BigTripleExponentialMovingAverage;
 import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.math.RoundingMode;

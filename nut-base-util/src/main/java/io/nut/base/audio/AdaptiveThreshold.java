@@ -5,7 +5,7 @@
  */
 package io.nut.base.audio;
 
-import io.nut.base.stats.MovingAverage;
+import io.nut.base.stats.movingaverage.MovingAverage;
 
 public class AdaptiveThreshold
 {
