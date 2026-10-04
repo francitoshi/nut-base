@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.crypto.shamir.ShamirSharedSecret;
 import io.nut.base.crypto.kdf.HKDF;
 import io.nut.base.crypto.kdf.HKDFBC;
 import io.nut.base.crypto.kdf.PBKDF2;

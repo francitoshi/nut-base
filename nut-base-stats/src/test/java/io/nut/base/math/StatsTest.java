@@ -5,6 +5,7 @@
  */
 package io.nut.base.math;
 
+import io.nut.base.stats.Stats;
 import io.nut.base.util.As;
 import io.nut.base.util.Utils;
 import java.math.BigDecimal;
