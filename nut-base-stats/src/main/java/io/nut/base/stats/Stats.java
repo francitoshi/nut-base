@@ -6,8 +6,6 @@
 package io.nut.base.stats;
 
 import io.nut.base.lang.Maths;
-import java.math.BigDecimal;
-import java.math.MathContext;
 import java.util.Arrays;
 
 /**
@@ -16,18 +14,6 @@ import java.util.Arrays;
  */
 public class Stats
 {
-    public static double exponentialMovingAverage(double ema, double value, int n)
-    {
-        double k = 2.0/(n+1);
-        return value*k + ema*(1-k);
-    }
-    public static BigDecimal exponentialMovingAverage(BigDecimal ema, BigDecimal value, int n, MathContext mc)
-    {
-        BigDecimal k = BigDecimal.valueOf(2).divide(BigDecimal.valueOf(n+1), mc);
-        BigDecimal _1_k = BigDecimal.ONE.subtract(k, mc);
-        return value.multiply(k).add(ema.multiply(_1_k),mc);
-    }
-    
     public static double covariance(int[] x, int[] y)
     {
         if (x.length != y.length)

@@ -7,7 +7,6 @@ package io.nut.base.math;
 
 import io.nut.base.stats.Stats;
 import io.nut.base.util.As;
-import io.nut.base.util.Utils;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -186,7 +185,7 @@ public class StatsTest
         double[] x = { 1, 2, 1, 3, 1, 4, 1, 5};
         double[] y = { 1, 1, 1, 1, 1, 1, 1, 1.1};
         double result = Stats.correlationCoefficient(x, y);
-        System.out.println("correlacion="+result);
+        System.out.println("correlation="+result);
     }
 
     /**
@@ -324,78 +323,6 @@ public class StatsTest
         {22.17, 22.92},        
     };
     
-    /**
-     * Test of exponentialMovingAverage method, of class Statistics.
-     */
-    @Test
-    public void testExponentialMovingAverage_3args_1()
-    {
-        double sma8 = MOVING_AVERAGE8[0][0];
-        for(int i=0;i<MOVING_AVERAGE8.length;i++)
-        {
-            sma8 = Stats.exponentialMovingAverage(sma8, MOVING_AVERAGE8[i][0], 8);
-            if(MOVING_AVERAGE8[i].length>1)
-            {
-                assertEquals(MOVING_AVERAGE8[i][1], sma8, 0.0001, "i="+i);
-            }
-        }
-        
-        double sma10 = MOVING_AVERAGE10[0][0];
-        for(int i=0;i<MOVING_AVERAGE10.length;i++)
-        {
-            sma10 = Stats.exponentialMovingAverage(sma10, MOVING_AVERAGE10[i][0], 10);
-            if(MOVING_AVERAGE10[i].length>1)
-            {
-                assertEquals(MOVING_AVERAGE10[i][1], sma10, 0.0099, "i="+i);
-            }
-        }
-    }
-
-    /**
-     * Test of exponentialMovingAverage method, of class Statistics.
-     */
-    @Test
-    public void testExponentialMovingAverage_3args_2()
-    {
-        MathContext mc = new MathContext(16 ,RoundingMode.HALF_UP);
-        BigDecimal sma8 = BigDecimal.valueOf(MOVING_AVERAGE8[0][0]);
-        for(int i=0;i<MOVING_AVERAGE8.length;i++)
-        {
-            sma8 = Stats.exponentialMovingAverage(sma8, BigDecimal.valueOf(MOVING_AVERAGE8[i][0]), 8, mc);
-            if(MOVING_AVERAGE8[i].length>1)
-            {
-                assertEquals(MOVING_AVERAGE8[i][1], sma8.doubleValue(), 0.0001, "i="+i);
-            }
-        }
-        
-        BigDecimal sma10 = BigDecimal.valueOf(MOVING_AVERAGE10[0][0]);
-        for(int i=0;i<MOVING_AVERAGE10.length;i++)
-        {
-            sma10 = Stats.exponentialMovingAverage(sma10, BigDecimal.valueOf(MOVING_AVERAGE10[i][0]), 10, mc);
-            if(MOVING_AVERAGE10[i].length>1)
-            {
-                assertEquals(MOVING_AVERAGE10[i][1], sma10.doubleValue(), 0.0099, "i="+i);
-            }
-        }
-    }
-    /**
-     * Test that the overloaded versions produce the same results
-     */
-    @Test
-    public void testExponentialMovingAverage_same_results()
-    {
-        MathContext mc = new MathContext(16 ,RoundingMode.HALF_UP);
-        double doubleSma8 = 100;
-        BigDecimal decimalSma8 = BigDecimal.valueOf(doubleSma8);
-        for(int i=0;i<10000;i++)
-        {
-            double d = i % 97;
-            doubleSma8 = Stats.exponentialMovingAverage(doubleSma8, d, 8);
-            decimalSma8 = Stats.exponentialMovingAverage(decimalSma8, BigDecimal.valueOf(d), 8, mc);
-            assertEquals(doubleSma8, decimalSma8.doubleValue(), 0.00000001, "i="+i);
-        }
-    }
-
     private static final double DELTA = 1e-9;
 
     // ------------------------------------------------------------------
