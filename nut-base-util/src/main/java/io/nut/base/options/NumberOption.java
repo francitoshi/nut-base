@@ -113,7 +113,7 @@ public class NumberOption extends StringOption
         String value = getValue();
         try
         {
-            return Parsers.safeParseBigDecimal(value);
+            return Parsers.parseBigDecimal(value);
         }
         catch (NumberFormatException ex)
         {
@@ -125,7 +125,7 @@ public class NumberOption extends StringOption
         String value = getValue();
         try
         {
-            return Parsers.safeParseBigDecimal(value, def);
+            return Parsers.parseBigDecimal(value, def);
         }
         catch (NumberFormatException ex)
         {

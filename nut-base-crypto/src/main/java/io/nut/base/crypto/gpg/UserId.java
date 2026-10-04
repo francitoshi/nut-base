@@ -57,7 +57,7 @@ public class UserId
      */
     public UserId(String[] s)
     {
-        this.createdEpochSecond = Parsers.safeParseLong(s[5],0);
+        this.createdEpochSecond = Parsers.parseLong(s[5],0);
         this.hash = s[7];
         this.uid = s[9];
     }

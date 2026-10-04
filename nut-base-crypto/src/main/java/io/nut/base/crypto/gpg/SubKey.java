@@ -159,12 +159,12 @@ public class SubKey
         this.algorithm = Integer.parseInt(s[3]);
         this.keyid = s[4];
         this.createdEpochSecond = Long.parseLong(s[5]);
-        this.expiresEpochSecond = Parsers.safeParseLong(s[6], 0);
+        this.expiresEpochSecond = Parsers.parseLong(s[6], 0);
         this.uid_hash = s[7];
         this.ownertrust = s[8].isEmpty() ? 0 : s[8].charAt(0);
         this.sigclass = s[10];
         this.capabilities = s[11];
-        this.updateEpochSecond = Parsers.safeParseLong(s[11], 0);
+        this.updateEpochSecond = Parsers.parseLong(s[11], 0);
         this.origin = s.length<13 ? "" : s[12];
     }
 

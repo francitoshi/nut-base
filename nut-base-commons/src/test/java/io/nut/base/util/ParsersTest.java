@@ -51,11 +51,11 @@ public class ParsersTest
     @Test
     public void testSafeParseInt_String_int()
     {
-        assertEquals(-1, Parsers.safeParseInt(null, -1));
-        assertEquals(-1, Parsers.safeParseInt("", -1));
-        assertEquals(-1, Parsers.safeParseInt("a", -1));
-        assertEquals(1, Parsers.safeParseInt(" 1", 0));
-        assertEquals(1, Parsers.safeParseInt("1 ", 0));
+        assertEquals(-1, Parsers.parseInt(null, -1));
+        assertEquals(-1, Parsers.parseInt("", -1));
+        assertEquals(-1, Parsers.parseInt("a", -1));
+        assertEquals(1, Parsers.parseInt(" 1", 0));
+        assertEquals(1, Parsers.parseInt("1 ", 0));
     }
 
     /**
@@ -64,11 +64,11 @@ public class ParsersTest
     @Test
     public void testSafeParseInt_String()
     {
-        assertEquals(0, Parsers.safeParseInt(null));
-        assertEquals(0, Parsers.safeParseInt(""));
-        assertEquals(0, Parsers.safeParseInt("a"));
-        assertEquals(1, Parsers.safeParseInt(" 1"));
-        assertEquals(1, Parsers.safeParseInt("1 "));
+        assertEquals(0, Parsers.parseInt(null));
+        assertEquals(0, Parsers.parseInt(""));
+        assertEquals(0, Parsers.parseInt("a"));
+        assertEquals(1, Parsers.parseInt(" 1"));
+        assertEquals(1, Parsers.parseInt("1 "));
     }
     /**
      * Test of safeParseLong method, of class Parsers.
@@ -76,11 +76,11 @@ public class ParsersTest
     @Test
     public void testSafeParseLong_String_long()
     {
-        assertEquals(-1, Parsers.safeParseLong(null, -1));
-        assertEquals(-1, Parsers.safeParseLong("", -1));
-        assertEquals(-1, Parsers.safeParseLong("a", -1));
-        assertEquals(1, Parsers.safeParseLong(" 1", 0));
-        assertEquals(1, Parsers.safeParseLong("1 ", 0));
+        assertEquals(-1, Parsers.parseLong(null, -1));
+        assertEquals(-1, Parsers.parseLong("", -1));
+        assertEquals(-1, Parsers.parseLong("a", -1));
+        assertEquals(1, Parsers.parseLong(" 1", 0));
+        assertEquals(1, Parsers.parseLong("1 ", 0));
     }
     /**
      * Test of safeParseLong method, of class Parsers.
@@ -88,12 +88,12 @@ public class ParsersTest
     @Test
     public void testSafeParseLong_String_long_int()
     {
-        assertEquals(-1, Parsers.safeParseLong(null, -1, 16));
-        assertEquals(-1, Parsers.safeParseLong("", -1, 16));
-        assertEquals(10, Parsers.safeParseLong("a", -1, 16));
-        assertEquals(1, Parsers.safeParseLong(" 1", 0, 16));
-        assertEquals(1, Parsers.safeParseLong("1 ", 0, 16));
-        assertEquals(255, Parsers.safeParseLong("ff", 0, 16));
+        assertEquals(-1, Parsers.parseLong(null, -1, 16));
+        assertEquals(-1, Parsers.parseLong("", -1, 16));
+        assertEquals(10, Parsers.parseLong("a", -1, 16));
+        assertEquals(1, Parsers.parseLong(" 1", 0, 16));
+        assertEquals(1, Parsers.parseLong("1 ", 0, 16));
+        assertEquals(255, Parsers.parseLong("ff", 0, 16));
     }
 
     /**
@@ -102,11 +102,11 @@ public class ParsersTest
     @Test
     public void testSafeParseLong_String()
     {
-        assertEquals(0, Parsers.safeParseLong(null));
-        assertEquals(0, Parsers.safeParseLong(""));
-        assertEquals(0, Parsers.safeParseLong("a"));
-        assertEquals(1, Parsers.safeParseLong(" 1"));
-        assertEquals(1, Parsers.safeParseLong("1 "));
+        assertEquals(0, Parsers.parseLong(null));
+        assertEquals(0, Parsers.parseLong(""));
+        assertEquals(0, Parsers.parseLong("a"));
+        assertEquals(1, Parsers.parseLong(" 1"));
+        assertEquals(1, Parsers.parseLong("1 "));
     }
 
     /**
@@ -129,11 +129,11 @@ public class ParsersTest
     @Test
     public void testSafeParseDouble_String()
     {
-        assertEquals(-1, Parsers.safeParseDouble(null, -1), 0.001);
-        assertEquals(-1, Parsers.safeParseDouble("", -1),   0.001);
-        assertEquals(-1, Parsers.safeParseDouble("a", -1),  0.001);
-        assertEquals(1000, Parsers.safeParseDouble(" 1.0e3", 0),   0.001);
-        assertEquals(1000, Parsers.safeParseDouble("1.0E3 ", 0),   0.001);
+        assertEquals(-1, Parsers.parseDouble(null, -1), 0.001);
+        assertEquals(-1, Parsers.parseDouble("", -1),   0.001);
+        assertEquals(-1, Parsers.parseDouble("a", -1),  0.001);
+        assertEquals(1000, Parsers.parseDouble(" 1.0e3", 0),   0.001);
+        assertEquals(1000, Parsers.parseDouble("1.0E3 ", 0),   0.001);
     }
    
     /**
@@ -142,12 +142,12 @@ public class ParsersTest
     @Test
     public void testSafeParseFloat_String_float()
     {
-        assertEquals(0.0f, Parsers.safeParseFloat(null, 0.0f), 0.0);
-        assertEquals(1.0f, Parsers.safeParseFloat(null, 1.0f), 0.0);
-        assertEquals(0.0f, Parsers.safeParseFloat("", 0.0f), 0.0);
-        assertEquals(1.0f, Parsers.safeParseFloat("", 1.0f), 0.0);
-        assertEquals(1.234f, Parsers.safeParseFloat("1.234", 0.0f), 0.000001);
-        assertEquals(1.234567f, Parsers.safeParseFloat("1.234567", 1.0f), 0.000001);
+        assertEquals(0.0f, Parsers.parseFloat(null, 0.0f), 0.0);
+        assertEquals(1.0f, Parsers.parseFloat(null, 1.0f), 0.0);
+        assertEquals(0.0f, Parsers.parseFloat("", 0.0f), 0.0);
+        assertEquals(1.0f, Parsers.parseFloat("", 1.0f), 0.0);
+        assertEquals(1.234f, Parsers.parseFloat("1.234", 0.0f), 0.000001);
+        assertEquals(1.234567f, Parsers.parseFloat("1.234567", 1.0f), 0.000001);
     }
 
     /**
@@ -156,10 +156,10 @@ public class ParsersTest
     @Test
     public void testSafeParseFloat_String()
     {
-        assertEquals(0.0f, Parsers.safeParseFloat(null), 0.0);
-        assertEquals(0.0f, Parsers.safeParseFloat(""), 0.0);
-        assertEquals(1.234f, Parsers.safeParseFloat("1.234"), 0.000001);
-        assertEquals(1.234567f, Parsers.safeParseFloat("1.234567"), 0.000001);
+        assertEquals(0.0f, Parsers.parseFloat(null), 0.0);
+        assertEquals(0.0f, Parsers.parseFloat(""), 0.0);
+        assertEquals(1.234f, Parsers.parseFloat("1.234"), 0.000001);
+        assertEquals(1.234567f, Parsers.parseFloat("1.234567"), 0.000001);
     }
 
     /**
@@ -168,10 +168,10 @@ public class ParsersTest
     @Test
     public void testSafeParseLong_3args()
     {
-        assertEquals(10L, Parsers.safeParseLong("10", 3L, 10));
-        assertEquals(10L, Parsers.safeParseLong("A", 3L, 16));
+        assertEquals(10L, Parsers.parseLong("10", 3L, 10));
+        assertEquals(10L, Parsers.parseLong("A", 3L, 16));
 
-        assertEquals(3L, Parsers.safeParseLong("A", 3L, 10));
+        assertEquals(3L, Parsers.parseLong("A", 3L, 10));
     }
 
     /**
@@ -180,11 +180,11 @@ public class ParsersTest
     @Test
     public void testSafeParseBigInteger_3args()
     {
-        assertEquals(BigInteger.TEN, Parsers.safeParseBigInteger("10", BigInteger.ONE, 10));
-        assertEquals(BigInteger.TEN, Parsers.safeParseBigInteger("A", BigInteger.ONE, 16));
-        assertEquals(BigInteger.ONE, Parsers.safeParseBigInteger("nan", BigInteger.ONE, 10));
-        assertEquals(BigInteger.ONE, Parsers.safeParseBigInteger("nan", BigInteger.ONE, 16));
-        assertEquals(BigInteger.ONE, Parsers.safeParseBigInteger(null, BigInteger.ONE, 16));
+        assertEquals(BigInteger.TEN, Parsers.parseBigInteger("10", BigInteger.ONE, 10));
+        assertEquals(BigInteger.TEN, Parsers.parseBigInteger("A", BigInteger.ONE, 16));
+        assertEquals(BigInteger.ONE, Parsers.parseBigInteger("nan", BigInteger.ONE, 10));
+        assertEquals(BigInteger.ONE, Parsers.parseBigInteger("nan", BigInteger.ONE, 16));
+        assertEquals(BigInteger.ONE, Parsers.parseBigInteger(null, BigInteger.ONE, 16));
     }
 
     /**
@@ -193,9 +193,9 @@ public class ParsersTest
     @Test
     public void testSafeParseBigInteger_String_BigInteger()
     {
-        assertEquals(BigInteger.TEN, Parsers.safeParseBigInteger("10", BigInteger.ONE));
-        assertEquals(BigInteger.ONE, Parsers.safeParseBigInteger("aa", BigInteger.ONE));
-        assertEquals(BigInteger.ONE, Parsers.safeParseBigInteger(null, BigInteger.ONE));
+        assertEquals(BigInteger.TEN, Parsers.parseBigInteger("10", BigInteger.ONE));
+        assertEquals(BigInteger.ONE, Parsers.parseBigInteger("aa", BigInteger.ONE));
+        assertEquals(BigInteger.ONE, Parsers.parseBigInteger(null, BigInteger.ONE));
     }
 
     /**
@@ -205,9 +205,9 @@ public class ParsersTest
     public void testSafeParseBigInteger_String()
     {
         
-        assertEquals(BigInteger.TEN, Parsers.safeParseBigInteger("10"));
-        assertEquals(BigInteger.ZERO, Parsers.safeParseBigInteger("aa"));
-        assertEquals(BigInteger.ZERO, Parsers.safeParseBigInteger(null));
+        assertEquals(BigInteger.TEN, Parsers.parseBigInteger("10"));
+        assertEquals(BigInteger.ZERO, Parsers.parseBigInteger("aa"));
+        assertEquals(BigInteger.ZERO, Parsers.parseBigInteger(null));
     }
 
     /**
@@ -216,9 +216,9 @@ public class ParsersTest
     @Test
     public void testSafeParseBigDecimal_String_BigDecimal()
     {
-        assertEquals(BigDecimal.ZERO, Parsers.safeParseBigDecimal("0", BigDecimal.TEN));
-        assertEquals(BigDecimal.TEN, Parsers.safeParseBigDecimal("x", BigDecimal.TEN));
-        assertEquals(BigDecimal.TEN, Parsers.safeParseBigDecimal(null, BigDecimal.TEN));
+        assertEquals(BigDecimal.ZERO, Parsers.parseBigDecimal("0", BigDecimal.TEN));
+        assertEquals(BigDecimal.TEN, Parsers.parseBigDecimal("x", BigDecimal.TEN));
+        assertEquals(BigDecimal.TEN, Parsers.parseBigDecimal(null, BigDecimal.TEN));
     }
 
     /**
@@ -227,16 +227,16 @@ public class ParsersTest
     @Test
     public void testSafeParseBigDecimal_String()
     {
-        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.safeParseBigDecimal("0")));
-        assertEquals(0,BigDecimal.ONE.compareTo(Parsers.safeParseBigDecimal("1")));
-        assertEquals(0,BigDecimal.TEN.compareTo(Parsers.safeParseBigDecimal("10")));
+        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.parseBigDecimal("0")));
+        assertEquals(0,BigDecimal.ONE.compareTo(Parsers.parseBigDecimal("1")));
+        assertEquals(0,BigDecimal.TEN.compareTo(Parsers.parseBigDecimal("10")));
 
-        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.safeParseBigDecimal("0.0")));
-        assertEquals(0,BigDecimal.ONE.compareTo(Parsers.safeParseBigDecimal("1.0")));
-        assertEquals(0,BigDecimal.TEN.compareTo(Parsers.safeParseBigDecimal("10.0")));
+        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.parseBigDecimal("0.0")));
+        assertEquals(0,BigDecimal.ONE.compareTo(Parsers.parseBigDecimal("1.0")));
+        assertEquals(0,BigDecimal.TEN.compareTo(Parsers.parseBigDecimal("10.0")));
         
-        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.safeParseBigDecimal("nan")));
-        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.safeParseBigDecimal(null)));
+        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.parseBigDecimal("nan")));
+        assertEquals(0,BigDecimal.ZERO.compareTo(Parsers.parseBigDecimal(null)));
     }
 
     /**
