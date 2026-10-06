@@ -7,11 +7,11 @@ package io.nut.base.crypto.stego;
 
 import io.nut.base.cache.Checksums;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.Pbkdf2;
-import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.crypto.Rand;
 import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.encoding.Ascii85;
+import io.nut.base.jca.Kr.Pbkdf2;
+import io.nut.base.jca.Kr.SecretKeyTransformation;
 import io.nut.base.util.BitSetReader;
 import io.nut.base.util.BitSetWriter;
 import io.nut.base.lang.Empty;

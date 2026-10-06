@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.MessageDigestAlgorithm;
+import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import io.nut.base.encoding.Hex;
 import static io.nut.base.util.CharSets.UTF8;
 import java.io.UnsupportedEncodingException;

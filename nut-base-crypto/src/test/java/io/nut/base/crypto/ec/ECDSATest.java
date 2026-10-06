@@ -6,7 +6,7 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
-import io.nut.base.crypto.Kripto.MessageDigestAlgorithm;
+import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import io.nut.base.util.As;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;

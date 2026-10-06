@@ -7,12 +7,12 @@ package io.nut.base.crypto;
 
 import io.nut.base.crypto.shamir.ShamirSharedSecret;
 import io.nut.base.crypto.Kripto.KeyAgreementAlgorithm;
-import io.nut.base.crypto.Kripto.KeyPairAlgorithm;
-import io.nut.base.crypto.Kripto.KeyPairTransformation;
-import io.nut.base.crypto.Kripto.SecretKeyAlgorithm;
-import io.nut.base.crypto.Kripto.SecretKeyTransformation;
 import io.nut.base.crypto.Kripto.SignatureAlgorithm;
 import io.nut.base.encoding.Hex;
+import io.nut.base.jca.Kr.KeyPairAlgorithm;
+import io.nut.base.jca.Kr.KeyPairTransformation;
+import io.nut.base.jca.Kr.SecretKeyAlgorithm;
+import io.nut.base.jca.Kr.SecretKeyTransformation;
 import io.nut.base.util.CharSets;
 import static io.nut.base.util.CharSets.UTF8;
 import io.nut.base.lang.Joins;
@@ -517,9 +517,9 @@ public class KriptoTest
         Signature aliceSignature = instance.getSignature(SignatureAlgorithm.SHA256withECDSA);
 
         //kripto.deriveKey
-        Kripto forced = new Kripto("fake", true);
         try
         {
+            Kripto forced = new Kripto("fake", true);
             forced.sha256.get();
             fail("must throw an exception like ProviderException");
         }

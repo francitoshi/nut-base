@@ -9,7 +9,7 @@ package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.alt.PBKDF2SHA512;
 import io.nut.base.crypto.Digest;
-import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import io.nut.base.lang.Empty;
 import io.nut.base.lang.Strings;
 import java.text.Normalizer;
@@ -63,7 +63,7 @@ public class Bip39
 
     public static final int PBKDF2_ROUNDS = 2048;
 
-    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    private static final Digest SHA256 = new Digest(null, Kr.MessageDigestAlgorithm.SHA256);
     
     private static String[] split(String words)
     {

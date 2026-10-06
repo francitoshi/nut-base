@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.MessageDigestAlgorithm;
+import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
 

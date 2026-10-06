@@ -9,7 +9,7 @@
 package io.nut.base.encoding;
 
 import io.nut.base.crypto.Digest;
-import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
@@ -21,7 +21,7 @@ import java.util.Arrays;
  */
 public final class Base58Check 
 {
-    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    private static final Digest SHA256 = new Digest(null, MessageDigestAlgorithm.SHA256);
 	/*---- Static functions ----*/
 
     // Adds the checksum and converts to Base58Check. Note that the caller needs to prepend the version byte(s).

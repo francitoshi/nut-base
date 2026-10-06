@@ -12,13 +12,14 @@ import io.nut.base.lang.Joins;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
+import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
 import java.util.Objects;
 
 public class Schnorr extends Sign
 {    
-    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    private static final Digest SHA256 = new Digest(null, MessageDigestAlgorithm.SHA256);
     
     public Schnorr(Curve curve)
     {

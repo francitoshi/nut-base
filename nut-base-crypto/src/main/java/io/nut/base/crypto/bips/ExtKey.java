@@ -6,10 +6,10 @@
 package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.Digest;
-import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.alt.RIPEMD160;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.encoding.Base58;
+import io.nut.base.jca.Kr;
 import io.nut.base.util.As;
 import io.nut.base.util.Comparators;
 import io.nut.base.util.Utils;
@@ -26,7 +26,7 @@ import java.util.Objects;
  */
 public class ExtKey
 {
-    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    private static final Digest SHA256 = new Digest(null, Kr.MessageDigestAlgorithm.SHA256);
     
     static final int PUBKEY = 1;
     static final int PRVKEY = 2;

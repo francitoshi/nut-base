@@ -18,6 +18,7 @@
 package io.nut.base.encoding;
 
 import io.nut.base.crypto.Digest;
+import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import io.nut.base.crypto.Kripto;
 import io.nut.base.lang.Empty;
 import java.math.BigInteger;
@@ -58,7 +59,7 @@ public class Base58
     private static final char ENCODED_ZERO = ALPHABET[0];
     private static final int[] INDEXES = new int[128];
 
-    private static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    private static final Digest SHA256 = new Digest(null, MessageDigestAlgorithm.SHA256);
 
     static
     {
