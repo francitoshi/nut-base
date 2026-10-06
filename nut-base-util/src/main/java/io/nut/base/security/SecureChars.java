@@ -7,7 +7,6 @@ package io.nut.base.security;
 
 import io.nut.base.crypto.Kripto;
 import io.nut.base.lang.Chars;
-import io.nut.base.util.Byter;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -19,79 +18,67 @@ import javax.security.auth.Destroyable;
  * Holds a {@code char[]} securely in memory by converting it to bytes and
  * delegating all cryptographic protection to a {@link SecureBytes} instance.
  *
- * <p>This class is the character-oriented counterpart of {@link SecureBytes}.
- * It is designed to protect sensitive string-like data (passwords, passphrases,
- * PINs, etc.) that must not persist as plaintext on the heap. The source
- * {@code char[]} is encoded to a byte array, handed off to {@link SecureBytes}
- * for AES-256-GCM encryption, and then zeroed immediately.</p>
+ * <p>The source {@code char[]} is encoded, handed to {@link SecureBytes} for
+ * AES-256-GCM encryption, and zeroed, also if encoding or encryption fails.
+ * The charset is always explicit (UTF-8 by default), so results do not depend
+ * on the platform default charset, which changed on Java 18 (JEP 400).</p>
  *
- * <p>Instances must be released by calling {@link #destroy()} or by using a
- * try-with-resources block. After destruction the underlying
- * {@link SecureBytes} wipes its key, IV and ciphertext.</p>
+ * <p>Note: whether {@link Chars} leaves intermediate {@code ByteBuffer} /
+ * {@code CharBuffer} copies on the heap depends on its implementation, and
+ * unmappable characters (e.g. unpaired surrogates) are replaced by the
+ * charset's replacement, so the recovered text may differ from the
+ * original.</p>
  *
- * <p>Usage example:</p>
  * <pre>{@code
  * char[] password = readPasswordFromUI();
- * try (SecureChars sc = new SecureChars(password)) {
- *     // password[] has already been zeroed by the constructor
+ * try (SecureChars sc = new SecureChars(password)) 
+ * {
  *     sc.consume(chars -> authenticate(chars));
- *     // chars[] is zeroed immediately after the lambda returns
  * }
  * }</pre>
  *
  * @see SecureBytes
  */
-public class SecureChars implements AutoCloseable, Destroyable
+public final class SecureChars implements AutoCloseable, Destroyable
 {
-    /**
-     * The underlying byte-level secure storage that holds the encoded and
-     * encrypted character data.
-     */
+    /** Underlying encrypted storage of the encoded characters. */
     private final SecureBytes secureBytes;
 
-    /**
-     * The character encoding used to convert between {@code char[]} and
-     * {@code byte[]}.
-     */
+    /** Charset used to convert between {@code char[]} and {@code byte[]}. */
     private final Charset charset;
 
     /**
-     * Constructs a {@code SecureChars} instance that protects {@code src}
-     * using the specified {@link Charset} and {@link Kripto} instance.
+     * Protects {@code src} using the given charset and {@link Kripto}.
      *
-     * <p>The source array is encoded to bytes, encrypted by a new
-     * {@link SecureBytes}, and then zeroed. Passing {@code null} or an empty
-     * array is handled gracefully and delegates the edge-case behaviour to
-     * {@link SecureBytes}.</p>
-     *
-     * @param src     the plaintext character array to protect; may be
-     *                {@code null} or empty. The array is zeroed by this
-     *                constructor.
-     * @param charset the {@link Charset} used to encode {@code src} to bytes.
-     * @param kripto  the {@link Kripto} instance for cryptographic operations;
-     *                if {@code null} the shared singleton inside
-     *                {@link SecureBytes} is used.
+     * @param src     the characters to protect; may be {@code null} or empty.
+     *                Zeroed by this constructor.
+     * @param charset encoding to use; {@code null} means UTF-8.
+     * @param kripto  crypto provider; {@code null} means the shared default.
      */
     public SecureChars(char[] src, Charset charset, Kripto kripto)
     {
-        this.secureBytes = new SecureBytes(Chars.bytes(src, charset), kripto);
-        this.charset = charset;
-        if(src!=null && src.length>0)
+        Charset cs = charset == null ? StandardCharsets.UTF_8 : charset;
+        SecureBytes sb;
+        try
         {
-            Arrays.fill(src, '\0');
+            sb = new SecureBytes(Chars.bytes(src, cs), kripto);
         }
+        finally
+        {
+            if(src != null && src.length > 0)
+            {
+                Arrays.fill(src, '\0');
+            }
+        }
+        this.secureBytes = sb;
+        this.charset = cs;
     }
 
     /**
-     * Constructs a {@code SecureChars} instance using UTF-8 encoding and the
-     * provided {@link Kripto} instance.
+     * Uses UTF-8 and the given {@link Kripto}.
      *
-     * <p>Equivalent to {@code new SecureChars(src, StandardCharsets.UTF_8, kripto)}.</p>
-     *
-     * @param kripto the {@link Kripto} instance for cryptographic operations;
-     *               if {@code null} the shared singleton is used.
-     * @param src    the plaintext character array to protect. The array is
-     *               zeroed by this constructor.
+     * @param kripto crypto provider; {@code null} means the shared default.
+     * @param src    the characters to protect. Zeroed by this constructor.
      */
     public SecureChars(Kripto kripto, char[] src)
     {
@@ -99,13 +86,9 @@ public class SecureChars implements AutoCloseable, Destroyable
     }
 
     /**
-     * Constructs a {@code SecureChars} instance using UTF-8 encoding and the
-     * shared default {@link Kripto} instance.
+     * Uses UTF-8 and the shared default {@link Kripto}.
      *
-     * <p>Equivalent to {@code new SecureChars(src, StandardCharsets.UTF_8, null)}.</p>
-     *
-     * @param src the plaintext character array to protect. The array is zeroed
-     *            by this constructor.
+     * @param src the characters to protect. Zeroed by this constructor.
      */
     public SecureChars(char[] src)
     {
@@ -113,65 +96,46 @@ public class SecureChars implements AutoCloseable, Destroyable
     }
 
     /**
-     * Decrypts and decodes the protected data, returning it as a fresh
-     * {@code char[]}.
+     * Decrypts and decodes the protected data. The intermediate byte buffer is
+     * zeroed, also if decoding fails. The caller must zero the result
+     * (prefer {@link #consume(Consumer)} or {@link #apply(Function)}).
      *
-     * <p>The intermediate byte buffer is zeroed before this method returns.
-     * The caller is responsible for zeroing the returned {@code char[]} when
-     * finished (prefer {@link #consume(Consumer)} or {@link #apply(Function)}
-     * which do this automatically).</p>
-     *
-     * <p>Package-private visibility is intentional: external code must use
-     * {@link #consume(Consumer)} or {@link #apply(Function)} to guarantee
-     * that the plaintext is wiped after use.</p>
-     *
-     * @return a freshly decoded plaintext {@code char[]}, or {@code null} /
-     *         an empty array if this instance was constructed from a
-     *         {@code null} or empty source.
+     * @return the plaintext, or {@code null} / an empty array if constructed
+     *         from {@code null} / an empty source.
+     * @throws IllegalStateException if this instance has been destroyed
      */
     // keep private for outsiders
     char[] getChars()
     {
         byte[] bytes = this.secureBytes.getBytes();
-        char[] chars = Chars.chars(bytes, this.charset);
-        if(bytes!=null && bytes.length>0)
+        try
         {
-            Arrays.fill(bytes, (byte)0);
+            return Chars.chars(bytes, this.charset);
         }
-        return chars;
+        finally
+        {
+            if(bytes != null && bytes.length > 0)
+            {
+                Arrays.fill(bytes, (byte) 0);
+            }
+        }
     }
 
-    /**
-     * Destroys this instance by delegating to the underlying
-     * {@link SecureBytes#destroy()}, which zeros the key, IV and ciphertext.
-     *
-     * <p>Subsequent calls are no-ops. After this method returns,
-     * {@link #isDestroyed()} returns {@code true}.</p>
-     */
+    /** Destroys this instance by delegating to {@link SecureBytes#destroy()}. */
     @Override
     public void destroy()
     {
         this.secureBytes.destroy();
     }
 
-    /**
-     * Returns {@code true} if this instance has been destroyed and all
-     * sensitive material has been wiped from memory.
-     *
-     * @return {@code true} after {@link #destroy()} (or {@link #close()})
-     *         has been called; {@code false} otherwise.
-     */
+    /** @return {@code true} after {@link #destroy()} or {@link #close()}, and for null/empty input */
     @Override
     public boolean isDestroyed()
     {
         return this.secureBytes.isDestroyed();
     }
 
-    /**
-     * Implements {@link AutoCloseable} by delegating to {@link #destroy()},
-     * enabling use in try-with-resources statements.
-     *
-     */
+    /** Delegates to {@link #destroy()}, enabling try-with-resources. */
     @Override
     public void close()
     {
@@ -179,21 +143,12 @@ public class SecureChars implements AutoCloseable, Destroyable
     }
 
     /**
-     * Decrypts the protected data, passes the resulting {@code char[]} to
-     * {@code consumer}, and then zeros the temporary buffer before returning
-     * — even if the consumer throws an exception.
+     * Decrypts the data, passes it to {@code consumer}, and zeros the temporary
+     * buffer afterwards, even if the consumer throws. The consumer receives
+     * {@code null} if this instance was built from {@code null}.
      *
-     * <p>This is the preferred way to access the protected character data
-     * because it guarantees the plaintext does not linger on the heap longer
-     * than necessary.</p>
-     *
-     * <p>Example:</p>
-     * <pre>{@code
-     * secureChars.consume(chars -> verifyPassword(chars));
-     * }</pre>
-     *
-     * @param consumer a {@link Consumer} that receives the temporary plaintext
-     *                 array; must not retain a reference to it after returning.
+     * @param consumer receives the temporary plaintext; must not retain it.
+     * @throws IllegalStateException if this instance has been destroyed
      */
     public void consume(Consumer<char[]> consumer)
     {
@@ -204,7 +159,7 @@ public class SecureChars implements AutoCloseable, Destroyable
         }
         finally
         {
-            if(tmp!=null && tmp.length>0)
+            if(tmp != null && tmp.length > 0)
             {
                 Arrays.fill(tmp, '\0');
             }
@@ -212,21 +167,14 @@ public class SecureChars implements AutoCloseable, Destroyable
     }
 
     /**
-     * Decrypts the protected data, applies {@code function} to the resulting
-     * {@code char[]}, zeros the temporary buffer, and returns the function's
-     * result — even if the function throws an exception.
+     * Decrypts the data, applies {@code function}, zeros the temporary buffer
+     * and returns the result, even if the function throws. The function must
+     * not return the array it receives, since it is zeroed afterwards.
      *
-     * <p>Use this variant when the caller needs a return value (e.g., to
-     * derive a key from a password):</p>
-     * <pre>{@code
-     * byte[] key = secureChars.apply(chars -> deriveKey(chars));
-     * }</pre>
-     *
-     * @param <T>      the type of the result produced by {@code function}.
-     * @param function a {@link Function} that receives the temporary plaintext
-     *                 array and produces a result; must not retain a reference
-     *                 to the array after returning.
-     * @return the value returned by {@code function}.
+     * @param <T>      result type
+     * @param function receives the temporary plaintext and produces a result.
+     * @return the function's result
+     * @throws IllegalStateException if this instance has been destroyed
      */
     public <T> T apply(Function<char[], T> function)
     {

@@ -18,7 +18,6 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
-import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.security.auth.Destroyable;
 
@@ -28,18 +27,29 @@ import javax.security.auth.Destroyable;
  * lifetime.
  *
  * <p>The plaintext is encrypted immediately on construction and the original
- * array is zeroed out. The decrypted data is only ever reconstructed
- * transiently (inside {@link #getBytes()} or {@link #consume(Consumer)}) and
- * is zeroed again as soon as the caller is done with it.</p>
+ * array is zeroed out (also when encryption fails). The decrypted data is only
+ * ever reconstructed transiently (inside {@link #getBytes()} or
+ * {@link #consume(Consumer)}) and is zeroed again as soon as the caller is
+ * done with it.</p>
+ *
+ * <p>The AES key is kept as a plain {@code byte[]} owned by this class. Every
+ * cipher operation wraps it in a {@link SecureSecretKey} that is destroyed in a
+ * {@code finally} block, so no {@code SecretKeySpec} copy is left on the heap
+ * and no reflection (which fails on JDK 16+ without {@code --add-opens}) is
+ * needed. The JCA provider may still keep its own internal copies (key
+ * schedule); those cannot be wiped from here.</p>
  *
  * <p>Instances must be explicitly released by calling {@link #destroy()} or
- * by using a try-with-resources block (the class implements
- * {@link AutoCloseable}). After destruction all internal state (key, IV and
- * ciphertext) is overwritten with zeroes.</p>
+ * by using a try-with-resources block. After destruction all internal state
+ * (key, IV and ciphertext) is overwritten with zeroes and
+ * {@link #getBytes()} / {@link #consume(Consumer)} throw
+ * {@link IllegalStateException}.</p>
  *
- * <p>Thread safety: {@code destroy()} is guarded by a {@code volatile} flag;
- * all other methods are <em>not</em> synchronized and should not be called
- * concurrently.</p>
+ * <p>Thread safety: {@link #destroy()} and the decryption step of
+ * {@link #getBytes()} are synchronized on this instance, so a concurrent
+ * destroy can neither interleave with a decryption nor leave a half-wiped
+ * state. The consumer passed to {@link #consume(Consumer)} runs outside the
+ * lock.</p>
  *
  * <p>Usage example:</p>
  * <pre>{@code
@@ -49,50 +59,49 @@ import javax.security.auth.Destroyable;
  *     sb.consume(data -> process(data));
  *     // data[] is zeroed immediately after the lambda returns
  * }
- * // sb is now destroyed; key, IV and ciphertext are all zeroed
  * }</pre>
  *
  * @see SecureChars
  */
-public class SecureBytes implements AutoCloseable, Destroyable
+public final class SecureBytes implements AutoCloseable, Destroyable
 {
     /**
      * Lazy-initialized singleton holder for the shared {@link Kripto} instance.
-     * Using an enum guarantees thread-safe, exactly-once initialization without
-     * explicit synchronization.
      */
     private enum Holder
     {
         INSTANCE;
-        Kripto kripto = Kripto.getInstance();
+        final Kripto kripto = Kripto.getInstance();
     }
 
     /** Length of the AES-GCM initialization vector in bytes (96 bits). */
     private static final int IV_BYTES = 12; //96 bits
 
+    /** Length of the AES-256 key in bytes. */
+    private static final int KEY_BYTES = 32;
+
     /** Length of the AES-GCM authentication tag in bits. */
     private static final int TAG_BITS = 128;
+
+    /** Algorithm name of the ephemeral key. */
+    private static final String AES = "AES";
 
     /** Shared cryptographically-secure random generator. */
     private static final Rand RAND = Kripto.getRand();
 
-    /** Cryptographic utilities used to create keys, IVs and ciphers. */
+    /** Cryptographic utilities used to create IVs and ciphers. */
     private final Kripto kripto;
 
     /** Random IV generated fresh for every instance. */
     private final byte[] iv;
 
-    /** Ephemeral AES-256 key used solely for this object's encrypted payload. */
-    private final SecretKey key;
+    /** Ephemeral AES-256 key bytes owned by this object; wiped by {@link #destroy()}. */
+    private final byte[] key;
 
     /** AES-256-GCM ciphertext of the original data, including the authentication tag. */
     private final byte[] encryptedData;
 
-    /**
-     * {@code true} once {@link #destroy()} has been called and all sensitive
-     * material has been wiped. Declared {@code volatile} so that
-     * {@link #isDestroyed()} is always visible across threads.
-     */
+    /** {@code true} once {@link #destroy()} has been called (or for null/empty input). */
     private volatile boolean destroyed;
 
     /**
@@ -100,108 +109,130 @@ public class SecureBytes implements AutoCloseable, Destroyable
      * with AES-256-GCM using the provided {@link Kripto} instance (or the
      * shared default if {@code null}).
      *
-     * <p>The {@code data} array is zeroed immediately after encryption. Passing
-     * {@code null} creates a destroyed instance that behaves as if it wraps a
-     * {@code null} byte array. Passing an empty array creates a special-case
-     * instance that returns an empty array from {@link #getBytes()} without
-     * performing any cryptographic operation.</p>
+     * <p>The {@code data} array is zeroed by this constructor, including when
+     * encryption fails. Passing {@code null} creates an already destroyed
+     * instance that behaves as if it wraps a {@code null} array. Passing an
+     * empty array creates an already destroyed instance whose
+     * {@link #getBytes()} returns an empty array without any cryptographic
+     * operation.</p>
      *
-     * @param data   the plaintext byte array to protect; may be {@code null}
-     *               or empty. The array is zeroed by this constructor.
-     * @param kripto the {@link Kripto} instance to use for key generation and
-     *               cipher operations; if {@code null} the shared singleton is used.
+     * @param data   the plaintext to protect; may be {@code null} or empty.
+     * @param kripto the {@link Kripto} instance to use; if {@code null} the
+     *               shared singleton is used.
      * @throws RuntimeException wrapping any JCA exception that occurs during
-     *                          key generation or encryption.
+     *                          encryption.
      */
     public SecureBytes(byte[] data, Kripto kripto)
     {
+        if(data == null)
+        {
+            this.kripto = null;
+            this.iv = null;
+            this.key = null;
+            this.encryptedData = null;
+            this.destroyed = true;
+            return;
+        }
+        if(data.length == 0)
+        {
+            this.kripto = null;
+            this.iv = null;
+            this.key = null;
+            this.encryptedData = Empty.BYTES;
+            this.destroyed = true;
+            return;
+        }
+
+        Kripto k = kripto == null ? Holder.INSTANCE.kripto : kripto;
+        byte[] keyBytes = null;
+        byte[] ivBytes = null;
+        byte[] cipherText;
+        boolean ok = false;
         try
         {
-            if(data == null)
-            {
-                this.kripto = null;
-                this.iv = null;
-                this.key = null;
-                this.encryptedData = null;
-                this.destroyed = true;
-                return;
-            }
-            if(data.length == 0)
-            {
-                this.kripto = null;
-                this.iv = null;
-                this.key = null;
-                this.encryptedData = Empty.BYTES;
-                this.destroyed = true;
-                return;
-            }
+            // use the returned arrays: do not assume nextBytes fills in place
+            keyBytes = RAND.nextBytes(new byte[KEY_BYTES]);
+            ivBytes = RAND.nextBytes(new byte[IV_BYTES]);
 
-            this.kripto = kripto==null ? Holder.INSTANCE.kripto : kripto;
-            this.key = this.kripto.keyGenAes256.generateKey();
-            this.iv = RAND.nextBytes(new byte[IV_BYTES]);
-            
-            GCMParameterSpec spec = this.kripto.getIvGCM(iv, TAG_BITS);
-            Cipher cipher = this.kripto.getCipher(this.key, SecretKeyTransformation.AES_GCM_NoPadding, spec, Cipher.ENCRYPT_MODE);
-            this.encryptedData = cipher.doFinal(data);
-            
-            Arrays.fill(data, (byte) 0);
+            GCMParameterSpec spec = k.getIvGCM(ivBytes, TAG_BITS);
+            try (SecureSecretKey sk = new SecureSecretKey(keyBytes, AES))
+            {
+                Cipher cipher = k.getCipher(sk, SecretKeyTransformation.AES_GCM_NoPadding, spec, Cipher.ENCRYPT_MODE);
+                cipherText = cipher.doFinal(data);
+            }
+            ok = true;
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
         {
             throw new RuntimeException(ex);
         }
+        finally
+        {
+            Arrays.fill(data, (byte) 0);
+            if(!ok)
+            {
+                if(keyBytes != null)
+                {
+                    Arrays.fill(keyBytes, (byte) 0);
+                }
+                if(ivBytes != null)
+                {
+                    Arrays.fill(ivBytes, (byte) 0);
+                }
+            }
+        }
+        this.kripto = k;
+        this.key = keyBytes;
+        this.iv = ivBytes;
+        this.encryptedData = cipherText;
     }
 
     /**
      * Constructs a {@code SecureBytes} instance using the shared default
-     * {@link Kripto} instance.
+     * {@link Kripto} instance. Equivalent to {@code new SecureBytes(data, null)}.
      *
-     * <p>Equivalent to {@code new SecureBytes(data, null)}.</p>
-     *
-     * @param data the plaintext byte array to protect; may be {@code null}
-     *             or empty. The array is zeroed by this constructor.
-     * @throws RuntimeException wrapping any JCA exception that occurs during
-     *                          key generation or encryption.
+     * @param data the plaintext to protect; may be {@code null} or empty.
      */
     public SecureBytes(byte[] data)
     {
-        this(data, Holder.INSTANCE.kripto);
+        this(data, null);
     }
 
     /**
      * Decrypts and returns the protected byte array.
      *
-     * <p>The returned array is a freshly allocated buffer containing the
-     * original plaintext. The caller is responsible for zeroing it when
-     * finished (prefer {@link #consume(Consumer)} which does this
-     * automatically).</p>
+     * <p>The returned array is a freshly allocated buffer. The caller must zero
+     * it when finished (prefer {@link #consume(Consumer)}). Package-private on
+     * purpose.</p>
      *
-     * <p>Package-private visibility is intentional: external code must use
-     * {@link #consume(Consumer)} to guarantee that the plaintext is wiped
-     * after use.</p>
-     *
-     * @return the decrypted plaintext, or {@code null} if this instance was
-     *         constructed with a {@code null} array, or an empty array if it
-     *         was constructed with an empty array.
-     * @throws RuntimeException wrapping any JCA exception that occurs during
-     *                          decryption.
+     * @return the plaintext, {@code null} if constructed with {@code null}, or
+     *         an empty array if constructed with an empty array.
+     * @throws IllegalStateException if this instance has been destroyed
+     * @throws RuntimeException      wrapping any JCA exception during decryption
      */
     // keep private for outsiders
-    byte[] getBytes()
+    synchronized byte[] getBytes()
     {
-        if(this.encryptedData==null)
+        if(this.encryptedData == null)
         {
             return null;
         }
-        if(this.encryptedData.length==0)
+        if(this.encryptedData.length == 0)
         {
             return this.encryptedData;
         }
+        if(this.destroyed)
+        {
+            throw new IllegalStateException("SecureBytes has been destroyed");
+        }
         try
         {
-            GCMParameterSpec spec = this.kripto.getIvGCM(iv, TAG_BITS);
-            Cipher cipher = this.kripto.getCipher(this.key, SecretKeyTransformation.AES_GCM_NoPadding, spec, Cipher.DECRYPT_MODE);
-            return cipher.doFinal(this.encryptedData);
+            GCMParameterSpec spec = this.kripto.getIvGCM(this.iv, TAG_BITS);
+            try (SecureSecretKey sk = new SecureSecretKey(this.key, AES))
+            {
+                Cipher cipher = this.kripto.getCipher(sk, SecretKeyTransformation.AES_GCM_NoPadding, spec, Cipher.DECRYPT_MODE);
+                return cipher.doFinal(this.encryptedData);
+            }
         }
         catch (NoSuchAlgorithmException | NoSuchPaddingException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException ex)
         {
@@ -211,31 +242,39 @@ public class SecureBytes implements AutoCloseable, Destroyable
 
     /**
      * Destroys this instance by zeroing all sensitive material (ciphertext,
-     * IV and secret key) and marking the object as destroyed.
-     *
-     * <p>Subsequent calls to this method are no-ops. After this method
-     * returns, {@link #isDestroyed()} will return {@code true} and any call
-     * to {@link #getBytes()} or {@link #consume(Consumer)} may fail or
-     * produce undefined results.</p>
+     * IV and key) and marking it as destroyed. Subsequent calls are no-ops.
      */
     @Override
-    public void destroy()
+    public synchronized void destroy()
     {
         if(!this.destroyed)
         {
-            Arrays.fill(this.encryptedData, (byte) 0);
-            Arrays.fill(this.iv, (byte) 0);
-            Wiper.wipeSecretKey(this.key);
-            this.destroyed=true;
+            try
+            {
+                if(this.encryptedData != null)
+                {
+                    Arrays.fill(this.encryptedData, (byte) 0);
+                }
+                if(this.iv != null)
+                {
+                    Arrays.fill(this.iv, (byte) 0);
+                }
+                if(this.key != null)
+                {
+                    Arrays.fill(this.key, (byte) 0);
+                }
+            }
+            finally
+            {
+                this.destroyed = true;
+            }
         }
     }
 
     /**
-     * Returns {@code true} if this instance has been destroyed and all
-     * sensitive material has been wiped from memory.
-     *
-     * @return {@code true} after {@link #destroy()} (or {@link #close()})
-     *         has been called; {@code false} otherwise.
+     * @return {@code true} after {@link #destroy()} or {@link #close()} has
+     *         been called, and for instances built from {@code null} or an
+     *         empty array.
      */
     @Override
     public boolean isDestroyed()
@@ -243,10 +282,7 @@ public class SecureBytes implements AutoCloseable, Destroyable
         return this.destroyed;
     }
 
-    /**
-     * Implements {@link AutoCloseable} by delegating to {@link #destroy()},
-     * enabling use in try-with-resources statements.
-     */
+    /** Delegates to {@link #destroy()}, enabling try-with-resources. */
     @Override
     public void close()
     {
@@ -254,21 +290,15 @@ public class SecureBytes implements AutoCloseable, Destroyable
     }
 
     /**
-     * Decrypts the protected data, passes it to {@code consumer}, and then
-     * zeros the temporary plaintext buffer before returning — even if the
-     * consumer throws an exception.
+     * Decrypts the protected data, passes it to {@code consumer}, and zeros the
+     * temporary plaintext before returning, even if the consumer throws.
      *
-     * <p>This is the preferred way to access the protected data because it
-     * guarantees that the plaintext does not linger on the heap longer than
-     * necessary.</p>
+     * <p>If this instance was built from {@code null}, the consumer receives
+     * {@code null}; if built from an empty array, it receives an empty
+     * array.</p>
      *
-     * <p>Example:</p>
-     * <pre>{@code
-     * secureBytes.consume(data -> sendOverNetwork(data));
-     * }</pre>
-     *
-     * @param consumer a {@link Consumer} that receives the temporary plaintext
-     *                 array; must not retain a reference to it after returning.
+     * @param consumer receives the temporary plaintext; must not retain it.
+     * @throws IllegalStateException if this instance has been destroyed
      */
     public void consume(Consumer<byte[]> consumer)
     {
@@ -279,11 +309,10 @@ public class SecureBytes implements AutoCloseable, Destroyable
         }
         finally
         {
-            if(tmp!=null && tmp.length!=0)
+            if(tmp != null && tmp.length != 0)
             {
-                Arrays.fill(tmp, (byte)0);
+                Arrays.fill(tmp, (byte) 0);
             }
         }
     }
-    
 }

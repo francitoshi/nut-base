@@ -1,153 +1,142 @@
 /*
- *  Wiper.java
- *
- *  Copyright (C) 2025-2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.security;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
+import javax.security.auth.DestroyFailedException;
 
 /**
- * The {@code Wiper} class provides utility methods for securely wiping
- * cryptographic key material from memory. This is crucial for preventing
- * sensitive key data from being exposed through memory dumps or other forensic
- * analysis techniques after it is no longer needed.
- * <p>
- * It attempts to overwrite the byte arrays holding the key material with zeros.
- * While this offers a layer of security, it's important to understand that
- * Java's garbage collection and memory management might still leave traces of
- * the original data in other memory locations. For ultimate security, consider
- * using hardware security modules (HSMs) or secure enclaves.
- * </p>
+ * Best-effort utilities for wiping cryptographic key material from memory.
+ *
+ * <p><b>Reliability by Java version.</b> Wiping a {@link SecretKeySpec} needs
+ * reflection on a private JDK field. That works on Java 8, prints an
+ * "illegal reflective access" warning on 9-15, is denied by default on 16 and
+ * is always denied on 17+ unless the JVM runs with
+ * {@code --add-opens java.base/javax.crypto.spec=ALL-UNNAMED}. When denied, the
+ * methods return {@code false} and the key stays on the heap. Code that must
+ * wipe its own key material should keep the bytes in an array it owns (see
+ * {@link SecureSecretKey}) and zero it directly instead of relying on this
+ * class.</p>
+ *
+ * <p>Java's garbage collector may also have moved or copied the data before it
+ * is wiped; for stronger guarantees use an HSM or a secure enclave.</p>
  */
-public abstract class Wiper
+public final class Wiper
 {
-    
+    private Wiper()
+    {
+    }
+
     /**
-     * Attempts to securely wipe the key material stored within a
-     * {@code SecretKeySpec} object. This method uses reflection to access the
-     * private {@code key} field of the {@code SecretKeySpec} and overwrites its
-     * contents with zeros.
+     * Attempts to wipe the key material held by a {@link SecretKeySpec} via
+     * reflection on its private {@code key} field.
      *
-     * @param key The {@code SecretKeySpec} object whose key material
-     * needs to be wiped.
-     * @return {@code true} if the key material was successfully wiped,
-     * {@code false} otherwise. This can fail if reflection access is denied,
-     * the field is not found, or other runtime exceptions occur.
+     * @param key the key to wipe; may be {@code null}
+     * @return {@code true} only if a non-null array was found and zeroed;
+     *         {@code false} if {@code key} is {@code null}, access is denied
+     *         (JDK 16+ without {@code --add-opens}), the field does not exist,
+     *         or the field holds no array.
      */
     public static boolean wipeSecretKeySpec(SecretKeySpec key)
     {
+        if(key == null)
+        {
+            return false;
+        }
         try
         {
-            // Get the private 'key' field from SecretKeySpec
             Field keyField = SecretKeySpec.class.getDeclaredField("key");
-            // Make the private field accessible
             keyField.setAccessible(true);
-            
-            // Get the byte array holding the key
             byte[] keyBytes = (byte[]) keyField.get(key);
-            // If the key array exists, fill it with zeros
-            if (keyBytes != null)
+            if(keyBytes == null)
             {
-                Arrays.fill(keyBytes, (byte) 0);
+                return false;
             }
+            Arrays.fill(keyBytes, (byte) 0);
             return true;
         }
-        catch (NoSuchFieldException | SecurityException | IllegalArgumentException | IllegalAccessException ex)
+        catch (NoSuchFieldException | IllegalAccessException | RuntimeException ex)
         {
+            // InaccessibleObjectException (JDK 9+) and SecurityException are RuntimeExceptions
             return false;
         }
     }
 
     /**
-     * Attempts to securely wipe the key material stored within a generic
-     * {@code SecretKey} object.
-     * <p>
-     * If the provided {@code SecretKey} is an instance of
-     * {@code SecretKeySpec}, it delegates to
-     * {@link #wipeSecretKeySpec(SecretKeySpec)} for a more targeted wipe.
-     * Otherwise, it uses reflection to iterate through all declared fields of
-     * the {@code SecretKey} object's class. If a field is found to be a
-     * {@code byte[]} array, it attempts to overwrite its contents with zeros.
-     * </p>
-     * <p>
-     * This method is a best-effort attempt and may not be exhaustive for all
-     * {@code SecretKey} implementations, as key material might be stored in
-     * different types of fields or in native memory.
-     * </p>
+     * Attempts to wipe a generic {@link SecretKey}, trying in order:
+     * <ol>
+     * <li>{@link SecretKey#destroy()} (reliable for implementations that
+     * support it, such as {@link SecureSecretKey}; the default implementation
+     * throws on most JDK keys);</li>
+     * <li>{@link #wipeSecretKeySpec(SecretKeySpec)} for {@code SecretKeySpec};</li>
+     * <li>reflection over the non-static {@code byte[]} fields of the key's
+     * class and its superclasses.</li>
+     * </ol>
      *
-     * @param key The {@code SecretKey} object whose key material needs to
-     * be wiped.
-     * @return {@code true} if at least one {@code byte[]} field was found and
-     * wiped, {@code false} otherwise (e.g., no {@code byte[]} fields were found
-     * or accessible).
+     * <p>Best effort only: key material may live in other field types, in
+     * native memory, or be unreachable due to module encapsulation.</p>
+     *
+     * @param key the key to wipe; may be {@code null}
+     * @return {@code true} if the key was destroyed or at least one non-null
+     *         {@code byte[]} field was zeroed; {@code false} otherwise.
      */
     public static boolean wipeSecretKey(SecretKey key)
     {
-        if(key==null)
+        if(key == null)
         {
-            throw new NullPointerException("key must not be null");
+            return false;
         }
-        // Handle SecretKeySpec specifically for a more reliable wipe
-        if (key instanceof SecretKeySpec)
+
+        try
         {
-            if(wipeSecretKeySpec((SecretKeySpec) key))
+            key.destroy();
+            if(key.isDestroyed())
             {
                 return true;
             }
         }
-        
-        Class<?> clazz = key.getClass();
-        // Get all declared fields of the SecretKey's class
-        Field[] fields = clazz.getDeclaredFields();
-        boolean foundAndWiped = false;
-
-        // Iterate through all fields
-        for (Field field : fields)
+        catch (DestroyFailedException | RuntimeException ex)
         {
-            // Check if the field is a byte array
-            if (field.getType().equals(byte[].class))
+            // not supported by this key: fall through to reflection
+        }
+
+        if(key instanceof SecretKeySpec && wipeSecretKeySpec((SecretKeySpec) key))
+        {
+            return true;
+        }
+
+        boolean wiped = false;
+        for(Class<?> c = key.getClass(); c != null && c != Object.class; c = c.getSuperclass())
+        {
+            for(Field field : c.getDeclaredFields())
             {
+                if(field.getType() != byte[].class || Modifier.isStatic(field.getModifiers()))
+                {
+                    continue;
+                }
                 try
                 {
-                    // Make the private field accessible
                     field.setAccessible(true);
-                    // Get the byte array instance
-                    byte[] keyArray = (byte[]) field.get(key);
-
-                    // If the array exists, fill it with zeros
-                    if (keyArray != null)
+                    byte[] array = (byte[]) field.get(key);
+                    if(array != null)
                     {
-                        Arrays.fill(keyArray, (byte) 0);
-                        foundAndWiped = true;
+                        Arrays.fill(array, (byte) 0);
+                        wiped = true;
                     }
                 }
-                catch (IllegalAccessException ex)
+                catch (IllegalAccessException | RuntimeException ex)
                 {
-                    // Ignore fields that are not accessible even after setAccessible(true)
-                    // or other access exceptions. This might happen with final fields or
-                    // security manager restrictions.
+                    // inaccessible (e.g. InaccessibleObjectException on JDK 9+): skip
                 }
             }
         }
-        return foundAndWiped;
+        return wiped;
     }
 }
