@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto.bips;
 
-import io.nut.base.crypto.Digest;
+import io.nut.base.jca.Digest;
 import io.nut.base.crypto.alt.RIPEMD160;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.encoding.Base58;

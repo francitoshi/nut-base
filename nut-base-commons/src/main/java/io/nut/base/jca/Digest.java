@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.crypto;
+package io.nut.base.jca;
 
-import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;

@@ -5,6 +5,8 @@
  */
 package io.nut.base.jca;
 
+import io.nut.base.util.As;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -983,5 +985,100 @@ public class Kr
         return signature.verify(sign);
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Digest data  /////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    public HMAC getHMAC(Hmac algorithm)
+    {
+        return new HMAC(this, algorithm);
+    }
+
+    public Digest getDigest(MessageDigestAlgorithm algorithm)
+    {
+        return new Digest(this, algorithm);
+    }
+
+    //useful instances
+    public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
+    public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
+    public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
+    
+    ////////////////////////////////////////////////////////////////////////////
+    ///// HMAC facilities //////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    public Mac getMac(Hmac hash, SecretKey key)
+    {
+        try
+        {
+            return getMac(hash.name(), key);
+        }
+        catch (NoSuchAlgorithmException ex)
+        {
+            throw new IllegalArgumentException("Unsupported MAC algorithm: " + hash.name(), ex);
+        }
+    }
+    
+    /**
+     * Creates a {@link SecretKey} from the provided byte array and algorithm.
+     *
+     * @param secretKey the key material
+     * @param hmac the Hmac algorithm used as SecretKey
+     * @return a new SecretKey instance
+     */
+    public SecretKey getSecretKey(byte[] secretKey, Hmac hmac)
+    {
+        return new SecretKeySpec(secretKey, hmac.name());
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Salt facilities ////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
+    /**
+     * Derives bytes from a character sequence using SHA-256.
+     *
+     * @param src the input character sequence
+     * @return the derived bytes
+     */
+    public byte[] deriveSaltSHA256(CharSequence src)
+    {
+        MessageDigest md = this.sha256.get();
+        md.update(normalizeNFKD(src).getBytes(StandardCharsets.UTF_8));
+        return md.digest();
+    }
+
+    /**
+     * Derives bytes from multiple character arrays using SHA-256.
+     *
+     * @param src the character arrays to process
+     * @return the derived bytes
+     */
+    public byte[] deriveSaltSHA256(char[]... src)
+    {
+        MessageDigest md = this.sha256.get();
+        for (char[] item : src)
+        {
+            md.update(As.bytesUTF8(item));
+        }
+        return md.digest();
+    }
+
+    /**
+     * Derives bytes from multiple byte arrays using SHA-256.
+     *
+     * @param src the byte arrays to process
+     * @return the derived bytes
+     */
+    public byte[] deriveSaltSHA256(byte[]... src)
+    {
+        MessageDigest md = this.sha256.get();
+        for (byte[] item : src)
+        {
+            md.update(item);
+        }
+        return md.digest();
+    }
 
 }

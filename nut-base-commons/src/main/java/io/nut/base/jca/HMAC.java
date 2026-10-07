@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.crypto;
+package io.nut.base.jca;
 
-import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.Hmac;
 import java.nio.charset.Charset;
 import javax.crypto.Mac;
@@ -15,18 +14,18 @@ import javax.crypto.spec.SecretKeySpec;
 public class HMAC
 {
 
-    final Kripto kripto;
+    final Kr kr;
     final Hmac algorithm;
 
-    public HMAC(Kripto kripto, Hmac algorithm)
+    public HMAC(Kr kr, Hmac algorithm)
     {
-        this.kripto = kripto==null ? Kripto.getInstance() : kripto;
+        this.kr = kr==null ? Kr.getInstance() : kr;
         this.algorithm = algorithm;
     }
     
     public Mac get(SecretKey secretKey)
     {
-        return kripto.getMac(algorithm, secretKey);
+        return kr.getMac(algorithm, secretKey);
     }
 
     public byte[] digest(byte[] secretKey, byte[] bytes) 

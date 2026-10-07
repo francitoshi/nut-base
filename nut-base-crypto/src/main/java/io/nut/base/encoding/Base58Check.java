@@ -8,7 +8,7 @@
 
 package io.nut.base.encoding;
 
-import io.nut.base.crypto.Digest;
+import io.nut.base.jca.Digest;
 import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

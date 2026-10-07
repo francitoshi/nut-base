@@ -3,11 +3,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.crypto;
+package io.nut.base.jca;
 
 import io.nut.base.jca.Kr.Hmac;
 import io.nut.base.encoding.Hex;
-import io.nut.base.jca.Kr;
 import io.nut.base.util.CharSets;
 import java.io.UnsupportedEncodingException;
 import javax.crypto.SecretKey;
@@ -21,7 +20,7 @@ import org.junit.jupiter.api.Test;
  */
 public class HMACTest
 {
-    static final Kripto KRIPTO = Kripto.getInstance();
+    static final Kr KRIPTO = Kr.getInstance();
     
     private void checkHmacSHA256(String key, String data, String result) throws UnsupportedEncodingException
     {

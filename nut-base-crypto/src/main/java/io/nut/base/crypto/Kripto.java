@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Digest;
 import io.nut.base.crypto.shamir.ShamirSharedSecret;
 import io.nut.base.crypto.kdf.HKDF;
 import io.nut.base.crypto.kdf.HKDFBC;
@@ -221,84 +222,7 @@ public class Kripto extends io.nut.base.jca.Kr
             return SecretKeyFactory.getInstance(algoritm.name());
         }
     }
-
-    ////////////////////////////////////////////////////////////////////////////
-    ///// HMAC facilities //////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
     
-    public Mac getMac(Hmac hash, SecretKey key)
-    {
-        try
-        {
-            return getMac(hash.name(), key);
-        }
-        catch (NoSuchAlgorithmException ex)
-        {
-            throw new IllegalArgumentException("Unsupported MAC algorithm: " + hash.name(), ex);
-        }
-    }
-    
-    /**
-     * Creates a {@link SecretKey} from the provided byte array and algorithm.
-     *
-     * @param secretKey the key material
-     * @param hmac the Hmac algorithm used as SecretKey
-     * @return a new SecretKey instance
-     */
-    public SecretKey getSecretKey(byte[] secretKey, Hmac hmac)
-    {
-        return new SecretKeySpec(secretKey, hmac.name());
-    }
-    
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Salt facilities ////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    /**
-     * Derives bytes from a character sequence using SHA-256.
-     *
-     * @param src the input character sequence
-     * @return the derived bytes
-     */
-    public byte[] deriveSaltSHA256(CharSequence src)
-    {
-        MessageDigest md = this.sha256.get();
-        md.update(normalizeNFKD(src).getBytes(StandardCharsets.UTF_8));
-        return md.digest();
-    }
-
-    /**
-     * Derives bytes from multiple character arrays using SHA-256.
-     *
-     * @param src the character arrays to process
-     * @return the derived bytes
-     */
-    public byte[] deriveSaltSHA256(char[]... src)
-    {
-        MessageDigest md = this.sha256.get();
-        for (char[] item : src)
-        {
-            md.update(As.bytesUTF8(item));
-        }
-        return md.digest();
-    }
-
-    /**
-     * Derives bytes from multiple byte arrays using SHA-256.
-     *
-     * @param src the byte arrays to process
-     * @return the derived bytes
-     */
-    public byte[] deriveSaltSHA256(byte[]... src)
-    {
-        MessageDigest md = this.sha256.get();
-        for (byte[] item : src)
-        {
-            md.update(item);
-        }
-        return md.digest();
-    }
-
     ////////////////////////////////////////////////////////////////////////////
     ///// KeyAgreement Algorithms ///////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -511,16 +435,6 @@ public class Kripto extends io.nut.base.jca.Kr
     ////////////////////////////////////////////////////////////////////////////
     ///// Digest data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
-    
-    public HMAC getHMAC(Hmac algorithm)
-    {
-        return new HMAC(this, algorithm);
-    }
-
-    public Digest getDigest(MessageDigestAlgorithm algorithm)
-    {
-        return new Digest(this, algorithm);
-    }
 
     /**
      * Computes RIPEMD160(SHA256(input)), the hash160 of a compressed public key.
@@ -548,10 +462,6 @@ public class Kripto extends io.nut.base.jca.Kr
         return new Steganography(this, columns, splitLines, mergeLines, deflate);
     }
 
-    //useful instances
-    public final Digest sha256 = getDigest(MessageDigestAlgorithm.SHA256);
-    public final Digest sha384 = getDigest(MessageDigestAlgorithm.SHA384);
-    public final Digest sha512 = getDigest(MessageDigestAlgorithm.SHA512);
     /**
      * The RIPEMD160 digest of this provider.
      *

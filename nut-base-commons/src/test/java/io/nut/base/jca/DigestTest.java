@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.crypto;
+package io.nut.base.jca;
 
 import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import io.nut.base.encoding.Hex;
@@ -20,12 +20,12 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class DigestTest
 {
-    final Kripto kripto = Kripto.getInstanceBouncyCastle();
-    final Digest md5 = kripto.getDigest(MessageDigestAlgorithm.MD5);
-    final Digest sha1 = kripto.getDigest(MessageDigestAlgorithm.SHA1);
-    final Digest sha256 = kripto.getDigest(MessageDigestAlgorithm.SHA256);
-    final Digest sha512 = kripto.getDigest(MessageDigestAlgorithm.SHA512);
-    final Digest ripemd160 = kripto.getDigest(MessageDigestAlgorithm.RIPEMD160);
+    final Kr kr = Kr.getInstance();
+    final Digest md5 = kr.getDigest(MessageDigestAlgorithm.MD5);
+    final Digest sha1 = kr.getDigest(MessageDigestAlgorithm.SHA1);
+    final Digest sha256 = kr.getDigest(MessageDigestAlgorithm.SHA256);
+    final Digest sha512 = kr.getDigest(MessageDigestAlgorithm.SHA512);
+    final Digest ripemd160 = kr.getDigest(MessageDigestAlgorithm.RIPEMD160);
     
     @Test
     public void testSome() throws UnsupportedEncodingException

@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto.ec;
 
-import io.nut.base.crypto.Digest;
+import io.nut.base.jca.Digest;
 import io.nut.base.util.As;
 import io.nut.base.lang.Joins;
 import io.nut.base.util.Utils;
