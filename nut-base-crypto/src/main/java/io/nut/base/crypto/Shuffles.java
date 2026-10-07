@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Kr;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,7 +20,7 @@ public class Shuffles
     enum Holder
     {
         INSTANCE;
-        private final SecureRandom secureRandom = Kripto.getSecureRandomStrong();
+        private final SecureRandom secureRandom = Kr.getSecureRandomStrong();
     }
 
     private static SecureRandom getSecureRandom()

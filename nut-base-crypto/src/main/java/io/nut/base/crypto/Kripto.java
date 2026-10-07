@@ -11,20 +11,17 @@ import io.nut.base.crypto.kdf.HKDF;
 import io.nut.base.crypto.kdf.HKDFBC;
 import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.crypto.stego.Steganography;
+import io.nut.base.jca.Kr;
 import io.nut.base.lang.Exceptions;
 import io.nut.base.lang.Strings;
-import io.nut.base.util.As;
 import io.nut.base.util.Comparators;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
-import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;
-import java.security.Key;
 import java.security.KeyFactory;
-import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.MessageDigest;
@@ -37,23 +34,16 @@ import java.security.PublicKey;
 import java.security.Security;
 import java.security.Signature;
 import java.security.SignatureException;
-import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.text.Normalizer;
 import java.util.Arrays;
 import java.util.function.UnaryOperator;
-import javax.crypto.BadPaddingException;
-import javax.crypto.Cipher;
-import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyAgreement;
 import javax.crypto.KeyGenerator;
-import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
-import javax.crypto.spec.SecretKeySpec;
 
 /**
  * A utility class providing cryptographic operations including encryption,
@@ -62,7 +52,7 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * @author franci
  */
-public class Kripto extends io.nut.base.jca.Kr
+public class Kripto extends Kr
 {
     ////////////////////////////////////////////////////////////////////////////
     ///// GOOD PRACTICES ///////////////////////////////////////////////////////
@@ -90,31 +80,6 @@ public class Kripto extends io.nut.base.jca.Kr
     public static Rand getRand()
     {
         return new Rand(getSecureRandom());
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Bouncy Castle registration ///////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    private static volatile boolean registeredBouncyCastle;
-
-    public static boolean registerBouncyCastle()
-    {
-        if (!registeredBouncyCastle)
-        {
-            try
-            {
-                Class<?> bcp = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
-                Security.addProvider((Provider) bcp.getDeclaredConstructor().newInstance());
-                registeredBouncyCastle = true;
-            }
-            catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | InstantiationException | IllegalAccessException ex)
-            {
-                Exceptions.severe(LOG, ex);
-                registeredBouncyCastle = false;
-            }
-        }
-        return registeredBouncyCastle;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -207,158 +172,7 @@ public class Kripto extends io.nut.base.jca.Kr
         super(providerName, forceProvider);
     }
 
-    public SecretKeyFactory getSecretKeyFactory(Pbkdf2 algoritm) throws NoSuchAlgorithmException
-    {
-        try
-        {
-            return this.providerName == null ? SecretKeyFactory.getInstance(algoritm.name()) : SecretKeyFactory.getInstance(algoritm.name(), this.providerName);
-        }
-        catch (NoSuchProviderException ex)
-        {
-            if (this.forceProvider)
-            {
-                throw new ProviderException(ex.getMessage(), ex);
-            }
-            return SecretKeyFactory.getInstance(algoritm.name());
-        }
-    }
     
-    ////////////////////////////////////////////////////////////////////////////
-    ///// KeyAgreement Algorithms ///////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    
-    /**
-     * Performs a key agreement to generate a shared {@link SecretKey}.
-     *
-     * @param kpa the key pair algorithm
-     * @param kaa the key agreement algorithm
-     * @param privateKeyBytes the private key bytes
-     * @param foreignKeyBytes the foreign public key bytes
-     * @return the shared SecretKey
-     * @throws NoSuchAlgorithmException if the algorithm is not available
-     * @throws InvalidKeyException if the key is invalid
-     * @throws InvalidAlgorithmParameterException if the parameters are invalid
-     * @throws InvalidKeySpecException if the key specification is invalid
-     * @throws NoSuchPaddingException if the padding is not available
-    //use the pair (EC,ECDH) or (DiffieHellman,DiffieHellman)
-     */
-    public SecretKey makeAgreement(KeyPairAlgorithm kpa, KeyAgreementAlgorithm kaa, byte[] privateKeyBytes, byte[] foreignKeyBytes) throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchPaddingException
-    {
-        KeyFactory keyFactory = this.getKeyFactory(kpa.name());
-        KeyAgreement keyAgreement = this.getKeyAgreement(kaa.name());
-
-        X509EncodedKeySpec foreignSpec = new X509EncodedKeySpec(foreignKeyBytes);
-        PublicKey foreignKey = keyFactory.generatePublic(foreignSpec);
-
-        PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        PrivateKey privateKey = keyFactory.generatePrivate(privateSpec);
-
-        keyAgreement.init(privateKey);
-        keyAgreement.doPhase(foreignKey, true);
-        return keyAgreement.generateSecret(kpa.name());
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Signatures ///////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-        
-    /**
-     * Returns a {@link Signature} instance for the specified algorithm.
-     *
-     * @param algorithm the signature algorithm to use
-     * @return a Signature instance
-     * @throws NoSuchAlgorithmException if the algorithm is not available
-     */
-    public Signature getSignature(SignatureAlgorithm algorithm) throws NoSuchAlgorithmException
-    {
-        return this.getSignature(algorithm.name());
-    }
-
-    /**
-     * Signs data using a private key and specified signature algorithm.
-     *
-     * @param algorithm the signature algorithm to use
-     * @param privateKey the private key for signing
-     * @param data the data to sign (multiple arrays)
-     * @return the signature bytes
-     * @throws InvalidKeyException if the key is invalid
-     * @throws SignatureException if the signature process fails
-     * @throws NoSuchAlgorithmException if the algorithm is not available
-     */
-    public byte[] sign(SignatureAlgorithm algorithm, PrivateKey privateKey, byte[]... data) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException
-    {
-        Signature signature = this.getSignature(algorithm);
-        signature.initSign(privateKey);
-        for (byte[] item : data)
-        {
-            signature.update(item);
-        }
-        return signature.sign();
-    }
-
-    /**
-     * Verifies a signature using a public key and specified signature
-     * algorithm.
-     *
-     * @param algorithm the signature algorithm to use
-     * @param publicKey the public key for verification
-     * @param sign the signature bytes to verify
-     * @param data the data to verify (multiple arrays)
-     * @return true if the signature is valid, false otherwise
-     * @throws InvalidKeyException if the key is invalid
-     * @throws SignatureException if the verification process fails
-     * @throws NoSuchAlgorithmException if the algorithm is not available
-     */
-    public boolean verify(SignatureAlgorithm algorithm, PublicKey publicKey, byte[] sign, byte[]... data) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException
-    {
-        Signature signature = this.getSignature(algorithm);
-        signature.initVerify(publicKey);
-        for (byte[] item : data)
-        {
-            signature.update(item);
-        }
-        return signature.verify(sign);
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Debug things /////////////////////////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-    
-    /**
-     * Displays information about all registered security providers.
-     *
-     * @param out the PrintStream to output the information
-     */
-    public static void showProvidersInfo(PrintStream out)
-    {
-        String hr10 = Strings.repeat('-', 10);
-        String hr40 = Strings.repeat('-', 40);
-
-        for (Provider provider : Security.getProviders())
-        {
-            out.println(hr40);
-            out.println(Strings.fill(hr10 + ' ' + provider.getName() + ' ', '-', 40));
-            out.println(hr40);
-            showProviderInfo(out, provider);
-            out.println(hr40);
-            out.println();
-        }
-    }
-
-    /**
-     * Displays information about a specific security provider.
-     *
-     * @param out the PrintStream to output the information
-     * @param provider the Provider to display information about
-     */
-    public static void showProviderInfo(PrintStream out, Provider provider)
-    {
-        out.println(provider.getInfo());
-        for (Provider.Service service : provider.getServices())
-        {
-            out.println("  " + service.toString());
-        }
-    }
 
     ////////////////////////////////////////////////////////////////////////////
     ///// Shared Secrets n of m share the secret key ///////////////////////////

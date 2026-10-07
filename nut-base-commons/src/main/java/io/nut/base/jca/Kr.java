@@ -5,7 +5,11 @@
  */
 package io.nut.base.jca;
 
+import io.nut.base.lang.Exceptions;
+import io.nut.base.lang.Strings;
 import io.nut.base.util.As;
+import java.io.PrintStream;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
@@ -18,12 +22,17 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.ProviderException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
+import java.security.Security;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.spec.AlgorithmParameterSpec;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.text.Normalizer;
 import java.util.logging.Logger;
 import javax.crypto.BadPaddingException;
@@ -34,6 +43,7 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -155,6 +165,28 @@ public class Kr
     ///// Bouncy Castle registration ///////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
+    private static volatile boolean registeredBouncyCastle;
+
+    public static boolean registerBouncyCastle()
+    {
+        if (!registeredBouncyCastle)
+        {
+            try
+            {
+                Class<?> bcp = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
+                Security.addProvider((Provider) bcp.getDeclaredConstructor().newInstance());
+                registeredBouncyCastle = true;
+            }
+            catch (ClassNotFoundException | NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException | InstantiationException | IllegalAccessException ex)
+            {
+                Exceptions.severe(LOG, ex);
+                registeredBouncyCastle = false;
+            }
+        }
+        return registeredBouncyCastle;
+    }
+
+    
     ////////////////////////////////////////////////////////////////////////////
     ///// Random data  /////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -373,6 +405,23 @@ public class Kr
     {
         return Holder.INSTANCE.kr;
     }
+    
+    public SecretKeyFactory getSecretKeyFactory(Pbkdf2 algoritm) throws NoSuchAlgorithmException
+    {
+        try
+        {
+            return this.providerName == null ? SecretKeyFactory.getInstance(algoritm.name()) : SecretKeyFactory.getInstance(algoritm.name(), this.providerName);
+        }
+        catch (NoSuchProviderException ex)
+        {
+            if (this.forceProvider)
+            {
+                throw new ProviderException(ex.getMessage(), ex);
+            }
+            return SecretKeyFactory.getInstance(algoritm.name());
+        }
+    }
+    
 
     ////////////////////////////////////////////////////////////////////////////
     ///// PROTECTED METHODS ////////////////////////////////////////////////////
@@ -1008,7 +1057,7 @@ public class Kr
     ///// HMAC facilities //////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
     
-    public Mac getMac(Hmac hash, SecretKey key)
+    public final Mac getMac(Hmac hash, SecretKey key)
     {
         try
         {
@@ -1027,7 +1076,7 @@ public class Kr
      * @param hmac the Hmac algorithm used as SecretKey
      * @return a new SecretKey instance
      */
-    public SecretKey getSecretKey(byte[] secretKey, Hmac hmac)
+    public final SecretKey getSecretKey(byte[] secretKey, Hmac hmac)
     {
         return new SecretKeySpec(secretKey, hmac.name());
     }
@@ -1042,7 +1091,7 @@ public class Kr
      * @param src the input character sequence
      * @return the derived bytes
      */
-    public byte[] deriveSaltSHA256(CharSequence src)
+    public final byte[] deriveSaltSHA256(CharSequence src)
     {
         MessageDigest md = this.sha256.get();
         md.update(normalizeNFKD(src).getBytes(StandardCharsets.UTF_8));
@@ -1055,7 +1104,7 @@ public class Kr
      * @param src the character arrays to process
      * @return the derived bytes
      */
-    public byte[] deriveSaltSHA256(char[]... src)
+    public final byte[] deriveSaltSHA256(char[]... src)
     {
         MessageDigest md = this.sha256.get();
         for (char[] item : src)
@@ -1071,7 +1120,7 @@ public class Kr
      * @param src the byte arrays to process
      * @return the derived bytes
      */
-    public byte[] deriveSaltSHA256(byte[]... src)
+    public final byte[] deriveSaltSHA256(byte[]... src)
     {
         MessageDigest md = this.sha256.get();
         for (byte[] item : src)
@@ -1081,4 +1130,78 @@ public class Kr
         return md.digest();
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    ///// KeyAgreement Algorithms ///////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Performs a key agreement to generate a shared {@link SecretKey}.
+     *
+     * @param kpa the key pair algorithm
+     * @param kaa the key agreement algorithm
+     * @param privateKeyBytes the private key bytes
+     * @param foreignKeyBytes the foreign public key bytes
+     * @return the shared SecretKey
+     * @throws NoSuchAlgorithmException if the algorithm is not available
+     * @throws InvalidKeyException if the key is invalid
+     * @throws InvalidAlgorithmParameterException if the parameters are invalid
+     * @throws InvalidKeySpecException if the key specification is invalid
+     * @throws NoSuchPaddingException if the padding is not available
+    //use the pair (EC,ECDH) or (DiffieHellman,DiffieHellman)
+     */
+    public SecretKey makeAgreement(KeyPairAlgorithm kpa, KeyAgreementAlgorithm kaa, byte[] privateKeyBytes, byte[] foreignKeyBytes) throws NoSuchAlgorithmException, InvalidKeyException, InvalidAlgorithmParameterException, InvalidKeySpecException, NoSuchPaddingException
+    {
+        KeyFactory keyFactory = this.getKeyFactory(kpa.name());
+        KeyAgreement keyAgreement = this.getKeyAgreement(kaa.name());
+
+        X509EncodedKeySpec foreignSpec = new X509EncodedKeySpec(foreignKeyBytes);
+        PublicKey foreignKey = keyFactory.generatePublic(foreignSpec);
+
+        PKCS8EncodedKeySpec privateSpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        PrivateKey privateKey = keyFactory.generatePrivate(privateSpec);
+
+        keyAgreement.init(privateKey);
+        keyAgreement.doPhase(foreignKey, true);
+        return keyAgreement.generateSecret(kpa.name());
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Debug things /////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+    
+    /**
+     * Displays information about all registered security providers.
+     *
+     * @param out the PrintStream to output the information
+     */
+    public static void showProvidersInfo(PrintStream out)
+    {
+        String hr10 = Strings.repeat('-', 10);
+        String hr40 = Strings.repeat('-', 40);
+
+        for (Provider provider : Security.getProviders())
+        {
+            out.println(hr40);
+            out.println(Strings.fill(hr10 + ' ' + provider.getName() + ' ', '-', 40));
+            out.println(hr40);
+            showProviderInfo(out, provider);
+            out.println(hr40);
+            out.println();
+        }
+    }
+
+    /**
+     * Displays information about a specific security provider.
+     *
+     * @param out the PrintStream to output the information
+     * @param provider the Provider to display information about
+     */
+    public static void showProviderInfo(PrintStream out, Provider provider)
+    {
+        out.println(provider.getInfo());
+        for (Provider.Service service : provider.getServices())
+        {
+            out.println("  " + service.toString());
+        }
+    }
 }

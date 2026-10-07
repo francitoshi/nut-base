@@ -14,23 +14,22 @@ import java.security.MessageDigest;
  * digests).
  * <p>
  * This class acts as a wrapper around {@link java.security.MessageDigest} to
- * provide a more convenient and fluent API. It handles exceptions, provides
- * shortcuts for common algorithms like SHA-256 and MD5, and includes
- * specialized methods used in cryptocurrency protocols.
+ * provide a more convenient API. It handles exceptions, provides shortcuts for
+ * common algorithms like SHA-256 and RIPEMD160, and includes specialized
+ * methods used in cryptocurrency protocols (double hashing, hash chains).
  * <p>
- * Instances of this class are configured for a specific algorithm. For
- * convenience, it also provides lazily-initialized singleton instances for
- * common algorithms, making it easy to perform hashes without manually managing
- * {@code MessageDigest} objects.
+ * Instances of this class are configured for a specific algorithm. Reusable
+ * instances for the most common algorithms are available on {@link Kr}
+ * (e.g., {@code kr.sha256}, {@code kr.sha384}, {@code kr.sha512}), making it
+ * easy to perform hashes without manually managing {@code MessageDigest}
+ * objects.
  * <p>
  * <b>Thread Safety:</b> This class is thread-safe. The core {@code digest}
  * methods create a new {@link MessageDigest} instance for each operation, as
- * those objects are not reusable. The lazily-initialized helper instances
- * (e.g., {@code md5Digest}) are declared as {@code volatile} to ensure
- * visibility across threads.
+ * those objects are not reusable and are not safe for concurrent use.
  *
  * @see java.security.MessageDigest
- * @see io.nut.base.crypto.Kr
+ * @see Kr
  */
 public class Digest
 {
