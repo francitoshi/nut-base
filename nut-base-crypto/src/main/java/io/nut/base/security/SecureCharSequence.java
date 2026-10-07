@@ -5,8 +5,8 @@
  */
 package io.nut.base.security;
 
-import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Rand;
+import io.nut.base.jca.Kr;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -18,7 +18,7 @@ import javax.security.auth.Destroyable;
 public class SecureCharSequence implements CharSequence, Destroyable
 {
     private static final String HIDDEN_CONTENT_MESSAGE = "[SecureCharSequence: ****]";
-    private static final Rand rand = Kripto.getRand();
+    private static final Rand rand = new Rand(Kr.getSecureRandom());
     
     private final AtomicInteger acquireCount = new AtomicInteger();
     private final int[] chars;
@@ -26,7 +26,7 @@ public class SecureCharSequence implements CharSequence, Destroyable
     private final int length;
     private final SecureChars secureChars;
     
-    public SecureCharSequence(char[] src, Charset charset, Kripto kripto)
+    public SecureCharSequence(char[] src, Charset charset, Kr kripto)
     {
         if (src == null)
         {

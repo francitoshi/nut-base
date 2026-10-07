@@ -5,8 +5,8 @@
  */
 package io.nut.base.security;
 
-import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Rand;
+import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
 import io.nut.base.lang.Empty;
 import java.security.InvalidAlgorithmParameterException;
@@ -66,12 +66,12 @@ import javax.security.auth.Destroyable;
 public final class SecureBytes implements AutoCloseable, Destroyable
 {
     /**
-     * Lazy-initialized singleton holder for the shared {@link Kripto} instance.
+     * Lazy-initialized singleton holder for the shared {@link Kr} instance.
      */
     private enum Holder
     {
         INSTANCE;
-        final Kripto kripto = Kripto.getInstance();
+        final Kr kripto = Kr.getInstance();
     }
 
     /** Length of the AES-GCM initialization vector in bytes (96 bits). */
@@ -87,10 +87,10 @@ public final class SecureBytes implements AutoCloseable, Destroyable
     private static final String AES = "AES";
 
     /** Shared cryptographically-secure random generator. */
-    private static final Rand RAND = Kripto.getRand();
+    private static final Rand RAND = new Rand(Kr.getSecureRandom());
 
     /** Cryptographic utilities used to create IVs and ciphers. */
-    private final Kripto kripto;
+    private final Kr kripto;
 
     /** Random IV generated fresh for every instance. */
     private final byte[] iv;
@@ -106,7 +106,7 @@ public final class SecureBytes implements AutoCloseable, Destroyable
 
     /**
      * Constructs a {@code SecureBytes} instance that encrypts {@code data}
-     * with AES-256-GCM using the provided {@link Kripto} instance (or the
+     * with AES-256-GCM using the provided {@link Kr} instance (or the
      * shared default if {@code null}).
      *
      * <p>The {@code data} array is zeroed by this constructor, including when
@@ -117,12 +117,12 @@ public final class SecureBytes implements AutoCloseable, Destroyable
      * operation.</p>
      *
      * @param data   the plaintext to protect; may be {@code null} or empty.
-     * @param kripto the {@link Kripto} instance to use; if {@code null} the
+     * @param kripto the {@link Kr} instance to use; if {@code null} the
      *               shared singleton is used.
      * @throws RuntimeException wrapping any JCA exception that occurs during
      *                          encryption.
      */
-    public SecureBytes(byte[] data, Kripto kripto)
+    public SecureBytes(byte[] data, Kr kripto)
     {
         if(data == null)
         {
@@ -143,7 +143,7 @@ public final class SecureBytes implements AutoCloseable, Destroyable
             return;
         }
 
-        Kripto k = kripto == null ? Holder.INSTANCE.kripto : kripto;
+        Kr k = kripto == null ? Holder.INSTANCE.kripto : kripto;
         byte[] keyBytes = null;
         byte[] ivBytes = null;
         byte[] cipherText;
@@ -189,7 +189,7 @@ public final class SecureBytes implements AutoCloseable, Destroyable
 
     /**
      * Constructs a {@code SecureBytes} instance using the shared default
-     * {@link Kripto} instance. Equivalent to {@code new SecureBytes(data, null)}.
+     * {@link Kr} instance. Equivalent to {@code new SecureBytes(data, null)}.
      *
      * @param data the plaintext to protect; may be {@code null} or empty.
      */

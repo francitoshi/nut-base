@@ -5,7 +5,8 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.KeyStoreType;
+import io.nut.base.jca.Kr;
+import io.nut.base.jca.Kr.KeyStoreType;
 import java.nio.charset.StandardCharsets;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;

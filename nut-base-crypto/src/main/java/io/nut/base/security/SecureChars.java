@@ -5,7 +5,7 @@
  */
 package io.nut.base.security;
 
-import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import io.nut.base.lang.Chars;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -48,14 +48,14 @@ public final class SecureChars implements AutoCloseable, Destroyable
     private final Charset charset;
 
     /**
-     * Protects {@code src} using the given charset and {@link Kripto}.
+     * Protects {@code src} using the given charset and {@link Kr}.
      *
      * @param src     the characters to protect; may be {@code null} or empty.
      *                Zeroed by this constructor.
      * @param charset encoding to use; {@code null} means UTF-8.
      * @param kripto  crypto provider; {@code null} means the shared default.
      */
-    public SecureChars(char[] src, Charset charset, Kripto kripto)
+    public SecureChars(char[] src, Charset charset, Kr kripto)
     {
         Charset cs = charset == null ? StandardCharsets.UTF_8 : charset;
         SecureBytes sb;
@@ -75,18 +75,18 @@ public final class SecureChars implements AutoCloseable, Destroyable
     }
 
     /**
-     * Uses UTF-8 and the given {@link Kripto}.
+     * Uses UTF-8 and the given {@link Kr}.
      *
      * @param kripto crypto provider; {@code null} means the shared default.
      * @param src    the characters to protect. Zeroed by this constructor.
      */
-    public SecureChars(Kripto kripto, char[] src)
+    public SecureChars(Kr kripto, char[] src)
     {
         this(src, StandardCharsets.UTF_8, kripto);
     }
 
     /**
-     * Uses UTF-8 and the shared default {@link Kripto}.
+     * Uses UTF-8 and the shared default {@link Kr}.
      *
      * @param src the characters to protect. Zeroed by this constructor.
      */

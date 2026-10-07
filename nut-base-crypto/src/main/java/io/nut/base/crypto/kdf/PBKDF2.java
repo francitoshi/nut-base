@@ -7,6 +7,7 @@ package io.nut.base.crypto.kdf;
 
 import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Ascii85;
+import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.Pbkdf2;
 import io.nut.base.jca.Kr.SecretKeyAlgorithm;
 import io.nut.base.lang.Exceptions;
@@ -51,7 +52,7 @@ public class PBKDF2
     }
 
 
-    public SecretKey deriveSecretKey(char[] password, byte[] salt, int rounds, int keyBits, Kripto.SecretKeyAlgorithm keyAlgorithm)
+    public SecretKey deriveSecretKey(char[] password, byte[] salt, int rounds, int keyBits, Kr.SecretKeyAlgorithm keyAlgorithm)
     {
         byte[] bytes = deriveSecretKeyEncoded(password, salt, rounds, keyBits);
         try

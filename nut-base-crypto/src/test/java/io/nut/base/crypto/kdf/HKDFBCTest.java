@@ -1,27 +1,12 @@
 /*
- * HKDFBCTest.java
- *
- * Copyright (c) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.crypto.kdf;
 
-import io.nut.base.crypto.Kripto;
 import io.nut.base.encoding.Hex;
+import io.nut.base.jca.Kr;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -35,7 +20,7 @@ public class HKDFBCTest
     @Test
     public void testGenerateBytes()
     {
-        HKDFBC hkdf256 = new HKDFBC(Kripto.Hkdf.HkdfWithSha256);
+        HKDFBC hkdf256 = new HKDFBC(Kr.Hkdf.HkdfWithSha256);
         {
             byte[] ikm = Hex.decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
             byte[] salt = Hex.decode("000102030405060708090a0b0c");
@@ -72,7 +57,7 @@ public class HKDFBCTest
             byte[] result = hkdf256.deriveBytes(ikm, salt, info, keyLengthBytes);
             assertArrayEquals(expResult, result);
         }
-        HKDFBC hkdf512 = new HKDFBC(Kripto.Hkdf.HkdfWithSha512);
+        HKDFBC hkdf512 = new HKDFBC(Kr.Hkdf.HkdfWithSha512);
         {
             byte[] ikm = Hex.decode("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b");
             byte[] salt = Hex.decode("000102030405060708090a0b0c");

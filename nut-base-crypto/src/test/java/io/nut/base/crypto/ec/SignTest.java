@@ -6,7 +6,7 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
-import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import io.nut.base.util.As;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class SignTest
 {
     
-    static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    static final Digest SHA256 = new Digest(null, Kr.MessageDigestAlgorithm.SHA256);
 
  
     /**

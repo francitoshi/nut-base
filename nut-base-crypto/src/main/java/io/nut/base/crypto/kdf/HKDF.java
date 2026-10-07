@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto.kdf;
 
-import io.nut.base.crypto.Kripto.Hkdf;
+import io.nut.base.jca.Kr.Hkdf;
 import io.nut.base.jca.Kr.SecretKeyAlgorithm;
 import javax.crypto.SecretKey;
 

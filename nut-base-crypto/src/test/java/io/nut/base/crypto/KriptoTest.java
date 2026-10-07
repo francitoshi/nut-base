@@ -6,9 +6,10 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.shamir.ShamirSharedSecret;
-import io.nut.base.crypto.Kripto.KeyAgreementAlgorithm;
-import io.nut.base.crypto.Kripto.SignatureAlgorithm;
+import io.nut.base.jca.Kr.KeyAgreementAlgorithm;
+import io.nut.base.jca.Kr.SignatureAlgorithm;
 import io.nut.base.encoding.Hex;
+import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.KeyPairAlgorithm;
 import io.nut.base.jca.Kr.KeyPairTransformation;
 import io.nut.base.jca.Kr.SecretKeyAlgorithm;
@@ -99,7 +100,7 @@ public class KriptoTest
     {
         Kripto instance = Kripto.getInstance();
 
-        KeyPairGenerator keyPairGenerator = instance.getKeyPairGenerator(Kripto.KeyPairAlgorithm.RSA, 512);
+        KeyPairGenerator keyPairGenerator = instance.getKeyPairGenerator(Kr.KeyPairAlgorithm.RSA, 512);
         KeyPair keyPair = keyPairGenerator.generateKeyPair();
         PublicKey pubKey = keyPair.getPublic();
         PrivateKey prvKey = keyPair.getPrivate();
@@ -144,7 +145,7 @@ public class KriptoTest
     {
         Kripto instance = Kripto.getInstance();
         {
-            MessageDigest sha224 = instance.getMessageDigest(Kripto.MessageDigestAlgorithm.SHA224);
+            MessageDigest sha224 = instance.getMessageDigest(Kr.MessageDigestAlgorithm.SHA224);
             byte[] a = sha224.digest("The quick brown fox jumps over the lazy dog".getBytes(UTF8));
             byte[] b = sha224.digest("The quick brown fox jumps over the lazy dog.".getBytes(UTF8));
             byte[] c = sha224.digest("".getBytes(UTF8));
@@ -346,7 +347,7 @@ public class KriptoTest
     @Test
     public void testExampleAgrement() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException
     {
-        Kripto kripto = Kripto.getInstance();
+        Kr kripto = Kripto.getInstance();
         // Paso 1: Generar pares de claves DH para Alice y Bob
         KeyPairGenerator keyPairGen = kripto.getKeyPairGenerator(KeyPairAlgorithm.DiffieHellman, 1024);
         keyPairGen.initialize(2048); // Tamaño de clave DH
@@ -467,7 +468,7 @@ public class KriptoTest
     @Test
     public void testGetInstance_0args()
     {
-        Kripto result = Kripto.getInstance();
+        Kr result = Kripto.getInstance();
         assertNotNull(result);
     }
 
@@ -626,7 +627,7 @@ public class KriptoTest
             assertEquals(prvKeySrc, dst);
         }
 
-        KeyPairTransformation rsaOAEP = Kripto.KeyPairTransformation.RSA_ECB_OAEPWithSHA256AndMGF1Padding;
+        KeyPairTransformation rsaOAEP = Kr.KeyPairTransformation.RSA_ECB_OAEPWithSHA256AndMGF1Padding;
 
         {
             byte[] bytes = instance.wrap(rsaWrapper.getPublic(), rsaOAEP, secKeySrc);

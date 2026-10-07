@@ -5,7 +5,8 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.Hmac;
+import io.nut.base.jca.Kr;
+import io.nut.base.jca.Kr.Hmac;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;

@@ -6,10 +6,9 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.crypto.Digest;
-import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import io.nut.base.encoding.Hex;
 import io.nut.base.util.As;
-import io.nut.base.util.Utils;
 import io.nut.base.concurrent.actor.ActorHub;
 import io.nut.base.concurrent.actor.PipelineActor;
 import java.io.InputStreamReader;
@@ -110,7 +109,7 @@ public class SchnorrTest
 
     static final int LOOPS = 25;
     static final int MS_TO_LOOP = 2_000;
-    static final Digest SHA256 = new Digest(null, Kripto.MessageDigestAlgorithm.SHA256);
+    static final Digest SHA256 = new Digest(null, Kr.MessageDigestAlgorithm.SHA256);
 
     /**
      * Test of sign method, of class Schnorr.

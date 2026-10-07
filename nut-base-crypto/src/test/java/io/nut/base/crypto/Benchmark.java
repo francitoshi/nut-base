@@ -5,11 +5,14 @@
  */
 package io.nut.base.crypto;
 
-import static io.nut.base.crypto.Kripto.CHACHA20_IV_BITS;
-import static io.nut.base.crypto.Kripto.CHACHA20_IV_BYTES;
-import static io.nut.base.crypto.Kripto.GCM_IV_BYTES;
-import static io.nut.base.crypto.Kripto.GCM_TAG_BITS;
+import io.nut.base.jca.Kr;
+import static io.nut.base.jca.Kr.CHACHA20_IV_BITS;
+import static io.nut.base.jca.Kr.CHACHA20_IV_BYTES;
+import static io.nut.base.jca.Kr.GCM_IV_BYTES;
+import static io.nut.base.jca.Kr.GCM_TAG_BITS;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
+import static io.nut.base.jca.Kr.SecretKeyTransformation.AES_GCM_NoPadding;
+import static io.nut.base.jca.Kr.SecretKeyTransformation.ChaCha20_Poly1305;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -90,7 +93,7 @@ public class Benchmark
         }
     }
 
-    private long benchmark(Kripto.SecretKeyTransformation skt, int keyBits, long nanos) throws Exception
+    private long benchmark(Kr.SecretKeyTransformation skt, int keyBits, long nanos) throws Exception
     {
         KeyGenerator keyGen = this.kripto.getKeyGenerator(skt.algorithm, keyBits);
         SecretKey key = keyGen.generateKey();
@@ -125,7 +128,7 @@ public class Benchmark
         return count;
     }
 
-    private Cipher getCipher(Kripto.SecretKeyTransformation skt, SecretKey key) throws InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, AssertionError
+    private Cipher getCipher(Kr.SecretKeyTransformation skt, SecretKey key) throws InvalidAlgorithmParameterException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, AssertionError
     {
         Cipher cipher;
         switch (skt)

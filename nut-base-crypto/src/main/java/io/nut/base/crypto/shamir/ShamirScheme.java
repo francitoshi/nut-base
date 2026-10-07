@@ -19,7 +19,7 @@
 
 package io.nut.base.crypto.shamir;
 
-import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import java.security.SecureRandom;
 
 /**
@@ -46,7 +46,7 @@ public class ShamirScheme
     {
         this.n = n;
         this.k = k;
-        this.secureRandom = Kripto.getSecureRandomStrong();
+        this.secureRandom = Kr.getSecureRandomStrong();
     }
   
   /**

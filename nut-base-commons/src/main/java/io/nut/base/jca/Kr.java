@@ -20,6 +20,7 @@ import java.security.ProviderException;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
+import java.security.SignatureException;
 import java.security.spec.AlgorithmParameterSpec;
 import java.text.Normalizer;
 import java.util.logging.Logger;
@@ -51,7 +52,7 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * @author franci
  */
-public abstract class Kr
+public class Kr
 {
     protected static final Logger LOG = Logger.getLogger(Kr.class.getName());
 
@@ -287,6 +288,56 @@ public abstract class Kr
         }
     }
     
+    public enum SignatureAlgorithm
+    {
+        @Deprecated
+        NONEwithRSA, 
+        @Deprecated
+        NONEwithDSA, 
+        @Deprecated
+        NONEwithECDSA, 
+        @Deprecated
+        SHA224withRSA,
+        @Deprecated
+        SHA224withDSA, 
+        @Deprecated
+        SHA224withECDSA,
+        SHA256withRSA, SHA384withRSA, SHA512withRSA,
+        SHA256withDSA,
+        SHA256withECDSA, SHA384withECDSA, SHA512withECDSA,
+    }
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Enums /////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+
+
+    public enum KeyAgreementAlgorithm
+    {
+        DiffieHellman, ECDH, ECMQV
+    }
+
+    public enum Hmac
+    {
+        @Deprecated
+        HmacSHA224, 
+        HmacSHA256, HmacSHA384, HmacSHA512
+    }
+    
+    public enum Hkdf
+    {
+        HkdfWithSha256, HkdfWithSha384, HkdfWithSha512
+    }
+    
+    public enum KeyStoreType
+    {
+        @Deprecated
+        JKS, 
+        @Deprecated
+        JCEKS, 
+        PKCS12, BCFKS
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     ///// Instance Members /////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -308,6 +359,17 @@ public abstract class Kr
     {
         this.providerName = providerName;
         this.forceProvider = forceProvider;
+    }
+    
+    private enum Holder
+    {
+        INSTANCE;
+        final Kr kr = new Kr();
+    }
+    
+    public static Kr getInstance()
+    {
+        return Holder.INSTANCE.kr;
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -858,6 +920,68 @@ public abstract class Kr
         return (SecretKey) getCipher(prvKey, transformation, UNWRAP_MODE).unwrap(key, secretKeyAlgorithm.name(), SECRET_KEY);
     }
 
+
+    ////////////////////////////////////////////////////////////////////////////
+    ///// Signatures ///////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////
+        
+    /**
+     * Returns a {@link Signature} instance for the specified algorithm.
+     *
+     * @param algorithm the signature algorithm to use
+     * @return a Signature instance
+     * @throws NoSuchAlgorithmException if the algorithm is not available
+     */
+    public Signature getSignature(SignatureAlgorithm algorithm) throws NoSuchAlgorithmException
+    {
+        return this.getSignature(algorithm.name());
+    }
+
+    /**
+     * Signs data using a private key and specified signature algorithm.
+     *
+     * @param algorithm the signature algorithm to use
+     * @param privateKey the private key for signing
+     * @param data the data to sign (multiple arrays)
+     * @return the signature bytes
+     * @throws InvalidKeyException if the key is invalid
+     * @throws SignatureException if the signature process fails
+     * @throws NoSuchAlgorithmException if the algorithm is not available
+     */
+    public byte[] sign(SignatureAlgorithm algorithm, PrivateKey privateKey, byte[]... data) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException
+    {
+        Signature signature = this.getSignature(algorithm);
+        signature.initSign(privateKey);
+        for (byte[] item : data)
+        {
+            signature.update(item);
+        }
+        return signature.sign();
+    }
+
+    /**
+     * Verifies a signature using a public key and specified signature
+     * algorithm.
+     *
+     * @param algorithm the signature algorithm to use
+     * @param publicKey the public key for verification
+     * @param sign the signature bytes to verify
+     * @param data the data to verify (multiple arrays)
+     * @return true if the signature is valid, false otherwise
+     * @throws InvalidKeyException if the key is invalid
+     * @throws SignatureException if the verification process fails
+     * @throws NoSuchAlgorithmException if the algorithm is not available
+     */
+    public boolean verify(SignatureAlgorithm algorithm, PublicKey publicKey, byte[] sign, byte[]... data) throws InvalidKeyException, SignatureException, NoSuchAlgorithmException
+    {
+        Signature signature = this.getSignature(algorithm);
+        signature.initVerify(publicKey);
+        for (byte[] item : data)
+        {
+            signature.update(item);
+        }
+        return signature.verify(sign);
+    }
 
 
 }

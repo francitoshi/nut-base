@@ -6,6 +6,7 @@
 package io.nut.base.crypto.stego;
 
 import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import io.nut.base.io.IO;
 import java.io.File;
 import java.io.IOException;

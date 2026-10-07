@@ -6,6 +6,7 @@
 package io.nut.base.crypto.kdf;
 
 import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -38,9 +39,9 @@ public class PBKDF2Test
         SecretKey key = pbkdf2.deriveSecretKeyAES(passphrase, salt, 2048, 256);
         
         IvParameterSpec iv = kripto.getIv(iv32,128);
-        byte[] encryptedBytes = kripto.encrypt(key, Kripto.SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, plainText.getBytes());
+        byte[] encryptedBytes = kripto.encrypt(key, Kr.SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, plainText.getBytes());
 
-        byte[] restoredBytes = kripto.decrypt(key, Kripto.SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, encryptedBytes);
+        byte[] restoredBytes = kripto.decrypt(key, Kr.SecretKeyTransformation.AES_CBC_PKCS5Padding, iv, encryptedBytes);
 
         String restoredText = new String(restoredBytes);
         

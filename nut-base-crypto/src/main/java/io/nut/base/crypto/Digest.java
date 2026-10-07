@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -30,7 +31,7 @@ import java.security.MessageDigest;
  * visibility across threads.
  *
  * @see java.security.MessageDigest
- * @see io.nut.base.crypto.Kripto
+ * @see io.nut.base.crypto.Kr
  */
 public class Digest
 {
@@ -38,7 +39,7 @@ public class Digest
     /**
      * The underlying crypto provider factory.
      */
-    final Kripto kripto;
+    final Kr kr;
     /**
      * The name of the message digest algorithm for this instance.
      */
@@ -47,14 +48,14 @@ public class Digest
     /**
      * Creates a new Digest instance for a specific algorithm.
      *
-     * @param kripto The crypto provider. If null, a default instance from
-     * {@link Kripto#getInstance()} will be used.
+     * @param kr The crypto provider. If null, a default instance from
+     * {@link Kr#getInstance()} will be used.
      * @param algorithm The {@link MessageDigestAlgorithm} enum constant
      * representing the desired algorithm.
      */
-    public Digest(Kripto kripto, MessageDigestAlgorithm algorithm)
+    public Digest(Kr kr, MessageDigestAlgorithm algorithm)
     {
-        this.kripto = kripto==null ? Kripto.getInstance() : kripto;
+        this.kr = kr==null ? Kr.getInstance() : kr;
         this.algorithm = algorithm;
     }
     
@@ -71,7 +72,7 @@ public class Digest
      */
     public MessageDigest get()
     {
-        return kripto.getMessageDigest(algorithm);
+        return kr.getMessageDigest(algorithm);
     }
 
     /**

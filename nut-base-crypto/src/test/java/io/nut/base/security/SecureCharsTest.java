@@ -5,7 +5,7 @@
  */
 package io.nut.base.security;
 
-import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -113,7 +113,7 @@ public class SecureCharsTest
     @Test
     public void testKriptoFirstConstructor()
     {
-        try (SecureChars instance = new SecureChars((Kripto) null, HELLO_WORLD.toCharArray()))
+        try (SecureChars instance = new SecureChars((Kr) null, HELLO_WORLD.toCharArray()))
         {
             assertArrayEquals(HELLO_WORLD.toCharArray(), instance.getChars());
         }

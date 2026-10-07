@@ -5,8 +5,9 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.Hkdf;
 import io.nut.base.crypto.kdf.HKDF;
+import io.nut.base.jca.Kr;
+import io.nut.base.jca.Kr.Hkdf;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
 import java.nio.charset.StandardCharsets;
 
@@ -70,9 +71,9 @@ public final class SecureWrapper
 
     public SecureWrapper(Kripto kripto, byte[] ikm, Hkdf hkdf)
     {
-        this.kripto = kripto == null ? Kripto.getInstance(true) : kripto;
+        this.kripto = kripto == null ? Kripto.getInstance() : kripto;
         this.ikm = ikm;
-        this.rand = Kripto.getRand();
+        this.rand = new Rand(Kr.getSecureRandom());
         this.hkdf = this.kripto.getHKDF(hkdf);
     }
 

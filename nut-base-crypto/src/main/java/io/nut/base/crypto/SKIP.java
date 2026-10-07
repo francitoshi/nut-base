@@ -5,7 +5,8 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.Hmac;
+import io.nut.base.jca.Kr;
+import io.nut.base.jca.Kr.Hmac;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
 import javax.crypto.*;
 import javax.crypto.spec.*;
@@ -182,7 +183,7 @@ public class SKIP
             secureRandom.nextBytes(iv);
 
             GCMParameterSpec ivGCM = kripto.getIvGCM(iv, 128);
-            SecretKey secretKey = kripto.getSecretKey(kEnc, Kripto.SecretKeyAlgorithm.AES);
+            SecretKey secretKey = kripto.getSecretKey(kEnc, Kr.SecretKeyAlgorithm.AES);
             Cipher cipher = kripto.getCipher(secretKey, SecretKeyTransformation.AES_GCM_NoPadding, ivGCM, Cipher.ENCRYPT_MODE);
             
             byte[] ciphertext = cipher.doFinal(payload.getBytes(StandardCharsets.UTF_8));
@@ -265,7 +266,7 @@ public class SKIP
         try
         {
             GCMParameterSpec ivGCM = kripto.getIvGCM(iv, 128);
-            SecretKey secretKey = kripto.getSecretKey(kEnc, Kripto.SecretKeyAlgorithm.AES);
+            SecretKey secretKey = kripto.getSecretKey(kEnc, Kr.SecretKeyAlgorithm.AES);
             Cipher cipher = kripto.getCipher(secretKey, SecretKeyTransformation.AES_GCM_NoPadding, ivGCM, Cipher.DECRYPT_MODE);
 
             return new String(cipher.doFinal(ciphertext), StandardCharsets.UTF_8);

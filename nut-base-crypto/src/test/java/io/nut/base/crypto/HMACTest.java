@@ -5,8 +5,9 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.crypto.Kripto.Hmac;
+import io.nut.base.jca.Kr.Hmac;
 import io.nut.base.encoding.Hex;
+import io.nut.base.jca.Kr;
 import io.nut.base.util.CharSets;
 import java.io.UnsupportedEncodingException;
 import javax.crypto.SecretKey;
@@ -24,7 +25,7 @@ public class HMACTest
     
     private void checkHmacSHA256(String key, String data, String result) throws UnsupportedEncodingException
     {
-        SecretKey k = new SecretKeySpec(key.getBytes(CharSets.UTF8), Kripto.Hmac.HmacSHA256.name());
+        SecretKey k = new SecretKeySpec(key.getBytes(CharSets.UTF8), Kr.Hmac.HmacSHA256.name());
         byte[] d = data.getBytes(CharSets.UTF8);
         byte[] r =  Hex.decode(result);
         assertArrayEquals(r, KRIPTO.getHMAC(Hmac.HmacSHA256).digest(k, d));

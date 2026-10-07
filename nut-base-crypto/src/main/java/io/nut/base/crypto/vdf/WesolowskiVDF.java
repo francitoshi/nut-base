@@ -6,6 +6,7 @@
 package io.nut.base.crypto.vdf;
 
 import io.nut.base.crypto.Kripto;
+import io.nut.base.jca.Kr;
 import io.nut.base.math.Primes;
 import java.math.BigInteger;
 import java.security.MessageDigest;

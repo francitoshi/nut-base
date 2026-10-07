@@ -5,7 +5,10 @@
  */
 package io.nut.base.crypto.kdf;
 
-import io.nut.base.crypto.Kripto.Hkdf;
+import io.nut.base.jca.Kr.Hkdf;
+import static io.nut.base.jca.Kr.Hkdf.HkdfWithSha256;
+import static io.nut.base.jca.Kr.Hkdf.HkdfWithSha384;
+import static io.nut.base.jca.Kr.Hkdf.HkdfWithSha512;
 import io.nut.base.jca.Kr.SecretKeyAlgorithm;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;

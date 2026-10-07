@@ -10,7 +10,6 @@ import io.nut.base.crypto.kdf.HKDF;
 import io.nut.base.crypto.kdf.HKDFBC;
 import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.crypto.stego.Steganography;
-import io.nut.base.jca.Kr;
 import io.nut.base.lang.Exceptions;
 import io.nut.base.lang.Strings;
 import io.nut.base.util.As;
@@ -62,7 +61,7 @@ import javax.crypto.spec.SecretKeySpec;
  *
  * @author franci
  */
-public class Kripto extends Kr
+public class Kripto extends io.nut.base.jca.Kr
 {
     ////////////////////////////////////////////////////////////////////////////
     ///// GOOD PRACTICES ///////////////////////////////////////////////////////
@@ -188,55 +187,6 @@ public class Kripto extends Kr
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
-    ///// Enums /////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-
-    public enum KeyAgreementAlgorithm
-    {
-        DiffieHellman, ECDH, ECMQV
-    }
-
-    public enum SignatureAlgorithm
-    {
-        @Deprecated
-        NONEwithRSA, 
-        @Deprecated
-        NONEwithDSA, 
-        @Deprecated
-        NONEwithECDSA, 
-        @Deprecated
-        SHA224withRSA,
-        @Deprecated
-        SHA224withDSA, 
-        @Deprecated
-        SHA224withECDSA,
-        SHA256withRSA, SHA384withRSA, SHA512withRSA,
-        SHA256withDSA,
-        SHA256withECDSA, SHA384withECDSA, SHA512withECDSA,
-    }
-
-    public enum Hmac
-    {
-        @Deprecated
-        HmacSHA224, 
-        HmacSHA256, HmacSHA384, HmacSHA512
-    }
-    
-    public enum Hkdf
-    {
-        HkdfWithSha256, HkdfWithSha384, HkdfWithSha512
-    }
-    
-    public enum KeyStoreType
-    {
-        @Deprecated
-        JKS, 
-        @Deprecated
-        JCEKS, 
-        PKCS12, BCFKS
-    }
     ////////////////////////////////////////////////////////////////////////////
     ///// Instance Members /////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////

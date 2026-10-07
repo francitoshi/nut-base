@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Kr;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,7 @@ public class BenchmarkTest
     {
         Benchmark instance = new Benchmark(Kripto.getInstanceBouncyCastle());
         
-        Benchmark.Result[] results = instance.benchmark(1000, Kripto.SecretKeyTransformation.AES_GCM_NoPadding, Kripto.SecretKeyTransformation.ChaCha20_Poly1305);
+        Benchmark.Result[] results = instance.benchmark(1000, Kr.SecretKeyTransformation.AES_GCM_NoPadding, Kr.SecretKeyTransformation.ChaCha20_Poly1305);
         for(Benchmark.Result item : results)
         {
             System.out.printf("%s = %d\n", item.skt.name(), item.count);

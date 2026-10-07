@@ -6,13 +6,14 @@
 package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Kripto.Hmac;
 import io.nut.base.crypto.alt.RIPEMD160;
 import io.nut.base.crypto.ec.ECDSA;
 import io.nut.base.crypto.ec.Point;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.crypto.ec.Sign;
 import io.nut.base.encoding.Base58;
+import io.nut.base.jca.Kr;
+import io.nut.base.jca.Kr.Hmac;
 import io.nut.base.lang.Joins;
 import io.nut.base.util.Utils;
 import java.math.BigInteger;

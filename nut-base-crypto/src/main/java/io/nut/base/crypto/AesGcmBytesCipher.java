@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
@@ -34,10 +35,10 @@ public class AesGcmBytesCipher implements BytesCipher
     protected final SecretKey key;
 
     // The recommended IV size for GCM is 96 bits (12 bytes) for performance reasons.
-    private static final int GCM_IV_BYTES = Kripto.GCM_IV_BYTES;
+    private static final int GCM_IV_BYTES = Kr.GCM_IV_BYTES;
 
     // The recommended TAG size for GCM is 128 bits (16 bytes) for security reasons.
-    private static final int GCM_TAG_BITS = Kripto.GCM_TAG_BITS;
+    private static final int GCM_TAG_BITS = Kr.GCM_TAG_BITS;
     /**
      * Constructs an AesGcmBytesCipher with a default Kripto instance.
      *
@@ -121,6 +122,6 @@ public class AesGcmBytesCipher implements BytesCipher
 
         // 4. Perform decryption. The underlying JCE provider will automatically
         // verify the authentication tag. If verification fails, it will throw an exception.
-        return kripto.decrypt(key, Kripto.SecretKeyTransformation.AES_GCM_NoPadding, ivGCM, encryptedData);
+        return kripto.decrypt(key, Kr.SecretKeyTransformation.AES_GCM_NoPadding, ivGCM, encryptedData);
     }
 }
