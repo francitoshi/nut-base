@@ -279,13 +279,12 @@ public class Kripto extends Kr
     /**
      * The RIPEMD160 digest of this provider.
      *
-     * @deprecated the JDK does not implement RIPEMD160, so this digest can only
+     * the JDK does not implement RIPEMD160, so this digest can only
      * be used when Bouncy Castle is on the classpath and the instance was
      * created with that provider. Use {@link io.nut.base.crypto.alt.RIPEMD160},
      * which is implemented in pure java and always works, instead. See
      * {@link #getDigest(MessageDigestAlgorithm)}.
      */
-    @Deprecated
     public final Digest ripemd160 = getDigest(MessageDigestAlgorithm.RIPEMD160);
 
     public final PBKDF2 pbkdf2WithSha256 = getPBKDF2(Pbkdf2.PBKDF2WithHmacSHA256);
