@@ -6,13 +6,12 @@
 package io.nut.base.crypto;
 
 import java.math.BigInteger;
-import java.security.SecureRandom;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class RandTest
 {
-    final Rand instance = new Rand(new SecureRandom());
+    final Rand instance = Rand.getInstance();
 
     @Test
     public void testNextInt_int()

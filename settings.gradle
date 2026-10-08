@@ -4,6 +4,7 @@ rootProject.name = 'nut-base'
 
 include 'nut-base-commons'
 include 'nut-base-crypto'
+include 'nut-base-math'
 include 'nut-base-net'
 include 'nut-base-stats'
 include 'nut-base-util'

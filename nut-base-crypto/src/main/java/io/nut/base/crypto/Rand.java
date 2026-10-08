@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Kr;
 import java.math.BigInteger;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -45,7 +46,7 @@ public class Rand
      * @param random the underlying generator; its quality determines whether
      * this instance is suitable for cryptographic use.
      */
-    public Rand(Random random)
+    private Rand(Random random)
     {
         this.random = random;
     }
@@ -65,7 +66,24 @@ public class Rand
     {
         return new Rand(ThreadLocalRandom.current());
     }
-    
+
+    public static Rand getInstance()
+    {
+        return new Rand(Kr.getSecureRandom());
+    }
+        
+    public static Rand getStrongInstance()
+    {
+        return new Rand(Kr.getSecureRandomStrong());
+    }
+     
+    public static Rand getStrongFastInstance()
+    {
+        return new Rand(Kr.getSecureRandomStrongFast());
+    }
+     
+
+        
     /**
      * Returns the next pseudorandom, uniformly distributed {@code int} value.
      *

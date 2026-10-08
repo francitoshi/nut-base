@@ -29,7 +29,7 @@ import java.nio.ByteBuffer; // Using ByteBuffer for cleaner array handling is a 
  */
 public class AesGcmBytesCipher implements BytesCipher
 {
-    private static final Rand RAND = Kripto.getRand();
+    private static final Rand RAND = Rand.getInstance();
     
     protected final Kripto kripto;
     protected final SecretKey key;

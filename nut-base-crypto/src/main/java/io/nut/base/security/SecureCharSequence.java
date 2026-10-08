@@ -18,7 +18,7 @@ import javax.security.auth.Destroyable;
 public class SecureCharSequence implements CharSequence, Destroyable
 {
     private static final String HIDDEN_CONTENT_MESSAGE = "[SecureCharSequence: ****]";
-    private static final Rand rand = new Rand(Kr.getSecureRandom());
+    private static final Rand rand = Rand.getInstance();
     
     private final AtomicInteger acquireCount = new AtomicInteger();
     private final int[] chars;

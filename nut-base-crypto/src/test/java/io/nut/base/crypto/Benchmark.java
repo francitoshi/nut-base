@@ -134,11 +134,11 @@ public class Benchmark
         switch (skt)
         {
             case AES_GCM_NoPadding:
-                GCMParameterSpec ivGCM = this.kripto.getIvGCM(Kripto.getRand().nextBytes(new byte[GCM_IV_BYTES]), GCM_TAG_BITS);
+                GCMParameterSpec ivGCM = this.kripto.getIvGCM(Rand.getInstance().nextBytes(new byte[GCM_IV_BYTES]), GCM_TAG_BITS);
                 cipher = this.kripto.getCipher(key, skt, ivGCM, Cipher.ENCRYPT_MODE);
                 break;
             case ChaCha20_Poly1305:
-                IvParameterSpec iv = this.kripto.getIv(Kripto.getRand().nextBytes(new byte[CHACHA20_IV_BYTES]), CHACHA20_IV_BITS);
+                IvParameterSpec iv = this.kripto.getIv(Rand.getInstance().nextBytes(new byte[CHACHA20_IV_BYTES]), CHACHA20_IV_BITS);
                 cipher = this.kripto.getCipher(key, skt, iv, Cipher.ENCRYPT_MODE);
                 break;
             default:

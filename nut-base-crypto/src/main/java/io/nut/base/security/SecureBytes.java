@@ -87,7 +87,7 @@ public final class SecureBytes implements AutoCloseable, Destroyable
     private static final String AES = "AES";
 
     /** Shared cryptographically-secure random generator. */
-    private static final Rand RAND = new Rand(Kr.getSecureRandom());
+    private static final Rand RAND = Rand.getInstance();
 
     /** Cryptographic utilities used to create IVs and ciphers. */
     private final Kr kripto;

@@ -10,7 +10,6 @@ import io.nut.base.crypto.Kripto;
 import io.nut.base.crypto.Rand;
 import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.encoding.Ascii85;
-import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.Pbkdf2;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
 import io.nut.base.util.BitSetReader;
@@ -68,7 +67,7 @@ public class Steganography
     private final int rounds;
     private final Kripto kripto;
     private final PBKDF2 pbkdf2;
-    private final Rand rand = new Rand(Kr.getSecureRandom());
+    private final Rand rand = Rand.getInstance();
     
     private volatile double bitsRatio=0;
     private volatile String bitsGauge="";
