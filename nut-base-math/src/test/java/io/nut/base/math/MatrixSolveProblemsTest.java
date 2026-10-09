@@ -6,7 +6,9 @@
 package io.nut.base.math;
 
 import io.nut.base.math.matrix.BigRationalMatrix;
+import io.nut.base.math.matrix.InconsistentSystemException;
 import io.nut.base.math.matrix.Matrix;
+import io.nut.base.math.matrix.UnderdeterminedSystemException;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -86,5 +88,70 @@ public class MatrixSolveProblemsTest
         assertEquals(140, A.get(0, 0).mul(x[0]).add(A.get(0, 1).mul(x[1])).add(A.get(0, 2).mul(x[2])).intValue());
         assertEquals(110, A.get(1, 0).mul(x[0]).add(A.get(1, 1).mul(x[1])).add(A.get(1, 2).mul(x[2])).intValue());
         assertEquals(80, A.get(2, 0).mul(x[0]).add(A.get(2, 1).mul(x[1])).add(A.get(2, 2).mul(x[2])).intValue());
+    }
+
+    @Test
+    public void testInconsistentSystem()
+    {
+        // Original furniture statement: the cupboard consumes exactly a chair
+        // plus a table, so the system is singular and inconsistent.
+        Matrix<BigRational> A = BigRationalMatrix.of(new BigRational[][]{
+            {new BigRational(2), new BigRational(3), new BigRational(5)},
+            {new BigRational(1), new BigRational(3), new BigRational(4)},
+            {new BigRational(1), new BigRational(2), new BigRational(3)}});
+        BigRational[] b =
+        {
+            BigRational.valueOf(140),
+            BigRational.valueOf(110),
+            BigRational.valueOf(80)
+        };
+
+        assertEquals(2, A.rank());
+        assertEquals(1, A.nullity());
+        assertFalse(A.isConsistent(b));
+        assertFalse(A.hasUniqueSolution(b));
+        assertThrows(InconsistentSystemException.class, () -> A.solve(b));
+    }
+
+    @Test
+    public void testUnderdeterminedSystem()
+    {
+        // x + y + z = 20 ; 2x + y + z/2 = 20 -> infinitely many solutions
+        Matrix<BigRational> A = BigRationalMatrix.of(new BigRational[][]{
+            {BigRational.ONE, BigRational.ONE, BigRational.ONE},
+            {BigRational.TWO, BigRational.ONE, new BigRational(1, 2)}});
+        BigRational[] b =
+        {
+            BigRational.valueOf(20),
+            BigRational.valueOf(20)
+        };
+
+        assertEquals(2, A.rank());
+        assertEquals(1, A.nullity());
+        assertTrue(A.isConsistent(b));
+        assertFalse(A.hasUniqueSolution(b));
+        assertThrows(UnderdeterminedSystemException.class, () -> A.solve(b));
+    }
+
+    @Test
+    public void testUniqueSystem()
+    {
+        Matrix<BigRational> A = BigRationalMatrix.of(new BigRational[][]{
+            {BigRational.ONE, BigRational.ONE},
+            {BigRational.TWO, BigRational.valueOf(4)}});
+        BigRational[] b =
+        {
+            BigRational.valueOf(70),
+            BigRational.valueOf(200)
+        };
+
+        assertEquals(2, A.rank());
+        assertEquals(0, A.nullity());
+        assertTrue(A.isConsistent(b));
+        assertTrue(A.hasUniqueSolution(b));
+
+        BigRational[] x = A.solve(b);
+        assertEquals(40, x[0].intValue());
+        assertEquals(30, x[1].intValue());
     }
 }

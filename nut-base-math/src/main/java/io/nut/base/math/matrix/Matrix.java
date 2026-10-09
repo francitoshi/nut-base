@@ -307,6 +307,9 @@ public abstract class Matrix<N>
      *
      * @param b right-hand side vector
      * @return the solution vector
+     * @throws InconsistentSystemException if the system has no solution
+     * @throws UnderdeterminedSystemException if the system has infinitely many
+     * solutions
      */
     public abstract N[] solveLinearSystem(N[] b);
 
@@ -317,6 +320,40 @@ public abstract class Matrix<N>
      * @return the solution vector
      */
     public abstract N[] solve(N[] b);
+
+    /**
+     * Returns the rank of this matrix, i.e. the number of linearly independent
+     * rows (or columns).
+     *
+     * @return the rank
+     */
+    public abstract int rank();
+
+    /**
+     * Returns the nullity of this matrix, i.e. the dimension of its null space.
+     * It equals the number of columns minus the rank.
+     *
+     * @return the nullity
+     */
+    public abstract int nullity();
+
+    /**
+     * Returns whether the linear system {@code A * x = b} is consistent, i.e.
+     * whether it has at least one solution.
+     *
+     * @param b right-hand side vector
+     * @return true if the system has at least one solution
+     */
+    public abstract boolean isConsistent(N[] b);
+
+    /**
+     * Returns whether the linear system {@code A * x = b} has exactly one
+     * solution.
+     *
+     * @param b right-hand side vector
+     * @return true if the system has a unique solution
+     */
+    public abstract boolean hasUniqueSolution(N[] b);
 
     /**
      * Swaps two rows.

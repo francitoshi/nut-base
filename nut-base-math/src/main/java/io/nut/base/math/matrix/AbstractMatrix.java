@@ -872,6 +872,75 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
         return rowEchelonForm();
     }
 
+    @Override
+    public int rank()
+    {
+        AbstractMatrix<N> rref = rowEchelonForm();
+        int rank = 0;
+        for (int i = 0; i < rref.rows; i++)
+        {
+            if (!isZeroRow(rref, i))
+            {
+                rank++;
+            }
+        }
+        return rank;
+    }
+
+    @Override
+    public int nullity()
+    {
+        return cols - rank();
+    }
+
+    private boolean isZeroRow(AbstractMatrix<N> matrix, int row)
+    {
+        for (int j = 0; j < matrix.cols; j++)
+        {
+            if (!alu.equals(matrix.data[row][j], alu.zero()))
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private AbstractMatrix<N> augment(N[] b)
+    {
+        AbstractMatrix<N> aug = create(rows, cols + 1);
+        for (int i = 0; i < rows; i++)
+        {
+            for (int j = 0; j < cols; j++)
+            {
+                aug.set(i, j, get(i, j));
+            }
+            aug.set(i, cols, b[i]);
+        }
+        return aug;
+    }
+
+    @Override
+    public boolean isConsistent(N[] b)
+    {
+        checkRightHandSide(b);
+        return rank() == augment(b).rank();
+    }
+
+    @Override
+    public boolean hasUniqueSolution(N[] b)
+    {
+        checkRightHandSide(b);
+        return isConsistent(b) && rank() == cols;
+    }
+
+    private void checkRightHandSide(N[] b)
+    {
+        if (b == null || b.length != rows)
+        {
+            throw new IllegalArgumentException("Invalid right-hand side vector");
+        }
+    }
+
     public AbstractMatrix<N>[] luDecomposition()
     {
         if (!isSquare())
@@ -916,37 +985,23 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
 
     public N[] solveLinearSystem(N[] b)
     {
-        if (b == null || b.length != rows)
+        checkRightHandSide(b);
+        AbstractMatrix<N> aug = augment(b);
+        int rankA = rank();
+        int rankAug = aug.rank();
+        if (rankA < rankAug)
         {
-            throw new IllegalArgumentException("Invalid right-hand side vector");
+            throw new InconsistentSystemException("Inconsistent system: no solution");
         }
-        if (!isSquare())
+        if (rankA < cols)
         {
-            throw new IllegalArgumentException("Linear system solver requires square coefficient matrix");
+            throw new UnderdeterminedSystemException("Underdetermined system: infinitely many solutions (nullity=" + (cols - rankA) + ")");
         }
-        int n = rows;
-        AbstractMatrix<N>[] lu = luDecomposition();
-        AbstractMatrix<N> Lmat = lu[0];
-        AbstractMatrix<N> Umat = lu[1];
-        N[] y = createVector(n);
-        for (int i = 0; i < n; i++)
+        AbstractMatrix<N> rref = aug.rowEchelonForm();
+        N[] x = createVector(cols);
+        for (int i = 0; i < cols; i++)
         {
-            N sum = alu.zero();
-            for (int j = 0; j < i; j++)
-            {
-                sum = alu.add(sum, alu.mul(Lmat.get(i, j), y[j]));
-            }
-            y[i] = alu.sub(b[i], sum);
-        }
-        N[] x = createVector(n);
-        for (int i = n - 1; i >= 0; i--)
-        {
-            N sum = alu.zero();
-            for (int j = i + 1; j < n; j++)
-            {
-                sum = alu.add(sum, alu.mul(Umat.get(i, j), x[j]));
-            }
-            x[i] = alu.div(alu.sub(y[i], sum), Umat.get(i, i));
+            x[i] = rref.get(i, cols);
         }
         return x;
     }
