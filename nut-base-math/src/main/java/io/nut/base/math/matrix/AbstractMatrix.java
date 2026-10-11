@@ -17,7 +17,7 @@ import java.util.Arrays;
  *
  * @param <N> numeric type
  */
-public abstract class AbstractMatrix<N> extends Matrix<N>
+public abstract class AbstractMatrix<N> implements Matrix<N>
 {
     protected final int rows;
     protected final int cols;
@@ -97,7 +97,7 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
             }
             for (int j = 0; j < cols; j++)
             {
-                data[i][j] = alu.fromInt(values[i][j]);
+                data[i][j] = alu.valueOf(values[i][j]);
             }
         }
     }
@@ -113,7 +113,7 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
             }
             for (int j = 0; j < cols; j++)
             {
-                data[i][j] = alu.fromLong(values[i][j]);
+                data[i][j] = alu.valueOf(values[i][j]);
             }
         }
     }
@@ -129,7 +129,7 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
             }
             for (int j = 0; j < cols; j++)
             {
-                data[i][j] = alu.fromFloat(values[i][j]);
+                data[i][j] = alu.valueOf(values[i][j]);
             }
         }
     }
@@ -145,7 +145,7 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
             }
             for (int j = 0; j < cols; j++)
             {
-                data[i][j] = alu.fromDouble(values[i][j]);
+                data[i][j] = alu.valueOf(values[i][j]);
             }
         }
     }
@@ -161,7 +161,7 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
             }
             for (int j = 0; j < cols; j++)
             {
-                data[i][j] = alu.fromBigInteger(values[i][j]);
+                data[i][j] = alu.valueOf(values[i][j]);
             }
         }
     }
@@ -177,7 +177,7 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
             }
             for (int j = 0; j < cols; j++)
             {
-                data[i][j] = alu.fromBigDecimal(values[i][j]);
+                data[i][j] = alu.valueOf(values[i][j]);
             }
         }
     }
@@ -193,7 +193,7 @@ public abstract class AbstractMatrix<N> extends Matrix<N>
             }
             for (int j = 0; j < cols; j++)
             {
-                data[i][j] = alu.fromBigRational(values[i][j]);
+                data[i][j] = alu.valueOf(values[i][j]);
             }
         }
     }

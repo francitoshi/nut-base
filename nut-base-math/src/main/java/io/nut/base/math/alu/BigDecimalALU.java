@@ -88,43 +88,43 @@ public class BigDecimalALU implements ALU<BigDecimal>
     }
 
     @Override
-    public BigDecimal fromInt(int value)
+    public BigDecimal valueOf(int value)
     {
         return BigDecimal.valueOf(value);
     }
 
     @Override
-    public BigDecimal fromLong(long value)
+    public BigDecimal valueOf(long value)
     {
         return BigDecimal.valueOf(value);
     }
 
     @Override
-    public BigDecimal fromFloat(float value)
+    public BigDecimal valueOf(float value)
     {
         return BigDecimal.valueOf(value);
     }
 
     @Override
-    public BigDecimal fromDouble(double value)
+    public BigDecimal valueOf(double value)
     {
         return BigDecimal.valueOf(value);
     }
 
     @Override
-    public BigDecimal fromBigInteger(BigInteger value)
+    public BigDecimal valueOf(BigInteger value)
     {
         return new BigDecimal(value);
     }
 
     @Override
-    public BigDecimal fromBigDecimal(BigDecimal value)
+    public BigDecimal valueOf(BigDecimal value)
     {
         return value;
     }
 
     @Override
-    public BigDecimal fromBigRational(BigRational value)
+    public BigDecimal valueOf(BigRational value)
     {
         return new BigDecimal(value.numerator()).divide(new BigDecimal(value.denominator()), mathContext);
     }

@@ -75,43 +75,43 @@ public class BigIntegerALU implements ALU<BigInteger>
     }
 
     @Override
-    public BigInteger fromInt(int value)
+    public BigInteger valueOf(int value)
     {
         return BigInteger.valueOf(value);
     }
 
     @Override
-    public BigInteger fromLong(long value)
+    public BigInteger valueOf(long value)
     {
         return BigInteger.valueOf(value);
     }
 
     @Override
-    public BigInteger fromFloat(float value)
+    public BigInteger valueOf(float value)
     {
         return BigDecimal.valueOf(value).toBigInteger();
     }
 
     @Override
-    public BigInteger fromDouble(double value)
+    public BigInteger valueOf(double value)
     {
         return BigDecimal.valueOf(value).toBigInteger();
     }
 
     @Override
-    public BigInteger fromBigInteger(BigInteger value)
+    public BigInteger valueOf(BigInteger value)
     {
         return value;
     }
 
     @Override
-    public BigInteger fromBigDecimal(BigDecimal value)
+    public BigInteger valueOf(BigDecimal value)
     {
         return value.toBigInteger();
     }
 
     @Override
-    public BigInteger fromBigRational(BigRational value)
+    public BigInteger valueOf(BigRational value)
     {
         return value.numerator().divide(value.denominator());
     }

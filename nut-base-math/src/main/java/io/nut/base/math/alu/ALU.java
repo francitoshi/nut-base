@@ -72,7 +72,7 @@ public interface ALU<N>
      * @param value the value to convert
      * @return the converted value
      */
-    N fromInt(int value);
+    N valueOf(int value);
 
     /**
      * Converts a {@code long} value to this ALU numeric type.
@@ -80,7 +80,7 @@ public interface ALU<N>
      * @param value the value to convert
      * @return the converted value
      */
-    N fromLong(long value);
+    N valueOf(long value);
 
     /**
      * Converts a {@code float} value to this ALU numeric type.
@@ -88,7 +88,7 @@ public interface ALU<N>
      * @param value the value to convert
      * @return the converted value
      */
-    N fromFloat(float value);
+    N valueOf(float value);
 
     /**
      * Converts a {@code double} value to this ALU numeric type.
@@ -96,7 +96,7 @@ public interface ALU<N>
      * @param value the value to convert
      * @return the converted value
      */
-    N fromDouble(double value);
+    N valueOf(double value);
 
     /**
      * Converts a {@link BigInteger} value to this ALU numeric type.
@@ -104,7 +104,7 @@ public interface ALU<N>
      * @param value the value to convert
      * @return the converted value
      */
-    N fromBigInteger(BigInteger value);
+    N valueOf(BigInteger value);
 
     /**
      * Converts a {@link BigDecimal} value to this ALU numeric type.
@@ -112,7 +112,7 @@ public interface ALU<N>
      * @param value the value to convert
      * @return the converted value
      */
-    N fromBigDecimal(BigDecimal value);
+    N valueOf(BigDecimal value);
 
     /**
      * Converts a {@link BigRational} value to this ALU numeric type.
@@ -120,7 +120,7 @@ public interface ALU<N>
      * @param value the value to convert
      * @return the converted value
      */
-    N fromBigRational(BigRational value);
+    N valueOf(BigRational value);
 
     /**
      * Returns the square root of the given value.

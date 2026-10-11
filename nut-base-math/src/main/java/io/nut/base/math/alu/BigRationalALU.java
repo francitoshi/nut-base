@@ -75,43 +75,43 @@ public class BigRationalALU implements ALU<BigRational>
     }
 
     @Override
-    public BigRational fromInt(int value)
+    public BigRational valueOf(int value)
     {
         return BigRational.valueOf(value);
     }
 
     @Override
-    public BigRational fromLong(long value)
+    public BigRational valueOf(long value)
     {
         return BigRational.valueOf(value);
     }
 
     @Override
-    public BigRational fromFloat(float value)
+    public BigRational valueOf(float value)
     {
         return BigRational.valueOf(BigDecimal.valueOf(value));
     }
 
     @Override
-    public BigRational fromDouble(double value)
+    public BigRational valueOf(double value)
     {
         return BigRational.valueOf(BigDecimal.valueOf(value));
     }
 
     @Override
-    public BigRational fromBigInteger(BigInteger value)
+    public BigRational valueOf(BigInteger value)
     {
         return BigRational.valueOf(value);
     }
 
     @Override
-    public BigRational fromBigDecimal(BigDecimal value)
+    public BigRational valueOf(BigDecimal value)
     {
         return BigRational.valueOf(value);
     }
 
     @Override
-    public BigRational fromBigRational(BigRational value)
+    public BigRational valueOf(BigRational value)
     {
         return value;
     }
