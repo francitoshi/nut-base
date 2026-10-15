@@ -5,7 +5,8 @@
  */
 package io.nut.base.util;
 
-import static io.nut.base.util.BashEscaper.buildCommandLine;
+import io.nut.base.lang.BashEscaper;
+import static io.nut.base.lang.BashEscaper.buildCommandLine;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto.gpg;
 
-import io.nut.base.util.Parsers;
+import io.nut.base.lang.Parsers;
 
 /**
  * Represents a single GPG key record as returned by
