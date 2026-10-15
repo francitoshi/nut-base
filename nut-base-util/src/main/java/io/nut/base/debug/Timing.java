@@ -20,7 +20,7 @@
  */
 package io.nut.base.debug;
 
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.time.JavaTime;
 import java.time.Duration;
 
 /**

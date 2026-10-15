@@ -5,8 +5,8 @@
  */
 package io.nut.base.crypto.kdf;
 
-import io.nut.base.jca.Kr.Hkdf;
-import io.nut.base.jca.Kr.SecretKeyAlgorithm;
+import io.nut.base.commons.jca.Kr.Hkdf;
+import io.nut.base.commons.jca.Kr.SecretKeyAlgorithm;
 import javax.crypto.SecretKey;
 
 public abstract class HKDF

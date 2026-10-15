@@ -20,7 +20,7 @@
  */
 package io.nut.base.jar;
 
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.time.JavaTime;
 import java.io.File;
 import java.util.jar.JarFile;
 import java.io.IOException;

@@ -21,7 +21,7 @@
 
 package io.nut.base.net;
 
-import io.nut.base.lang.Strings;
+import io.nut.base.commons.lang.Strings;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 

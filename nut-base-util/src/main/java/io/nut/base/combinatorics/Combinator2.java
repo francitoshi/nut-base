@@ -5,7 +5,7 @@
  */
 package io.nut.base.combinatorics;
 
-import io.nut.base.concurrent.Generator;
+import io.nut.base.commons.concurrent.Generator;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Arrays;

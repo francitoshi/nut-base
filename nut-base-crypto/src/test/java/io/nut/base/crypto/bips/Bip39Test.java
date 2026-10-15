@@ -22,8 +22,8 @@ package io.nut.base.crypto.bips;
 
 import io.nut.base.crypto.bips.Bip39.MnemonicChecksumException;
 import io.nut.base.crypto.bips.Bip39.MnemonicWordException;
-import io.nut.base.encoding.Hex;
-import io.nut.base.lang.Strings;
+import io.nut.base.commons.encoding.Hex;
+import io.nut.base.commons.lang.Strings;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;

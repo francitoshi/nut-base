@@ -7,7 +7,7 @@ package io.nut.base.logging;
 
 import io.nut.base.logging.Log.FormatType;
 import io.nut.base.time.CachedDateTimeFormatter;
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.time.JavaTime;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.ZoneId;

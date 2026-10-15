@@ -5,9 +5,9 @@
  */
 package io.nut.base.crypto.ec;
 
-import io.nut.base.compat.ByteBufferCompat;
-import io.nut.base.lang.BigMaths;
-import io.nut.base.lang.As;
+import io.nut.base.commons.compat.ByteBufferCompat;
+import io.nut.base.commons.lang.BigMaths;
+import io.nut.base.commons.lang.As;
 import java.math.BigInteger;
 import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;

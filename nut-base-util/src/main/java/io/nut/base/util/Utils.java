@@ -5,9 +5,9 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.lang.Comparators;
-import io.nut.base.lang.Exceptions;
-import io.nut.base.lang.Java;
+import io.nut.base.commons.lang.Comparators;
+import io.nut.base.commons.lang.Exceptions;
+import io.nut.base.commons.lang.Java;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;

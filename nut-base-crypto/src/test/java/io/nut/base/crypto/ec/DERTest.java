@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto.ec;
 
-import io.nut.base.encoding.Hex;
+import io.nut.base.commons.encoding.Hex;
 import java.math.BigInteger;
 import java.security.InvalidParameterException;
 import org.junit.jupiter.api.AfterEach;

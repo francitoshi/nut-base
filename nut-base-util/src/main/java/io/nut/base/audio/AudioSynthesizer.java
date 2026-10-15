@@ -20,9 +20,9 @@
  */
 package io.nut.base.audio;
 
-import io.nut.base.cache.Cache;
-import io.nut.base.cache.TinyLFUCache;
-import io.nut.base.tuple.Trio;
+import io.nut.base.commons.cache.Cache;
+import io.nut.base.commons.cache.TinyLFUCache;
+import io.nut.base.commons.tuple.Trio;
 import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;

@@ -5,8 +5,8 @@
  */
 package io.nut.base.math;
 
-import io.nut.base.lang.BigMaths;
-import io.nut.base.lang.Maths;
+import io.nut.base.commons.lang.BigMaths;
+import io.nut.base.commons.lang.Maths;
 import static io.nut.base.math.Nums.BIG_DEC_ATTO;
 import static io.nut.base.math.Nums.BIG_DEC_EXA;
 import static io.nut.base.math.Nums.BIG_DEC_EXBI;
@@ -48,7 +48,7 @@ import static io.nut.base.math.Nums.BIG_INT_YOBI;
 import static io.nut.base.math.Nums.BIG_INT_YOTTA;
 import static io.nut.base.math.Nums.BIG_INT_ZEBI;
 import static io.nut.base.math.Nums.BIG_INT_ZETTA;
-import io.nut.base.lang.As;
+import io.nut.base.commons.lang.As;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;

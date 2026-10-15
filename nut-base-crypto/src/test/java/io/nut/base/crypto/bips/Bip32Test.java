@@ -5,8 +5,8 @@
  */
 package io.nut.base.crypto.bips;
 
-import io.nut.base.encoding.Base58;
-import io.nut.base.encoding.Hex;
+import io.nut.base.commons.encoding.Base58;
+import io.nut.base.commons.encoding.Hex;
 import java.security.InvalidKeyException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;

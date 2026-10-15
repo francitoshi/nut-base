@@ -6,11 +6,11 @@
 package io.nut.base.crypto.kdf;
 
 import io.nut.base.crypto.Kripto;
-import io.nut.base.encoding.Ascii85;
-import io.nut.base.jca.Kr;
-import io.nut.base.jca.Kr.Pbkdf2;
-import io.nut.base.jca.Kr.SecretKeyAlgorithm;
-import io.nut.base.lang.Exceptions;
+import io.nut.base.commons.encoding.Ascii85;
+import io.nut.base.commons.jca.Kr;
+import io.nut.base.commons.jca.Kr.Pbkdf2;
+import io.nut.base.commons.jca.Kr.SecretKeyAlgorithm;
+import io.nut.base.commons.lang.Exceptions;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;

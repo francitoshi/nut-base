@@ -6,10 +6,10 @@
 package io.nut.base.signal;
 
 import io.nut.base.collections.ring.RingQueueInt;
-import io.nut.base.lang.As;
-import io.nut.base.lang.Empty;
-import io.nut.base.lang.Joins;
-import io.nut.base.lang.Maths;
+import io.nut.base.commons.lang.As;
+import io.nut.base.commons.lang.Empty;
+import io.nut.base.commons.lang.Joins;
+import io.nut.base.commons.lang.Maths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

@@ -5,15 +5,15 @@
  */
 package io.nut.base.crypto.bips;
 
-import io.nut.base.jca.Digest;
+import io.nut.base.commons.jca.Digest;
 import io.nut.base.crypto.alt.RIPEMD160;
 import io.nut.base.crypto.ec.Secp256k1;
-import io.nut.base.encoding.Base58;
-import io.nut.base.jca.Kr;
-import io.nut.base.lang.BigMaths;
-import io.nut.base.lang.Require;
-import io.nut.base.lang.As;
-import io.nut.base.lang.Comparators;
+import io.nut.base.commons.encoding.Base58;
+import io.nut.base.commons.jca.Kr;
+import io.nut.base.commons.lang.BigMaths;
+import io.nut.base.commons.lang.Require;
+import io.nut.base.commons.lang.As;
+import io.nut.base.commons.lang.Comparators;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

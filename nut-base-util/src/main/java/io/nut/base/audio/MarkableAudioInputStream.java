@@ -5,7 +5,7 @@
  */
 package io.nut.base.audio;
 
-import io.nut.base.lang.Empty;
+import io.nut.base.commons.lang.Empty;
 import javax.sound.sampled.AudioInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

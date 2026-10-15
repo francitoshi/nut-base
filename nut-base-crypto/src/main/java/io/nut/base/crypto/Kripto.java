@@ -5,13 +5,13 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.jca.Digest;
+import io.nut.base.commons.jca.Digest;
 import io.nut.base.crypto.shamir.ShamirSharedSecret;
 import io.nut.base.crypto.kdf.HKDF;
 import io.nut.base.crypto.kdf.HKDFBC;
 import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.crypto.stego.Steganography;
-import io.nut.base.jca.Kr;
+import io.nut.base.commons.jca.Kr;
 
 /**
  * A utility class providing cryptographic operations including encryption,

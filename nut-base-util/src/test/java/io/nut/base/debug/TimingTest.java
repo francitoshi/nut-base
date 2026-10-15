@@ -20,7 +20,7 @@
  */
 package io.nut.base.debug;
 
-import io.nut.base.lang.Pauses;
+import io.nut.base.commons.lang.Pauses;
 import org.junit.jupiter.api.Test;
 
 /**

@@ -6,8 +6,8 @@
 package io.nut.base.logging;
 
 import io.nut.base.logging.Log.FormatType;
-import io.nut.base.profile.Profiler;
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.profile.Profiler;
+import io.nut.base.commons.time.JavaTime;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.junit.jupiter.api.AfterAll;

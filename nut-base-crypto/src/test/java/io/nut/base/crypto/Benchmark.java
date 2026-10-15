@@ -5,15 +5,15 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.jca.Rand;
-import io.nut.base.jca.Kr;
-import static io.nut.base.jca.Kr.CHACHA20_IV_BITS;
-import static io.nut.base.jca.Kr.CHACHA20_IV_BYTES;
-import static io.nut.base.jca.Kr.GCM_IV_BYTES;
-import static io.nut.base.jca.Kr.GCM_TAG_BITS;
-import io.nut.base.jca.Kr.SecretKeyTransformation;
-import static io.nut.base.jca.Kr.SecretKeyTransformation.AES_GCM_NoPadding;
-import static io.nut.base.jca.Kr.SecretKeyTransformation.ChaCha20_Poly1305;
+import io.nut.base.commons.jca.Rand;
+import io.nut.base.commons.jca.Kr;
+import static io.nut.base.commons.jca.Kr.CHACHA20_IV_BITS;
+import static io.nut.base.commons.jca.Kr.CHACHA20_IV_BYTES;
+import static io.nut.base.commons.jca.Kr.GCM_IV_BYTES;
+import static io.nut.base.commons.jca.Kr.GCM_TAG_BITS;
+import io.nut.base.commons.jca.Kr.SecretKeyTransformation;
+import static io.nut.base.commons.jca.Kr.SecretKeyTransformation.AES_GCM_NoPadding;
+import static io.nut.base.commons.jca.Kr.SecretKeyTransformation.ChaCha20_Poly1305;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;

@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.jca.Kr;
+import io.nut.base.commons.jca.Kr;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

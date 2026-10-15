@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto.gpg;
 
-import io.nut.base.lang.Parsers;
+import io.nut.base.commons.lang.Parsers;
 
 /**
  * Represents a GPG user ID ({@code uid}) record as returned by

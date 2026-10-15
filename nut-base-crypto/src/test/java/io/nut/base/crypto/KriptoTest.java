@@ -6,16 +6,16 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.shamir.ShamirSharedSecret;
-import io.nut.base.jca.Kr.KeyAgreementAlgorithm;
-import io.nut.base.jca.Kr.SignatureAlgorithm;
-import io.nut.base.jca.Kr;
-import io.nut.base.jca.Kr.KeyPairAlgorithm;
-import io.nut.base.jca.Kr.KeyPairTransformation;
-import io.nut.base.jca.Kr.SecretKeyAlgorithm;
-import io.nut.base.jca.Kr.SecretKeyTransformation;
-import io.nut.base.jca.Rand;
-import io.nut.base.lang.CharSets;
-import io.nut.base.lang.Joins;
+import io.nut.base.commons.jca.Kr.KeyAgreementAlgorithm;
+import io.nut.base.commons.jca.Kr.SignatureAlgorithm;
+import io.nut.base.commons.jca.Kr;
+import io.nut.base.commons.jca.Kr.KeyPairAlgorithm;
+import io.nut.base.commons.jca.Kr.KeyPairTransformation;
+import io.nut.base.commons.jca.Kr.SecretKeyAlgorithm;
+import io.nut.base.commons.jca.Kr.SecretKeyTransformation;
+import io.nut.base.commons.jca.Rand;
+import io.nut.base.commons.lang.CharSets;
+import io.nut.base.commons.lang.Joins;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;

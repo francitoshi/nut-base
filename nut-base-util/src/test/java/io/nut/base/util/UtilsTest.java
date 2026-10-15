@@ -5,9 +5,9 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.lang.As;
-import io.nut.base.lang.Comparators;
-import io.nut.base.lang.Sorts;
+import io.nut.base.commons.lang.As;
+import io.nut.base.commons.lang.Comparators;
+import io.nut.base.commons.lang.Sorts;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.LocalDateTime;

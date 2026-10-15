@@ -20,7 +20,7 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.time.JavaTime;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

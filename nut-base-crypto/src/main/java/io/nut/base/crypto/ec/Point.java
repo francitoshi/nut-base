@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto.ec;
 
-import io.nut.base.lang.BigMaths;
+import io.nut.base.commons.lang.BigMaths;
 import java.math.BigInteger;
 import java.util.Objects;
 

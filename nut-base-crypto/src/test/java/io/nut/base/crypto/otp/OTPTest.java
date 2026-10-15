@@ -20,10 +20,10 @@
  */
 package io.nut.base.crypto.otp;
 
-import io.nut.base.encoding.Base32String;
-import io.nut.base.encoding.Base64DecoderException;
-import io.nut.base.encoding.Hex;
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.encoding.Base32String;
+import io.nut.base.commons.encoding.Base64DecoderException;
+import io.nut.base.commons.encoding.Hex;
+import io.nut.base.commons.time.JavaTime;
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.InvalidKeyException;

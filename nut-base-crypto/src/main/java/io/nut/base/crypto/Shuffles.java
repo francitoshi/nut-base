@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.jca.Kr;
+import io.nut.base.commons.jca.Kr;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;

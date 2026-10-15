@@ -5,7 +5,7 @@
  */
 package io.nut.base.cli.options;
 
-import io.nut.base.units.SizeUnits;
+import io.nut.base.commons.units.SizeUnits;
 
 /**
  *

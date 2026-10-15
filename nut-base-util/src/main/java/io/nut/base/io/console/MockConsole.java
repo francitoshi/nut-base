@@ -12,7 +12,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.io.Reader;
-import io.nut.base.lang.Exceptions;
+import io.nut.base.commons.lang.Exceptions;
 import java.util.Scanner;
 import java.util.logging.Logger;
 

@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto.alt;
 
-import io.nut.base.encoding.Hex;
+import io.nut.base.commons.encoding.Hex;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 

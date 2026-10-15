@@ -20,7 +20,7 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.time.JavaTime;
 
 /**
  * Abstract base class for generating monotonically increasing {@code long} nonce values.

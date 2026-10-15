@@ -5,7 +5,7 @@
  */
 package io.nut.base.util.properties;
 
-import io.nut.base.lang.As;
+import io.nut.base.commons.lang.As;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.nio.charset.StandardCharsets;

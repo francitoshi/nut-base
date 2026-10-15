@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto.bips;
 
-import io.nut.base.encoding.Hex;
+import io.nut.base.commons.encoding.Hex;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

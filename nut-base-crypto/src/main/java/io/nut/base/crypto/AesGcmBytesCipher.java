@@ -5,9 +5,9 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.jca.Rand;
-import io.nut.base.jca.Kr;
-import io.nut.base.jca.Kr.SecretKeyTransformation;
+import io.nut.base.commons.jca.Rand;
+import io.nut.base.commons.jca.Kr;
+import io.nut.base.commons.jca.Kr.SecretKeyTransformation;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 import java.nio.ByteBuffer; // Using ByteBuffer for cleaner array handling is a good practice, but System.arraycopy is also correct and efficient.

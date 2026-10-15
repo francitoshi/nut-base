@@ -20,8 +20,8 @@
  */
 package io.nut.base.crypto.pake;
 
-import io.nut.base.encoding.Hex;
-import io.nut.base.lang.Strings;
+import io.nut.base.commons.encoding.Hex;
+import io.nut.base.commons.lang.Strings;
 import java.math.BigInteger;
 import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;

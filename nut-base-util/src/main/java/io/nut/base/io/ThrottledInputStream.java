@@ -5,7 +5,7 @@
  */
 package io.nut.base.io;
 
-import io.nut.base.lang.Pauses;
+import io.nut.base.commons.lang.Pauses;
 import io.nut.base.util.Utils;
 import java.io.FilterInputStream;
 import java.io.IOException;

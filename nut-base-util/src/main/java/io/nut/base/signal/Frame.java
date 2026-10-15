@@ -5,8 +5,8 @@
  */
 package io.nut.base.signal;
 
-import io.nut.base.lang.Empty;
-import io.nut.base.lang.Checksums;
+import io.nut.base.commons.lang.Empty;
+import io.nut.base.commons.lang.Checksums;
 
 /**
  * Frame — builds and parses binary frames over a byte stream.

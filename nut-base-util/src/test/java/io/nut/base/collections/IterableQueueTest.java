@@ -5,7 +5,7 @@
  */
 package io.nut.base.collections;
 
-import io.nut.base.lang.As;
+import io.nut.base.commons.lang.As;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;

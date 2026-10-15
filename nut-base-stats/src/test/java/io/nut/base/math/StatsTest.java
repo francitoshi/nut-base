@@ -6,7 +6,7 @@
 package io.nut.base.math;
 
 import io.nut.base.stats.Stats;
-import io.nut.base.lang.As;
+import io.nut.base.commons.lang.As;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;

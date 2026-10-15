@@ -15,7 +15,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
-import io.nut.base.cache.CacheType;
+import io.nut.base.commons.cache.CacheType;
 
 import static org.junit.jupiter.api.Assertions.*;
 

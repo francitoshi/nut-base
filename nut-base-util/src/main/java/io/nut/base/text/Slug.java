@@ -5,7 +5,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.lang.As;
+import io.nut.base.commons.lang.As;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;

@@ -5,9 +5,9 @@
  */
 package io.nut.base.math;
 
-import io.nut.base.cache.Cache;
-import io.nut.base.cache.CacheFactory;
-import io.nut.base.cache.CacheType;
+import io.nut.base.commons.cache.Cache;
+import io.nut.base.commons.cache.CacheFactory;
+import io.nut.base.commons.cache.CacheType;
 import java.util.Objects;
 
 /**

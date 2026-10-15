@@ -14,9 +14,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.function.Function;
-import io.nut.base.cache.Cache;
-import io.nut.base.cache.CacheFactory;
-import io.nut.base.cache.CacheType;
+import io.nut.base.commons.cache.Cache;
+import io.nut.base.commons.cache.CacheFactory;
+import io.nut.base.commons.cache.CacheType;
 import io.nut.base.logging.Log;
 
 /**

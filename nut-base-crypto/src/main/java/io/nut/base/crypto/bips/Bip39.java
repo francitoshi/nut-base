@@ -8,10 +8,10 @@ package io.nut.base.crypto.bips;
 //https://github.com/bitcoinj/bitcoinj/blob/master/core/src/main/java/org/bitcoinj/crypto/MnemonicCode.java
 
 import io.nut.base.crypto.alt.PBKDF2SHA512;
-import io.nut.base.jca.Digest;
-import io.nut.base.jca.Kr;
-import io.nut.base.lang.Empty;
-import io.nut.base.lang.Strings;
+import io.nut.base.commons.jca.Digest;
+import io.nut.base.commons.jca.Kr;
+import io.nut.base.commons.lang.Empty;
+import io.nut.base.commons.lang.Strings;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.HashMap;

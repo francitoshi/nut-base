@@ -6,8 +6,8 @@
 package io.nut.base.crypto.kdf;
 
 import io.nut.base.crypto.Kripto;
-import io.nut.base.encoding.Hex;
-import io.nut.base.jca.Kr;
+import io.nut.base.commons.encoding.Hex;
+import io.nut.base.commons.jca.Kr;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

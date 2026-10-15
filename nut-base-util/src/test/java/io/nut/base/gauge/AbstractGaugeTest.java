@@ -5,7 +5,7 @@
  */
 package io.nut.base.gauge;
 
-import io.nut.base.time.JavaTime;
+import io.nut.base.commons.time.JavaTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;

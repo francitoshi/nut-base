@@ -19,7 +19,7 @@
 
 package io.nut.base.crypto.shamir;
 
-import io.nut.base.jca.Kr;
+import io.nut.base.commons.jca.Kr;
 import java.security.SecureRandom;
 
 /**

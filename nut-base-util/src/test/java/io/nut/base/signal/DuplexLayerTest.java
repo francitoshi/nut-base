@@ -7,8 +7,8 @@ package io.nut.base.signal;
 
 import io.nut.base.audio.AudioMorseTransceiver;
 import io.nut.base.audio.Wave;
-import io.nut.base.lang.Pauses;
-import io.nut.base.lang.Strings;
+import io.nut.base.commons.lang.Pauses;
+import io.nut.base.commons.lang.Strings;
 import io.nut.base.util.Utils;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.*;

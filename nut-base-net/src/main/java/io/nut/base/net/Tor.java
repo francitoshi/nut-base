@@ -5,9 +5,9 @@
  */
 package io.nut.base.net;
 
-import io.nut.base.encoding.Hex;
-import io.nut.base.lang.Exec;
-import io.nut.base.lang.OS;
+import io.nut.base.commons.encoding.Hex;
+import io.nut.base.commons.lang.Exec;
+import io.nut.base.commons.lang.OS;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;

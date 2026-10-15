@@ -5,8 +5,8 @@
  */
 package io.nut.base.os;
 
-import io.nut.base.lang.OS;
-import io.nut.base.lang.Exceptions;
+import io.nut.base.commons.lang.OS;
+import io.nut.base.commons.lang.Exceptions;
 import java.util.logging.Logger;
 
 /**

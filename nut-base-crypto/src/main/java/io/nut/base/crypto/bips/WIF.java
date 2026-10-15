@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto.bips;
 
-import io.nut.base.encoding.Base58;
+import io.nut.base.commons.encoding.Base58;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;

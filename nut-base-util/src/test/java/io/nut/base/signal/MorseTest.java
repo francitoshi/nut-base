@@ -5,11 +5,11 @@
  */
 package io.nut.base.signal;
 
-import io.nut.base.lang.Maths;
+import io.nut.base.commons.lang.Maths;
 import io.nut.base.math.Nums;
 import static io.nut.base.signal.Morse.DAH;
 import static io.nut.base.signal.Morse.DIT;
-import io.nut.base.lang.Strings;
+import io.nut.base.commons.lang.Strings;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.TreeSet;

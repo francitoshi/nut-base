@@ -5,7 +5,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.lang.Empty;
+import io.nut.base.commons.lang.Empty;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;

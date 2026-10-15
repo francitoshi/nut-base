@@ -5,7 +5,7 @@
  */
 package io.nut.base.profile;
 
-import io.nut.base.lang.Pauses;
+import io.nut.base.commons.lang.Pauses;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;

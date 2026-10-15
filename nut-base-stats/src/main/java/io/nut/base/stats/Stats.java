@@ -5,7 +5,7 @@
  */
 package io.nut.base.stats;
 
-import io.nut.base.lang.Maths;
+import io.nut.base.commons.lang.Maths;
 import java.util.Arrays;
 
 /**

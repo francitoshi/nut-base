@@ -11,7 +11,7 @@ import static io.nut.base.crypto.gpg.GPG.NISTP384;
 import static io.nut.base.crypto.gpg.GPG.NISTP521;
 import static io.nut.base.crypto.gpg.GPG.RSA1024;
 import static io.nut.base.crypto.gpg.GPG.RSA4096;
-import io.nut.base.encoding.Hex;
+import io.nut.base.commons.encoding.Hex;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;

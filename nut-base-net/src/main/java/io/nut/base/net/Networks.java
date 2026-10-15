@@ -5,7 +5,7 @@
  */
 package io.nut.base.net;
 
-import io.nut.base.lang.First;
+import io.nut.base.commons.lang.First;
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;

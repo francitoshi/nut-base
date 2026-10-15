@@ -1,0 +1,85 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.nut.base.commons.lang;
+
+import io.nut.base.commons.lang.Chars;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ *
+ * @author franci
+ */
+public class CharsTest
+{
+    
+    public CharsTest()
+    {
+    }
+
+    @Test
+    public void testToLowerCase()
+    {
+        assertNull(Chars.toLowerCase(null));
+        assertEquals(0, Chars.toLowerCase("".toCharArray()).length);
+        assertArrayEquals("abcdefghi123".toCharArray(), Chars.toLowerCase("ABCDEFGHI123".toCharArray()));
+        assertArrayEquals("abcdefghi123".toCharArray(), Chars.toLowerCase("AbCdEfGhI123".toCharArray()));
+    }
+
+    @Test
+    public void testToUpperCase()
+    {
+        assertNull(Chars.toUpperCase(null));
+        assertEquals(0, Chars.toUpperCase("".toCharArray()).length);
+        assertArrayEquals("ABCDEFGHI123".toCharArray(), Chars.toUpperCase("abcdefghi123".toCharArray()));
+        assertArrayEquals("ABCDEFGHI123".toCharArray(), Chars.toUpperCase("AbCdEfGhI123".toCharArray()));
+    }
+
+    @Test
+    public void testTrim()
+    {
+        assertNull(Chars.trim(null));
+        assertEquals(0, Chars.trim("".toCharArray()).length);
+        assertArrayEquals("ABCDEFGHI123".toCharArray(), Chars.trim("ABCDEFGHI123".toCharArray()));
+        assertArrayEquals("   ABCDEFGHI123".trim().toCharArray(), Chars.trim("   ABCDEFGHI123".toCharArray()));
+        assertArrayEquals("   ABCDEFGHI123   ".trim().toCharArray(), Chars.trim("   ABCDEFGHI123   ".toCharArray()));
+        assertArrayEquals("ABCDEFGHI123   ".trim().toCharArray(), Chars.trim("ABCDEFGHI123   ".toCharArray()));
+        assertArrayEquals("   ABC   DEFGHI   123   ".trim().toCharArray(), Chars.trim("   ABC   DEFGHI   123   ".toCharArray()));
+    }
+
+    @Test
+    public void testContains()
+    {
+        
+        assertTrue( "".contains("") );
+        assertTrue( Chars.contains("".toCharArray(), "".toCharArray()) );
+        
+        assertTrue( "abc".contains("abc"));
+        assertTrue( Chars.contains("abc".toCharArray(), "abc".toCharArray()) );
+
+        assertFalse( Chars.contains("ab".toCharArray(), "abc".toCharArray()) );
+
+        assertTrue( "123abc".contains("abc"));
+        assertTrue( Chars.contains("123abc".toCharArray(), "abc".toCharArray()) );
+
+        assertFalse( "123abc".contains("abcd"));
+        assertFalse( Chars.contains("123abc".toCharArray(), "abcd".toCharArray()) );
+
+        assertFalse( Chars.contains("abc".toCharArray(), "A".toCharArray()) );
+        assertFalse( Chars.contains("abc".toCharArray(), "ABCD".toCharArray()) );
+    }
+
+    @Test
+    public void testStartsWith()
+    {
+        assertTrue(Chars.startsWith("hello world!!!".toCharArray(), ""));
+        assertFalse(Chars.startsWith("hello world!!!".toCharArray(), null));
+        assertFalse(Chars.startsWith(null, null));
+        assertTrue(Chars.startsWith("hello world!!!".toCharArray(), "hello"));
+        assertFalse(Chars.startsWith("hello world!!!".toCharArray(), "hola"));
+    }
+    
+}

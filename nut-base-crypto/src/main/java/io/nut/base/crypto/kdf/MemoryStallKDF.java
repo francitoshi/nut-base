@@ -6,7 +6,7 @@
 package io.nut.base.crypto.kdf;
 
 import io.nut.base.crypto.Kripto;
-import io.nut.base.jca.Kr;
+import io.nut.base.commons.jca.Kr;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.security.MessageDigest;

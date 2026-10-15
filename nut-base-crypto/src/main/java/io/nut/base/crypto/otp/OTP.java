@@ -26,8 +26,8 @@ package io.nut.base.crypto.otp;
 //copied from
 //https://github.com/andOTP/andOTP/blob/master/app/src/main/java/org/shadowice/flocke/andotp/Utilities/TokenCalculator.java
 
-import io.nut.base.encoding.Base32String;
-import io.nut.base.encoding.Hex;
+import io.nut.base.commons.encoding.Base32String;
+import io.nut.base.commons.encoding.Hex;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;

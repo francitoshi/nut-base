@@ -5,7 +5,7 @@
  */
 package io.nut.base.cli.options;
 
-import io.nut.base.lang.ConsoleAppendable;
+import io.nut.base.commons.lang.ConsoleAppendable;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Locale;

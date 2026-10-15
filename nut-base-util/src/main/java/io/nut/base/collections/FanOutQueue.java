@@ -5,7 +5,7 @@
  */
 package io.nut.base.collections;
 
-import io.nut.base.lang.Empty;
+import io.nut.base.commons.lang.Empty;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;

@@ -21,7 +21,7 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.kdf.HKDF;
-import io.nut.base.encoding.Ascii85;
+import io.nut.base.commons.encoding.Ascii85;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

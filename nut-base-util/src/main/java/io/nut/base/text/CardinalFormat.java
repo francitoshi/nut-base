@@ -5,7 +5,7 @@
  */
 package io.nut.base.text;
 
-import io.nut.base.i18n.ResourceBundles;
+import io.nut.base.commons.i18n.ResourceBundles;
 import java.security.InvalidParameterException;
 import java.text.MessageFormat;
 import java.util.ArrayList;

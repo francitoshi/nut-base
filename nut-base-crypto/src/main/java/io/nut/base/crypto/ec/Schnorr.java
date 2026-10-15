@@ -5,14 +5,14 @@
  */
 package io.nut.base.crypto.ec;
 
-import io.nut.base.jca.Digest;
-import io.nut.base.lang.As;
-import io.nut.base.lang.Joins;
+import io.nut.base.commons.jca.Digest;
+import io.nut.base.commons.lang.As;
+import io.nut.base.commons.lang.Joins;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
-import io.nut.base.jca.Kr.MessageDigestAlgorithm;
-import io.nut.base.lang.BigMaths;
-import io.nut.base.lang.Bitwise;
+import io.nut.base.commons.jca.Kr.MessageDigestAlgorithm;
+import io.nut.base.commons.lang.BigMaths;
+import io.nut.base.commons.lang.Bitwise;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
 import java.util.Objects;

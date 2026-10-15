@@ -5,7 +5,7 @@
  */
 package io.nut.base.keyarray;
 
-import io.nut.base.lang.Comparators;
+import io.nut.base.commons.lang.Comparators;
 import java.util.Arrays;
 
 /**

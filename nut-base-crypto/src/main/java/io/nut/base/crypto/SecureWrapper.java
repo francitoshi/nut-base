@@ -5,10 +5,10 @@
  */
 package io.nut.base.crypto;
 
-import io.nut.base.jca.Rand;
+import io.nut.base.commons.jca.Rand;
 import io.nut.base.crypto.kdf.HKDF;
-import io.nut.base.jca.Kr.Hkdf;
-import io.nut.base.jca.Kr.SecretKeyTransformation;
+import io.nut.base.commons.jca.Kr.Hkdf;
+import io.nut.base.commons.jca.Kr.SecretKeyTransformation;
 import java.nio.charset.StandardCharsets;
 
 import javax.crypto.Cipher;

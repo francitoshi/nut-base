@@ -6,7 +6,7 @@
 package io.nut.base.crypto;
 
 import io.nut.base.crypto.kdf.PBKDF2;
-import io.nut.base.jca.Kr.SecretKeyAlgorithm;
+import io.nut.base.commons.jca.Kr.SecretKeyAlgorithm;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Base64;
