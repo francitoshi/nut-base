@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.profile;
+package io.nut.base.commons.profile;
 
 import io.nut.base.commons.lang.Pauses;
 import org.junit.jupiter.api.AfterEach;
