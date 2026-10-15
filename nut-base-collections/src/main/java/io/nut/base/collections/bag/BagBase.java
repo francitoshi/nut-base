@@ -5,7 +5,7 @@
  */
 package io.nut.base.collections.bag;
 
-import io.nut.base.equalizer.EqualsSame;
+import io.nut.base.commons.lang.EqualsSame;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Comparator;

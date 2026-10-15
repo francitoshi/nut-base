@@ -6,7 +6,7 @@
 package io.nut.base.util;
 
 import io.nut.base.collections.bag.Bag;
-import io.nut.base.equalizer.Equalizer;
+import io.nut.base.commons.lang.Equalizer;
 import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Arrays;

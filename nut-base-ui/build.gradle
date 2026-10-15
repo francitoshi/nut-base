@@ -1,0 +1,6 @@
+//nut-base-ui: console user interface helpers (menus, gauges). Depends on nut-base-commons and nut-base-io.
+dependencies
+{
+    api project(':nut-base-commons')
+    api project(':nut-base-io')
+}

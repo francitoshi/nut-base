@@ -5,7 +5,7 @@
  */
 package io.nut.base.collections.bag;
 
-import io.nut.base.equalizer.Equalizer;
+import io.nut.base.commons.lang.Equalizer;
 import java.util.Arrays;
 import java.util.Comparator;
 import org.junit.jupiter.api.Test;

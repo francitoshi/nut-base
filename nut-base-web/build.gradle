@@ -1,0 +1,4 @@
+//nut-base-web: web/HTTP helpers. No internal dependencies.
+dependencies
+{
+}

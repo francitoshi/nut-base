@@ -20,7 +20,7 @@
  */
 package io.nut.base.util;
 
-import io.nut.base.equalizer.Equalizer;
+import io.nut.base.commons.lang.Equalizer;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -216,7 +216,7 @@ class SplitterTest
         void nullEqualizerFallsBack()
         {
             Integer[] src = {1, 2, 1, 3};
-            Integer[][] result = normalize(Splitter.splitEquals(src, (io.nut.base.equalizer.Equalizer<Integer>) null));
+            Integer[][] result = normalize(Splitter.splitEquals(src, (io.nut.base.commons.lang.Equalizer<Integer>) null));
 
             assertEquals(3, result.length);
         }
