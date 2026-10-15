@@ -18,8 +18,6 @@ subprojects
         maven { url 'https://jitpack.io' }
     }
 
-    def bouncycastleVersion = '1.84'
-
     dependencies
     {
         //DO NOT ADD ANY DEPENDENCIES EXCEPT FOR TEST
