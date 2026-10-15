@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.math.RoundingMode;
+import java.util.Arrays;
 
 /**
  * Utility class providing mathematical methods for {@link BigInteger} and
@@ -365,32 +366,74 @@ public class BigMaths
     }
 
     /**
-     * Returns the sum of all the given BigDecimal values, skipping nulls.
-     * Null values are replaced by the given default value (if non-null and non-zero).
+     * Returns the sum of all the given values, skipping null values.
      *
-     * @param defaultValue the value used in place of null entries, or null to skip nulls entirely.
      * @param values the values to add.
-     * @return the sum of the values, or {@link BigDecimal#ZERO} if null or no values are given.
+     * @return the sum of the values.
      */
-    public static BigDecimal sum(BigDecimal defaultValue, BigDecimal... values)
+    public static BigInteger sum(BigInteger... values)
     {
-        if (values == null || values.length==0)
+        BigInteger s = BigInteger.ZERO;
+        if (values == null)
         {
-            return BigDecimal.ZERO;
+            return s;
         }
-        BigDecimal ret = BigDecimal.ZERO;
+        for (BigInteger v : values)
+        {
+            if (v != null)
+            {
+                s = s.add(v);
+            }
+        }
+        return s;
+    }
+
+    /**
+     * Returns the sum of all the given values skipping null values.
+     *
+     * @param values the values to add.
+     * @return the sum of the values.
+     */
+    public static BigDecimal sum(BigDecimal... values)
+    {
+        BigDecimal s = BigDecimal.ZERO;
+        if (values == null)
+        {
+            return s;
+        }
         for (BigDecimal v : values)
         {
             if (v != null)
             {
-                ret = ret.add(v);
-            }
-            else if (defaultValue != null && defaultValue != BigDecimal.ZERO)
-            {
-                ret = ret.add(defaultValue);
+                s = s.add(v);
             }
         }
-        return ret;
+        return s;
+    }
+
+    /**
+     * Returns the sum of all the given values using the given MathContext,
+     * skipping null values.
+     *
+     * @param mc the MathContext to use.
+     * @param values the values to add.
+     * @return the sum of the values.
+     */
+    public static BigDecimal sum(MathContext mc, BigDecimal... values)
+    {
+        BigDecimal s = BigDecimal.ZERO;
+        if (values == null)
+        {
+            return s;
+        }
+        for (BigDecimal v : values)
+        {
+            if (v != null)
+            {
+                s = s.add(v, mc);
+            }
+        }
+        return s;
     }
 
     /**
@@ -426,4 +469,112 @@ public class BigMaths
         return ret.divide(BigDecimal.valueOf(count), mc);
     }
     
+    //java9 new BigInteger​​(int signum, byte[] magnitude, int off, int len)
+    public static BigInteger newBigInteger(int signum, byte[] magnitude, int off, int len)
+    {
+        return new BigInteger(signum, Arrays.copyOfRange(magnitude, off, off+len));
+    }
+    
+    //java9 new BigInteger​​(byte[] val, int off, int len)
+    public static BigInteger newBigInteger​(byte[] val, int off, int len)
+    {
+        return new BigInteger(Arrays.copyOfRange(val, off, off+len));
+    }    
+    
+
+    /**
+     * Clamps the given {@link BigInteger} {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the BigInteger value to clamp.
+     * @return      the clamped value; {@code min} if {@code value} is less than {@code min},
+     *              {@code max} if {@code value} is greater than {@code max}, and {@code value} otherwise.
+     */
+    public static BigInteger bound(BigInteger min, BigInteger max, BigInteger value)
+    {
+        if(min.compareTo(max)>0)
+        {
+            return bound(max,min,value);
+        }
+        if (value.compareTo(min) < 0)
+        {
+            return min;
+        }
+        if (value.compareTo(max) > 0)
+        {
+            return max;
+        }
+        return value;
+    }
+
+    /**
+     * Clamps the given {@link BigDecimal} {@code value} to be within the inclusive range of {@code [min, max]}.
+     * <p>
+     * If {@code min} is greater than {@code max}, the bounds are automatically swapped before clamping.
+     *
+     * @param min   the lower bound of the range (inclusive).
+     * @param max   the upper bound of the range (inclusive).
+     * @param value the BigDecimal value to clamp.
+     * @return      the clamped value; {@code min} if {@code value} is less than {@code min},
+     *              {@code max} if {@code value} is greater than {@code max}, and {@code value} otherwise.
+     */
+    public static BigDecimal bound(BigDecimal min, BigDecimal max, BigDecimal value)
+    {
+        if(min.compareTo(max)>0)
+        {
+            return bound(max,min,value);
+        }
+        if (value.compareTo(min) < 0)
+        {
+            return min;
+        }
+        if (value.compareTo(max) > 0)
+        {
+            return max;
+        }
+        return value;
+    }
+        
+    /**
+     * Compute the square root of x to a given scale, x &gt;= 0.
+     * Use Newton's algorithm.
+     * @param x the value of x
+     * @return the result value
+     */
+    public static BigDecimal sqrt(BigDecimal x)
+    {
+        if(x.compareTo(BigDecimal.ZERO)==0 || x.compareTo(BigDecimal.ONE)==0)
+        {
+            return x;
+        }
+        // Check that x >= 0.
+        if (x.signum() < 0)
+        {
+            throw new ArithmeticException("x < 0");
+        }
+
+        // n = x*(10^(2*SCALE))
+        BigInteger n = x.movePointRight(SCALE << 1).toBigInteger();
+
+        // The first approximation is the upper half of n.
+        int bits = (n.bitLength() + 1) >> 1;
+        BigInteger ix = n.shiftRight(bits);
+        BigInteger ixPrev;
+
+        // Loop until the approximations converge
+        // (two successive approximations are equal after rounding).
+        do
+        {
+            ixPrev = ix;
+            // x = (x + n/x)/2
+            ix = ix.add(n.divide(ix)).shiftRight(1);
+        } 
+        while (ix.compareTo(ixPrev) != 0);
+
+        return new BigDecimal(ix, SCALE);
+    }
+
 }

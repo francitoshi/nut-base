@@ -5,7 +5,7 @@
  */
 package io.nut.base.crypto.ec;
 
-import io.nut.base.util.As;
+import io.nut.base.lang.As;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import java.security.InvalidParameterException;

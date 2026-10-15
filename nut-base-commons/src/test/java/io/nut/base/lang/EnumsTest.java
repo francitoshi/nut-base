@@ -5,7 +5,6 @@
  */
 package io.nut.base.lang;
 
-import io.nut.base.lang.Enums;
 import java.util.EnumSet;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

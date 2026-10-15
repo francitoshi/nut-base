@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Rand;
 import io.nut.base.jca.Kr;
 import static io.nut.base.jca.Kr.CHACHA20_IV_BITS;
 import static io.nut.base.jca.Kr.CHACHA20_IV_BYTES;

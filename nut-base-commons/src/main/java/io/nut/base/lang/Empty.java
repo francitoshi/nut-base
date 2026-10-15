@@ -39,11 +39,23 @@ public abstract class Empty
     public static final float[] FLOATS = {};
     public static final double[] DOUBLES = {};
 
+    public static final Byte[] BYTE_OBJECTS = {};
+    public static final Integer[] INT_OBJECTS = {};
+    public static final Long[] LONG_OBJECTS = {};
+    public static final Character[] CHAR_OBJECTS = {};
+    public static final Boolean[] BOOLEAN_OBJECTS = {};
+    public static final Short[] SHORT_OBJECTS = {};
+    public static final Float[] FLOAT_OBJECTS = {};
+    public static final Double[] DOUBLE_OBJECTS = {};
+
     // Standard objects
     public static final Object[] OBJECTS = {};
     public static final String[] STRINGS = {};
     public static final Class<?>[] CLASSES = {};
     public static final Throwable[] THROWABLES = {};
+
+
+    public static final String STRING = "";
 
     // Common immutable collections
     public static final Collection<?> COLLECTION = Collections.emptyList();

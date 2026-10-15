@@ -5,6 +5,7 @@
  */
 package io.nut.base.crypto;
 
+import io.nut.base.jca.Rand;
 import io.nut.base.crypto.kdf.HKDF;
 import io.nut.base.jca.Kr.Hkdf;
 import io.nut.base.jca.Kr.SecretKeyTransformation;

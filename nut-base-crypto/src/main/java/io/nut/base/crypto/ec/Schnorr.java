@@ -6,12 +6,13 @@
 package io.nut.base.crypto.ec;
 
 import io.nut.base.jca.Digest;
-import io.nut.base.util.As;
+import io.nut.base.lang.As;
 import io.nut.base.lang.Joins;
-import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.security.InvalidKeyException;
 import io.nut.base.jca.Kr.MessageDigestAlgorithm;
+import io.nut.base.lang.BigMaths;
+import io.nut.base.lang.Bitwise;
 import java.security.InvalidParameterException;
 import java.security.MessageDigest;
 import java.util.Objects;
@@ -53,7 +54,7 @@ public class Schnorr extends Sign
             secKey = curve.n.subtract(secKey);
         }
         
-        byte[] t = Utils.xor(asBytes(secKey), taggedHash("BIP0340/aux", asBytes(auxRand)));
+        byte[] t = Bitwise.xor(asBytes(secKey), taggedHash("BIP0340/aux", asBytes(auxRand)));
         //t = xor_bytes(bytes_from_int(d), tagged_hash("BIP0340/aux", aux_rand))
         //k0 = int_from_bytes(tagged_hash("BIP0340/nonce", t + bytes_from_point(P) + msg)) % n
         BigInteger k0 = As.bigInteger(taggedHash("BIP0340/nonce", Joins.join(t, pxBytes, msgBytes))).mod(curve.n);
@@ -154,8 +155,8 @@ public class Schnorr extends Sign
             return false;
         }
         
-        BigInteger r = Utils.newBigInteger(1, signature, 0, curve.bytes);
-        BigInteger s = Utils.newBigInteger(1, signature, curve.bytes, curve.bytes);
+        BigInteger r = BigMaths.newBigInteger(1, signature, 0, curve.bytes);
+        BigInteger s = BigMaths.newBigInteger(1, signature, curve.bytes, curve.bytes);
         
         return verify(message, PK, r, s);
     }

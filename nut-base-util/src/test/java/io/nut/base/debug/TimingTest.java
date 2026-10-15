@@ -20,7 +20,7 @@
  */
 package io.nut.base.debug;
 
-import io.nut.base.util.Utils;
+import io.nut.base.lang.Pauses;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -37,9 +37,9 @@ public class TimingTest
     {
         Timing timing = Timing.getSecondsInstance(2);
         long t1 = System.nanoTime();
-        Utils.sleep(1);
+        Pauses.sleepMillis(1);
         long t2 = System.nanoTime();
-        Utils.sleep(1000);
+        Pauses.sleepMillis(1000);
         long t3 = System.nanoTime();
         
         timing.println("getSecondsInstance", t1, t2);
@@ -55,9 +55,9 @@ public class TimingTest
     {
         Timing timing = Timing.getMillisInstance(2);
         long t1 = System.nanoTime();
-        Utils.sleep(9);
+        Pauses.sleepMillis(9);
         long t2 = System.nanoTime();
-        Utils.sleep(99);
+        Pauses.sleepMillis(99);
         long t3 = System.nanoTime();
         
         timing.println("getMillisInstance", t1, t2);
@@ -73,9 +73,9 @@ public class TimingTest
     {
         Timing timing = Timing.getNanosInstance(2);
         long t1 = System.nanoTime();
-        Utils.sleep(1);
+        Pauses.sleepMillis(1);
         long t2 = System.nanoTime();
-        Utils.sleep(1);
+        Pauses.sleepMillis(1);
         long t3 = System.nanoTime();
         
         timing.println("getNanosInstance", t1, t2);

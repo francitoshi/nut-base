@@ -6,10 +6,9 @@
 package io.nut.base.jca;
 
 import io.nut.base.encoding.Hex;
+import static io.nut.base.io.IO.UTF8;
+import io.nut.base.lang.CharSets;
 import io.nut.base.lang.Joins;
-import io.nut.base.util.CharSets;
-import static io.nut.base.util.CharSets.UTF8;
-import io.nut.base.util.Utils;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -128,7 +127,7 @@ public class KrTest
         }
     }
 
-    static final byte[] IV16 = Utils.sequence(new byte[16], (byte) 0, (byte) 1);
+    static final byte[] IV16 = Rand.getInstance().nextBytes(new byte[16]);
 
     @Test
     public void testExampleAES() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException

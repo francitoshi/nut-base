@@ -8,7 +8,7 @@ package io.nut.base.crypto.ec;
 import io.nut.base.jca.Digest;
 import io.nut.base.jca.Kr;
 import io.nut.base.encoding.Hex;
-import io.nut.base.util.As;
+import io.nut.base.lang.As;
 import io.nut.base.concurrent.actor.ActorHub;
 import io.nut.base.concurrent.actor.PipelineActor;
 import java.io.InputStreamReader;

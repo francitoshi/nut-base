@@ -5,9 +5,9 @@
  */
 package io.nut.base.io;
 
-import io.nut.base.util.CharSets;
+import io.nut.base.lang.CharSets;
 import io.nut.base.lang.Java;
-import io.nut.base.util.Sorts;
+import io.nut.base.lang.Sorts;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

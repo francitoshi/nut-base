@@ -5,6 +5,7 @@
  */
 package io.nut.base.lang;
 
+import java.security.InvalidKeyException;
 import java.util.function.Supplier;
 
 /**
@@ -350,5 +351,20 @@ public final class Require
     private static String outOfBoundsCheckFromIndexSizeMsg(long fromIndex, long size, long length)
     {
         return "Range [" + fromIndex + ", " + fromIndex + " + " + size + ") out of bounds for length " + length;
+    }
+
+    public static void checkArgument(boolean condition, String message)
+    {
+        if(condition==false)
+        {
+            throw new IllegalArgumentException(message);
+        }
+    }
+    public static void checkKey(boolean condition, String message) throws InvalidKeyException
+    {
+        if(condition==false)
+        {
+            throw new InvalidKeyException(message);
+        }
     }
 }

@@ -6,6 +6,7 @@
 package io.nut.base.util;
 
 import io.nut.base.encoding.Encoding;
+import io.nut.base.lang.CharSets;
 import io.nut.base.profile.Profiler;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Random;

@@ -5,7 +5,7 @@
  */
 package io.nut.base.concurrent.channel;
 
-import io.nut.base.util.As;
+import io.nut.base.lang.As;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;

@@ -5,6 +5,7 @@
  */
 package io.nut.base.os;
 
+import io.nut.base.lang.OS;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;

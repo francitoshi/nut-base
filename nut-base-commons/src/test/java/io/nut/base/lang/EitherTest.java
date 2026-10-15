@@ -5,7 +5,6 @@
  */
 package io.nut.base.lang;
 
-import io.nut.base.util.As;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

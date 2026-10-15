@@ -1,0 +1,47 @@
+/*
+ * Copyright (C) 2023-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.nut.base.crypto.bips;
+
+import io.nut.base.encoding.Hex;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ *
+ * @author franci
+ */
+public class WIFTest
+{    
+    //https://learnmeabitcoin.com/technical/wif
+    
+    static final String[][] DATA =
+    {
+        {"5Kdc3UAwGmHHuj6fQD1LDmKR6J3SwYyFWyHgxKAZ2cKRzVCRETY", "ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2","6e9aa607"},
+        {"5KfpsGZoi3M3aEku65ky3hMFFwi9NGjdgeXwkyXBTRg2SshdZWe", "f42e6fe35fe2baa0f1542118c7a6175abe61e3ceba9cc27f1c87912e56467849","e60d9257"},
+        {"L5EZftvrYaSudiozVRzTqLcHLNDoVn7H5HSfM9BAN6tMJX8oTWz6", "ef235aacf90d9f4aadd8c92e4b2562e1d9eb97f0df9ba3b508258739cb013db2","66557e53"},
+        {"L5QNGshoA9MUMhikuS14Nu6MvxUbvtTAuzfah6UD9duFNm1PfNPf", "f42e6fe35fe2baa0f1542118c7a6175abe61e3ceba9cc27f1c87912e56467849","98886fe6"},
+        
+        {"KzbTzbKeotsem631kMcsvxovtH8atjurUwyNo7baXNN3G1nKkiVx", "64b43677f7ba50565530bbeef0d6a041d40b0b01bedc8176f0ec031fca1ef367","da48f3cb"},
+        {"5Jadvq73DtdQ4C7M7CUAGrM9apcFUajnebf9ZekBKD6DkLPr371",  "64b43677f7ba50565530bbeef0d6a041d40b0b01bedc8176f0ec031fca1ef367","8534074c"},
+    };
+                                       
+    /**
+     * Test of decode method, of class WIF.
+     */
+    @Test
+    public void testDecode() throws Exception
+    {
+        for(int i=0;i<DATA.length;i++)
+        {
+            WIF wif = WIF.decode(DATA[i][0]);
+            assertEquals(DATA[i][1], Hex.encode(wif.getKey()),"i="+i);
+            assertTrue(WIF.verify(wif),"i="+i);
+            assertEquals(DATA[i][2],Hex.encode(wif.getChecksum()),"i="+i);
+        }
+        
+    }
+    
+}

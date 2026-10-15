@@ -5,7 +5,6 @@
  */
 package io.nut.base.lang;
 
-import io.nut.base.lang.Unchecked;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.DisplayName;

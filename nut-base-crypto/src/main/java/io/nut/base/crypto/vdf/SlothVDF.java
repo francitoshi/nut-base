@@ -20,7 +20,7 @@
  */
 package io.nut.base.crypto.vdf;
 
-import io.nut.base.math.Primes;
+import io.nut.base.crypto.math.Primes;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

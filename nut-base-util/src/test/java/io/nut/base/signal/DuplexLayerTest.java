@@ -1,27 +1,13 @@
 /*
- *  DuplexLayerTest.java
- *
- *  Copyright (c) 2026 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.signal;
 
 import io.nut.base.audio.AudioMorseTransceiver;
 import io.nut.base.audio.Wave;
+import io.nut.base.lang.Pauses;
 import io.nut.base.lang.Strings;
 import io.nut.base.util.Utils;
 import java.nio.charset.StandardCharsets;
@@ -504,7 +490,7 @@ class DuplexLayerTest
 
         dl.write(framer.createData('\0', '\0', id, new byte[]{0x77}));
         ft.feed(framer.createNack('\0', '\0', id, status));
-        Utils.parkMillis(10);
+        Pauses.parkMillis(10);
         assertEquals(1, fl.onFailedCounter.get());
     }
 
@@ -569,7 +555,7 @@ class DuplexLayerTest
         DuplexLayer dl = new DuplexLayer().setTransceiver(ft).open();
         byte[] frame = framer.createData('\0', '\0', (char) 20, new byte[]{0x02});
         dl.write(frame);
-        Utils.parkMillis(DuplexLayer.ACK_TIMEOUT_MILLIS*2);
+        Pauses.parkMillis(DuplexLayer.ACK_TIMEOUT_MILLIS*2);
         assertTrue(ft.dataWriteCounter.get()>1);
     }
 
@@ -584,7 +570,7 @@ class DuplexLayerTest
         DuplexLayer dl = new DuplexLayer().setTransceiver(ft).open();
 
         dl.write(frame);
-        Utils.parkMillis(DuplexLayer.ACK_TIMEOUT_MILLIS + 500);
+        Pauses.parkMillis(DuplexLayer.ACK_TIMEOUT_MILLIS + 500);
         assertEquals(1, ft.dataWriteCounter.get());
     }
 
@@ -705,7 +691,7 @@ class DuplexLayerTest
             String plaintext = new String(payload, StandardCharsets.UTF_8);
             System.out.println(plaintext);
         }
-        Utils.parkMillis(2000);
+        Pauses.parkMillis(2000);
         duplexLayer.close();
         
     }    

@@ -5,6 +5,8 @@
  */
 package io.nut.base.math;
 
+import io.nut.base.lang.BigMaths;
+import io.nut.base.lang.Maths;
 import static io.nut.base.math.Nums.BIG_DEC_ATTO;
 import static io.nut.base.math.Nums.BIG_DEC_EXA;
 import static io.nut.base.math.Nums.BIG_DEC_EXBI;
@@ -46,16 +48,11 @@ import static io.nut.base.math.Nums.BIG_INT_YOBI;
 import static io.nut.base.math.Nums.BIG_INT_YOTTA;
 import static io.nut.base.math.Nums.BIG_INT_ZEBI;
 import static io.nut.base.math.Nums.BIG_INT_ZETTA;
-import io.nut.base.util.As;
-import io.nut.base.util.Utils;
+import io.nut.base.lang.As;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.MathContext;
 import java.security.SecureRandom;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -89,32 +86,8 @@ public class NumsTest
 
     final static BigInteger _60 = BigInteger.valueOf(60);
     
-    public NumsTest()
-    {
-    }
-    
-    @BeforeAll
-    public static void setUpClass()
-    {
-    }
-    
-    @AfterAll
-    public static void tearDownClass()
-    {
-    }
-    
-    @BeforeEach
-    public void setUp()
-    {
-    }
-    
-    @AfterEach
-    public void tearDown()
-    {
-    }
-
     /**
-     * Test of buildE method, of class Nums.
+     * Test of buildE method, of class BigMaths.
      */
     @Test
     public void testBuildE()
@@ -128,22 +101,6 @@ public class NumsTest
     }
     
 
-    /**
-     * Test of sqrt method, of class Nums.
-     */
-    @Test
-    public void testSqrt()
-    {
-        assertEquals(0, Nums.sqrt(BigDecimal.ONE).compareTo(BigDecimal.ONE));
-        assertEquals(0, Nums.sqrt(BigDecimal.ZERO).compareTo(BigDecimal.ZERO));
-
-        for(int i=1;i<1000;i++)
-        {
-            BigDecimal x = BigDecimal.valueOf(i*0.123456789);
-            BigDecimal xx = x.multiply(x);
-            assertEquals(0, Nums.sqrt(xx).compareTo(x));
-        }
-    }
     @Test
     public void testCuberoot()
     {
@@ -160,78 +117,8 @@ public class NumsTest
         assertEquals(0, root1000.compareTo(BigDecimal.valueOf(10)));
     }
     
-    
     /**
-     * Test of equals method, of class Nums.
-     */
-    @Test
-    public void testEqualsEnough_3args_1()
-    {
-        double d0 = 0;
-        double d1 = 0.000001;
-        double d2 = 0.000002;
-        double delta0 = 0.0;
-        double delta1 = 0.000001;
-        double delta2 = 0.000002;
-        
-        assertTrue(Nums.equalsEnough(d0, d0, delta0));
-        assertTrue(Nums.equalsEnough(d0, d0, delta1));
-        assertTrue(Nums.equalsEnough(d0, d0, delta2));
-
-        assertFalse(Nums.equalsEnough(d1, d2, delta0));
-        assertFalse(Nums.equalsEnough(d0, d2, delta1));
-        assertTrue(Nums.equalsEnough(d0, d2, delta2));
-        
-        assertFalse(Nums.equalsEnough(d2, d1, delta0));
-        assertFalse(Nums.equalsEnough(d2, d0, delta1));
-        assertTrue(Nums.equalsEnough(d2, d0, delta2));
-                
-    }
-
-    /**
-     * Test of equals method, of class Nums.
-     */
-    @Test
-    public void testEqualsEnough_3args_2()
-    {
-        float d0 = 0;
-        float d1 = 0.001f;
-        float d2 = 0.002f;
-        float delta0 = 0.0f;
-        float delta1 = 0.001f;
-        float delta2 = 0.002f;
-        
-        assertTrue(Nums.equalsEnough(d0, d0, delta0));
-        assertTrue(Nums.equalsEnough(d0, d0, delta1));
-        assertTrue(Nums.equalsEnough(d0, d0, delta2));
-
-        assertFalse(Nums.equalsEnough(d1, d2, delta0));
-        assertFalse(Nums.equalsEnough(d0, d2, delta1));
-        assertTrue(Nums.equalsEnough(d0, d2, delta2));
-        
-        assertFalse(Nums.equalsEnough(d2, d1, delta0));
-        assertFalse(Nums.equalsEnough(d2, d0, delta1));
-        assertTrue(Nums.equalsEnough(d2, d0, delta2));
-    }    
-    
-    /**
-     * Test of equalsEnough method, of class Nums.
-     */
-    @Test
-    public void testEqualsEnough()
-    {
-        assertTrue(Nums.equalsEnough(0, 0, 0));
-        assertTrue(Nums.equalsEnough(0.4, 0.6, 0.5));
-        assertTrue(Nums.equalsEnough(1.9, 2.1, 0.5));
-        assertTrue(Nums.equalsEnough(0.000001, 0.000002, 0.000002));
-
-        assertFalse(Nums.equalsEnough(0, 1, 0));
-        assertFalse(Nums.equalsEnough(0.4, 0.6, 0.1));
-        assertFalse(Nums.equalsEnough(1.9, 2.1, 0.1));
-        assertFalse(Nums.equalsEnough(0.000001, 0.000003, 0.000001));
-    }
-    /**
-     * Test of orderOfMagnitude method, of class Nums.
+     * Test of orderOfMagnitude method, of class BigMaths.
      */
     @Test
     public void testOrderOfMagnitude_long()
@@ -256,7 +143,7 @@ public class NumsTest
     }
 
     /**
-     * Test of orderOfMagnitude method, of class Nums.
+     * Test of orderOfMagnitude method, of class BigMaths.
      */
     @Test
     public void testOrderOfMagnitude_double()
@@ -292,52 +179,6 @@ public class NumsTest
         assertEquals(-3,   Nums.orderOfMagnitude(0.001));
         assertEquals(-2,   Nums.orderOfMagnitude(0.01));
         assertEquals(-1,   Nums.orderOfMagnitude(0.1));
-    }
-
-    /**
-     * Test of log2 method, of class FastMath.
-     */
-    @Test
-    public void testLog2_long()
-    {
-        assertEquals(0, Nums.log2(1));
-        assertEquals(1, Nums.log2(2));
-        assertEquals(2, Nums.log2(4));
-        assertEquals(3, Nums.log2(8));
-        assertEquals(4, Nums.log2(16));
-        assertEquals(5, Nums.log2(32));
-        assertEquals(6, Nums.log2(64));
-        assertEquals(7, Nums.log2(128));
-
-        assertEquals(1, Nums.log2(3));
-        assertEquals(2, Nums.log2(7));
-        assertEquals(3, Nums.log2(15));
-        assertEquals(4, Nums.log2(31));
-        assertEquals(5, Nums.log2(63));
-        assertEquals(6, Nums.log2(127));
-    }
-
-    /**
-     * Test of log2 method, of class FastMath.
-     */
-    @Test
-    public void testLog2_long_boolean()
-    {
-        assertEquals(0, Nums.log2(1,true));
-        assertEquals(1, Nums.log2(2,true));
-        assertEquals(2, Nums.log2(4,true));
-        assertEquals(3, Nums.log2(8,true));
-        assertEquals(4, Nums.log2(16,true));
-        assertEquals(5, Nums.log2(32,true));
-        assertEquals(6, Nums.log2(64,true));
-        assertEquals(7, Nums.log2(128,true));
-
-        assertEquals(2, Nums.log2(3,true));
-        assertEquals(3, Nums.log2(7,true));
-        assertEquals(4, Nums.log2(15,true));
-        assertEquals(5, Nums.log2(31,true));
-        assertEquals(6, Nums.log2(63,true));
-        assertEquals(7, Nums.log2(127,true));
     }
 
     /**
@@ -494,55 +335,8 @@ public class NumsTest
         assertEquals(BigInteger.valueOf(6), Nums.lcm(BigInteger.valueOf(-6)));
     }
 
-    /**
-     * Test of minOf method, of class Nums.
-     */
-    @Test
-    public void testMinOf_intArr()
-    {
-        assertEquals(0, Nums.minOf());
-        assertEquals(1, Nums.minOf(1));
-        assertEquals(1, Nums.minOf(2,1));
-        assertEquals(1, Nums.minOf(3,2,1));
-        assertEquals(1, Nums.minOf(3,2,1,4));
-    }
 
-    /**
-     * Test of minOf method, of class Nums.
-     */
-    @Test
-    public void testMinOf_longArr()
-    {
-        assertEquals(1L, Nums.minOf(1L));
-        assertEquals(1L, Nums.minOf(2L,1L));
-        assertEquals(1L, Nums.minOf(3L,2L,1L));
-        assertEquals(1L, Nums.minOf(3L,2L,1L,4L));
-    }
-
-    /**
-     * Test of minOf method, of class Nums.
-     */
-    @Test
-    public void testMinOf_doubleArr()
-    {
-        assertEquals(0.0, Nums.minOf(), 0.0);
-        assertEquals(1.0, Nums.minOf(1.0), 0.0);
-        assertEquals(1.0, Nums.minOf(2.0, 1.0), 0.0);
-        assertEquals(1.0, Nums.minOf(3.0, 2.0, 1.0), 0.0);
-        assertEquals(1.0, Nums.minOf(3.0, 2.0, 1.0, 4.0), 0.0);
-    }
-
-    /**
-     * Test of log method, of class FastMath.
-     */
-    @Test
-    public void testLog()
-    {
-        for(int i=0;i<1500;i++)
-        {
-            assertEquals(Math.log(i%300), Nums.log(i%300), 0.0);
-        }
-    }
+  
     static final int[] FIBONACCI = {0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169};
     static final int[] FIBO13_21 = {13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181, 6765, 10946, 17711, 28657, 46368, 75025, 121393, 196418, 317811, 514229, 832040, 1346269, 2178309, 3524578, 5702887, 9227465, 14930352, 24157817, 39088169};
 
@@ -587,445 +381,187 @@ public class NumsTest
         assertArrayEquals(FIBONACCI, fibonacci);
     }
 
-    /**
-     * Test of maxOf method, of class Nums.
-     */
-    @Test
-    public void testMaxOf_doubleArr()
-    {
-        assertEquals(2d, Nums.maxOf(1d, 2d), 0.0d);
-        assertEquals(3d, Nums.maxOf(1d, 2d, 3d), 0.0d);
-        assertEquals(3d, Nums.maxOf(3d, 2d, 1d), 0.0d);
-        assertEquals(9d, Nums.maxOf(9d, 8d, 7d, 6d, 5d), 0.0d);
-        assertEquals(0d, Nums.maxOf(), 0.0d);
-    }
+
 
     /**
-     * Test of maxOf method, of class Nums.
-     */
-    @Test
-    public void testMaxOf_floatArr()
-    {
-        assertEquals(2f, Nums.maxOf(1f, 2f), 0.0f);
-        assertEquals(3f, Nums.maxOf(1f, 2f, 3f), 0.0f);
-        assertEquals(3f, Nums.maxOf(3f, 2f, 1f), 0.0f);
-        assertEquals(9f, Nums.maxOf(9f, 8f, 7f, 6f, 5f), 0.0f);
-        assertEquals(0f, Nums.maxOf(), 0.0f);
-    }
-
-    /**
-     * Test of maxOf method, of class Nums.
-     */
-    @Test
-    public void testMaxOf_intArr()
-    {
-        assertEquals(2, Nums.maxOf(1, 2));
-        assertEquals(3, Nums.maxOf(1, 2, 3));
-        assertEquals(3, Nums.maxOf(3, 2, 1));
-        assertEquals(9, Nums.maxOf(9, 8, 7, 6, 5));
-        assertEquals(0, Nums.maxOf());
-    }
-
-    /**
-     * Test of maxOf method, of class Nums.
-     */
-    @Test
-    public void testMaxOf_longArr()
-    {
-        assertEquals(2L, Nums.maxOf(1L, 2L));
-        assertEquals(3L, Nums.maxOf(1L, 2L, 3L));
-        assertEquals(3L, Nums.maxOf(3L, 2L, 1L));
-        assertEquals(9L, Nums.maxOf(9L, 8L, 7L, 6L, 5L));
-    }
-
-    /**
-     * Test of max method with arrays, of class Nums.
-     */
-    @Test
-    public void testMax_intArr()
-    {
-        assertEquals(0, Nums.max(new int[]{}));
-        assertEquals(5, Nums.max(new int[]{5}));
-        assertEquals(2, Nums.max(new int[]{1, 2}));
-        assertEquals(9, Nums.max(new int[]{9, 8, 7, 6, 5}));
-    }
-
-    /**
-     * Test of max method with arrays, of class Nums.
-     */
-    @Test
-    public void testMax_longArr()
-    {
-        assertEquals(0L, Nums.max(new long[]{}));
-        assertEquals(5L, Nums.max(new long[]{5L}));
-        assertEquals(2L, Nums.max(new long[]{1L, 2L}));
-        assertEquals(9L, Nums.max(new long[]{9L, 8L, 7L, 6L, 5L}));
-    }
-
-    /**
-     * Test of max method with arrays, of class Nums.
-     */
-    @Test
-    public void testMax_doubleArr()
-    {
-        assertEquals(0.0, Nums.max(new double[]{}), 0.0);
-        assertEquals(5.0, Nums.max(new double[]{5.0}), 0.0);
-        assertEquals(2.0, Nums.max(new double[]{1.0, 2.0}), 0.0);
-        assertEquals(9.0, Nums.max(new double[]{9.0, 8.0, 7.0, 6.0, 5.0}), 0.0);
-    }
-
-    /**
-     * Test of minMax method, of class Nums.
-     */
-    @Test
-    public void testMinMax_byte()
-    {
-        assertNull(Nums.minMax((byte[]) null));
-        assertArrayEquals(new byte[]{0, 0}, Nums.minMax(new byte[]{}));
-        assertArrayEquals(new byte[]{5, 5}, Nums.minMax(new byte[]{5}));
-        assertArrayEquals(new byte[]{2, 8}, Nums.minMax(new byte[]{2, 8}));
-        assertArrayEquals(new byte[]{2, 8}, Nums.minMax(new byte[]{8, 2}));
-        assertArrayEquals(new byte[]{-5, 10}, Nums.minMax(new byte[]{3, 10, -5, 0, 7}));
-    }
-
-    /**
-     * Test of minMax method, of class Nums.
-     */
-    @Test
-    public void testMinMax_short()
-    {
-        assertNull(Nums.minMax((short[]) null));
-        assertArrayEquals(new short[]{0, 0}, Nums.minMax(new short[]{}));
-        assertArrayEquals(new short[]{5, 5}, Nums.minMax(new short[]{5}));
-        assertArrayEquals(new short[]{2, 8}, Nums.minMax(new short[]{2, 8}));
-        assertArrayEquals(new short[]{2, 8}, Nums.minMax(new short[]{8, 2}));
-        assertArrayEquals(new short[]{-5, 10}, Nums.minMax(new short[]{3, 10, -5, 0, 7}));
-    }
-
-    /**
-     * Test of minMax method, of class Nums.
-     */
-    @Test
-    public void testMinMax_char()
-    {
-        assertNull(Nums.minMax((char[]) null));
-        assertArrayEquals(new char[]{0, 0}, Nums.minMax(new char[]{}));
-        assertArrayEquals(new char[]{'a', 'a'}, Nums.minMax(new char[]{'a'}));
-        assertArrayEquals(new char[]{'a', 'z'}, Nums.minMax(new char[]{'a', 'z'}));
-        assertArrayEquals(new char[]{'a', 'z'}, Nums.minMax(new char[]{'z', 'a'}));
-        assertArrayEquals(new char[]{'b', 'y'}, Nums.minMax(new char[]{'m', 'y', 'b', 'd', 's'}));
-    }
-
-    /**
-     * Test of minMax method, of class Nums.
-     */
-    @Test
-    public void testMinMax_int()
-    {
-        assertNull(Nums.minMax((int[]) null));
-        assertArrayEquals(new int[]{0, 0}, Nums.minMax(new int[]{}));
-        assertArrayEquals(new int[]{5, 5}, Nums.minMax(new int[]{5}));
-        assertArrayEquals(new int[]{2, 8}, Nums.minMax(new int[]{2, 8}));
-        assertArrayEquals(new int[]{2, 8}, Nums.minMax(new int[]{8, 2}));
-        assertArrayEquals(new int[]{-5, 10}, Nums.minMax(new int[]{3, 10, -5, 0, 7}));
-    }
-
-    /**
-     * Test of minMax method, of class Nums.
-     */
-    @Test
-    public void testMinMax_long()
-    {
-        assertNull(Nums.minMax((long[]) null));
-        assertArrayEquals(new long[]{0L, 0L}, Nums.minMax(new long[]{}));
-        assertArrayEquals(new long[]{5L, 5L}, Nums.minMax(new long[]{5L}));
-        assertArrayEquals(new long[]{2L, 8L}, Nums.minMax(new long[]{2L, 8L}));
-        assertArrayEquals(new long[]{2L, 8L}, Nums.minMax(new long[]{8L, 2L}));
-        assertArrayEquals(new long[]{-5L, 10L}, Nums.minMax(new long[]{3L, 10L, -5L, 0L, 7L}));
-    }
-
-    /**
-     * Test of minMax method, of class Nums.
-     */
-    @Test
-    public void testMinMax_float()
-    {
-        assertNull(Nums.minMax((float[]) null));
-        assertArrayEquals(new float[]{0.0f, 0.0f}, Nums.minMax(new float[]{}), 0.0f);
-        assertArrayEquals(new float[]{5.0f, 5.0f}, Nums.minMax(new float[]{5.0f}), 0.0f);
-        assertArrayEquals(new float[]{2.0f, 8.0f}, Nums.minMax(new float[]{2.0f, 8.0f}), 0.0f);
-        assertArrayEquals(new float[]{2.0f, 8.0f}, Nums.minMax(new float[]{8.0f, 2.0f}), 0.0f);
-        assertArrayEquals(new float[]{-5.0f, 10.0f}, Nums.minMax(new float[]{3.0f, 10.0f, -5.0f, 0.0f, 7.0f}), 0.0f);
-    }
-
-    /**
-     * Test of minMax method, of class Nums.
-     */
-    @Test
-    public void testMinMax_double()
-    {
-        assertNull(Nums.minMax((double[]) null));
-        assertArrayEquals(new double[]{0.0, 0.0}, Nums.minMax(new double[]{}), 0.0);
-        assertArrayEquals(new double[]{5.0, 5.0}, Nums.minMax(new double[]{5.0}), 0.0);
-        assertArrayEquals(new double[]{2.0, 8.0}, Nums.minMax(new double[]{2.0, 8.0}), 0.0);
-        assertArrayEquals(new double[]{2.0, 8.0}, Nums.minMax(new double[]{8.0, 2.0}), 0.0);
-        assertArrayEquals(new double[]{-5.0, 10.0}, Nums.minMax(new double[]{3.0, 10.0, -5.0, 0.0, 7.0}), 0.0);
-    }
-
-    /**
-     * Test of isPositive method, of class Nums.
+     * Test of isPositive method, of class BigMaths.
      */
     @Test
     public void testIsPositive_BigInteger()
     {
-        assertTrue(Nums.isPositive(BigInteger.ONE));
-        assertTrue(Nums.isPositive(BigInteger.TEN));
-        assertFalse(Nums.isPositive(BigInteger.ZERO));
-        assertFalse(Nums.isPositive(BigInteger.valueOf(-1)));
+        assertTrue(BigMaths.isPositive(BigInteger.ONE));
+        assertTrue(BigMaths.isPositive(BigInteger.TEN));
+        assertFalse(BigMaths.isPositive(BigInteger.ZERO));
+        assertFalse(BigMaths.isPositive(BigInteger.valueOf(-1)));
     }
 
     /**
-     * Test of isPositive method, of class Nums.
+     * Test of isPositive method, of class BigMaths.
      */
     @Test
     public void testIsPositive_BigDecimal()
     {
-        assertTrue(Nums.isPositive(BigDecimal.ONE));
-        assertTrue(Nums.isPositive(BigDecimal.TEN));
-        assertFalse(Nums.isPositive(BigDecimal.ZERO));
-        assertFalse(Nums.isPositive(BigDecimal.valueOf(-1)));
+        assertTrue(BigMaths.isPositive(BigDecimal.ONE));
+        assertTrue(BigMaths.isPositive(BigDecimal.TEN));
+        assertFalse(BigMaths.isPositive(BigDecimal.ZERO));
+        assertFalse(BigMaths.isPositive(BigDecimal.valueOf(-1)));
     }
 
     /**
-     * Test of isPositiveOrZero method, of class Nums.
+     * Test of isPositiveOrZero method, of class BigMaths.
      */
     @Test
     public void testIsPositiveOrZero_BigInteger()
     {
-        assertTrue(Nums.isPositiveOrZero(BigInteger.ONE));
-        assertTrue(Nums.isPositiveOrZero(BigInteger.TEN));
-        assertTrue(Nums.isPositiveOrZero(BigInteger.ZERO));
-        assertFalse(Nums.isPositiveOrZero(BigInteger.valueOf(-1)));
+        assertTrue(BigMaths.isPositiveOrZero(BigInteger.ONE));
+        assertTrue(BigMaths.isPositiveOrZero(BigInteger.TEN));
+        assertTrue(BigMaths.isPositiveOrZero(BigInteger.ZERO));
+        assertFalse(BigMaths.isPositiveOrZero(BigInteger.valueOf(-1)));
     }
 
     /**
-     * Test of isPositiveOrZero method, of class Nums.
+     * Test of isPositiveOrZero method, of class BigMaths.
      */
     @Test
     public void testIsPositiveOrZero_BigDecimal()
     {
-        assertTrue(Nums.isPositiveOrZero(BigDecimal.ONE));
-        assertTrue(Nums.isPositiveOrZero(BigDecimal.TEN));
-        assertTrue(Nums.isPositiveOrZero(BigDecimal.ZERO));
-        assertFalse(Nums.isPositiveOrZero(BigDecimal.valueOf(-1)));
+        assertTrue(BigMaths.isPositiveOrZero(BigDecimal.ONE));
+        assertTrue(BigMaths.isPositiveOrZero(BigDecimal.TEN));
+        assertTrue(BigMaths.isPositiveOrZero(BigDecimal.ZERO));
+        assertFalse(BigMaths.isPositiveOrZero(BigDecimal.valueOf(-1)));
     }
 
     /**
-     * Test of isNegative method, of class Nums.
+     * Test of isNegative method, of class BigMaths.
      */
     @Test
     public void testIsNegative_BigInteger()
     {
-        assertTrue(Nums.isNegative(BigInteger.valueOf(-1)));
-        assertTrue(Nums.isNegative(BigInteger.valueOf(-10)));
-        assertFalse(Nums.isNegative(BigInteger.ZERO));
-        assertFalse(Nums.isNegative(BigInteger.ONE));
+        assertTrue(BigMaths.isNegative(BigInteger.valueOf(-1)));
+        assertTrue(BigMaths.isNegative(BigInteger.valueOf(-10)));
+        assertFalse(BigMaths.isNegative(BigInteger.ZERO));
+        assertFalse(BigMaths.isNegative(BigInteger.ONE));
     }
 
     /**
-     * Test of isNegative method, of class Nums.
+     * Test of isNegative method, of class BigMaths.
      */
     @Test
     public void testIsNegative_BigDecimal()
     {
-        assertTrue(Nums.isNegative(BigDecimal.valueOf(-1)));
-        assertTrue(Nums.isNegative(BigDecimal.valueOf(-10)));
-        assertFalse(Nums.isNegative(BigDecimal.ZERO));
-        assertFalse(Nums.isNegative(BigDecimal.ONE));
+        assertTrue(BigMaths.isNegative(BigDecimal.valueOf(-1)));
+        assertTrue(BigMaths.isNegative(BigDecimal.valueOf(-10)));
+        assertFalse(BigMaths.isNegative(BigDecimal.ZERO));
+        assertFalse(BigMaths.isNegative(BigDecimal.ONE));
     }
 
     /**
-     * Test of isNegativeOrZero method, of class Nums.
+     * Test of isNegativeOrZero method, of class BigMaths.
      */
     @Test
     public void testIsNegativeOrZero_BigInteger()
     {
-        assertTrue(Nums.isNegativeOrZero(BigInteger.valueOf(-1)));
-        assertTrue(Nums.isNegativeOrZero(BigInteger.valueOf(-10)));
-        assertTrue(Nums.isNegativeOrZero(BigInteger.ZERO));
-        assertFalse(Nums.isNegativeOrZero(BigInteger.ONE));
+        assertTrue(BigMaths.isNegativeOrZero(BigInteger.valueOf(-1)));
+        assertTrue(BigMaths.isNegativeOrZero(BigInteger.valueOf(-10)));
+        assertTrue(BigMaths.isNegativeOrZero(BigInteger.ZERO));
+        assertFalse(BigMaths.isNegativeOrZero(BigInteger.ONE));
     }
 
     /**
-     * Test of isNegativeOrZero method, of class Nums.
+     * Test of isNegativeOrZero method, of class BigMaths.
      */
     @Test
     public void testIsNegativeOrZero_BigDecimal()
     {
-        assertTrue(Nums.isNegativeOrZero(BigDecimal.valueOf(-1)));
-        assertTrue(Nums.isNegativeOrZero(BigDecimal.valueOf(-10)));
-        assertTrue(Nums.isNegativeOrZero(BigDecimal.ZERO));
-        assertFalse(Nums.isNegativeOrZero(BigDecimal.ONE));
+        assertTrue(BigMaths.isNegativeOrZero(BigDecimal.valueOf(-1)));
+        assertTrue(BigMaths.isNegativeOrZero(BigDecimal.valueOf(-10)));
+        assertTrue(BigMaths.isNegativeOrZero(BigDecimal.ZERO));
+        assertFalse(BigMaths.isNegativeOrZero(BigDecimal.ONE));
     }
 
     /**
-     * Test of isZero method, of class Nums.
+     * Test of isZero method, of class BigMaths.
      */
     @Test
     public void testIsZero_BigDecimal()
     {
-        assertFalse(Nums.isZero(BigDecimal.valueOf(-1)));
-        assertTrue(Nums.isZero(BigDecimal.ZERO));
-        assertFalse(Nums.isZero(BigDecimal.ONE));
+        assertFalse(BigMaths.isZero(BigDecimal.valueOf(-1)));
+        assertTrue(BigMaths.isZero(BigDecimal.ZERO));
+        assertFalse(BigMaths.isZero(BigDecimal.ONE));
     }
 
     /**
-     * Test of isZero method, of class Nums.
+     * Test of isZero method, of class BigMaths.
      */
     @Test
     public void testIsZero_BigDecimal_BigDecimal()
     {
         BigDecimal delta = new BigDecimal("0.002");
-        assertFalse(Nums.isZero(BigDecimal.valueOf(-1), delta));
-        assertTrue(Nums.isZero(BigDecimal.ZERO, delta));
-        assertFalse(Nums.isZero(BigDecimal.ONE, delta));
+        assertFalse(BigMaths.isZero(BigDecimal.valueOf(-1), delta));
+        assertTrue(BigMaths.isZero(BigDecimal.ZERO, delta));
+        assertFalse(BigMaths.isZero(BigDecimal.ONE, delta));
 
-        assertFalse(Nums.isZero(new BigDecimal(0.003), delta));
-        assertTrue(Nums.isZero(new BigDecimal(0.001), delta));
-        assertTrue(Nums.isZero(new BigDecimal(-0.001), delta));
-        assertFalse(Nums.isZero(new BigDecimal(-0.003), delta));
+        assertFalse(BigMaths.isZero(new BigDecimal(0.003), delta));
+        assertTrue(BigMaths.isZero(new BigDecimal(0.001), delta));
+        assertTrue(BigMaths.isZero(new BigDecimal(-0.001), delta));
+        assertFalse(BigMaths.isZero(new BigDecimal(-0.003), delta));
     }
 
     /**
-     * Test of isNullOrZero method, of class Nums.
+     * Test of isNullOrZero method, of class BigMaths.
      */
     @Test
     public void testIsNullOrZero_BigDecimal()
     {
-        assertFalse(Nums.isNullOrZero(BigDecimal.valueOf(-1)));
-        assertFalse(Nums.isNullOrZero(BigDecimal.valueOf(-1)));
-        assertTrue(Nums.isNullOrZero(BigDecimal.ZERO));
-        assertFalse(Nums.isNullOrZero(BigDecimal.ONE));
+        assertFalse(BigMaths.isNullOrZero(BigDecimal.valueOf(-1)));
+        assertFalse(BigMaths.isNullOrZero(BigDecimal.valueOf(-1)));
+        assertTrue(BigMaths.isNullOrZero(BigDecimal.ZERO));
+        assertFalse(BigMaths.isNullOrZero(BigDecimal.ONE));
     }
 
     /**
-     * Test of isNullOrZero method, of class Nums.
+     * Test of isNullOrZero method, of class BigMaths.
      */
     @Test
     public void testIsNullOrZero_BigDecimal_BigDecimal()
     {
         BigDecimal delta = new BigDecimal("0.002");
-        assertFalse(Nums.isNullOrZero(BigDecimal.valueOf(-1), delta));
-        assertTrue(Nums.isNullOrZero(BigDecimal.ZERO, delta));
-        assertFalse(Nums.isNullOrZero(BigDecimal.ONE, delta));
+        assertFalse(BigMaths.isNullOrZero(BigDecimal.valueOf(-1), delta));
+        assertTrue(BigMaths.isNullOrZero(BigDecimal.ZERO, delta));
+        assertFalse(BigMaths.isNullOrZero(BigDecimal.ONE, delta));
 
-        assertFalse(Nums.isNullOrZero(new BigDecimal(0.003), delta));
-        assertTrue(Nums.isNullOrZero(new BigDecimal(0.001), delta));
-        assertTrue(Nums.isNullOrZero(new BigDecimal(-0.001), delta));
-        assertFalse(Nums.isNullOrZero(new BigDecimal(-0.003), delta));
+        assertFalse(BigMaths.isNullOrZero(new BigDecimal(0.003), delta));
+        assertTrue(BigMaths.isNullOrZero(new BigDecimal(0.001), delta));
+        assertTrue(BigMaths.isNullOrZero(new BigDecimal(-0.001), delta));
+        assertFalse(BigMaths.isNullOrZero(new BigDecimal(-0.003), delta));
     }
 
     /**
-     * Test of sum method of class Nums, with BigInteger.
+     * Test of sum method of class BigMaths, with BigInteger.
      */
     @Test
     public void testSum_BigIntegerArr()
     {
-        assertEquals(BigInteger.ZERO, Nums.sum(BigInteger.ZERO));
-        assertEquals(BigInteger.ZERO, Nums.sum(BigInteger.ZERO, BigInteger.ZERO));
-        assertEquals(BigInteger.ONE, Nums.sum(BigInteger.ONE, BigInteger.ZERO));
-        assertEquals(BigInteger.valueOf(3), Nums.sum(BigInteger.ONE, BigInteger.valueOf(2)));
-        assertEquals(BigInteger.valueOf(6), Nums.sum(BigInteger.ONE, BigInteger.valueOf(2), BigInteger.valueOf(3)));
-        assertEquals(BigInteger.valueOf(6), Nums.sum(BigInteger.ONE, BigInteger.valueOf(2), BigInteger.valueOf(3), null));
+        assertEquals(BigInteger.ZERO, BigMaths.sum(BigInteger.ZERO));
+        assertEquals(BigInteger.ZERO, BigMaths.sum(BigInteger.ZERO, BigInteger.ZERO));
+        assertEquals(BigInteger.ONE, BigMaths.sum(BigInteger.ONE, BigInteger.ZERO));
+        assertEquals(BigInteger.valueOf(3), BigMaths.sum(BigInteger.ONE, BigInteger.valueOf(2)));
+        assertEquals(BigInteger.valueOf(6), BigMaths.sum(BigInteger.ONE, BigInteger.valueOf(2), BigInteger.valueOf(3)));
+        assertEquals(BigInteger.valueOf(6), BigMaths.sum(BigInteger.ONE, BigInteger.valueOf(2), BigInteger.valueOf(3), null));
     }
 
 
     /**
-     * Test of sum method with MathContext, of class Nums.
+     * Test of sum method with MathContext, of class BigMaths.
      */
     @Test
     public void testSum_MathContext()
     {
-        assertEquals(BigDecimal.ZERO, Nums.sum(MathContext.DECIMAL32));
-        assertEquals(BigDecimal.ONE, Nums.sum(MathContext.DECIMAL32, BigDecimal.ONE, BigDecimal.ZERO));
-        assertEquals(new BigDecimal("0.3333333"), Nums.sum(MathContext.DECIMAL32, BigDecimal.ZERO, new BigDecimal("0.33333333")));
-        assertEquals(BigDecimal.valueOf(6), Nums.sum(MathContext.DECIMAL32, BigDecimal.ONE, BigDecimal.valueOf(2), BigDecimal.valueOf(3), null));
+        assertEquals(BigDecimal.ZERO, BigMaths.sum(MathContext.DECIMAL32));
+        assertEquals(BigDecimal.ONE, BigMaths.sum(MathContext.DECIMAL32, BigDecimal.ONE, BigDecimal.ZERO));
+        assertEquals(new BigDecimal("0.3333333"), BigMaths.sum(MathContext.DECIMAL32, BigDecimal.ZERO, new BigDecimal("0.33333333")));
+        assertEquals(BigDecimal.valueOf(6), BigMaths.sum(MathContext.DECIMAL32, BigDecimal.ONE, BigDecimal.valueOf(2), BigDecimal.valueOf(3), null));
     }
-
-    /**
-     * Test of minOf method, of class Nums.
-     */
-    @Test
-    public void testMinOf_floatArr()
-    {
-        assertEquals(1f, Nums.minOf(1f, 2f), 0.0f);
-        assertEquals(1f, Nums.minOf(1f, 2f, 3f), 0.0f);
-        assertEquals(1f, Nums.minOf(3f, 2f, 1f), 0.0f);
-        assertEquals(5f, Nums.minOf(9f, 8f, 7f, 6f, 5f), 0.0f);
-        assertEquals(0f, Nums.minOf(), 0.0f);
-    }
-
-    /**
-     * Test of minOf method, of class Nums.
-     */
-    @Test
-    public void testMinLong()
-    {
-        assertEquals(1L, Nums.minOf(1L, 2L));
-        assertEquals(1L, Nums.minOf(1L, 2L, 3L));
-        assertEquals(1L, Nums.minOf(3L, 2L, 1L));
-        assertEquals(5L, Nums.minOf(9L, 8L, 7L, 6L, 5L));
-    }
-    
-    /**
-     * Test of isPow2 method, of class FastMath.
-     */
-    @Test
-    public void testIsPow2_int()
-    {
-        assertFalse(Nums.isPow2(-1));
-        assertFalse(Nums.isPow2(0));
-        assertFalse(Nums.isPow2(3));
-        assertFalse(Nums.isPow2(5));
-        assertFalse(Nums.isPow2(7));
-        assertFalse(Nums.isPow2(9));
-        assertFalse(Nums.isPow2(15));
-        assertFalse(Nums.isPow2(17));
-        assertFalse(Nums.isPow2(31));
-        assertFalse(Nums.isPow2(33));
-        assertFalse(Nums.isPow2(63));
-        assertFalse(Nums.isPow2(65));
-        assertFalse(Nums.isPow2(127));
-        assertFalse(Nums.isPow2(129));
-        
-        assertTrue(Nums.isPow2(1));
-        assertTrue(Nums.isPow2(2));
-        assertTrue(Nums.isPow2(4));
-        assertTrue(Nums.isPow2(8));
-        assertTrue(Nums.isPow2(16));
-        assertTrue(Nums.isPow2(32));
-        assertTrue(Nums.isPow2(64));
-        assertTrue(Nums.isPow2(128));
-        
-        assertFalse(Nums.isPow2(Byte.MAX_VALUE));
-        assertFalse(Nums.isPow2(Short.MAX_VALUE));
-        assertFalse(Nums.isPow2(Character.MAX_VALUE));
-        assertFalse(Nums.isPow2(Integer.MAX_VALUE));
-
-        assertTrue(Nums.isPow2(Byte.MAX_VALUE+1));
-        assertTrue(Nums.isPow2(Short.MAX_VALUE+1));
-        assertTrue(Nums.isPow2(Character.MAX_VALUE+1));
-
-        assertFalse(Nums.isPow2(-Byte.MAX_VALUE));
-        assertFalse(Nums.isPow2(-Short.MAX_VALUE));
-        assertFalse(Nums.isPow2(-Character.MAX_VALUE));
-        assertFalse(Nums.isPow2(-Integer.MAX_VALUE));
-
-        assertFalse(Nums.isPow2(-Byte.MAX_VALUE-1));
-        assertFalse(Nums.isPow2(-Short.MAX_VALUE-1));
-        assertFalse(Nums.isPow2(-Character.MAX_VALUE-1));
-    }
-
 
     /**
      * Test of isPow method, of class FastMath.
@@ -1056,38 +592,6 @@ public class NumsTest
     }
 
 
-    /**
-     * Test of mul method, of class FastMath.
-     */
-    @Test
-    public void testMul()
-    {
-        assertEquals(1, Nums.mul());
-        assertEquals(0, Nums.mul(0));
-        assertEquals(1, Nums.mul(1));
-        assertEquals(2, Nums.mul(1,2));
-        assertEquals(6, Nums.mul(1,2,3));
-        assertEquals(30, Nums.mul(1,2,3,5));
-    }
-
-    /**
-     * Test of log method, of class FastMath.
-     */
-    @Test
-    public void testLog_double_double()
-    {
-        for(int i=1;i<1_000_000;i++)
-        {
-             double a = Math.log(i);
-             double b = Nums.log(2.718281828459045235360, i);
-
-             double c = Math.log10(i);
-             double d = Nums.log(10, i);
-             
-             assertEquals(a, b, 0.0000000000001);
-             assertEquals(c, d, 0.0000000000001);
-        }
-    }
     @Test
     public void testSomeMethod()
     {
@@ -1145,19 +649,6 @@ public class NumsTest
         }
     }
 
-    /**
-     * Test of equals method, of class Nums.
-     */
-    @Test
-    public void testEquals()
-    {
-        BigDecimal d1 = BigDecimal.valueOf(0.001);
-        BigDecimal d2 = BigDecimal.valueOf(0.009);
-        BigDecimal delta = BigDecimal.valueOf(0.01);
-
-        assertTrue(Nums.equalsEnough(d1, d2, delta));
-    }
-
     @Test
     public void testSomeMethod_BigInteger()
     {
@@ -1196,7 +687,7 @@ public class NumsTest
     }
 
     /**
-     * Test of gcd method, of class Nums.
+     * Test of gcd method, of class BigMaths.
      */
     @Test
     public void testGcd_BigInteger_BigInteger()
@@ -1217,7 +708,7 @@ public class NumsTest
     }
 
     /**
-     * Test of gcd method, of class Nums.
+     * Test of gcd method, of class BigMaths.
      */
     @Test
     public void testGcd_BigInteger_BigIntegerArr()
@@ -1229,7 +720,7 @@ public class NumsTest
     }
 
     /**
-     * Test of lcm method, of class Nums.
+     * Test of lcm method, of class BigMaths.
      */
     @Test
     public void testLcm_BigInteger_BigInteger()
@@ -1250,7 +741,7 @@ public class NumsTest
     }
 
     /**
-     * Test of lcm method, of class Nums.
+     * Test of lcm method, of class BigMaths.
      */
     @Test
     public void testLcm_BigInteger_BigIntegerArr()
@@ -1263,7 +754,7 @@ public class NumsTest
 
 
     /**
-     * Test of fibonacci method, of class Nums.
+     * Test of fibonacci method, of class BigMaths.
      */
     @Test
     public void testFibonacci_BigIntegerArr()
@@ -1274,7 +765,7 @@ public class NumsTest
     }
 
     /**
-     * Test of fibonacci method, of class Nums.
+     * Test of fibonacci method, of class BigMaths.
      */
     @Test
     public void testFibonacci_BigInteger_3args()
@@ -1289,7 +780,7 @@ public class NumsTest
     }
 
     /**
-     * Test of fibonacci method, of class Nums.
+     * Test of fibonacci method, of class BigMaths.
      */
     @Test
     public void testFibonacci_BigInteger_5args()
@@ -1320,7 +811,7 @@ public class NumsTest
 
     static SecureRandom rnd = new SecureRandom();
     /**
-     * Test of safePrime method, of class Nums.
+     * Test of safePrime method, of class BigMaths.
      */
     @Test
     public void testSafePrime()
@@ -1332,7 +823,7 @@ public class NumsTest
     }
 
     /**
-     * Test of gcd method, of class Nums.
+     * Test of gcd method, of class BigMaths.
      */
     @Test
     public void testGcd_long_long()
@@ -1353,7 +844,7 @@ public class NumsTest
     }
 
     /**
-     * Test of gcd method, of class Nums.
+     * Test of gcd method, of class BigMaths.
      */
     @Test
     public void testGcd_long_longArr()
@@ -1365,7 +856,7 @@ public class NumsTest
     }
 
     /**
-     * Test of lcm method, of class Nums.
+     * Test of lcm method, of class BigMaths.
      */
     @Test
     public void testLcm_long_long()
@@ -1386,7 +877,7 @@ public class NumsTest
     }
 
     /**
-     * Test of lcm method, of class Nums.
+     * Test of lcm method, of class BigMaths.
      */
     @Test
     public void testLcm_long_longArr()
@@ -1402,7 +893,7 @@ public class NumsTest
     static long[] FIBO13_21_LONG = As.longs(FIBO13_21);
     
     /**
-     * Test of fibonacci method, of class Nums.
+     * Test of fibonacci method, of class BigMaths.
      */
     @Test
     public void testFibonacci_longArr()
@@ -1413,7 +904,7 @@ public class NumsTest
     }
 
     /**
-     * Test of fibonacci method, of class Nums.
+     * Test of fibonacci method, of class BigMaths.
      */
     @Test
     public void testFibonacci_long_3args()
@@ -1428,7 +919,7 @@ public class NumsTest
     }
 
     /**
-     * Test of fibonacci method, of class Nums.
+     * Test of fibonacci method, of class BigMaths.
      */
     @Test
     public void testFibonacci_long_5args()
@@ -1445,51 +936,51 @@ public class NumsTest
     @Test
     public void testIsPow2_long()
     {
-        assertFalse(Nums.isPow2(-1L));
-        assertFalse(Nums.isPow2(0L));
-        assertFalse(Nums.isPow2(3L));
-        assertFalse(Nums.isPow2(5L));
-        assertFalse(Nums.isPow2(7L));
-        assertFalse(Nums.isPow2(9L));
-        assertFalse(Nums.isPow2(15L));
-        assertFalse(Nums.isPow2(17L));
-        assertFalse(Nums.isPow2(31L));
-        assertFalse(Nums.isPow2(33L));
-        assertFalse(Nums.isPow2(63L));
-        assertFalse(Nums.isPow2(65L));
-        assertFalse(Nums.isPow2(127L));
-        assertFalse(Nums.isPow2(129L));
+        assertFalse(Maths.isPow2(-1L));
+        assertFalse(Maths.isPow2(0L));
+        assertFalse(Maths.isPow2(3L));
+        assertFalse(Maths.isPow2(5L));
+        assertFalse(Maths.isPow2(7L));
+        assertFalse(Maths.isPow2(9L));
+        assertFalse(Maths.isPow2(15L));
+        assertFalse(Maths.isPow2(17L));
+        assertFalse(Maths.isPow2(31L));
+        assertFalse(Maths.isPow2(33L));
+        assertFalse(Maths.isPow2(63L));
+        assertFalse(Maths.isPow2(65L));
+        assertFalse(Maths.isPow2(127L));
+        assertFalse(Maths.isPow2(129L));
         
-        assertTrue(Nums.isPow2(1L));
-        assertTrue(Nums.isPow2(2L));
-        assertTrue(Nums.isPow2(4L));
-        assertTrue(Nums.isPow2(8L));
-        assertTrue(Nums.isPow2(16L));
-        assertTrue(Nums.isPow2(32L));
-        assertTrue(Nums.isPow2(64L));
-        assertTrue(Nums.isPow2(128L));
+        assertTrue(Maths.isPow2(1L));
+        assertTrue(Maths.isPow2(2L));
+        assertTrue(Maths.isPow2(4L));
+        assertTrue(Maths.isPow2(8L));
+        assertTrue(Maths.isPow2(16L));
+        assertTrue(Maths.isPow2(32L));
+        assertTrue(Maths.isPow2(64L));
+        assertTrue(Maths.isPow2(128L));
         
-        assertFalse(Nums.isPow2((long)Byte.MAX_VALUE));
-        assertFalse(Nums.isPow2((long)Short.MAX_VALUE));
-        assertFalse(Nums.isPow2((long)Character.MAX_VALUE));
-        assertFalse(Nums.isPow2((long)Integer.MAX_VALUE));
-        assertFalse(Nums.isPow2(Long.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)Byte.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)Short.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)Character.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)Integer.MAX_VALUE));
+        assertFalse(Maths.isPow2(Long.MAX_VALUE));
 
-        assertTrue(Nums.isPow2(Byte.MAX_VALUE+1L));
-        assertTrue(Nums.isPow2(Short.MAX_VALUE+1L));
-        assertTrue(Nums.isPow2(Character.MAX_VALUE+1L));
-        assertTrue(Nums.isPow2(Integer.MAX_VALUE+1L));
+        assertTrue(Maths.isPow2(Byte.MAX_VALUE+1L));
+        assertTrue(Maths.isPow2(Short.MAX_VALUE+1L));
+        assertTrue(Maths.isPow2(Character.MAX_VALUE+1L));
+        assertTrue(Maths.isPow2(Integer.MAX_VALUE+1L));
 
-        assertFalse(Nums.isPow2((long)-Byte.MAX_VALUE));
-        assertFalse(Nums.isPow2((long)-Short.MAX_VALUE));
-        assertFalse(Nums.isPow2((long)-Character.MAX_VALUE));
-        assertFalse(Nums.isPow2((long)-Integer.MAX_VALUE));
-        assertFalse(Nums.isPow2(-Long.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)-Byte.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)-Short.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)-Character.MAX_VALUE));
+        assertFalse(Maths.isPow2((long)-Integer.MAX_VALUE));
+        assertFalse(Maths.isPow2(-Long.MAX_VALUE));
 
-        assertFalse(Nums.isPow2(-Byte.MAX_VALUE-1L));
-        assertFalse(Nums.isPow2(-Short.MAX_VALUE-1L));
-        assertFalse(Nums.isPow2(-Character.MAX_VALUE-1L));
-        assertFalse(Nums.isPow2(-Integer.MAX_VALUE-1L));
+        assertFalse(Maths.isPow2(-Byte.MAX_VALUE-1L));
+        assertFalse(Maths.isPow2(-Short.MAX_VALUE-1L));
+        assertFalse(Maths.isPow2(-Character.MAX_VALUE-1L));
+        assertFalse(Maths.isPow2(-Integer.MAX_VALUE-1L));
     }
 
     /**
@@ -1518,50 +1009,50 @@ public class NumsTest
     }
 
     /**
-     * Test of equalsEnough method, of class Nums.
+     * Test of equalsEnough method, of class BigMaths.
      */
     @Test
     public void testEqualsEnough_3args_3()
     {
-        assertTrue(Nums.equalsEnough(0f, 0f, 0f));
-        assertTrue(Nums.equalsEnough(0f, 1f, 1f));
-        assertFalse(Nums.equalsEnough(0f, 10f, 1f));
+        assertTrue(Maths.equalsEnough(0f, 0f, 0f));
+        assertTrue(Maths.equalsEnough(0f, 1f, 1f));
+        assertFalse(Maths.equalsEnough(0f, 10f, 1f));
 
-        assertTrue(Nums.equalsEnough(0.1001f, 0.1f, 0.01f));
-        assertFalse(Nums.equalsEnough(0.1001f, 0.2f, 0.01f));
+        assertTrue(Maths.equalsEnough(0.1001f, 0.1f, 0.01f));
+        assertFalse(Maths.equalsEnough(0.1001f, 0.2f, 0.01f));
     }
 
     /**
-     * Test of equalsEnough method, of class Nums.
+     * Test of equalsEnough method, of class BigMaths.
      */
     @Test
     public void testEqualsEnough_3args_4()
     {
-        assertTrue(Nums.equalsEnough(0d, 0d, 0d));
-        assertTrue(Nums.equalsEnough(0d, 1d, 1d));
-        assertFalse(Nums.equalsEnough(0d, 10d, 1d));
+        assertTrue(Maths.equalsEnough(0d, 0d, 0d));
+        assertTrue(Maths.equalsEnough(0d, 1d, 1d));
+        assertFalse(Maths.equalsEnough(0d, 10d, 1d));
 
-        assertTrue(Nums.equalsEnough(0.1001, 0.1, 0.01));
-        assertFalse(Nums.equalsEnough(0.1001, 0.2, 0.01));
+        assertTrue(Maths.equalsEnough(0.1001, 0.1, 0.01));
+        assertFalse(Maths.equalsEnough(0.1001, 0.2, 0.01));
     }
 
     /**
-     * Test of equalsEnough method, of class Nums.
+     * Test of equalsEnough method, of class BigMaths.
      */
     @Test
     public void testEqualsEnough_3args_5()
     {
-        assertTrue(Nums.equalsEnough(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
-        assertTrue(Nums.equalsEnough(BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.ONE));
-        assertFalse(Nums.equalsEnough(BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.ONE));
+        assertTrue(BigMaths.equalsEnough(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO));
+        assertTrue(BigMaths.equalsEnough(BigDecimal.ZERO, BigDecimal.ONE, BigDecimal.ONE));
+        assertFalse(BigMaths.equalsEnough(BigDecimal.ZERO, BigDecimal.TEN, BigDecimal.ONE));
 
-        assertTrue(Nums.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.1), BigDecimal.valueOf(0.01)));
-        assertFalse(Nums.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.2), BigDecimal.valueOf(0.01)));
+        assertTrue(BigMaths.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.1), BigDecimal.valueOf(0.01)));
+        assertFalse(BigMaths.equalsEnough(BigDecimal.valueOf(0.1001), BigDecimal.valueOf(0.2), BigDecimal.valueOf(0.01)));
     }
 
 
     /**
-     * Test of ceilDiv method, of class Nums.
+     * Test of ceilDiv method, of class BigMaths.
      */
     @Test
     public void testCeilDiv_int()
@@ -1582,7 +1073,7 @@ public class NumsTest
     }
 
     /**
-     * Test of ceilDiv method, of class Nums.
+     * Test of ceilDiv method, of class BigMaths.
      */
     @Test
     public void testCeilDiv_long()
@@ -1603,87 +1094,87 @@ public class NumsTest
     }
 
     /**
-     * Test of between method, of class Nums.
+     * Test of between method, of class BigMaths.
      */
     @Test
     public void testBetween_byte()
     {
-        assertTrue(Nums.between((byte)1, (byte)5, (byte)1, (byte)3, (byte)5));
-        assertTrue(Nums.between((byte)5, (byte)1, (byte)3, (byte)5, (byte)1));
-        assertTrue(Nums.between((byte)2, (byte)2, (byte)2, (byte)2));
-        assertFalse(Nums.between((byte)1, (byte)5, (byte)0, (byte)3));
-        assertFalse(Nums.between((byte)1, (byte)5, (byte)3, (byte)6));
-        assertTrue(Nums.between((byte)1, (byte)5));
-        assertTrue(Nums.between((byte)1, (byte)5, new byte[0]));
-        assertTrue(Nums.between((byte)1, (byte)5, (byte[])null));
+        assertTrue(Maths.between((byte)1, (byte)5, (byte)1, (byte)3, (byte)5));
+        assertTrue(Maths.between((byte)5, (byte)1, (byte)3, (byte)5, (byte)1));
+        assertTrue(Maths.between((byte)2, (byte)2, (byte)2, (byte)2));
+        assertFalse(Maths.between((byte)1, (byte)5, (byte)0, (byte)3));
+        assertFalse(Maths.between((byte)1, (byte)5, (byte)3, (byte)6));
+        assertTrue(Maths.between((byte)1, (byte)5));
+        assertTrue(Maths.between((byte)1, (byte)5, new byte[0]));
+        assertTrue(Maths.between((byte)1, (byte)5, (byte[])null));
     }
 
     /**
-     * Test of between method, of class Nums.
+     * Test of between method, of class BigMaths.
      */
     @Test
     public void testBetween_int()
     {
-        assertTrue(Nums.between(1, 5, 1, 3, 5));
-        assertTrue(Nums.between(5, 1, 3, 5, 1));
-        assertTrue(Nums.between(2, 2, 2, 2));
-        assertFalse(Nums.between(1, 5, 0, 3));
-        assertFalse(Nums.between(1, 5, 3, 6));
-        assertTrue(Nums.between(1, 5));
-        assertTrue(Nums.between(1, 5, new int[0]));
-        assertTrue(Nums.between(1, 5, (int[])null));
+        assertTrue(Maths.between(1, 5, 1, 3, 5));
+        assertTrue(Maths.between(5, 1, 3, 5, 1));
+        assertTrue(Maths.between(2, 2, 2, 2));
+        assertFalse(Maths.between(1, 5, 0, 3));
+        assertFalse(Maths.between(1, 5, 3, 6));
+        assertTrue(Maths.between(1, 5));
+        assertTrue(Maths.between(1, 5, new int[0]));
+        assertTrue(Maths.between(1, 5, (int[])null));
     }
 
     /**
-     * Test of between method, of class Nums.
+     * Test of between method, of class BigMaths.
      */
     @Test
     public void testBetween_long()
     {
-        assertTrue(Nums.between(1L, 5L, 1L, 3L, 5L));
-        assertTrue(Nums.between(5L, 1L, 3L, 5L, 1L));
-        assertTrue(Nums.between(2L, 2L, 2L, 2L));
-        assertFalse(Nums.between(1L, 5L, 0L, 3L));
-        assertFalse(Nums.between(1L, 5L, 3L, 6L));
-        assertTrue(Nums.between(1L, 5L));
-        assertTrue(Nums.between(1L, 5L, new long[0]));
-        assertTrue(Nums.between(1L, 5L, (long[])null));
+        assertTrue(Maths.between(1L, 5L, 1L, 3L, 5L));
+        assertTrue(Maths.between(5L, 1L, 3L, 5L, 1L));
+        assertTrue(Maths.between(2L, 2L, 2L, 2L));
+        assertFalse(Maths.between(1L, 5L, 0L, 3L));
+        assertFalse(Maths.between(1L, 5L, 3L, 6L));
+        assertTrue(Maths.between(1L, 5L));
+        assertTrue(Maths.between(1L, 5L, new long[0]));
+        assertTrue(Maths.between(1L, 5L, (long[])null));
     }
 
     /**
-     * Test of between method, of class Nums.
+     * Test of between method, of class BigMaths.
      */
     @Test
     public void testBetween_float()
     {
-        assertTrue(Nums.between(1.0f, 5.0f, 1.0f, 3.0f, 5.0f));
-        assertTrue(Nums.between(5.0f, 1.0f, 3.0f, 5.0f, 1.0f));
-        assertTrue(Nums.between(2.0f, 2.0f, 2.0f, 2.0f));
-        assertFalse(Nums.between(1.0f, 5.0f, 0.0f, 3.0f));
-        assertFalse(Nums.between(1.0f, 5.0f, 3.0f, 6.0f));
-        assertTrue(Nums.between(1.0f, 5.0f));
-        assertTrue(Nums.between(1.0f, 5.0f, new float[0]));
-        assertTrue(Nums.between(1.0f, 5.0f, (float[])null));
+        assertTrue(Maths.between(1.0f, 5.0f, 1.0f, 3.0f, 5.0f));
+        assertTrue(Maths.between(5.0f, 1.0f, 3.0f, 5.0f, 1.0f));
+        assertTrue(Maths.between(2.0f, 2.0f, 2.0f, 2.0f));
+        assertFalse(Maths.between(1.0f, 5.0f, 0.0f, 3.0f));
+        assertFalse(Maths.between(1.0f, 5.0f, 3.0f, 6.0f));
+        assertTrue(Maths.between(1.0f, 5.0f));
+        assertTrue(Maths.between(1.0f, 5.0f, new float[0]));
+        assertTrue(Maths.between(1.0f, 5.0f, (float[])null));
     }
 
     /**
-     * Test of between method, of class Nums.
+     * Test of between method, of class BigMaths.
      */
     @Test
     public void testBetween_double()
     {
-        assertTrue(Nums.between(1.0, 5.0, 1.0, 3.0, 5.0));
-        assertTrue(Nums.between(5.0, 1.0, 3.0, 5.0, 1.0));
-        assertTrue(Nums.between(2.0, 2.0, 2.0, 2.0));
-        assertFalse(Nums.between(1.0, 5.0, 0.0, 3.0));
-        assertFalse(Nums.between(1.0, 5.0, 3.0, 6.0));
-        assertTrue(Nums.between(1.0, 5.0));
-        assertTrue(Nums.between(1.0, 5.0, new double[0]));
-        assertTrue(Nums.between(1.0, 5.0, (double[])null));
+        assertTrue(Maths.between(1.0, 5.0, 1.0, 3.0, 5.0));
+        assertTrue(Maths.between(5.0, 1.0, 3.0, 5.0, 1.0));
+        assertTrue(Maths.between(2.0, 2.0, 2.0, 2.0));
+        assertFalse(Maths.between(1.0, 5.0, 0.0, 3.0));
+        assertFalse(Maths.between(1.0, 5.0, 3.0, 6.0));
+        assertTrue(Maths.between(1.0, 5.0));
+        assertTrue(Maths.between(1.0, 5.0, new double[0]));
+        assertTrue(Maths.between(1.0, 5.0, (double[])null));
     }
 
     /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_1()
@@ -1693,16 +1184,16 @@ public class NumsTest
         byte n = -1;
         byte m = 50;
         byte o = 127;
-        assertEquals(z, Nums.bound(z, c, n));
-        assertEquals(z, Nums.bound(z, c, z));
-        assertEquals(m, Nums.bound(z, c, m));
-        assertEquals(c, Nums.bound(z, c, c));
-        assertEquals(c, Nums.bound(z, c, o));
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, Maths.bound(z, c, n));
+        assertEquals(z, Maths.bound(z, c, z));
+        assertEquals(m, Maths.bound(z, c, m));
+        assertEquals(c, Maths.bound(z, c, c));
+        assertEquals(c, Maths.bound(z, c, o));
+        assertEquals(c, Maths.bound(c, z, o));
     }
 
     /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_2()
@@ -1712,16 +1203,16 @@ public class NumsTest
         short n = -1;
         short m = 50;
         short o = 127;
-        assertEquals(z, Nums.bound(z, c, n));
-        assertEquals(z, Nums.bound(z, c, z));
-        assertEquals(m, Nums.bound(z, c, m));
-        assertEquals(c, Nums.bound(z, c, c));
-        assertEquals(c, Nums.bound(z, c, o));
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, Maths.bound(z, c, n));
+        assertEquals(z, Maths.bound(z, c, z));
+        assertEquals(m, Maths.bound(z, c, m));
+        assertEquals(c, Maths.bound(z, c, c));
+        assertEquals(c, Maths.bound(z, c, o));
+        assertEquals(c, Maths.bound(c, z, o));
     }
 
     /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_3()
@@ -1731,16 +1222,16 @@ public class NumsTest
         int n = -1;
         int m = 50;
         int o = 127;
-        assertEquals(z, Nums.bound(z, c, n));
-        assertEquals(z, Nums.bound(z, c, z));
-        assertEquals(m, Nums.bound(z, c, m));
-        assertEquals(c, Nums.bound(z, c, c));
-        assertEquals(c, Nums.bound(z, c, o));
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, Maths.bound(z, c, n));
+        assertEquals(z, Maths.bound(z, c, z));
+        assertEquals(m, Maths.bound(z, c, m));
+        assertEquals(c, Maths.bound(z, c, c));
+        assertEquals(c, Maths.bound(z, c, o));
+        assertEquals(c, Maths.bound(c, z, o));
     }
 
     /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_4()
@@ -1750,16 +1241,16 @@ public class NumsTest
         long n = -1;
         long m = 50;
         long o = 127;
-        assertEquals(z, Nums.bound(z, c, n));
-        assertEquals(z, Nums.bound(z, c, z));
-        assertEquals(m, Nums.bound(z, c, m));
-        assertEquals(c, Nums.bound(z, c, c));
-        assertEquals(c, Nums.bound(z, c, o));
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, Maths.bound(z, c, n));
+        assertEquals(z, Maths.bound(z, c, z));
+        assertEquals(m, Maths.bound(z, c, m));
+        assertEquals(c, Maths.bound(z, c, c));
+        assertEquals(c, Maths.bound(z, c, o));
+        assertEquals(c, Maths.bound(c, z, o));
     }
 
     /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_5()
@@ -1769,16 +1260,16 @@ public class NumsTest
         float n = -1;
         float m = 50;
         float o = 127;
-        assertEquals(z, Nums.bound(z, c, n), 0.0f);
-        assertEquals(z, Nums.bound(z, c, z), 0.0f);
-        assertEquals(m, Nums.bound(z, c, m), 0.0f);
-        assertEquals(c, Nums.bound(z, c, c), 0.0f);
-        assertEquals(c, Nums.bound(z, c, o), 0.0f);
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, Maths.bound(z, c, n), 0.0f);
+        assertEquals(z, Maths.bound(z, c, z), 0.0f);
+        assertEquals(m, Maths.bound(z, c, m), 0.0f);
+        assertEquals(c, Maths.bound(z, c, c), 0.0f);
+        assertEquals(c, Maths.bound(z, c, o), 0.0f);
+        assertEquals(c, Maths.bound(c, z, o));
     }
 
     /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_6()
@@ -1788,16 +1279,16 @@ public class NumsTest
         double n = -1;
         double m = 50;
         double o = 127;
-        assertEquals(z, Nums.bound(z, c, n), 0.0);
-        assertEquals(z, Nums.bound(z, c, z), 0.0);
-        assertEquals(m, Nums.bound(z, c, m), 0.0);
-        assertEquals(c, Nums.bound(z, c, c), 0.0);
-        assertEquals(c, Nums.bound(z, c, o), 0.0);
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, Maths.bound(z, c, n), 0.0);
+        assertEquals(z, Maths.bound(z, c, z), 0.0);
+        assertEquals(m, Maths.bound(z, c, m), 0.0);
+        assertEquals(c, Maths.bound(z, c, c), 0.0);
+        assertEquals(c, Maths.bound(z, c, o), 0.0);
+        assertEquals(c, Maths.bound(c, z, o));
     }
 
         /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_7()
@@ -1807,16 +1298,16 @@ public class NumsTest
         BigInteger n = BigInteger.valueOf(-1);
         BigInteger m = BigInteger.valueOf(50);
         BigInteger o = BigInteger.valueOf(127);
-        assertEquals(z, Nums.bound(z, c, n));
-        assertEquals(z, Nums.bound(z, c, z));
-        assertEquals(m, Nums.bound(z, c, m));
-        assertEquals(c, Nums.bound(z, c, c));
-        assertEquals(c, Nums.bound(z, c, o));
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, BigMaths.bound(z, c, n));
+        assertEquals(z, BigMaths.bound(z, c, z));
+        assertEquals(m, BigMaths.bound(z, c, m));
+        assertEquals(c, BigMaths.bound(z, c, c));
+        assertEquals(c, BigMaths.bound(z, c, o));
+        assertEquals(c, BigMaths.bound(c, z, o));
     }
 
     /**
-     * Test of bound method, of class Nums.
+     * Test of bound method, of class BigMaths.
      */
     @Test
     public void testBound_3args_8()
@@ -1826,12 +1317,12 @@ public class NumsTest
         BigDecimal n = BigDecimal.valueOf(-1);
         BigDecimal m = BigDecimal.valueOf(50);
         BigDecimal o = BigDecimal.valueOf(127);
-        assertEquals(z, Nums.bound(z, c, n));
-        assertEquals(z, Nums.bound(z, c, z));
-        assertEquals(m, Nums.bound(z, c, m));
-        assertEquals(c, Nums.bound(z, c, c));
-        assertEquals(c, Nums.bound(z, c, o));
-        assertEquals(c, Nums.bound(c, z, o));
+        assertEquals(z, BigMaths.bound(z, c, n));
+        assertEquals(z, BigMaths.bound(z, c, z));
+        assertEquals(m, BigMaths.bound(z, c, m));
+        assertEquals(c, BigMaths.bound(z, c, c));
+        assertEquals(c, BigMaths.bound(z, c, o));
+        assertEquals(c, BigMaths.bound(c, z, o));
     }
         
     /**

@@ -5,7 +5,7 @@
  */
 package io.nut.base.collections;
 
-import io.nut.base.util.Sorts;
+import io.nut.base.lang.Sorts;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;

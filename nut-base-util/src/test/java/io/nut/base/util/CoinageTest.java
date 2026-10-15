@@ -5,6 +5,7 @@
  */
 package io.nut.base.util;
 
+import io.nut.base.lang.As;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;

@@ -5,7 +5,7 @@
  */
 package io.nut.base.net;
 
-import io.nut.base.util.Utils;
+import io.nut.base.lang.First;
 import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -153,7 +153,7 @@ public class Networks
     {
         InetAddress[] ips = Inet6Address.getAllByName(hostname);
         Inet6Address ip6 = ipv6(ips);
-        InetAddress ip = ip6!=null ? ip6 : Utils.firstNonNull(ips);
+        InetAddress ip = ip6!=null ? ip6 : First.firstNonNull(ips);
         return ip!=null ? ipv6(ip.getAddress()) : null;
     }
     

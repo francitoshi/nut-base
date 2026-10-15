@@ -7,11 +7,9 @@ package io.nut.base.jca;
 
 import io.nut.base.jca.Kr.MessageDigestAlgorithm;
 import io.nut.base.encoding.Hex;
-import static io.nut.base.util.CharSets.UTF8;
+import static io.nut.base.lang.CharSets.UTF8;
 import java.io.UnsupportedEncodingException;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -23,7 +21,6 @@ import org.junit.jupiter.api.BeforeAll;
  */
 public class DigestTest
 {
-    
 
     @BeforeAll
     public static void setUpClass() throws Exception

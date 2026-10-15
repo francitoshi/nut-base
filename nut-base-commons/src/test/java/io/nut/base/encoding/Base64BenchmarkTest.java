@@ -5,10 +5,6 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.encoding.Base64;
-import io.nut.base.encoding.Base64;
-import io.nut.base.encoding.Base64DecoderException;
-import io.nut.base.encoding.Base64DecoderException;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 

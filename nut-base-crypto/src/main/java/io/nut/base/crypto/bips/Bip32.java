@@ -12,10 +12,11 @@ import io.nut.base.crypto.ec.Point;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.crypto.ec.Sign;
 import io.nut.base.encoding.Base58;
-import io.nut.base.jca.Kr;
 import io.nut.base.jca.Kr.Hmac;
+import io.nut.base.lang.BigMaths;
 import io.nut.base.lang.Joins;
-import io.nut.base.util.Utils;
+import io.nut.base.lang.Require;
+import io.nut.base.lang.As;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -71,7 +72,7 @@ public class Bip32
         byte[] IR = new byte[32];
         ByteBuffer.wrap(I).get(IL, 1, 32).get(IR);
 
-        BigInteger il = Utils.newBigInteger(1, IL, 1,32);
+        BigInteger il = BigMaths.newBigInteger(1, IL, 1,32);
         if(il.compareTo(BigInteger.ZERO)==0)
         {
             throw new InvalidKeyException("masterSecretKey is 0");
@@ -99,7 +100,7 @@ public class Bip32
     
     public static ExtKey ckdPrv(ExtKey parent, int childNumber) throws InvalidKeyException
     {
-        Utils.checkArgument(parent.isPrvKey(),"parent not a private key");
+        Require.checkArgument(parent.isPrvKey(),"parent not a private key");
         return ckdPrvPrv(parent, childNumber);
     }
     
@@ -132,7 +133,7 @@ public class Bip32
         byte[] IR = new byte[32];
         ByteBuffer.wrap(I).get(IL).get(IR);
 
-        BigInteger kpar = Utils.newBigInteger(1, parent.key, 1, 32);
+        BigInteger kpar = BigMaths.newBigInteger(1, parent.key, 1, 32);
         BigInteger il = new BigInteger(1, IL);
         if(il.compareTo(N)>=0)
         {
@@ -146,7 +147,7 @@ public class Bip32
 
         byte[] fingerprint = getFingerprint(parent);
         
-        IL = Utils.asBytes(ki, 33);
+        IL = As.bytes(ki, 33);
         
         return new ExtKey(parent.version, (byte)(parent.depth+1), fingerprint, childNumber, IR, IL);
     }
@@ -163,8 +164,8 @@ public class Bip32
     
     private static ExtKey ckdPubPub(ExtKey parent, int childNumber) throws InvalidKeyException
     {
-        Utils.checkArgument(parent.isPubKey(),"parent key not neutered");
-        Utils.checkArgument(!isHardened(childNumber),"hardened child not allowed");
+        Require.checkArgument(parent.isPubKey(),"parent key not neutered");
+        Require.checkArgument(!isHardened(childNumber),"hardened child not allowed");
         
         byte[] data = new byte[33+4];
         ByteBuffer.wrap(data).order(ByteOrder.BIG_ENDIAN).put(parent.key).putInt(childNumber);

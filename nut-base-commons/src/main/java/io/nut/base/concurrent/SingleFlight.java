@@ -23,7 +23,7 @@ import java.util.function.Supplier;
  * @author franci
  * @since 1.8
  */
-public final class SingleFlight<K, V>
+public final class SingleFlight<K,V>
 {
     private final ConcurrentHashMap<K, Flight<V>> flights = new ConcurrentHashMap<>();
 

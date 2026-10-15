@@ -13,9 +13,9 @@ import io.nut.base.jca.Kr.KeyPairAlgorithm;
 import io.nut.base.jca.Kr.KeyPairTransformation;
 import io.nut.base.jca.Kr.SecretKeyAlgorithm;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
-import io.nut.base.util.CharSets;
+import io.nut.base.jca.Rand;
+import io.nut.base.lang.CharSets;
 import io.nut.base.lang.Joins;
-import io.nut.base.util.Utils;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
@@ -62,8 +62,7 @@ public class KriptoTest
         0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
     };
 
-    static final byte[] IV16 = Utils.sequence(new byte[16], (byte) 0, (byte) 1);
-
+    static final byte[] IV16 = Rand.getInstance().nextBytes(new byte[16]);
 
     @Test
     public void testExample1RSA() throws NoSuchAlgorithmException, NoSuchProviderException, NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException, IllegalBlockSizeException, BadPaddingException

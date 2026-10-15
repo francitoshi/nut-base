@@ -6,7 +6,7 @@
 package io.nut.base.signal;
 
 import io.nut.base.collections.ring.RingQueueInt;
-import io.nut.base.util.As;
+import io.nut.base.lang.As;
 import io.nut.base.lang.Empty;
 import io.nut.base.lang.Joins;
 import io.nut.base.lang.Maths;

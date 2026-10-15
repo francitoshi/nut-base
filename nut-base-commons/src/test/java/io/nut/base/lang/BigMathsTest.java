@@ -384,9 +384,9 @@ public class BigMathsTest
     public void testSum_BigDecimal_defaultValue()
     {
         assertEquals(BigDecimal.ZERO, BigMaths.sum(BigDecimal.ZERO));
-        assertEquals(BigDecimal.ZERO, BigMaths.sum(BigDecimal.ONE));
-        assertEquals(BigDecimal.ZERO, BigMaths.sum(BigDecimal.ZERO, (BigDecimal[]) null));
-        assertEquals(BigDecimal.ONE, BigMaths.sum(BigDecimal.ONE, (BigDecimal) null));
+        assertEquals(BigDecimal.ONE, BigMaths.sum(BigDecimal.ONE));
+        assertEquals(BigDecimal.ZERO, BigMaths.sum(BigDecimal.ZERO, null));
+        assertEquals(BigDecimal.ONE, BigMaths.sum(BigDecimal.ONE, null));
         assertEquals(BigDecimal.ONE, BigMaths.sum(BigDecimal.ZERO, BigDecimal.ONE));
         assertEquals(BigDecimal.valueOf(3), BigMaths.sum(BigDecimal.ONE, (BigDecimal) null, BigDecimal.valueOf(2)));
         assertEquals(BigDecimal.valueOf(6), BigMaths.sum(BigDecimal.ONE, BigDecimal.valueOf(2), BigDecimal.valueOf(3), null));
@@ -400,5 +400,35 @@ public class BigMathsTest
     {
         BigDecimal result = BigMaths.avg(BigDecimal.TEN, MathContext.DECIMAL128, BigDecimal.ONE, BigDecimal.TEN);
         assertEquals(BigDecimal.valueOf(5.5), result);
+    }
+    
+    /**
+     * Test of sqrt method, of class BigMaths.
+     */
+    @Test
+    public void testSqrt()
+    {
+        assertEquals(0, BigMaths.sqrt(BigDecimal.ONE).compareTo(BigDecimal.ONE));
+        assertEquals(0, BigMaths.sqrt(BigDecimal.ZERO).compareTo(BigDecimal.ZERO));
+
+        for(int i=1;i<1000;i++)
+        {
+            BigDecimal x = BigDecimal.valueOf(i*0.123456789);
+            BigDecimal xx = x.multiply(x);
+            assertEquals(0, BigMaths.sqrt(xx).compareTo(x));
+        }
+    }
+
+    /**
+     * Test of equals method, of class BigMaths.
+     */
+    @Test
+    public void testEquals()
+    {
+        BigDecimal d1 = BigDecimal.valueOf(0.001);
+        BigDecimal d2 = BigDecimal.valueOf(0.009);
+        BigDecimal delta = BigDecimal.valueOf(0.01);
+
+        assertTrue(BigMaths.equalsEnough(d1, d2, delta));
     }
 }

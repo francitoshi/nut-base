@@ -6,8 +6,7 @@
 package io.nut.base.keyarray;
 
 import io.nut.base.encoding.Hex;
-import io.nut.base.util.Comparators;
-import io.nut.base.util.Utils;
+import io.nut.base.lang.Comparators;
 import java.util.Arrays;
 
 /**

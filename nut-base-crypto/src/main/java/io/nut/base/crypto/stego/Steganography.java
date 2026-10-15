@@ -5,20 +5,20 @@
  */
 package io.nut.base.crypto.stego;
 
-import io.nut.base.cache.Checksums;
+import io.nut.base.lang.Checksums;
 import io.nut.base.crypto.Kripto;
-import io.nut.base.crypto.Rand;
+import io.nut.base.jca.Rand;
 import io.nut.base.crypto.kdf.PBKDF2;
 import io.nut.base.encoding.Ascii85;
 import io.nut.base.jca.Kr.Pbkdf2;
 import io.nut.base.jca.Kr.SecretKeyTransformation;
+import io.nut.base.lang.Bitwise;
 import io.nut.base.util.BitSetReader;
 import io.nut.base.util.BitSetWriter;
 import io.nut.base.lang.Empty;
 import io.nut.base.lang.Exceptions;
 import io.nut.base.lang.Maths;
 import io.nut.base.lang.Strings;
-import io.nut.base.util.Bits;
 import io.nut.base.util.Zip;
 import io.nut.base.varint.CompactSize;
 import java.nio.ByteBuffer;
@@ -176,7 +176,7 @@ public class Steganography
         }
         byte[] countBytes = CompactSize.encode(bytes.length);
         
-        byte mask = Bits.bitSet((byte)Checksums.adler32(bytes), 7, deflate);
+        byte mask = Bitwise.bitSet((byte)Checksums.adler32(bytes), 7, deflate);
         
         ByteBuffer buffer = ByteBuffer.allocate(countBytes.length+1+bytes.length);
 
@@ -192,7 +192,7 @@ public class Steganography
         int len = (int) CompactSize.decode(packet);
         int encodedSize = CompactSize.sizeOf(len);
         byte mask = buffer.get(encodedSize);
-        boolean deflate = Bits.bitGet(mask, 7);
+        boolean deflate = Bitwise.bitGet(mask, 7);
         
         byte[] bytes = new byte[len];
         if(bytes.length>0)
@@ -203,7 +203,7 @@ public class Steganography
             buffer.get(bytes, 0, len);
         }
 
-        byte mask2 = Bits.bitSet((byte)Checksums.adler32(bytes), 7, deflate);
+        byte mask2 = Bitwise.bitSet((byte)Checksums.adler32(bytes), 7, deflate);
         if(mask!=mask2)
         {
             throw new RuntimeException("invalid crc code");

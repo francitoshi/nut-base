@@ -5,7 +5,6 @@
  */
 package io.nut.base.encoding;
 
-import io.nut.base.encoding.ROT;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 

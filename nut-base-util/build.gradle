@@ -6,6 +6,7 @@ dependencies
 {
     api project(':nut-base-commons')
     api project(':nut-base-crypto')
+    api project(':nut-base-math')
     api project(':nut-base-net')
     api project(':nut-base-stats')
 

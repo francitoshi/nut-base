@@ -5,7 +5,7 @@
  */
 package io.nut.base.profile;
 
-import io.nut.base.util.Utils;
+import io.nut.base.lang.Pauses;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,12 +54,12 @@ public class UptimeTimingTest
         
         for(int i=0;i<1000;i++)
         {
-            Utils.sleep(1);
+            Pauses.sleepMillis(1);
             result.trace("one");
-            Utils.sleep(2);
+            Pauses.sleepMillis(2);
             result.trace("two");
         }
-        Utils.sleep(1000);
+        Pauses.sleepMillis(1000);
         result.uptime();
     }
 }

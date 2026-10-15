@@ -27,10 +27,11 @@ import static io.nut.base.audio.Audio.OVERLAP;
 import static io.nut.base.audio.Wave.SINE;
 import static io.nut.base.audio.Wave.SQUARE;
 import io.nut.base.encoding.Encoding;
+import io.nut.base.lang.Sorts;
+import io.nut.base.lang.Unique;
 import io.nut.base.math.Nums;
 import io.nut.base.signal.Frame;
 import io.nut.base.signal.Morse;
-import io.nut.base.util.Sorts;
 import io.nut.base.util.Utils;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -376,7 +377,7 @@ public class AudioMorseTest
         {
             wpm[i] = Math.max(1, 1200/i);
         }
-        wpm = Utils.unique(wpm);
+        wpm = Unique.ints(wpm);
         Arrays.sort(wpm);
         Sorts.reverse(wpm);
         return wpm;

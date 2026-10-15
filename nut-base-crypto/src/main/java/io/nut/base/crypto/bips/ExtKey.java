@@ -10,9 +10,10 @@ import io.nut.base.crypto.alt.RIPEMD160;
 import io.nut.base.crypto.ec.Secp256k1;
 import io.nut.base.encoding.Base58;
 import io.nut.base.jca.Kr;
-import io.nut.base.util.As;
-import io.nut.base.util.Comparators;
-import io.nut.base.util.Utils;
+import io.nut.base.lang.BigMaths;
+import io.nut.base.lang.Require;
+import io.nut.base.lang.As;
+import io.nut.base.lang.Comparators;
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -49,9 +50,9 @@ public class ExtKey
         Objects.requireNonNull(chainCode, "chainCode must not be null");
         Objects.requireNonNull(key, "key must not be null");
 
-        Utils.checkArgument(fingerprint.length==4,"fingerprint.length != 4");
-        Utils.checkArgument(chainCode.length==32,"chainCode.length != 32");
-        Utils.checkArgument(key.length==33, "key.length != 33 =>"+key.length);
+        Require.checkArgument(fingerprint.length==4,"fingerprint.length != 4");
+        Require.checkArgument(chainCode.length==32,"chainCode.length != 32");
+        Require.checkArgument(key.length==33, "key.length != 33 =>"+key.length);
         
         this.version = version;
         this.depth = depth;
@@ -94,7 +95,7 @@ public class ExtKey
             {
                 throw new InvalidKeyException("this.key[0]!=0");
             }
-            BigInteger k = Utils.newBigInteger(this.key, 1, 32);
+            BigInteger k = BigMaths.newBigInteger(this.key, 1, 32);
             if(k.compareTo(BigInteger.ZERO)<=0)
             {
                 throw new InvalidKeyException("private key <= 0 not in 1..n-1");
@@ -110,7 +111,7 @@ public class ExtKey
             {
                 throw new InvalidKeyException("this.key[0]!=2 && this.key[0]!=3");
             }
-            BigInteger k = Utils.newBigInteger(this.key, 0, 33);
+            BigInteger k = BigMaths.newBigInteger(this.key, 0, 33);
             if(k.compareTo(N)>=0)
             {
                 throw new InvalidKeyException("pubkey >= n");

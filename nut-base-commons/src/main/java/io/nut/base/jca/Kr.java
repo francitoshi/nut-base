@@ -7,8 +7,8 @@ package io.nut.base.jca;
 
 import io.nut.base.lang.Exceptions;
 import io.nut.base.lang.Strings;
-import io.nut.base.util.As;
-import io.nut.base.util.Comparators;
+import io.nut.base.lang.As;
+import io.nut.base.lang.Comparators;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.math.BigInteger;
