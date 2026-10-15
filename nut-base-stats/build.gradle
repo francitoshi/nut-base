@@ -1,5 +1,0 @@
-//nut-base-stats: statistics helpers. Depends on nut-base-commons.
-dependencies
-{
-    api project(':nut-base-commons')
-}

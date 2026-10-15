@@ -1,7 +1,7 @@
-//nut-base-util: residual low-level utilities. Depends on nut-base-commons, nut-base-collections and nut-base-logging.
+//nut-base-util: residual low-level utilities (incl. cli). Depends on nut-base-commons, nut-base-collections and nut-base-io.
 dependencies
 {
     api project(':nut-base-commons')
     api project(':nut-base-collections')
-    api project(':nut-base-logging')
+    api project(':nut-base-io')
 }

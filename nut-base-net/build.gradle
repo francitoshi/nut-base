@@ -1,4 +1,4 @@
-//nut-base-net: networking helpers. Depends on nut-base-commons.
+//nut-base-net: networking helpers (incl. web/html/css). Depends on nut-base-commons.
 dependencies
 {
     api project(':nut-base-commons')

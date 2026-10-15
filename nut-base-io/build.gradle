@@ -1,4 +1,4 @@
-//nut-base-io: streams, files, pipes, consoles and ANSI I/O helpers.
+//nut-base-io: streams, files, pipes, consoles, ANSI I/O and logging helpers.
 //Depends on nut-base-commons.
 dependencies
 {

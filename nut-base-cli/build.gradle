@@ -1,5 +1,0 @@
-//nut-base-cli: command-line option parsing. Depends on nut-base-commons.
-dependencies
-{
-    api project(':nut-base-commons')
-}

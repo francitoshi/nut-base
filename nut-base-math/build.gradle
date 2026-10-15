@@ -1,4 +1,4 @@
-//nut-base-math: numeric and arithmetic helpers. Depends on nut-base-commons.
+//nut-base-math: numeric, arithmetic, matrix and statistics helpers. Depends on nut-base-commons.
 dependencies
 {
     api project(':nut-base-commons')

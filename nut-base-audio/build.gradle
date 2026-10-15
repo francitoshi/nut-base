@@ -1,9 +1,8 @@
 //nut-base-audio: audio processing and signal (morse, transceiver) helpers.
-//Depends on nut-base-commons, nut-base-collections, nut-base-math and nut-base-stats.
+//Depends on nut-base-commons, nut-base-collections and nut-base-math.
 dependencies
 {
     api project(':nut-base-commons')
     api project(':nut-base-collections')
     api project(':nut-base-math')
-    api project(':nut-base-stats')
 }

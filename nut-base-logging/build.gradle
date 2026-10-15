@@ -1,6 +1,0 @@
-//nut-base-logging: logging facade and formatters. Depends on nut-base-commons and nut-base-io.
-dependencies
-{
-    api project(':nut-base-commons')
-    api project(':nut-base-io')
-}
