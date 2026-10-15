@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.options;
+package io.nut.base.cli.options;
 
 import io.nut.base.lang.Empty;
 import java.text.MessageFormat;
