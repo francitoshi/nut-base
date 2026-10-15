@@ -1,0 +1,6 @@
+//nut-base-collections: data structures (ring buffers, bags, queues) and equality helpers.
+//Depends on nut-base-commons.
+dependencies
+{
+    api project(':nut-base-commons')
+}
