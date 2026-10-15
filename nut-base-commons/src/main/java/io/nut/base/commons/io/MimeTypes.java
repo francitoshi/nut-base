@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.commons.io;
 
 import io.nut.base.commons.lang.Strings;
 import java.io.File;

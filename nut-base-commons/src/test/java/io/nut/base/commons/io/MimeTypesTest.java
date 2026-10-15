@@ -18,9 +18,8 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.commons.io;
 
-import io.nut.base.util.MimeTypes;
 import java.io.File;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;

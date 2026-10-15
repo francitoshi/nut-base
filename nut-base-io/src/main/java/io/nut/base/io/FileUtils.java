@@ -6,7 +6,7 @@
 package io.nut.base.io;
 
 import io.nut.base.commons.io.IO;
-import io.nut.base.util.MimeTypes;
+import io.nut.base.commons.io.MimeTypes;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;

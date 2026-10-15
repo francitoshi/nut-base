@@ -20,7 +20,7 @@
  */
 package io.nut.base.io;
 
-import io.nut.base.util.BytesFilter;
+import io.nut.base.commons.io.BytesFilter;
 import static org.junit.jupiter.api.Assertions.*;
 
 import org.junit.jupiter.api.Test;

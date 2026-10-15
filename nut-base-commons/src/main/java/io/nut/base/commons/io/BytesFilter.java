@@ -18,7 +18,7 @@
  *
  *  Report bugs or new features to: francitoshi@gmail.com
  */
-package io.nut.base.util;
+package io.nut.base.commons.io;
 
 /**
  * A functional interface that defines a contract for filtering or transforming a byte array.

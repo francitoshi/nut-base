@@ -1,0 +1,6 @@
+//nut-base-io: streams, files, pipes, consoles and ANSI I/O helpers.
+//Depends on nut-base-commons.
+dependencies
+{
+    api project(':nut-base-commons')
+}

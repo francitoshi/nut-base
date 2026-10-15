@@ -20,7 +20,7 @@
  */
 package io.nut.base.io;
 
-import io.nut.base.util.BytesFilter;
+import io.nut.base.commons.io.BytesFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

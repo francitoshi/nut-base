@@ -5,7 +5,6 @@
  */
 package io.nut.base.commons.i18n;
 
-import io.nut.base.commons.i18n.ResourceBundles;
 import java.util.Locale;
 import java.util.ResourceBundle;
 import org.junit.jupiter.api.Test;

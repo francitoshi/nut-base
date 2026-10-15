@@ -6,7 +6,6 @@
 package io.nut.base.io;
 
 import io.nut.base.commons.lang.Pauses;
-import io.nut.base.util.Utils;
 import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -135,7 +134,7 @@ public final class ThrottledInputStream extends FilterInputStream
                 this.lineNanoTime = Math.max(now, this.lineNanoTime) + this.nanosPerLine;
             }
         }
-        this.untilNanoTime = Utils.max(this.untilNanoTime, this.byteNanoTime, this.lineNanoTime);
+        this.untilNanoTime = Math.max(this.untilNanoTime, Math.max(this.byteNanoTime, this.lineNanoTime));
         return Pauses.parkUntilNanoTime(this.untilNanoTime);
     }
 }
