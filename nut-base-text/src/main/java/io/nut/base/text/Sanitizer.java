@@ -1,22 +1,7 @@
 /*
- * Sanitizer.java
- *
- * Copyright (c) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.text;
 
@@ -46,9 +31,16 @@ public class Sanitizer
     {
         this(ansi, html, 1000, "");
     }
-    
-    // Expresión regular para detectar secuencias ANSI
-    private static final Pattern ANSI_PATTERN = Pattern.compile("\u001B\\[[\\d;]*[a-zA-Z]");
+
+    // Secuencias de escape: CSI (colores, \u001B[2J...), OSC (enlaces OSC-8, titulo...),
+    // DCS/SOS/PM/APC y escapes de un solo caracter (ESC 7, ESC =, ESC >...).
+    private static final Pattern ANSI_PATTERN = Pattern.compile(
+            "\u001B(?:"
+            + "\\[[0-?]*[ -/]*[@-~]"                        // CSI
+            + "|\\][^\u0007\u001B]*(?:\u0007|\u001B\\\\)?"  // OSC
+            + "|[PX^_][^\u001B]*(?:\u001B\\\\)?"            // DCS/SOS/PM/APC
+            + "|[\u0020-\u007E]"                            // escapes de un solo caracter
+            + ")");
 
     // Expresión regular para detectar etiquetas <script> y su contenido
     private static final Pattern SCRIPT_PATTERN = Pattern.compile("<script\\b[^<]*(?:(?!</script>)<[^<]*)*</script>", Pattern.CASE_INSENSITIVE);
@@ -56,8 +48,11 @@ public class Sanitizer
     // Expresión regular para detectar otras etiquetas HTML
     private static final Pattern HTML_PATTERN = Pattern.compile("<[^>]+>");
 
-    // Expresión regular para permitir solo caracteres seguros
-    private static final Pattern SAFE_TEXT_PATTERN = Pattern.compile("[\\p{L}\\p{N}\\p{P}\\p{Z}\\n\\r\\t]*");
+    // Caracteres permitidos: letras, números, puntuación, separadores, '\n'/'\t' y
+    // los símbolos explícitamente seguros (<>+=). Todo lo demás se elimina: es decir
+    // controles (C0/C1/DEL), formato (Cf, p. ej. override RTL U+202E o ZWSP U+200B),
+    // símbolos y emoji (S), marcas (M), uso privado (Co) y no asignados (Cn).
+    private static final Pattern UNSAFE_PATTERN = Pattern.compile("[^\\p{L}\\p{N}\\p{P}\\p{Z}\\n\\t<>+=]");
 
     public String sanitize(byte[] bytes)
     {
@@ -75,34 +70,35 @@ public class Sanitizer
             return "";
         }
     }
-    
+
     public String sanitize(String s)
     {
-        // delete ANSI sequences
+        if (s == null || s.isEmpty())
+        {
+            return s;
+        }
+
+        // Elimina secuencias de escape ANSI/CSI/OSC/etc.
         if(ansi)
         {
             s = ANSI_PATTERN.matcher(s).replaceAll(harmless);
         }
         if(html)
         {
-            // delete <script> mark and their content
+            // Elimina <script> y su contenido
             s = SCRIPT_PATTERN.matcher(s).replaceAll(harmless);
 
-            // delete other HTML 
+            // Elimina el resto de etiquetas HTML
             s = HTML_PATTERN.matcher(s).replaceAll(harmless);
         }
 
-        // Filtrar caracteres no imprimibles (excepto \n, \r, \t)
-        s = s.replaceAll("[\\p{Cntrl}&&[^\\n\\r\\t]]", "");
+        // Normaliza CR/CRLF a '\n' para que nada pueda sobrescribir la línea.
+        s = s.replace("\r\n", "\n").replace('\r', '\n');
 
-        // Validar que el texto resultante solo contiene caracteres seguros
-        if (!SAFE_TEXT_PATTERN.matcher(s).matches())
-        {
-            s = s.chars()
-                    .filter(c -> isSafeCharacter((char) c))
-                    .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
-                    .toString();
-        }
+        // Conserva solo texto seguro (letras, números, puntuación, separadores,
+        // '\n'/'\t' y los símbolos permitidos). Elimina controles, formato, símbolos,
+        // emoji, marcas, uso privado y no asignados.
+        s = UNSAFE_PATTERN.matcher(s).replaceAll("");
 
         // Limitar longitud
         if (s.length() > sizeLimit)
@@ -111,26 +107,5 @@ public class Sanitizer
         }
 
         return s;
-    }
-
-    // Método auxiliar para determinar si un carácter es seguro
-    private static boolean isSafeCharacter(char c)
-    {
-        return Character.isLetterOrDigit(c)
-                || Character.isWhitespace(c)
-                || isSafePunctuation(c)
-                || isValidUnicode(c);
-    }
-
-    // Método para validar puntuación segura
-    private static boolean isSafePunctuation(char c)
-    {
-        return ",.?!:;\"'()[]{}<>+-*/=".indexOf(c) >= 0;
-    }
-
-    // Método para validar caracteres Unicode
-    private static boolean isValidUnicode(char c)
-    {
-        return Character.isDefined(c) && !Character.isISOControl(c);
     }
 }

@@ -1,22 +1,7 @@
 /*
- * SanitizerTest.java
- *
- * Copyright (c) 2025 francitoshi@gmail.com
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- *
- *  Report bugs or new features to: francitoshi@gmail.com
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
  */
 package io.nut.base.text;
 
@@ -158,5 +143,60 @@ public class SanitizerTest
         String expected = "Hola, mundo! ¿Cómo estás? TestHTML";
         String result = instance.sanitize(inputBytes);
         assertEquals(expected, result, "Debería preservar puntuación válida y eliminar <script> con su contenido");
+    }
+
+    @Test
+    void testSanitizeMessageWithOSCSequences()
+    {
+        String input = "a\u001B]8;;http://evil.example\u0007click\u001B]8;;\u0007b";
+        assertEquals("aclickb", instance.sanitize(input), "Debería eliminar secuencias OSC (enlaces OSC-8)");
+    }
+
+    @Test
+    void testSanitizeMessageWithSingleCharacterEscapes()
+    {
+        assertEquals("ab", instance.sanitize("a\u001B7b"), "Debería eliminar ESC 7 (save cursor)");
+        assertEquals("ab", instance.sanitize("a\u001B=b"), "Debería eliminar ESC = (keypad)");
+    }
+
+    @Test
+    void testSanitizeMessageNormalizesCarriageReturn()
+    {
+        assertEquals("l1\nl2", instance.sanitize("l1\r\nl2"), "Debería normalizar CRLF a LF");
+        assertEquals("l1\nOVER", instance.sanitize("l1\rOVER"), "Debería neutralizar CR para no sobrescribir la línea");
+    }
+
+    @Test
+    void testSanitizeMessageRemovesEmojiAndSymbols()
+    {
+        assertEquals("hola  fin", instance.sanitize("hola \uD83D\uDE00 fin"), "Debería eliminar emoji");
+        assertEquals("ab", instance.sanitize("a\u2603b"), "Debería eliminar símbolos (U+2603 snowman)");
+    }
+
+    @Test
+    void testSanitizeMessageRemovesFormatCharacters()
+    {
+        assertEquals("ab", instance.sanitize("a\u202Eb"), "Debería eliminar override RTL (U+202E)");
+        assertEquals("ab", instance.sanitize("a\u200Bb"), "Debería eliminar zero-width space (U+200B)");
+        assertEquals("ab", instance.sanitize("a\u00ADb"), "Debería eliminar soft hyphen (U+00AD)");
+        assertEquals("ab", instance.sanitize("a\u200Eb"), "Debería eliminar directional embedding (U+200E)");
+    }
+
+    @Test
+    void testSanitizeMessageKeepsCommonTextSymbols()
+    {
+        Sanitizer textOnly = new Sanitizer(true, false, 1000);
+        assertEquals("a < b + c = d > e", textOnly.sanitize("a < b + c = d > e"),
+                "Debería conservar los símbolos de texto habituales (<>+=) en modo texto");
+        // En modo HTML los <...> son etiquetas y se eliminan.
+        assertEquals("a  e", instance.sanitize("a < b + c = d > e"),
+                "En modo HTML un <...> se trata como etiqueta y se elimina");
+    }
+
+    @Test
+    void testSanitizeMessageRemovesMarksAndPrivateUse()
+    {
+        assertEquals("ab", instance.sanitize("a\u0301b"), "Debería eliminar marcas combinantes (U+0301)");
+        assertEquals("ab", instance.sanitize("a\uE000b"), "Debería eliminar uso privado (U+E000)");
     }
 }
