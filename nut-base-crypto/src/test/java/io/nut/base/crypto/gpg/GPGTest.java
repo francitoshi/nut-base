@@ -60,8 +60,8 @@ public class GPGTest
         GPG gpg = new GPG().setDebug(DEBUG);
         String name = GPG.class.getName()+System.nanoTime();
         
-        assertEquals(0, gpg.genKey(RSA1024, SCA, NISTP521, E, name, "1", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, name, "3", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(RSA1024, SCA, NISTP521, E, name, "1", EMAIL, PASSPHRASE.toCharArray(), "4y"));
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, name, "3", EMAIL, PASSPHRASE.toCharArray(), "4y"));
 
     }
     
@@ -73,14 +73,14 @@ public class GPGTest
         GPG gpg = new GPG().setDebug(DEBUG);
         String name = GPG.class.getName()+System.nanoTime();
         
-        assertEquals(0, gpg.genKey(RSA1024, S, name, "1", EMAIL, "PASSPHRASE", "4y"));
+        assertEquals(0, gpg.genKey(RSA1024, S, name, "1", EMAIL, "PASSPHRASE".toCharArray(), "4y"));
         SecKey[] keys = gpg.getSecKeys(name);
         
         String id = keys[0].main.getFingerprint();
 
-        assertEquals(0, gpg.addKeyRSA(id, 1024, true, true, true, "1y", PASSPHRASE));
+        assertEquals(0, gpg.addKeyRSA(id, 1024, true, true, true, "1y", PASSPHRASE.toCharArray()));
         
-        assertEquals(0, gpg.addKeyECC(id, true, false, true, 1, "3y", PASSPHRASE));
+        assertEquals(0, gpg.addKeyECC(id, true, false, true, 1, "3y", PASSPHRASE.toCharArray()));
         
         assertEquals(0, gpg.deleteSecKeys(id));
     }
@@ -99,8 +99,8 @@ public class GPGTest
         String signerId = "signer";
         String recipientId1 = "recipient1";
 
-        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, signerId, "", EMAIL, PASSPHRASE, "4y"));
-        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, recipientId1, "", EMAIL, PASSPHRASE, "4y"));
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, signerId, "", EMAIL, PASSPHRASE.toCharArray(), "4y"));
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, recipientId1, "", EMAIL, PASSPHRASE.toCharArray(), "4y"));
 
         // Cifrar y firmar
         byte[] encryptedSigned = gpg.encryptAndSign(plaindata, signerId, passphrase, recipientId1);
@@ -211,8 +211,8 @@ public class GPGTest
         Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
 
-        gpg.genKey(NISTP256, SCA, NISTP256, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE, "4y");
-        gpg.genKey(NISTP256, SCA, NISTP256, E, "bob", "1", "bob@gpgtest.io", PASSPHRASE, "4y");
+        gpg.genKey(NISTP256, SCA, NISTP256, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE.toCharArray(), "4y");
+        gpg.genKey(NISTP256, SCA, NISTP256, E, "bob", "1", "bob@gpgtest.io", PASSPHRASE.toCharArray(), "4y");
         
         byte[] plaintext = "hello world!!!".getBytes(StandardCharsets.UTF_8);
         

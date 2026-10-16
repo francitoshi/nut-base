@@ -568,7 +568,7 @@ public class GPG
      * @throws IOException
      * @throws InterruptedException
      */
-    public int genKey(String keyType, String keyUsage, String nameReal, String comment, String email, String passphrase, String expire) throws IOException, InterruptedException
+    public int genKey(String keyType, String keyUsage, String nameReal, String comment, String email, char[] passphrase, String expire) throws IOException, InterruptedException
     {
         return genKey(keyType, keyUsage, null, null, nameReal, comment, email, passphrase, expire);
     }    
@@ -588,7 +588,7 @@ public class GPG
      * @throws IOException
      * @throws InterruptedException
      */
-    public int genKey(String keyType, String keyUsage, String ssbType, String ssbUsage, String nameReal, String comment, String email, String passphrase, String expire) throws IOException, InterruptedException
+    public int genKey(String keyType, String keyUsage, String ssbType, String ssbUsage, String nameReal, String comment, String email, char[] passphrase, String expire) throws IOException, InterruptedException
     {
         KeyType secKey = buildKey(keyType, keyUsage);
         KeyType ssbKey = ssbType!=null ? buildKey(ssbType, ssbUsage) : null;
@@ -632,7 +632,19 @@ public class GPG
             }
             out.println("Name-Email: " + email);
             out.println("Expire-Date: "+expire); // 
-            out.println("Passphrase: " + passphrase);
+            boolean pass = passphrase != null && passphrase.length != 0;
+            if (pass)
+            {
+                out.print("Passphrase: ");
+                byte[] p;
+                out.write(p=Chars.bytesUTF8(passphrase));
+                Arrays.fill(p, (byte) 0);
+                out.write('\n');
+            }
+            else
+            {
+                out.println("Passphrase: ");
+            }
             out.println("Preferences: SHA512 SHA384 SHA256 AES256 AES192 AES ZLIB BZIP2 ZIP");
             out.println("%commit");
             out.println("%echo done");
@@ -669,7 +681,7 @@ public class GPG
      *                              I/O error occurs
      * @throws InterruptedException if the calling thread is interrupted
      */
-    public int addKeyRSA(String keyId, int ssbBits, boolean sign, boolean encrypt, boolean auth, String expire, String passphrase) throws IOException, InterruptedException
+    public int addKeyRSA(String keyId, int ssbBits, boolean sign, boolean encrypt, boolean auth, String expire, char[] passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, true, false, false, false, ssbBits, sign, encrypt, auth,  0, expire, passphrase);
     }
@@ -690,7 +702,7 @@ public class GPG
      *                              I/O error occurs
      * @throws InterruptedException if the calling thread is interrupted
      */
-    public int addKeyDSA(String keyId, int ssbBits, boolean sign, boolean auth, String expire, String passphrase) throws IOException, InterruptedException
+    public int addKeyDSA(String keyId, int ssbBits, boolean sign, boolean auth, String expire, char[] passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, false, true, false, false, ssbBits, sign, false, auth,  0, expire, passphrase);
     }
@@ -707,7 +719,7 @@ public class GPG
      *                              I/O error occurs
      * @throws InterruptedException if the calling thread is interrupted
      */
-    public int addKeyELG(String keyId, int ssbBits, String expire, String passphrase) throws IOException, InterruptedException
+    public int addKeyELG(String keyId, int ssbBits, String expire, char[] passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, false, false, true, false, ssbBits, false, true, false,  0, expire, passphrase);
     }
@@ -773,13 +785,13 @@ public class GPG
     * @throws InterruptedException if the process is interrupted
     * @throws InvalidParameterException if an invalid capability combination is used
     */
-    public int addKeyECC(String keyId, boolean sign, boolean encrypt, boolean auth, int ssbCurve, String expire, String passphrase) throws IOException, InterruptedException
+    public int addKeyECC(String keyId, boolean sign, boolean encrypt, boolean auth, int ssbCurve, String expire, char[] passphrase) throws IOException, InterruptedException
     {
         return editKeyAddKey(keyId, false, false, false, true, 0, sign, encrypt, auth, ssbCurve, expire, passphrase);
     }
-    private int editKeyAddKey(String keyId, boolean rsa, boolean dsa, boolean elg, boolean ecc, int ssbBits, boolean sign, boolean encrypt, boolean auth, int ssbCurve, String expire, String passphrase) throws IOException, InterruptedException
+    private int editKeyAddKey(String keyId, boolean rsa, boolean dsa, boolean elg, boolean ecc, int ssbBits, boolean sign, boolean encrypt, boolean auth, int ssbCurve, String expire, char[] passphrase) throws IOException, InterruptedException
     {
-        boolean pass = passphrase!=null && !passphrase.isEmpty();
+        boolean pass = passphrase != null && passphrase.length != 0;
         
         Process process = gpg(BATCH,"--expert", YES, "--command-fd=0")
                 .add(pass, PASSPHRASE_FD_0, PINENTRYMODE_LOOPBACK)
@@ -788,7 +800,10 @@ public class GPG
         {
             if(pass)
             {
-                out.println(passphrase);
+                byte[] p;
+                out.write(p=Chars.bytesUTF8(passphrase));
+                Arrays.fill(p, (byte) 0);
+                out.write('\n');
             }
             out.println("addkey");
             String ops;
@@ -1127,7 +1142,9 @@ public class GPG
         {
             if(pass)
             {
-                stdin.write(Chars.bytesUTF8(passphrase));
+                byte[] p;
+                stdin.write(p=Chars.bytesUTF8(passphrase));
+                Arrays.fill(p, (byte) 0);
                 stdin.write('\n');
             }
             IO.copy(plaindata,stdin);
@@ -1216,7 +1233,9 @@ public class GPG
         {
             if(pass)
             {
-                stdin.write(Chars.bytesUTF8(passphrase));
+                byte[] p;
+                stdin.write(p=Chars.bytesUTF8(passphrase));
+                Arrays.fill(p, (byte) 0);
                 stdin.write('\n');
             }
             IO.copy(plaindata,stdin);
@@ -1420,7 +1439,9 @@ public class GPG
         {
             if (pass)
             {
-                stdin.write(Chars.bytesUTF8(passphrase));
+                byte[] p;
+                stdin.write(p=Chars.bytesUTF8(passphrase));
+                Arrays.fill(p, (byte) 0);
                 stdin.write('\n');
             }
             IO.copy(cipherdata,stdin);
@@ -1572,7 +1593,9 @@ public class GPG
         {
             if (pass)
             {
-                stdin.write(Chars.bytesUTF8(passphrase));
+                byte[] p;
+                stdin.write(p=Chars.bytesUTF8(passphrase));
+                Arrays.fill(p, (byte) 0);
                 stdin.write('\n');
             }
             IO.copy(cipherdata,stdin);
@@ -1834,7 +1857,9 @@ public class GPG
         {
             if (pass)
             {
-                stdin.write(Chars.bytesUTF8(passphrase));
+                byte[] p;
+                stdin.write(p=Chars.bytesUTF8(passphrase));
+              	Arrays.fill(p, (byte) 0);
                 stdin.write('\n');
             }
             IO.copy(cipherdata, stdin);
