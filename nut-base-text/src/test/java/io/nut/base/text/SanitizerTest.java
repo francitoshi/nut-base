@@ -183,6 +183,14 @@ public class SanitizerTest
     }
 
     @Test
+    void testSanitizeMessageKeepsCurrencies()
+    {
+        assertEquals("cuesta 5€ o 10$ (200£, 1000¥, 0.001₿)",
+                instance.sanitize("cuesta 5€ o 10$ (200£, 1000¥, 0.001₿)"),
+                "Debería conservar los símbolos de moneda (Sc)");
+    }
+
+    @Test
     void testSanitizeMessageKeepsCommonTextSymbols()
     {
         Sanitizer textOnly = new Sanitizer(true, false, 1000);
@@ -191,6 +199,34 @@ public class SanitizerTest
         // En modo HTML los <...> son etiquetas y se eliminan.
         assertEquals("a  e", instance.sanitize("a < b + c = d > e"),
                 "En modo HTML un <...> se trata como etiqueta y se elimina");
+    }
+
+    @Test
+    void testSanitizeMessageKeepsGroupAAsciiSymbols()
+    {
+        Sanitizer textOnly = new Sanitizer(true, false, 1000);
+        String ascii = "ls -la ~/tmp | grep `x` a^2 ~45";
+        assertEquals(ascii, textOnly.sanitize(ascii),
+                "Debería conservar | ~ ^ ` (Grupo A)");
+    }
+
+    @Test
+    void testSanitizeMessageKeepsGroupBCommonSymbols()
+    {
+        String input = "23°C ±5% ×2 ÷3 ≠ ≈ ≤ ≥ ∞ √ ∑ ¬ a←b↑c→d↓e↔f ©2026 ® ™ ✓ ✗ ⚠ ★ ☆ ♠ ♥";
+        assertEquals(input, instance.sanitize(input),
+                "Debería conservar los símbolos BMP comunes (Grupo B)");
+    }
+
+    @Test
+    void testSanitizeMessageStillRemovesLookalikesAndEmoji()
+    {
+        assertEquals("ab", instance.sanitize("a\uff1cb"), "Debería eliminar el lookalike ancho ＜ (U+FF1C)");
+        assertEquals("ab", instance.sanitize("a\uff1eb"), "Debería eliminar el lookalike ancho ＞ (U+FF1E)");
+        assertEquals("ab", instance.sanitize("a\uff1db"), "Debería eliminar el lookalike ancho ＝ (U+FF1D)");
+        assertEquals("ab", instance.sanitize("a\uff5cb"), "Debería eliminar el lookalike ancho ｜ (U+FF5C)");
+        assertEquals("ab", instance.sanitize("a\u2603b"), "Debería eliminar símbolos no incluidos (U+2603)");
+        assertEquals("hola  fin", instance.sanitize("hola \uD83D\uDE00 fin"), "Los emoji astrales siguen eliminados");
     }
 
     @Test

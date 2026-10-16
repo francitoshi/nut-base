@@ -48,11 +48,18 @@ public class Sanitizer
     // Expresión regular para detectar otras etiquetas HTML
     private static final Pattern HTML_PATTERN = Pattern.compile("<[^>]+>");
 
-    // Caracteres permitidos: letras, números, puntuación, separadores, '\n'/'\t' y
-    // los símbolos explícitamente seguros (<>+=). Todo lo demás se elimina: es decir
-    // controles (C0/C1/DEL), formato (Cf, p. ej. override RTL U+202E o ZWSP U+200B),
-    // símbolos y emoji (S), marcas (M), uso privado (Co) y no asignados (Cn).
-    private static final Pattern UNSAFE_PATTERN = Pattern.compile("[^\\p{L}\\p{N}\\p{P}\\p{Z}\\n\\t<>+=]");
+    // Caracteres permitidos: letras, números, puntuación, separadores, monedas (Sc),
+    // '\n'/'\t' y los símbolos explícitamente seguros. Estos símbolos son glifos sin
+    // ningún efecto sobre el terminal:
+    //   ASCII:     < > + = | ~ ^ `
+    //   Latin-1:   ° ± × ÷ © ®
+    //   Técnicos:  ≠ ≈ ≤ ≥ ∞ √ ∑ ¬ ← ↑ → ↓ ↔ ™ ✓ ✗ ⚠ ★ ☆ ♠ ♥
+    // Todo lo demás se elimina: controles (C0/C1/DEL), formato (Cf, p. ej. override
+    // RTL U+202E o ZWSP U+200B), el resto de símbolos (emoji astrales, lookalikes
+    // anchos ＜＞＝｜, etc.), marcas (M), uso privado (Co) y no asignados (Cn).
+    private static final Pattern UNSAFE_PATTERN = Pattern.compile(
+            "[^\\p{L}\\p{N}\\p{P}\\p{Z}\\p{Sc}\\n\\t<>+=|~\\^`"
+            + "°±×÷©®≠≈≤≥∞√∑¬←↑→↓↔™✓✗⚠★☆♠♥]");
 
     public String sanitize(byte[] bytes)
     {
