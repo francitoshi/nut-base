@@ -65,15 +65,6 @@ import javax.security.auth.Destroyable;
  */
 public final class SecureBytes implements AutoCloseable, Destroyable
 {
-    /**
-     * Lazy-initialized singleton holder for the shared {@link Kr} instance.
-     */
-    private enum Holder
-    {
-        INSTANCE;
-        final Kr kripto = Kr.getInstance();
-    }
-
     /** Length of the AES-GCM initialization vector in bytes (96 bits). */
     private static final int IV_BYTES = 12; //96 bits
 
@@ -143,7 +134,7 @@ public final class SecureBytes implements AutoCloseable, Destroyable
             return;
         }
 
-        Kr k = kripto == null ? Holder.INSTANCE.kripto : kripto;
+        Kr k = kripto == null ? Kr.getInstance() : kripto;
         byte[] keyBytes = null;
         byte[] ivBytes = null;
         byte[] cipherText;
