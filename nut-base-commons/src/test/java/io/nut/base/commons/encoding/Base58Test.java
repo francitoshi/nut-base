@@ -5,7 +5,6 @@
  */
 package io.nut.base.commons.encoding;
 
-import io.nut.base.commons.encoding.Base58;
 import java.math.BigInteger;
 import java.util.Arrays;
 import java.util.Random;

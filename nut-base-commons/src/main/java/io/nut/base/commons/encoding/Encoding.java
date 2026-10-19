@@ -23,13 +23,13 @@ public class Encoding
     public static final Encoding BASE16 = new Encoding(Type.Base16);
     public static final Encoding BASE32 = new Encoding(Type.Base32);
     public static final Encoding BASE43 = new Encoding(Type.Base43);
-    
+    public static final Encoding BASE58 = new Encoding(Type.Base58);
     public static final Encoding BASE64 = new Encoding(Type.Base64);
     public static final Encoding BASE91 = new Encoding(Type.Base91);
     
     public enum Type
     {         
-        Base16(16), Base32(32), Base43(43), Base64(64), Base91(91);
+        Base16(16), Base32(32), Base43(43), Base58(58), Base64(64), Base91(91);
         Type(int base)
         {
             this.base = base;
@@ -70,6 +70,8 @@ public class Encoding
                     return Base32String.encode(src);
                 case Base43:
                     return Base43.encode(src);
+                case Base58:
+                    return Base58.encode(src);
                 case Base91:
                     return Base91.encodeToString(src, UTF8);
                 case Base64:
@@ -100,6 +102,8 @@ public class Encoding
                     return Base32String.decode(src);
                 case Base43:
                     return Base43.decode(src);
+                case Base58:
+                    return Base58.decode(src);
                 case Base91:
                     return Base91.decodeFromString(src, UTF8);
                 case Base64:
@@ -107,7 +111,7 @@ public class Encoding
                     return Base64.decode(src);
             }
         }
-        catch (IllegalArgumentException | UnsupportedEncodingException | Base64DecoderException | Base32String.DecodingException ex)
+        catch (IllegalArgumentException | UnsupportedEncodingException | Base64DecoderException | Base32String.DecodingException | Base58.FormatException ex)
         {
             Exceptions.severe(LOG, ex);
             return null;
