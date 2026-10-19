@@ -458,63 +458,6 @@ public final class Iterables
     }
 
     /**
-     * Concatenates multiple {@link Iterable} sources into a single lazy {@link Iterable}.
-     *
-     * <p>The returned iterable's iterator retrieves iterators from the input sources lazily,
-     * one after another. If any source is empty, it is skipped.</p>
-     *
-     * @param sources the source iterables to concatenate; must not be {@code null} and must not contain {@code null}
-     * @param <T> the common element type
-     * @return a single concatenated lazy iterable; never {@code null}
-     * @throws NullPointerException if sources is null or any individual source is null
-     */
-    @SafeVarargs
-    public static <T> Iterable<T> concat(Iterable<? extends T>... sources)
-    {
-        Objects.requireNonNull(sources, "sources must not be null");
-        for (Iterable<? extends T> source : sources)
-        {
-            Objects.requireNonNull(source, "each source must not be null");
-        }
-        return () -> new Iterator<T>()
-        {
-            private int currentIdx = 0;
-            private Iterator<? extends T> currentIterator = null;
-
-            private Iterator<? extends T> getNextIterator()
-            {
-                while (currentIterator == null || !currentIterator.hasNext())
-                {
-                    if (currentIdx >= sources.length)
-                    {
-                        return null;
-                    }
-                    Iterable<? extends T> nextIterable = sources[currentIdx++];
-                    currentIterator = nextIterable.iterator();
-                }
-                return currentIterator;
-            }
-
-            @Override
-            public boolean hasNext()
-            {
-                return getNextIterator() != null;
-            }
-
-            @Override
-            public T next()
-            {
-                Iterator<? extends T> iterator = getNextIterator();
-                if (iterator == null)
-                {
-                    throw new NoSuchElementException();
-                }
-                return iterator.next();
-            }
-        };
-    }
-
-    /**
      * Filters elements of the source {@link Iterable} lazily according to the provided predicate.
      *
      * @param source the source iterable; must not be {@code null}

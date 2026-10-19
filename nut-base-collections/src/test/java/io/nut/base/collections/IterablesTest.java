@@ -154,9 +154,6 @@ class IterablesTest
         assertThrows(NullPointerException.class, () -> Iterables.count(null, x -> true));
         assertThrows(NullPointerException.class, () -> Iterables.count(Collections.emptyList(), (java.util.function.Predicate<Object>) null));
 
-        assertThrows(NullPointerException.class, () -> Iterables.concat((Iterable<Object>[]) null));
-        assertThrows(NullPointerException.class, () -> Iterables.concat(Collections.emptyList(), null));
-
         assertThrows(NullPointerException.class, () -> Iterables.filter(null, x -> true));
         assertThrows(NullPointerException.class, () -> Iterables.filter(Collections.emptyList(), null));
     }
@@ -253,46 +250,6 @@ class IterablesTest
 
         assertEquals(0, Iterables.count(Collections.emptyList()));
         assertEquals(0, Iterables.count(Collections.emptyList(), s -> true));
-    }
-
-    @Test
-    @DisplayName("concat combines multiple iterables lazily")
-    void testConcat()
-    {
-        List<Integer> list1 = Arrays.asList(1, 2);
-        List<Integer> list2 = Arrays.asList(3, 4);
-        List<Integer> list3 = Collections.singletonList(5);
-
-        Iterable<Integer> concatenated = Iterables.concat(list1, list2, list3);
-
-        Iterator<Integer> iterator = concatenated.iterator();
-        assertTrue(iterator.hasNext());
-        assertEquals(Integer.valueOf(1), iterator.next());
-        assertTrue(iterator.hasNext());
-        assertEquals(Integer.valueOf(2), iterator.next());
-        assertTrue(iterator.hasNext());
-        assertEquals(Integer.valueOf(3), iterator.next());
-        assertTrue(iterator.hasNext());
-        assertEquals(Integer.valueOf(4), iterator.next());
-        assertTrue(iterator.hasNext());
-        assertEquals(Integer.valueOf(5), iterator.next());
-        assertFalse(iterator.hasNext());
-
-        // Test with empty iterables
-        Iterable<Integer> concatWithEmpty = Iterables.concat(
-            Collections.emptyList(),
-            Arrays.asList(1, 2),
-            Collections.emptyList(),
-            Collections.singletonList(3)
-        );
-        Iterator<Integer> emptyIterator = concatWithEmpty.iterator();
-        assertTrue(emptyIterator.hasNext());
-        assertEquals(Integer.valueOf(1), emptyIterator.next());
-        assertTrue(emptyIterator.hasNext());
-        assertEquals(Integer.valueOf(2), emptyIterator.next());
-        assertTrue(emptyIterator.hasNext());
-        assertEquals(Integer.valueOf(3), emptyIterator.next());
-        assertFalse(emptyIterator.hasNext());
     }
 
     @Test
