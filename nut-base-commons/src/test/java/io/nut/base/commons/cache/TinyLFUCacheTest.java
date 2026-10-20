@@ -5,8 +5,6 @@
  */
 package io.nut.base.commons.cache;
 
-import io.nut.base.commons.cache.Cache;
-import io.nut.base.commons.cache.TinyLFUCache;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;

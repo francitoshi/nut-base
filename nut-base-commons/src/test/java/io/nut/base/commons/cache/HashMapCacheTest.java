@@ -5,8 +5,6 @@
  */
 package io.nut.base.commons.cache;
 
-import io.nut.base.commons.cache.HashMapCache;
-import io.nut.base.commons.cache.Cache;
 import org.junit.jupiter.api.Test;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
