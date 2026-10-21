@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Base64;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 
 /**
  * Serializers for the most common java types.
@@ -35,7 +36,12 @@ import java.util.function.Function;
  *   <li>text arrays: a 4 byte count followed by, for every element, its 4 byte
  *       length in bytes and its UTF-8 content</li>
  *   <li>byte arrays: the raw bytes, without any header</li>
+ *   <li>two dimensional arrays: a 4 byte number of rows followed by, for every
+ *       row, its length in bytes and its content, encoded as a one dimensional
+ *       array</li>
  * </ul>
+ * A null array is encoded as a null, and a null row or element is encoded with
+ * the length -1.
  */
 public final class BasicSerializers
 {
@@ -69,27 +75,49 @@ public final class BasicSerializers
 
     public static final int ID_BASE64 = 13;
 
-    public static final int ID_BOOLEAN_ARRAY = 14;
+    public static final int ID_BOOLEAN_ARRAY_1D = 14;
 
-    public static final int ID_BYTE_ARRAY = 15;
+    public static final int ID_BYTE_ARRAY_1D = 15;
 
-    public static final int ID_CHAR_ARRAY = 16;
+    public static final int ID_CHAR_ARRAY_1D = 16;
 
-    public static final int ID_SHORT_ARRAY = 17;
+    public static final int ID_SHORT_ARRAY_1D = 17;
 
-    public static final int ID_INT_ARRAY = 18;
+    public static final int ID_INT_ARRAY_1D = 18;
 
-    public static final int ID_LONG_ARRAY = 19;
+    public static final int ID_LONG_ARRAY_1D = 19;
 
-    public static final int ID_FLOAT_ARRAY = 20;
+    public static final int ID_FLOAT_ARRAY_1D = 20;
 
-    public static final int ID_DOUBLE_ARRAY = 21;
+    public static final int ID_DOUBLE_ARRAY_1D = 21;
 
-    public static final int ID_STRING_ARRAY = 22;
+    public static final int ID_STRING_ARRAY_1D = 22;
 
-    public static final int ID_BIG_INTEGER_ARRAY = 23;
+    public static final int ID_BIG_INTEGER_ARRAY_1D = 23;
 
-    public static final int ID_BIG_DECIMAL_ARRAY = 24;
+    public static final int ID_BIG_DECIMAL_ARRAY_1D = 24;
+
+    public static final int ID_BOOLEAN_ARRAY_2D = 25;
+
+    public static final int ID_BYTE_ARRAY_2D = 26;
+
+    public static final int ID_CHAR_ARRAY_2D = 27;
+
+    public static final int ID_SHORT_ARRAY_2D = 28;
+
+    public static final int ID_INT_ARRAY_2D = 29;
+
+    public static final int ID_LONG_ARRAY_2D = 30;
+
+    public static final int ID_FLOAT_ARRAY_2D = 31;
+
+    public static final int ID_DOUBLE_ARRAY_2D = 32;
+
+    public static final int ID_STRING_ARRAY_2D = 33;
+
+    public static final int ID_BIG_INTEGER_ARRAY_2D = 34;
+
+    public static final int ID_BIG_DECIMAL_ARRAY_2D = 35;
 
     private BasicSerializers()
     {
@@ -290,7 +318,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<boolean[]> BOOLEAN_ARRAY = new Serializer<boolean[]>()
+    public static final Serializer<boolean[]> BOOLEAN_ARRAY_1D = new Serializer<boolean[]>()
     {
         @Override
         public byte[] serialize(boolean[] values)
@@ -326,7 +354,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<byte[]> BYTE_ARRAY = new Serializer<byte[]>()
+    public static final Serializer<byte[]> BYTE_ARRAY_1D = new Serializer<byte[]>()
     {
         @Override
         public byte[] serialize(byte[] values)
@@ -341,7 +369,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<char[]> CHAR_ARRAY = new Serializer<char[]>()
+    public static final Serializer<char[]> CHAR_ARRAY_1D = new Serializer<char[]>()
     {
         @Override
         public byte[] serialize(char[] values)
@@ -377,7 +405,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<short[]> SHORT_ARRAY = new Serializer<short[]>()
+    public static final Serializer<short[]> SHORT_ARRAY_1D = new Serializer<short[]>()
     {
         @Override
         public byte[] serialize(short[] values)
@@ -413,7 +441,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<int[]> INT_ARRAY = new Serializer<int[]>()
+    public static final Serializer<int[]> INT_ARRAY_1D = new Serializer<int[]>()
     {
         @Override
         public byte[] serialize(int[] values)
@@ -449,7 +477,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<long[]> LONG_ARRAY = new Serializer<long[]>()
+    public static final Serializer<long[]> LONG_ARRAY_1D = new Serializer<long[]>()
     {
         @Override
         public byte[] serialize(long[] values)
@@ -485,7 +513,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<float[]> FLOAT_ARRAY = new Serializer<float[]>()
+    public static final Serializer<float[]> FLOAT_ARRAY_1D = new Serializer<float[]>()
     {
         @Override
         public byte[] serialize(float[] values)
@@ -521,7 +549,7 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<double[]> DOUBLE_ARRAY = new Serializer<double[]>()
+    public static final Serializer<double[]> DOUBLE_ARRAY_1D = new Serializer<double[]>()
     {
         @Override
         public byte[] serialize(double[] values)
@@ -557,14 +585,179 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<String[]> STRING_ARRAY = textArray(String.class,
+    public static final Serializer<String[]> STRING_ARRAY_1D = textArray(String.class,
             value -> value, text -> text);
 
-    public static final Serializer<BigInteger[]> BIG_INTEGER_ARRAY = textArray(BigInteger.class,
+    public static final Serializer<BigInteger[]> BIG_INTEGER_ARRAY_1D = textArray(BigInteger.class,
             BigInteger::toString, BigInteger::new);
 
-    public static final Serializer<BigDecimal[]> BIG_DECIMAL_ARRAY = textArray(BigDecimal.class,
+    public static final Serializer<BigDecimal[]> BIG_DECIMAL_ARRAY_1D = textArray(BigDecimal.class,
             BigDecimal::toString, BigDecimal::new);
+
+    public static final Serializer<boolean[][]> BOOLEAN_ARRAY_2D = new Serializer<boolean[][]>()
+    {
+        @Override
+        public byte[] serialize(boolean[][] values)
+        {
+            return serializeRows(values, row -> BOOLEAN_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public boolean[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, BOOLEAN_ARRAY_1D, length -> new boolean[length][]);
+        }
+    };
+
+    public static final Serializer<byte[][]> BYTE_ARRAY_2D = new Serializer<byte[][]>()
+    {
+        @Override
+        public byte[] serialize(byte[][] values)
+        {
+            return serializeRows(values, row -> BYTE_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public byte[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, BYTE_ARRAY_1D, length -> new byte[length][]);
+        }
+    };
+
+    public static final Serializer<char[][]> CHAR_ARRAY_2D = new Serializer<char[][]>()
+    {
+        @Override
+        public byte[] serialize(char[][] values)
+        {
+            return serializeRows(values, row -> CHAR_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public char[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, CHAR_ARRAY_1D, length -> new char[length][]);
+        }
+    };
+
+    public static final Serializer<short[][]> SHORT_ARRAY_2D = new Serializer<short[][]>()
+    {
+        @Override
+        public byte[] serialize(short[][] values)
+        {
+            return serializeRows(values, row -> SHORT_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public short[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, SHORT_ARRAY_1D, length -> new short[length][]);
+        }
+    };
+
+    public static final Serializer<int[][]> INT_ARRAY_2D = new Serializer<int[][]>()
+    {
+        @Override
+        public byte[] serialize(int[][] values)
+        {
+            return serializeRows(values, row -> INT_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public int[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, INT_ARRAY_1D, length -> new int[length][]);
+        }
+    };
+
+    public static final Serializer<long[][]> LONG_ARRAY_2D = new Serializer<long[][]>()
+    {
+        @Override
+        public byte[] serialize(long[][] values)
+        {
+            return serializeRows(values, row -> LONG_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public long[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, LONG_ARRAY_1D, length -> new long[length][]);
+        }
+    };
+
+    public static final Serializer<float[][]> FLOAT_ARRAY_2D = new Serializer<float[][]>()
+    {
+        @Override
+        public byte[] serialize(float[][] values)
+        {
+            return serializeRows(values, row -> FLOAT_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public float[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, FLOAT_ARRAY_1D, length -> new float[length][]);
+        }
+    };
+
+    public static final Serializer<double[][]> DOUBLE_ARRAY_2D = new Serializer<double[][]>()
+    {
+        @Override
+        public byte[] serialize(double[][] values)
+        {
+            return serializeRows(values, row -> DOUBLE_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public double[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, DOUBLE_ARRAY_1D, length -> new double[length][]);
+        }
+    };
+
+    public static final Serializer<String[][]> STRING_ARRAY_2D = new Serializer<String[][]>()
+    {
+        @Override
+        public byte[] serialize(String[][] values)
+        {
+            return serializeRows(values, row -> STRING_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public String[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, STRING_ARRAY_1D, length -> new String[length][]);
+        }
+    };
+
+    public static final Serializer<BigInteger[][]> BIG_INTEGER_ARRAY_2D = new Serializer<BigInteger[][]>()
+    {
+        @Override
+        public byte[] serialize(BigInteger[][] values)
+        {
+            return serializeRows(values, row -> BIG_INTEGER_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public BigInteger[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, BIG_INTEGER_ARRAY_1D, length -> new BigInteger[length][]);
+        }
+    };
+
+    public static final Serializer<BigDecimal[][]> BIG_DECIMAL_ARRAY_2D = new Serializer<BigDecimal[][]>()
+    {
+        @Override
+        public byte[] serialize(BigDecimal[][] values)
+        {
+            return serializeRows(values, row -> BIG_DECIMAL_ARRAY_1D.serialize(row));
+        }
+
+        @Override
+        public BigDecimal[][] deserialize(byte[] data)
+        {
+            return deserializeRows(data, BIG_DECIMAL_ARRAY_1D, length -> new BigDecimal[length][]);
+        }
+    };
 
     public static void registerAll(SerializerRegistry registry)
     {
@@ -580,17 +773,117 @@ public final class BasicSerializers
         registry.register(LocalDateTime.class, ID_LOCAL_DATE_TIME, LOCAL_DATE_TIME);
         registry.register(ZonedDateTime.class, ID_ZONED_DATE_TIME, ZONED_DATE_TIME);
         registry.register(ZoneId.class, ID_ZONE_ID, ZONE_ID);
-        registry.register(boolean[].class, ID_BOOLEAN_ARRAY, BOOLEAN_ARRAY);
-        registry.register(byte[].class, ID_BYTE_ARRAY, BYTE_ARRAY);
-        registry.register(char[].class, ID_CHAR_ARRAY, CHAR_ARRAY);
-        registry.register(short[].class, ID_SHORT_ARRAY, SHORT_ARRAY);
-        registry.register(int[].class, ID_INT_ARRAY, INT_ARRAY);
-        registry.register(long[].class, ID_LONG_ARRAY, LONG_ARRAY);
-        registry.register(float[].class, ID_FLOAT_ARRAY, FLOAT_ARRAY);
-        registry.register(double[].class, ID_DOUBLE_ARRAY, DOUBLE_ARRAY);
-        registry.register(String[].class, ID_STRING_ARRAY, STRING_ARRAY);
-        registry.register(BigInteger[].class, ID_BIG_INTEGER_ARRAY, BIG_INTEGER_ARRAY);
-        registry.register(BigDecimal[].class, ID_BIG_DECIMAL_ARRAY, BIG_DECIMAL_ARRAY);
+        registry.register(boolean[].class, ID_BOOLEAN_ARRAY_1D, BOOLEAN_ARRAY_1D);
+        registry.register(byte[].class, ID_BYTE_ARRAY_1D, BYTE_ARRAY_1D);
+        registry.register(char[].class, ID_CHAR_ARRAY_1D, CHAR_ARRAY_1D);
+        registry.register(short[].class, ID_SHORT_ARRAY_1D, SHORT_ARRAY_1D);
+        registry.register(int[].class, ID_INT_ARRAY_1D, INT_ARRAY_1D);
+        registry.register(long[].class, ID_LONG_ARRAY_1D, LONG_ARRAY_1D);
+        registry.register(float[].class, ID_FLOAT_ARRAY_1D, FLOAT_ARRAY_1D);
+        registry.register(double[].class, ID_DOUBLE_ARRAY_1D, DOUBLE_ARRAY_1D);
+        registry.register(String[].class, ID_STRING_ARRAY_1D, STRING_ARRAY_1D);
+        registry.register(BigInteger[].class, ID_BIG_INTEGER_ARRAY_1D, BIG_INTEGER_ARRAY_1D);
+        registry.register(BigDecimal[].class, ID_BIG_DECIMAL_ARRAY_1D, BIG_DECIMAL_ARRAY_1D);
+        registry.register(boolean[][].class, ID_BOOLEAN_ARRAY_2D, BOOLEAN_ARRAY_2D);
+        registry.register(byte[][].class, ID_BYTE_ARRAY_2D, BYTE_ARRAY_2D);
+        registry.register(char[][].class, ID_CHAR_ARRAY_2D, CHAR_ARRAY_2D);
+        registry.register(short[][].class, ID_SHORT_ARRAY_2D, SHORT_ARRAY_2D);
+        registry.register(int[][].class, ID_INT_ARRAY_2D, INT_ARRAY_2D);
+        registry.register(long[][].class, ID_LONG_ARRAY_2D, LONG_ARRAY_2D);
+        registry.register(float[][].class, ID_FLOAT_ARRAY_2D, FLOAT_ARRAY_2D);
+        registry.register(double[][].class, ID_DOUBLE_ARRAY_2D, DOUBLE_ARRAY_2D);
+        registry.register(String[][].class, ID_STRING_ARRAY_2D, STRING_ARRAY_2D);
+        registry.register(BigInteger[][].class, ID_BIG_INTEGER_ARRAY_2D, BIG_INTEGER_ARRAY_2D);
+        registry.register(BigDecimal[][].class, ID_BIG_DECIMAL_ARRAY_2D, BIG_DECIMAL_ARRAY_2D);
+    }
+
+    /**
+     * Serializes the rows of a two dimensional array, prefixing every row
+     * with its length in bytes.
+     *
+     * @param <R>           The type of the rows.
+     * @param rows          The rows to serialize.
+     * @param rowSerializer The serializer of a single row.
+     * @return The serialized rows.
+     */
+    private static <R> byte[] serializeRows(R[] rows, Function<R, byte[]> rowSerializer)
+    {
+        if (rows == null)
+        {
+            return null;
+        }
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        DataOutputStream data = new DataOutputStream(out);
+        try
+        {
+            data.writeInt(rows.length);
+            for (R row : rows)
+            {
+                byte[] bytes = rowSerializer.apply(row);
+                data.writeInt(bytes == null ? -1 : bytes.length);
+                if (bytes != null)
+                {
+                    data.write(bytes);
+                }
+            }
+            data.flush();
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(e);
+        }
+        return out.toByteArray();
+    }
+
+    /**
+     * Deserializes the rows of a two dimensional array, decoding every row
+     * with the given serializer.
+     *
+     * @param <A>           The type of the two dimensional array.
+     * @param <R>           The type of the rows.
+     * @param data          The serialized rows.
+     * @param rowSerializer The serializer of a single row.
+     * @param rowsFactory   The factory of the array of rows.
+     * @return The rows of the array.
+     * @throws IllegalArgumentException If the data is malformed.
+     */
+    private static <A, R> A deserializeRows(byte[] data, Serializer<R> rowSerializer, IntFunction<A> rowsFactory)
+    {
+        if (data == null)
+        {
+            return null;
+        }
+        DataInputStream input = new DataInputStream(new ByteArrayInputStream(data));
+        try
+        {
+            int rows = input.readInt();
+            if (rows < 0 || rows > input.available() / Integer.BYTES)
+            {
+                throw new IllegalArgumentException("Invalid array length " + rows);
+            }
+            A values = rowsFactory.apply(rows);
+            for (int i = 0; i < rows; i++)
+            {
+                int size = input.readInt();
+                if (size == -1)
+                {
+                    Array.set(values, i, null);
+                    continue;
+                }
+                if (size < 0 || size > input.available())
+                {
+                    throw new IllegalArgumentException("Invalid row length " + size);
+                }
+                byte[] row = new byte[size];
+                input.readFully(row);
+                Array.set(values, i, rowSerializer.deserialize(row));
+            }
+            return values;
+        }
+        catch (IOException e)
+        {
+            throw new IllegalArgumentException("Invalid data", e);
+        }
     }
 
     /**
@@ -646,7 +939,13 @@ public final class BasicSerializers
                     data.writeInt(values.length);
                     for (T value : values)
                     {
-                        byte[] bytes = toText.apply(value).getBytes(StandardCharsets.UTF_8);
+                        String text = value == null ? null : toText.apply(value);
+                        if (text == null)
+                        {
+                            data.writeInt(-1);
+                            continue;
+                        }
+                        byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
                         data.writeInt(bytes.length);
                         data.write(bytes);
                     }
@@ -679,6 +978,11 @@ public final class BasicSerializers
                     for (int i = 0; i < length; i++)
                     {
                         int size = input.readInt();
+                        if (size == -1)
+                        {
+                            values[i] = null;
+                            continue;
+                        }
                         if (size < 0 || size > input.available())
                         {
                             throw new IllegalArgumentException("Invalid element length " + size);
