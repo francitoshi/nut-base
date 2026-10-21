@@ -5,7 +5,6 @@
  */
 package io.nut.base.commons.varint;
 
-import io.nut.base.commons.varint.CompactSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import org.junit.jupiter.api.Test;
 
