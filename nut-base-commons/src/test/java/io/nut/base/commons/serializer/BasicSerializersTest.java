@@ -7,6 +7,8 @@ package io.nut.base.commons.serializer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -24,6 +26,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class BasicSerializersTest
 {
+
+    private static final class Point
+    {
+
+        private final int x;
+
+        private final int y;
+
+        public Point(int x, int y)
+        {
+            this.x = x;
+            this.y = y;
+        }
+    }
 
     private static <T> void assertRoundtrip(Serializer<T> serializer, T value)
     {
@@ -46,6 +62,14 @@ public class BasicSerializersTest
         T result = serializer.deserialize(data);
         assertNotNull(result);
         assertTrue(deepEquals(value, result), "the arrays are different");
+    }
+
+    private static void assertObjectRoundtrip(Serializer<Object> serializer, Object value)
+    {
+        byte[] data = serializer.serialize(value);
+        assertNotNull(data);
+        Object result = serializer.deserialize(data);
+        assertTrue(deepEquals(value, result), "the values are different");
     }
 
     private static boolean deepEquals(Object a, Object b)
@@ -374,6 +398,118 @@ public class BasicSerializersTest
     }
 
     @Test
+    public void testObject()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        BasicSerializers.registerAll(registry);
+        Serializer<Object> object = registry.object();
+
+        assertObjectRoundtrip(object, "hola ünïcödé");
+        assertObjectRoundtrip(object, 42);
+        assertObjectRoundtrip(object, 42L);
+        assertObjectRoundtrip(object, 1.5f);
+        assertObjectRoundtrip(object, -2.25d);
+        assertObjectRoundtrip(object, Boolean.TRUE);
+        assertObjectRoundtrip(object, (byte) 7);
+        assertObjectRoundtrip(object, (short) 300);
+        assertObjectRoundtrip(object, 'ñ');
+        assertObjectRoundtrip(object, BigInteger.valueOf(-1234567890123456789L));
+        assertObjectRoundtrip(object, new BigDecimal("-1.23456789012345678901234567890"));
+        assertObjectRoundtrip(object, LocalDate.of(2026, 10, 20));
+        assertObjectRoundtrip(object, LocalTime.of(23, 59, 59));
+        assertObjectRoundtrip(object, LocalDateTime.of(2026, 10, 20, 10, 15, 30));
+        assertObjectRoundtrip(object, ZonedDateTime.of(2026, 10, 20, 10, 15, 30, 0, ZoneId.of("Europe/Madrid")));
+        assertObjectRoundtrip(object, ZoneId.of("UTC"));
+        assertObjectRoundtrip(object, new int[] { 1, 2, 3 });
+        assertObjectRoundtrip(object, new String[] { "a", "b" });
+        assertObjectRoundtrip(object, new int[][] { { 1, 2 }, { 3 } });
+        assertObjectRoundtrip(object, new BigDecimal[][] { { BigDecimal.ONE } });
+    }
+
+    @Test
+    public void testObjectFormat()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        BasicSerializers.registerAll(registry);
+        Serializer<Object> object = registry.object();
+
+        byte[] data = object.serialize("hola");
+        assertEquals(1, data[0]);
+        assertEquals(4, data[1]);
+        assertArrayEquals("hola".getBytes(StandardCharsets.UTF_8), Arrays.copyOfRange(data, 2, data.length));
+
+        data = object.serialize(42);
+        assertEquals(BasicSerializers.ID_INTEGER, data[0]);
+        assertEquals(4, data[1]);
+        assertArrayEquals(ByteBuffer.allocate(4).putInt(42).array(), Arrays.copyOfRange(data, 2, data.length));
+    }
+
+    @Test
+    public void testObjectWithCustomType()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        BasicSerializers.registerAll(registry);
+        registry.register(Point.class, 100, new Serializer<Point>()
+        {
+            @Override
+            public byte[] serialize(Point p)
+            {
+                return ByteBuffer.allocate(8).putInt(p.x).putInt(p.y).array();
+            }
+
+            @Override
+            public Point deserialize(byte[] d)
+            {
+                ByteBuffer buffer = ByteBuffer.wrap(d);
+                return new Point(buffer.getInt(), buffer.getInt());
+            }
+        });
+        Serializer<Object> object = registry.object();
+
+        byte[] data = object.serialize(new Point(1, 2));
+        assertEquals(100, data[0]);
+        Point point = (Point) object.deserialize(data);
+        assertEquals(1, point.x);
+        assertEquals(2, point.y);
+    }
+
+    @Test
+    public void testObjectErrors()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        BasicSerializers.registerAll(registry);
+        Serializer<Object> object = registry.object();
+
+        assertThrows(NullPointerException.class, () -> object.serialize(null));
+        assertThrows(NullPointerException.class, () -> object.deserialize(null));
+        assertThrows(IllegalArgumentException.class, () -> object.serialize(new Point(1, 2)));
+        assertThrows(IllegalArgumentException.class, () -> object.deserialize(new byte[] { 1, 2 }));
+        assertThrows(IllegalArgumentException.class, () -> object.deserialize(new byte[] { 99 }));
+    }
+
+    @Test
+    public void testObjectDefaultRegistry()
+    {
+        assertTrue(SerializerRegistry.getDefault().isRegistered(String.class));
+        assertTrue(SerializerRegistry.getDefault().isRegistered(Object.class));
+        assertEquals(BasicSerializers.ID_OBJECT, SerializerRegistry.getDefault().getId(Object.class));
+        assertObjectRoundtrip(BasicSerializers.OBJECT, "hola");
+        assertObjectRoundtrip(BasicSerializers.OBJECT, 42);
+        assertObjectRoundtrip(BasicSerializers.OBJECT, new int[] { 1, 2, 3 });
+    }
+
+    @Test
+    public void testRegisterAllIsIdempotent()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        BasicSerializers.registerAll(registry);
+        int size = registry.size();
+        BasicSerializers.registerAll(registry);
+        assertEquals(size, registry.size());
+        BasicSerializers.registerAll(SerializerRegistry.getDefault());
+    }
+
+    @Test
     public void testNumbers()
     {
         assertRoundtrip(BasicSerializers.INTEGER, 42);
@@ -534,6 +670,7 @@ public class BasicSerializersTest
         types.add(String[][].class);
         types.add(BigInteger[][].class);
         types.add(BigDecimal[][].class);
+        types.add(Object.class);
         for (Class<?> type : types)
         {
             assertTrue(registry.isRegistered(type), "missing registration for " + type);
@@ -586,6 +723,7 @@ public class BasicSerializersTest
         assertEquals(BasicSerializers.ID_STRING_ARRAY_2D, registry.getId(String[][].class));
         assertEquals(BasicSerializers.ID_BIG_INTEGER_ARRAY_2D, registry.getId(BigInteger[][].class));
         assertEquals(BasicSerializers.ID_BIG_DECIMAL_ARRAY_2D, registry.getId(BigDecimal[][].class));
+        assertEquals(BasicSerializers.ID_OBJECT, registry.getId(Object.class));
         assertEquals(types().size(), registry.size());
         assertEquals(BasicSerializers.STRING, registry.getById(BasicSerializers.ID_STRING));
         assertEquals(BasicSerializers.LOCAL_DATE, registry.getById(BasicSerializers.ID_LOCAL_DATE));
@@ -633,6 +771,7 @@ public class BasicSerializersTest
         ids.add(BasicSerializers.ID_STRING_ARRAY_2D);
         ids.add(BasicSerializers.ID_BIG_INTEGER_ARRAY_2D);
         ids.add(BasicSerializers.ID_BIG_DECIMAL_ARRAY_2D);
+        ids.add(BasicSerializers.ID_OBJECT);
         return ids;
     }
 }

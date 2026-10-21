@@ -218,6 +218,69 @@ public class SerializerRegistryTest
         assertThrows(NullPointerException.class, () -> registry.registerIfAbsent(String.class, 1, null));
     }
 
+    @Test
+    public void testSerializeAndDeserializeObject()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        registry.register(String.class, 1, STRING_SERIALIZER);
+        registry.register(Integer.class, 2, INTEGER_SERIALIZER);
+
+        byte[] data = registry.serializeObject("hola");
+        assertEquals(1, data[0]);
+        assertEquals(4, data[1]);
+        assertEquals("hola", registry.deserializeObject(data));
+
+        data = registry.serializeObject(7);
+        assertEquals(2, data[0]);
+        assertEquals(1, data[1]);
+        assertEquals(7, registry.deserializeObject(data));
+    }
+
+    @Test
+    public void testObjectSerializerUsesTheRegistry()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        registry.register(String.class, 1, STRING_SERIALIZER);
+        Serializer<Object> object = registry.object();
+
+        byte[] data = object.serialize("hola");
+        assertEquals(1, data[0]);
+        assertEquals("hola", object.deserialize(data));
+    }
+
+    @Test
+    public void testObjectSerializerWithoutSerializerForTheType()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        registry.register(String.class, 1, STRING_SERIALIZER);
+        Serializer<Object> object = registry.object();
+
+        assertThrows(IllegalArgumentException.class, () -> object.serialize(new Circle()));
+        assertThrows(IllegalArgumentException.class, () -> registry.serializeObject(new Circle()));
+    }
+
+    @Test
+    public void testObjectSerializerDoesNotRecurse()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        registry.register(String.class, 1, STRING_SERIALIZER);
+        registry.register(Object.class, 2, registry.object());
+
+        assertThrows(IllegalArgumentException.class, () -> registry.serializeObject(new Circle()));
+    }
+
+    @Test
+    public void testObjectSerializerWithInvalidData()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        registry.register(String.class, 1, STRING_SERIALIZER);
+
+        assertThrows(IllegalArgumentException.class, () -> registry.deserializeObject(new byte[] { 1, 2 }));
+        assertThrows(IllegalArgumentException.class, () -> registry.deserializeObject(new byte[] { 9 }));
+        assertThrows(NullPointerException.class, () -> registry.serializeObject(null));
+        assertThrows(NullPointerException.class, () -> registry.deserializeObject(null));
+    }
+
     private interface Shape
     {
     }

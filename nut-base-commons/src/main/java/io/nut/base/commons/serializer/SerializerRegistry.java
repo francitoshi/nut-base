@@ -5,6 +5,11 @@
  */
 package io.nut.base.commons.serializer;
 
+import io.nut.base.commons.varint.VarInt;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -30,12 +35,18 @@ public class SerializerRegistry
 
     private static final SerializerRegistry DEFAULT = new SerializerRegistry();
 
+    static
+    {
+        BasicSerializers.registerAll(DEFAULT);
+    }
+
     private final Map<Class<?>, Item<?>> byType = new ConcurrentHashMap<>();
 
     private final Map<Integer, Item<?>> byId = new ConcurrentHashMap<>();
 
     /**
-     * Shared instance for those who do not want to inject their own.
+     * Shared instance for those who do not want to inject their own. It comes
+     * with the basic serializers already registered.
      */
     public static SerializerRegistry getDefault()
     {
@@ -282,6 +293,106 @@ public class SerializerRegistry
     }
 
     /**
+     * Creates a serializer able to serialize any object whose concrete type has
+     * a serializer registered in this registry.
+     * <p>
+     * The serialized object is prefixed with the id of the serializer used and
+     * with the length of the serialized object, both encoded as a
+     * {@link VarInt}, so the object can be deserialized later with
+     * {@link #deserializeObject(byte[])}.
+     *
+     * @return The serializer of any object.
+     */
+    public Serializer<Object> object()
+    {
+        return new Serializer.ObjectSerializer()
+        {
+            @Override
+            public byte[] serialize(Object value)
+            {
+                return serializeObject(value);
+            }
+
+            @Override
+            public Object deserialize(byte[] data)
+            {
+                return deserializeObject(data);
+            }
+        };
+    }
+
+    /**
+     * Serializes an object with the serializer registered for its concrete
+     * type in this registry, prepending the id of that serializer and the
+     * length of the serialized object, both encoded as a {@link VarInt}.
+     *
+     * @param value The object to serialize.
+     * @return The serialized object.
+     * @throws NullPointerException     If the value is null.
+     * @throws IllegalArgumentException If the type of the value has no
+     *                                  serializer registered.
+     */
+    public byte[] serializeObject(Object value)
+    {
+        if (value == null)
+        {
+            throw new NullPointerException("value must not be null");
+        }
+        Item<?> item = findItemForInstanceOf(value.getClass());
+        if (item == null || item.getSerializer() instanceof Serializer.ObjectSerializer)
+        {
+            throw new IllegalArgumentException("No serializer registered for " + value.getClass().getName());
+        }
+        byte[] data = serializeWith(item.getSerializer(), value);
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream())
+        {
+            VarInt.write(out, item.getId());
+            VarInt.write(out, data.length);
+            out.write(data);
+            return out.toByteArray();
+        }
+        catch (IOException e)
+        {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Deserializes an object serialized with {@link #serializeObject(Object)},
+     * reading the id of the serializer to use from the prefixed data.
+     *
+     * @param data The serialized object.
+     * @return The deserialized object.
+     * @throws NullPointerException     If the data is null.
+     * @throws IllegalArgumentException If the data is malformed or the id has no
+     *                                  serializer registered.
+     */
+    public Object deserializeObject(byte[] data)
+    {
+        if (data == null)
+        {
+            throw new NullPointerException("data must not be null");
+        }
+        try (ByteArrayInputStream in = new ByteArrayInputStream(data);
+                DataInputStream input = new DataInputStream(in))
+        {
+            int id = (int) VarInt.read(input);
+            int size = (int) VarInt.read(input);
+            if (size < 0 || size > in.available())
+            {
+                throw new IllegalArgumentException("Invalid object length " + size);
+            }
+            byte[] payload = new byte[size];
+            input.readFully(payload);
+            return deserializeWith(getById(id), payload);
+        }
+        catch (IOException e)
+        {
+            throw new IllegalArgumentException("Invalid data", e);
+        }
+    }
+
+    /**
      * Returns all the registered items.
      *
      * @return A snapshot of the registered items.
@@ -331,6 +442,18 @@ public class SerializerRegistry
             byType.clear();
             byId.clear();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static byte[] serializeWith(Serializer<?> serializer, Object value)
+    {
+        return ((Serializer<Object>) serializer).serialize(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Object deserializeWith(Serializer<?> serializer, byte[] data)
+    {
+        return ((Serializer<Object>) serializer).deserialize(data);
     }
 
     private Item<?> find(Class<?> type)

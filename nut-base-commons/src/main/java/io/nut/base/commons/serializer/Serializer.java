@@ -10,4 +10,13 @@ public interface Serializer<T>
     byte[] serialize(T object);
 
     T deserialize(byte[] data);
+
+    /**
+     * Marker for the serializers able to serialize any object, using the
+     * serializer registered for its concrete type in a registry. It is used to
+     * detect the serializers that would recurse endlessly.
+     */
+    interface ObjectSerializer extends Serializer<Object>
+    {
+    }
 }

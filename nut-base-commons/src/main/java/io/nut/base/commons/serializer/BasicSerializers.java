@@ -5,6 +5,7 @@
  */
 package io.nut.base.commons.serializer;
 
+import io.nut.base.commons.varint.VarInt;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -126,6 +127,8 @@ public final class BasicSerializers
     public static final int ID_SHORT = 38;
 
     public static final int ID_CHARACTER = 39;
+
+    public static final int ID_OBJECT = 40;
 
     private BasicSerializers()
     {
@@ -263,6 +266,41 @@ public final class BasicSerializers
         public Character deserialize(byte[] d)
         {
             return ByteBuffer.wrap(d).getChar();
+        }
+    };
+
+    /**
+     * Serializer for any object whose type has a serializer registered in a
+     * {@link SerializerRegistry}.
+     * <p>
+     * The concrete type of the object is detected on serialization and the
+     * serializer registered for it, or for one of its supertypes, is used. The
+     * serialized data is:
+     * <ul>
+     *   <li>the id of the serializer used, encoded as a {@link VarInt}</li>
+     *   <li>the length in bytes of the serialized object, encoded as a
+     *       {@link VarInt}</li>
+     *   <li>the serialized object</li>
+     * </ul>
+     * On deserialization the id is read back, the serializer registered with
+     * that id is used and the object is deserialized with it.
+     * <p>
+     * This serializer uses the {@link SerializerRegistry#getDefault() default
+     * registry}, which comes with the basic serializers already registered. Use
+     * {@link SerializerRegistry#object()} to work with another registry.
+     */
+    public static final Serializer<Object> OBJECT = new Serializer.ObjectSerializer()
+    {
+        @Override
+        public byte[] serialize(Object value)
+        {
+            return SerializerRegistry.getDefault().serializeObject(value);
+        }
+
+        @Override
+        public Object deserialize(byte[] data)
+        {
+            return SerializerRegistry.getDefault().deserializeObject(data);
         }
     };
     
@@ -653,14 +691,11 @@ public final class BasicSerializers
         }
     };
 
-    public static final Serializer<String[]> STRING_ARRAY_1D = textArray(String.class,
-            value -> value, text -> text);
+    public static final Serializer<String[]> STRING_ARRAY_1D = textArray(String.class, value -> value, text -> text);
 
-    public static final Serializer<BigInteger[]> BIG_INTEGER_ARRAY_1D = textArray(BigInteger.class,
-            BigInteger::toString, BigInteger::new);
+    public static final Serializer<BigInteger[]> BIG_INTEGER_ARRAY_1D = textArray(BigInteger.class, BigInteger::toString, BigInteger::new);
 
-    public static final Serializer<BigDecimal[]> BIG_DECIMAL_ARRAY_1D = textArray(BigDecimal.class,
-            BigDecimal::toString, BigDecimal::new);
+    public static final Serializer<BigDecimal[]> BIG_DECIMAL_ARRAY_1D = textArray(BigDecimal.class, BigDecimal::toString, BigDecimal::new);
 
     public static final Serializer<boolean[][]> BOOLEAN_ARRAY_2D = new Serializer<boolean[][]>()
     {
@@ -827,46 +862,59 @@ public final class BasicSerializers
         }
     };
 
+    /**
+     * Registers all the basic serializers in the given registry. The types
+     * already registered are not modified, so this method can be called more
+     * than once without any effect.
+     *
+     * @param registry The registry where the serializers are registered.
+     * @throws NullPointerException If the registry is null.
+     */
     public static void registerAll(SerializerRegistry registry)
     {
-        registry.register(String.class, ID_STRING, STRING);
-        registry.register(Integer.class, ID_INTEGER, INTEGER);
-        registry.register(Long.class, ID_LONG, LONG);
-        registry.register(Float.class, ID_FLOAT, FLOAT);
-        registry.register(Double.class, ID_DOUBLE, DOUBLE);
-        registry.register(Boolean.class, ID_BOOLEAN, BOOLEAN);
-        registry.register(Byte.class, ID_BYTE, BYTE);
-        registry.register(Short.class, ID_SHORT, SHORT);
-        registry.register(Character.class, ID_CHARACTER, CHARACTER);
-        registry.register(BigInteger.class, ID_BIG_INTEGER, BIG_INTEGER);
-        registry.register(BigDecimal.class, ID_BIG_DECIMAL, BIG_DECIMAL);
-        registry.register(LocalDate.class, ID_LOCAL_DATE, LOCAL_DATE);
-        registry.register(LocalTime.class, ID_LOCAL_TIME, LOCAL_TIME);
-        registry.register(LocalDateTime.class, ID_LOCAL_DATE_TIME, LOCAL_DATE_TIME);
-        registry.register(ZonedDateTime.class, ID_ZONED_DATE_TIME, ZONED_DATE_TIME);
-        registry.register(ZoneId.class, ID_ZONE_ID, ZONE_ID);
-        registry.register(boolean[].class, ID_BOOLEAN_ARRAY_1D, BOOLEAN_ARRAY_1D);
-        registry.register(byte[].class, ID_BYTE_ARRAY_1D, BYTE_ARRAY_1D);
-        registry.register(char[].class, ID_CHAR_ARRAY_1D, CHAR_ARRAY_1D);
-        registry.register(short[].class, ID_SHORT_ARRAY_1D, SHORT_ARRAY_1D);
-        registry.register(int[].class, ID_INT_ARRAY_1D, INT_ARRAY_1D);
-        registry.register(long[].class, ID_LONG_ARRAY_1D, LONG_ARRAY_1D);
-        registry.register(float[].class, ID_FLOAT_ARRAY_1D, FLOAT_ARRAY_1D);
-        registry.register(double[].class, ID_DOUBLE_ARRAY_1D, DOUBLE_ARRAY_1D);
-        registry.register(String[].class, ID_STRING_ARRAY_1D, STRING_ARRAY_1D);
-        registry.register(BigInteger[].class, ID_BIG_INTEGER_ARRAY_1D, BIG_INTEGER_ARRAY_1D);
-        registry.register(BigDecimal[].class, ID_BIG_DECIMAL_ARRAY_1D, BIG_DECIMAL_ARRAY_1D);
-        registry.register(boolean[][].class, ID_BOOLEAN_ARRAY_2D, BOOLEAN_ARRAY_2D);
-        registry.register(byte[][].class, ID_BYTE_ARRAY_2D, BYTE_ARRAY_2D);
-        registry.register(char[][].class, ID_CHAR_ARRAY_2D, CHAR_ARRAY_2D);
-        registry.register(short[][].class, ID_SHORT_ARRAY_2D, SHORT_ARRAY_2D);
-        registry.register(int[][].class, ID_INT_ARRAY_2D, INT_ARRAY_2D);
-        registry.register(long[][].class, ID_LONG_ARRAY_2D, LONG_ARRAY_2D);
-        registry.register(float[][].class, ID_FLOAT_ARRAY_2D, FLOAT_ARRAY_2D);
-        registry.register(double[][].class, ID_DOUBLE_ARRAY_2D, DOUBLE_ARRAY_2D);
-        registry.register(String[][].class, ID_STRING_ARRAY_2D, STRING_ARRAY_2D);
-        registry.register(BigInteger[][].class, ID_BIG_INTEGER_ARRAY_2D, BIG_INTEGER_ARRAY_2D);
-        registry.register(BigDecimal[][].class, ID_BIG_DECIMAL_ARRAY_2D, BIG_DECIMAL_ARRAY_2D);
+        if (registry == null)
+        {
+            throw new NullPointerException("registry must not be null");
+        }
+        registry.registerIfAbsent(String.class, ID_STRING, STRING);
+        registry.registerIfAbsent(Integer.class, ID_INTEGER, INTEGER);
+        registry.registerIfAbsent(Long.class, ID_LONG, LONG);
+        registry.registerIfAbsent(Float.class, ID_FLOAT, FLOAT);
+        registry.registerIfAbsent(Double.class, ID_DOUBLE, DOUBLE);
+        registry.registerIfAbsent(Boolean.class, ID_BOOLEAN, BOOLEAN);
+        registry.registerIfAbsent(Byte.class, ID_BYTE, BYTE);
+        registry.registerIfAbsent(Short.class, ID_SHORT, SHORT);
+        registry.registerIfAbsent(Character.class, ID_CHARACTER, CHARACTER);
+        registry.registerIfAbsent(BigInteger.class, ID_BIG_INTEGER, BIG_INTEGER);
+        registry.registerIfAbsent(BigDecimal.class, ID_BIG_DECIMAL, BIG_DECIMAL);
+        registry.registerIfAbsent(LocalDate.class, ID_LOCAL_DATE, LOCAL_DATE);
+        registry.registerIfAbsent(LocalTime.class, ID_LOCAL_TIME, LOCAL_TIME);
+        registry.registerIfAbsent(LocalDateTime.class, ID_LOCAL_DATE_TIME, LOCAL_DATE_TIME);
+        registry.registerIfAbsent(ZonedDateTime.class, ID_ZONED_DATE_TIME, ZONED_DATE_TIME);
+        registry.registerIfAbsent(ZoneId.class, ID_ZONE_ID, ZONE_ID);
+        registry.registerIfAbsent(boolean[].class, ID_BOOLEAN_ARRAY_1D, BOOLEAN_ARRAY_1D);
+        registry.registerIfAbsent(byte[].class, ID_BYTE_ARRAY_1D, BYTE_ARRAY_1D);
+        registry.registerIfAbsent(char[].class, ID_CHAR_ARRAY_1D, CHAR_ARRAY_1D);
+        registry.registerIfAbsent(short[].class, ID_SHORT_ARRAY_1D, SHORT_ARRAY_1D);
+        registry.registerIfAbsent(int[].class, ID_INT_ARRAY_1D, INT_ARRAY_1D);
+        registry.registerIfAbsent(long[].class, ID_LONG_ARRAY_1D, LONG_ARRAY_1D);
+        registry.registerIfAbsent(float[].class, ID_FLOAT_ARRAY_1D, FLOAT_ARRAY_1D);
+        registry.registerIfAbsent(double[].class, ID_DOUBLE_ARRAY_1D, DOUBLE_ARRAY_1D);
+        registry.registerIfAbsent(String[].class, ID_STRING_ARRAY_1D, STRING_ARRAY_1D);
+        registry.registerIfAbsent(BigInteger[].class, ID_BIG_INTEGER_ARRAY_1D, BIG_INTEGER_ARRAY_1D);
+        registry.registerIfAbsent(BigDecimal[].class, ID_BIG_DECIMAL_ARRAY_1D, BIG_DECIMAL_ARRAY_1D);
+        registry.registerIfAbsent(boolean[][].class, ID_BOOLEAN_ARRAY_2D, BOOLEAN_ARRAY_2D);
+        registry.registerIfAbsent(byte[][].class, ID_BYTE_ARRAY_2D, BYTE_ARRAY_2D);
+        registry.registerIfAbsent(char[][].class, ID_CHAR_ARRAY_2D, CHAR_ARRAY_2D);
+        registry.registerIfAbsent(short[][].class, ID_SHORT_ARRAY_2D, SHORT_ARRAY_2D);
+        registry.registerIfAbsent(int[][].class, ID_INT_ARRAY_2D, INT_ARRAY_2D);
+        registry.registerIfAbsent(long[][].class, ID_LONG_ARRAY_2D, LONG_ARRAY_2D);
+        registry.registerIfAbsent(float[][].class, ID_FLOAT_ARRAY_2D, FLOAT_ARRAY_2D);
+        registry.registerIfAbsent(double[][].class, ID_DOUBLE_ARRAY_2D, DOUBLE_ARRAY_2D);
+        registry.registerIfAbsent(String[][].class, ID_STRING_ARRAY_2D, STRING_ARRAY_2D);
+        registry.registerIfAbsent(BigInteger[][].class, ID_BIG_INTEGER_ARRAY_2D, BIG_INTEGER_ARRAY_2D);
+        registry.registerIfAbsent(BigDecimal[][].class, ID_BIG_DECIMAL_ARRAY_2D, BIG_DECIMAL_ARRAY_2D);
+        registry.registerIfAbsent(Object.class, ID_OBJECT, registry.object());
     }
 
     /**
