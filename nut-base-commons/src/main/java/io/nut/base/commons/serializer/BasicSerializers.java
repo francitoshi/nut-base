@@ -119,6 +119,14 @@ public final class BasicSerializers
 
     public static final int ID_BIG_DECIMAL_ARRAY_2D = 35;
 
+    public static final int ID_BOOLEAN = 36;
+
+    public static final int ID_BYTE = 37;
+
+    public static final int ID_SHORT = 38;
+
+    public static final int ID_CHARACTER = 39;
+
     private BasicSerializers()
     {
     }
@@ -143,7 +151,7 @@ public final class BasicSerializers
         @Override
         public byte[] serialize(Integer i)
         {
-            return ByteBuffer.allocate(4).putInt(i).array();
+            return ByteBuffer.allocate(Integer.BYTES).putInt(i).array();
         }
 
         @Override
@@ -158,7 +166,7 @@ public final class BasicSerializers
         @Override
         public byte[] serialize(Long l)
         {
-            return ByteBuffer.allocate(8).putLong(l).array();
+            return ByteBuffer.allocate(Long.BYTES).putLong(l).array();
         }
 
         @Override
@@ -173,7 +181,7 @@ public final class BasicSerializers
         @Override
         public byte[] serialize(Float v)
         {
-            return ByteBuffer.allocate(8).putFloat(v).array();
+            return ByteBuffer.allocate(Float.BYTES).putFloat(v).array();
         }
 
         @Override
@@ -188,13 +196,73 @@ public final class BasicSerializers
         @Override
         public byte[] serialize(Double v)
         {
-            return ByteBuffer.allocate(8).putDouble(v).array();
+            return ByteBuffer.allocate(Double.BYTES).putDouble(v).array();
         }
 
         @Override
         public Double deserialize(byte[] d)
         {
             return ByteBuffer.wrap(d).getDouble();
+        }
+    };
+
+    public static final Serializer<Boolean> BOOLEAN = new Serializer<Boolean>()
+    {
+        @Override
+        public byte[] serialize(Boolean v)
+        {
+            return ByteBuffer.allocate(1).put(v ? (byte) 1 : (byte) 0).array();
+        }
+
+        @Override
+        public Boolean deserialize(byte[] d)
+        {
+            return ByteBuffer.wrap(d).get() != 0;
+        }
+    };
+
+    public static final Serializer<Byte> BYTE = new Serializer<Byte>()
+    {
+        @Override
+        public byte[] serialize(Byte v)
+        {
+            return ByteBuffer.allocate(Byte.BYTES).put(v).array();
+        }
+
+        @Override
+        public Byte deserialize(byte[] d)
+        {
+            return ByteBuffer.wrap(d).get();
+        }
+    };
+
+    public static final Serializer<Short> SHORT = new Serializer<Short>()
+    {
+        @Override
+        public byte[] serialize(Short v)
+        {
+            return ByteBuffer.allocate(Short.BYTES).putShort(v).array();
+        }
+
+        @Override
+        public Short deserialize(byte[] d)
+        {
+            return ByteBuffer.wrap(d).getShort();
+        }
+    };
+
+    public static final Serializer<Character> CHARACTER = new Serializer<Character>()
+    {
+        @Override
+        public byte[] serialize(Character v)
+        {
+            return ByteBuffer.allocate(Character.BYTES).putChar(v).array();
+        }
+
+        @Override
+        public Character deserialize(byte[] d)
+        {
+            return ByteBuffer.wrap(d).getChar();
         }
     };
     
@@ -766,6 +834,10 @@ public final class BasicSerializers
         registry.register(Long.class, ID_LONG, LONG);
         registry.register(Float.class, ID_FLOAT, FLOAT);
         registry.register(Double.class, ID_DOUBLE, DOUBLE);
+        registry.register(Boolean.class, ID_BOOLEAN, BOOLEAN);
+        registry.register(Byte.class, ID_BYTE, BYTE);
+        registry.register(Short.class, ID_SHORT, SHORT);
+        registry.register(Character.class, ID_CHARACTER, CHARACTER);
         registry.register(BigInteger.class, ID_BIG_INTEGER, BIG_INTEGER);
         registry.register(BigDecimal.class, ID_BIG_DECIMAL, BIG_DECIMAL);
         registry.register(LocalDate.class, ID_LOCAL_DATE, LOCAL_DATE);

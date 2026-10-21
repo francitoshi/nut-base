@@ -385,6 +385,52 @@ public class BasicSerializersTest
     }
 
     @Test
+    public void testBoolean()
+    {
+        assertRoundtrip(BasicSerializers.BOOLEAN, Boolean.TRUE);
+        assertRoundtrip(BasicSerializers.BOOLEAN, Boolean.FALSE);
+        assertEquals(1, BasicSerializers.BOOLEAN.serialize(Boolean.TRUE).length);
+    }
+
+    @Test
+    public void testByte()
+    {
+        assertRoundtrip(BasicSerializers.BYTE, (byte) 0);
+        assertRoundtrip(BasicSerializers.BYTE, (byte) -1);
+        assertRoundtrip(BasicSerializers.BYTE, Byte.MAX_VALUE);
+        assertRoundtrip(BasicSerializers.BYTE, Byte.MIN_VALUE);
+        assertEquals(Byte.BYTES, BasicSerializers.BYTE.serialize((byte) 1).length);
+    }
+
+    @Test
+    public void testShort()
+    {
+        assertRoundtrip(BasicSerializers.SHORT, (short) 0);
+        assertRoundtrip(BasicSerializers.SHORT, (short) -1);
+        assertRoundtrip(BasicSerializers.SHORT, Short.MAX_VALUE);
+        assertRoundtrip(BasicSerializers.SHORT, Short.MIN_VALUE);
+        assertEquals(Short.BYTES, BasicSerializers.SHORT.serialize((short) 1).length);
+    }
+
+    @Test
+    public void testChar()
+    {
+        assertRoundtrip(BasicSerializers.CHARACTER, 'a');
+        assertRoundtrip(BasicSerializers.CHARACTER, 'ñ');
+        assertRoundtrip(BasicSerializers.CHARACTER, Character.MAX_VALUE);
+        assertRoundtrip(BasicSerializers.CHARACTER, Character.MIN_VALUE);
+        assertEquals(Character.BYTES, BasicSerializers.CHARACTER.serialize('a').length);
+    }
+
+    @Test
+    public void testFloat()
+    {
+        assertRoundtrip(BasicSerializers.FLOAT, 1.5f);
+        assertRoundtrip(BasicSerializers.FLOAT, Float.MAX_VALUE);
+        assertEquals(Float.BYTES, BasicSerializers.FLOAT.serialize(1.5f).length);
+    }
+
+    @Test
     public void testBigInteger()
     {
         assertRoundtrip(BasicSerializers.BIG_INTEGER, BigInteger.ZERO);
@@ -455,6 +501,10 @@ public class BasicSerializersTest
         types.add(Long.class);
         types.add(Float.class);
         types.add(Double.class);
+        types.add(Boolean.class);
+        types.add(Byte.class);
+        types.add(Short.class);
+        types.add(Character.class);
         types.add(BigInteger.class);
         types.add(BigDecimal.class);
         types.add(LocalDate.class);
@@ -503,6 +553,10 @@ public class BasicSerializersTest
         assertEquals(BasicSerializers.ID_LONG, registry.getId(Long.class));
         assertEquals(BasicSerializers.ID_FLOAT, registry.getId(Float.class));
         assertEquals(BasicSerializers.ID_DOUBLE, registry.getId(Double.class));
+        assertEquals(BasicSerializers.ID_BOOLEAN, registry.getId(Boolean.class));
+        assertEquals(BasicSerializers.ID_BYTE, registry.getId(Byte.class));
+        assertEquals(BasicSerializers.ID_SHORT, registry.getId(Short.class));
+        assertEquals(BasicSerializers.ID_CHARACTER, registry.getId(Character.class));
         assertEquals(BasicSerializers.ID_BIG_INTEGER, registry.getId(BigInteger.class));
         assertEquals(BasicSerializers.ID_BIG_DECIMAL, registry.getId(BigDecimal.class));
         assertEquals(BasicSerializers.ID_LOCAL_DATE, registry.getId(LocalDate.class));
@@ -546,6 +600,10 @@ public class BasicSerializersTest
         ids.add(BasicSerializers.ID_LONG);
         ids.add(BasicSerializers.ID_FLOAT);
         ids.add(BasicSerializers.ID_DOUBLE);
+        ids.add(BasicSerializers.ID_BOOLEAN);
+        ids.add(BasicSerializers.ID_BYTE);
+        ids.add(BasicSerializers.ID_SHORT);
+        ids.add(BasicSerializers.ID_CHARACTER);
         ids.add(BasicSerializers.ID_BIG_INTEGER);
         ids.add(BasicSerializers.ID_BIG_DECIMAL);
         ids.add(BasicSerializers.ID_LOCAL_DATE);
