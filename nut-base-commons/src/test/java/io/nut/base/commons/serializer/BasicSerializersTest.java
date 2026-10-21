@@ -256,10 +256,35 @@ public class BasicSerializersTest
     public void testInvalidArrayData()
     {
         assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY_1D.deserialize(new byte[] { 1, 2 }));
-        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY_1D.deserialize(new byte[] { 0, 0, 0, 5, 0, 0, 0, 1 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY_1D.deserialize(new byte[] { 5, 0, 0, 0, 1 }));
         assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY_1D.deserialize(new byte[] { -1, -1, -1, -1 }));
-        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.DOUBLE_ARRAY_1D.deserialize(new byte[] { 0, 0, 0, 1, 0 }));
-        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.STRING_ARRAY_1D.deserialize(new byte[] { 0, 0, 0, 1 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.DOUBLE_ARRAY_1D.deserialize(new byte[] { 1, 0 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.STRING_ARRAY_1D.deserialize(new byte[] { 1 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.STRING_ARRAY_1D.deserialize(new byte[] { 1, 5 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.STRING_ARRAY_1D.deserialize(new byte[0]));
+    }
+
+    @Test
+    public void testArrayEncoding()
+    {
+        assertArrayEquals(new byte[] { 0x03, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3 },
+                BasicSerializers.INT_ARRAY_1D.serialize(new int[] { 1, 2, 3 }));
+
+        byte[] data = BasicSerializers.INT_ARRAY_1D.serialize(new int[64]);
+        assertEquals(0x40, data[0] & 0xFF);
+        assertEquals(0x00, data[1] & 0xFF);
+        assertEquals(1 + 64 * Integer.BYTES, data.length);
+
+        data = BasicSerializers.INT_ARRAY_1D.serialize(new int[200]);
+        assertEquals(0xC8, data[0] & 0xFF);
+        assertEquals(0x01, data[1] & 0xFF);
+        assertEquals(2 + 200 * Integer.BYTES, data.length);
+
+        assertArrayEquals(new byte[] { 0x02, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, 0x04, 'h', 'o', 'l', 'a' },
+                BasicSerializers.STRING_ARRAY_1D.serialize(new String[] { null, "hola" }));
+
+        assertArrayEquals(new byte[] { 0x01, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF, (byte) 0xFF },
+                BasicSerializers.INT_ARRAY_2D.serialize(new int[][] { null }));
     }
 
     @Test
@@ -386,15 +411,15 @@ public class BasicSerializersTest
     @Test
     public void testInvalidArray2DData()
     {
-        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY_2D.deserialize(new byte[] { 1, 2 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY_2D.deserialize(new byte[] { 2 }));
         assertThrows(IllegalArgumentException.class,
-                () -> BasicSerializers.INT_ARRAY_2D.deserialize(new byte[] { 0, 0, 0, 5, 0, 0, 0, 1 }));
+                () -> BasicSerializers.INT_ARRAY_2D.deserialize(new byte[] { 5, 0, 0, 0, 1 }));
         assertThrows(IllegalArgumentException.class,
                 () -> BasicSerializers.INT_ARRAY_2D.deserialize(new byte[] { -1, -1, -1, -1 }));
         assertThrows(IllegalArgumentException.class,
-                () -> BasicSerializers.INT_ARRAY_2D.deserialize(new byte[] { 0, 0, 0, 1, 0, 0, 0, 10 }));
+                () -> BasicSerializers.INT_ARRAY_2D.deserialize(new byte[] { 1, 10 }));
         assertThrows(IllegalArgumentException.class,
-                () -> BasicSerializers.STRING_ARRAY_2D.deserialize(new byte[] { 0, 0, 0, 1, 0, 0, 0, 2 }));
+                () -> BasicSerializers.STRING_ARRAY_2D.deserialize(new byte[] { 1, 2 }));
     }
 
     @Test

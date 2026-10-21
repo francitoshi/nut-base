@@ -5,7 +5,7 @@
  */
 package io.nut.base.commons.serializer;
 
-import io.nut.base.commons.varint.VarInt;
+import io.nut.base.commons.varint.VarSize;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -32,17 +32,18 @@ import java.util.function.IntFunction;
  * as {@link ByteBuffer} does) or as UTF-8 text. The array types use the
  * following layout:
  * <ul>
- *   <li>fixed width numeric arrays: a 4 byte count followed by the elements,
- *       one after the other, in big endian order</li>
- *   <li>text arrays: a 4 byte count followed by, for every element, its 4 byte
- *       length in bytes and its UTF-8 content</li>
+ *   <li>fixed width numeric arrays: a {@link VarSize} count followed by the
+ *       elements, one after the other, in big endian order</li>
+ *   <li>text arrays: a {@link VarSize} count followed by, for every element,
+ *       its length in bytes as a {@link VarSize} and its UTF-8 content</li>
  *   <li>byte arrays: the raw bytes, without any header</li>
- *   <li>two dimensional arrays: a 4 byte number of rows followed by, for every
- *       row, its length in bytes and its content, encoded as a one dimensional
- *       array</li>
+ *   <li>two dimensional arrays: a {@link VarSize} number of rows followed by,
+ *       for every row, its length in bytes as a {@link VarSize} and its
+ *       content, encoded as a one dimensional array</li>
  * </ul>
  * A null array is encoded as a null, and a null row or element is encoded with
- * the length -1.
+ * the length -1, the null value of the {@link VarSize} format ({@code
+ * 0xFFFFFFFF}).
  */
 public final class BasicSerializers
 {
@@ -277,9 +278,9 @@ public final class BasicSerializers
      * serializer registered for it, or for one of its supertypes, is used. The
      * serialized data is:
      * <ul>
-     *   <li>the id of the serializer used, encoded as a {@link VarInt}</li>
+     *   <li>the id of the serializer used, encoded as a {@link VarSize}</li>
      *   <li>the length in bytes of the serialized object, encoded as a
-     *       {@link VarInt}</li>
+     *       {@link VarSize}</li>
      *   <li>the serialized object</li>
      * </ul>
      * On deserialization the id is read back, the serializer registered with
@@ -433,8 +434,9 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + values.length);
-            buffer.putInt(values.length);
+            byte[] header = VarSize.encode(values.length);
+            ByteBuffer buffer = ByteBuffer.allocate(header.length + values.length);
+            buffer.put(header);
             for (boolean value : values)
             {
                 buffer.put(value ? (byte) 1 : (byte) 0);
@@ -449,10 +451,10 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int length = readArrayLength(buffer, data.length, 1);
-            boolean[] values = new boolean[length];
-            for (int i = 0; i < length; i++)
+            ArrayHeader header = readArrayHeader(data, 1);
+            boolean[] values = new boolean[header.count];
+            ByteBuffer buffer = header.body;
+            for (int i = 0; i < header.count; i++)
             {
                 values[i] = buffer.get() != 0;
             }
@@ -484,8 +486,9 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + values.length * Character.BYTES);
-            buffer.putInt(values.length);
+            byte[] header = VarSize.encode(values.length);
+            ByteBuffer buffer = ByteBuffer.allocate(header.length + values.length * Character.BYTES);
+            buffer.put(header);
             for (char value : values)
             {
                 buffer.putChar(value);
@@ -500,10 +503,10 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int length = readArrayLength(buffer, data.length, Character.BYTES);
-            char[] values = new char[length];
-            for (int i = 0; i < length; i++)
+            ArrayHeader header = readArrayHeader(data, Character.BYTES);
+            char[] values = new char[header.count];
+            ByteBuffer buffer = header.body;
+            for (int i = 0; i < header.count; i++)
             {
                 values[i] = buffer.getChar();
             }
@@ -520,8 +523,9 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + values.length * Short.BYTES);
-            buffer.putInt(values.length);
+            byte[] header = VarSize.encode(values.length);
+            ByteBuffer buffer = ByteBuffer.allocate(header.length + values.length * Short.BYTES);
+            buffer.put(header);
             for (short value : values)
             {
                 buffer.putShort(value);
@@ -536,10 +540,10 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int length = readArrayLength(buffer, data.length, Short.BYTES);
-            short[] values = new short[length];
-            for (int i = 0; i < length; i++)
+            ArrayHeader header = readArrayHeader(data, Short.BYTES);
+            short[] values = new short[header.count];
+            ByteBuffer buffer = header.body;
+            for (int i = 0; i < header.count; i++)
             {
                 values[i] = buffer.getShort();
             }
@@ -556,8 +560,9 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + values.length * Integer.BYTES);
-            buffer.putInt(values.length);
+            byte[] header = VarSize.encode(values.length);
+            ByteBuffer buffer = ByteBuffer.allocate(header.length + values.length * Integer.BYTES);
+            buffer.put(header);
             for (int value : values)
             {
                 buffer.putInt(value);
@@ -572,10 +577,10 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int length = readArrayLength(buffer, data.length, Integer.BYTES);
-            int[] values = new int[length];
-            for (int i = 0; i < length; i++)
+            ArrayHeader header = readArrayHeader(data, Integer.BYTES);
+            int[] values = new int[header.count];
+            ByteBuffer buffer = header.body;
+            for (int i = 0; i < header.count; i++)
             {
                 values[i] = buffer.getInt();
             }
@@ -592,8 +597,9 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + values.length * Long.BYTES);
-            buffer.putInt(values.length);
+            byte[] header = VarSize.encode(values.length);
+            ByteBuffer buffer = ByteBuffer.allocate(header.length + values.length * Long.BYTES);
+            buffer.put(header);
             for (long value : values)
             {
                 buffer.putLong(value);
@@ -608,10 +614,10 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int length = readArrayLength(buffer, data.length, Long.BYTES);
-            long[] values = new long[length];
-            for (int i = 0; i < length; i++)
+            ArrayHeader header = readArrayHeader(data, Long.BYTES);
+            long[] values = new long[header.count];
+            ByteBuffer buffer = header.body;
+            for (int i = 0; i < header.count; i++)
             {
                 values[i] = buffer.getLong();
             }
@@ -628,8 +634,9 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + values.length * Float.BYTES);
-            buffer.putInt(values.length);
+            byte[] header = VarSize.encode(values.length);
+            ByteBuffer buffer = ByteBuffer.allocate(header.length + values.length * Float.BYTES);
+            buffer.put(header);
             for (float value : values)
             {
                 buffer.putFloat(value);
@@ -644,10 +651,10 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int length = readArrayLength(buffer, data.length, Float.BYTES);
-            float[] values = new float[length];
-            for (int i = 0; i < length; i++)
+            ArrayHeader header = readArrayHeader(data, Float.BYTES);
+            float[] values = new float[header.count];
+            ByteBuffer buffer = header.body;
+            for (int i = 0; i < header.count; i++)
             {
                 values[i] = buffer.getFloat();
             }
@@ -664,8 +671,9 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.allocate(Integer.BYTES + values.length * Double.BYTES);
-            buffer.putInt(values.length);
+            byte[] header = VarSize.encode(values.length);
+            ByteBuffer buffer = ByteBuffer.allocate(header.length + values.length * Double.BYTES);
+            buffer.put(header);
             for (double value : values)
             {
                 buffer.putDouble(value);
@@ -680,10 +688,10 @@ public final class BasicSerializers
             {
                 return null;
             }
-            ByteBuffer buffer = ByteBuffer.wrap(data);
-            int length = readArrayLength(buffer, data.length, Double.BYTES);
-            double[] values = new double[length];
-            for (int i = 0; i < length; i++)
+            ArrayHeader header = readArrayHeader(data, Double.BYTES);
+            double[] values = new double[header.count];
+            ByteBuffer buffer = header.body;
+            for (int i = 0; i < header.count; i++)
             {
                 values[i] = buffer.getDouble();
             }
@@ -936,15 +944,17 @@ public final class BasicSerializers
         DataOutputStream data = new DataOutputStream(out);
         try
         {
-            data.writeInt(rows.length);
+            VarSize.write(data, rows.length);
             for (R row : rows)
             {
                 byte[] bytes = rowSerializer.apply(row);
-                data.writeInt(bytes == null ? -1 : bytes.length);
-                if (bytes != null)
+                if (bytes == null)
                 {
-                    data.write(bytes);
+                    VarSize.write(data, VarSize.NULL_VALUE);
+                    continue;
                 }
+                VarSize.write(data, bytes.length);
+                data.write(bytes);
             }
             data.flush();
         }
@@ -976,16 +986,16 @@ public final class BasicSerializers
         DataInputStream input = new DataInputStream(new ByteArrayInputStream(data));
         try
         {
-            int rows = input.readInt();
-            if (rows < 0 || rows > input.available() / Integer.BYTES)
+            int rows = VarSize.read(input);
+            if (rows < 0 || rows > input.available())
             {
                 throw new IllegalArgumentException("Invalid array length " + rows);
             }
             A values = rowsFactory.apply(rows);
             for (int i = 0; i < rows; i++)
             {
-                int size = input.readInt();
-                if (size == -1)
+                int size = VarSize.read(input);
+                if (size == VarSize.NULL_VALUE)
                 {
                     Array.set(values, i, null);
                     continue;
@@ -1007,27 +1017,41 @@ public final class BasicSerializers
     }
 
     /**
-     * Reads the number of elements of an array of fixed width elements,
-     * checking that the data is long enough to hold them.
+     * The header of an array of fixed width elements: the number of elements
+     * and the buffer positioned at the first element.
+     */
+    private static final class ArrayHeader
+    {
+
+        private final int count;
+
+        private final ByteBuffer body;
+
+        private ArrayHeader(int count, ByteBuffer body)
+        {
+            this.count = count;
+            this.body = body;
+        }
+    }
+
+    /**
+     * Reads the header of an array of fixed width elements, checking that the
+     * data is long enough to hold them.
      *
-     * @param buffer      The buffer positioned at the count.
-     * @param dataLength  The total length of the data.
+     * @param data        The serialized array.
      * @param elementSize The size in bytes of every element.
-     * @return The number of elements.
+     * @return The header of the array.
      * @throws IllegalArgumentException If the data is too short or the count is invalid.
      */
-    private static int readArrayLength(ByteBuffer buffer, int dataLength, int elementSize)
+    private static ArrayHeader readArrayHeader(byte[] data, int elementSize)
     {
-        if (dataLength < Integer.BYTES)
+        int count = VarSize.decode(data, 0);
+        int offset = VarSize.sizeOf(data, 0);
+        if (count < 0 || (long) count * elementSize > data.length - offset)
         {
-            throw new IllegalArgumentException("Invalid data length " + dataLength);
+            throw new IllegalArgumentException("Invalid array length " + count + " for " + data.length + " bytes of data");
         }
-        int length = buffer.getInt();
-        if (length < 0 || (long) length * elementSize > dataLength - Integer.BYTES)
-        {
-            throw new IllegalArgumentException("Invalid array length " + length + " for " + dataLength + " bytes of data");
-        }
-        return length;
+        return new ArrayHeader(count, ByteBuffer.wrap(data, offset, data.length - offset));
     }
 
     /**
@@ -1056,17 +1080,17 @@ public final class BasicSerializers
                 DataOutputStream data = new DataOutputStream(out);
                 try
                 {
-                    data.writeInt(values.length);
+                    VarSize.write(data, values.length);
                     for (T value : values)
                     {
                         String text = value == null ? null : toText.apply(value);
                         if (text == null)
                         {
-                            data.writeInt(-1);
+                            VarSize.write(data, VarSize.NULL_VALUE);
                             continue;
                         }
                         byte[] bytes = text.getBytes(StandardCharsets.UTF_8);
-                        data.writeInt(bytes.length);
+                        VarSize.write(data, bytes.length);
                         data.write(bytes);
                     }
                     data.flush();
@@ -1089,16 +1113,16 @@ public final class BasicSerializers
                 DataInputStream input = new DataInputStream(new ByteArrayInputStream(data));
                 try
                 {
-                    int length = input.readInt();
-                    if (length < 0 || length > input.available() / Integer.BYTES)
+                    int length = VarSize.read(input);
+                    if (length < 0 || length > input.available())
                     {
                         throw new IllegalArgumentException("Invalid array length " + length);
                     }
                     T[] values = (T[]) Array.newInstance(componentType, length);
                     for (int i = 0; i < length; i++)
                     {
-                        int size = input.readInt();
-                        if (size == -1)
+                        int size = VarSize.read(input);
+                        if (size == VarSize.NULL_VALUE)
                         {
                             values[i] = null;
                             continue;

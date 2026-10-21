@@ -5,7 +5,7 @@
  */
 package io.nut.base.commons.serializer;
 
-import io.nut.base.commons.varint.VarInt;
+import io.nut.base.commons.varint.VarSize;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -298,7 +298,7 @@ public class SerializerRegistry
      * <p>
      * The serialized object is prefixed with the id of the serializer used and
      * with the length of the serialized object, both encoded as a
-     * {@link VarInt}, so the object can be deserialized later with
+     * {@link VarSize}, so the object can be deserialized later with
      * {@link #deserializeObject(byte[])}.
      *
      * @return The serializer of any object.
@@ -324,13 +324,15 @@ public class SerializerRegistry
     /**
      * Serializes an object with the serializer registered for its concrete
      * type in this registry, prepending the id of that serializer and the
-     * length of the serialized object, both encoded as a {@link VarInt}.
+     * length of the serialized object, both encoded as a {@link VarSize}.
      *
      * @param value The object to serialize.
      * @return The serialized object.
      * @throws NullPointerException     If the value is null.
      * @throws IllegalArgumentException If the type of the value has no
-     *                                  serializer registered.
+     *                                  serializer registered or the serialized
+     *                                  object is longer than
+     *                                  {@link SmallInt#MAX_VALUE} bytes.
      */
     public byte[] serializeObject(Object value)
     {
@@ -346,8 +348,8 @@ public class SerializerRegistry
         byte[] data = serializeWith(item.getSerializer(), value);
         try (ByteArrayOutputStream out = new ByteArrayOutputStream())
         {
-            VarInt.write(out, item.getId());
-            VarInt.write(out, data.length);
+            VarSize.write(out, item.getId());
+            VarSize.write(out, data.length);
             out.write(data);
             return out.toByteArray();
         }
@@ -376,8 +378,8 @@ public class SerializerRegistry
         try (ByteArrayInputStream in = new ByteArrayInputStream(data);
                 DataInputStream input = new DataInputStream(in))
         {
-            int id = (int) VarInt.read(input);
-            int size = (int) VarInt.read(input);
+            int id = VarSize.read(input);
+            int size = VarSize.read(input);
             if (size < 0 || size > in.available())
             {
                 throw new IllegalArgumentException("Invalid object length " + size);
