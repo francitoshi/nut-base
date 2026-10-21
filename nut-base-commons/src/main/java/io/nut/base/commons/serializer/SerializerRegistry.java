@@ -360,7 +360,7 @@ public class SerializerRegistry
      *
      * @param <T> The handled type.
      */
-    private static final class Item<T>
+    public static final class Item<T>
     {
 
         private final Class<T> type;

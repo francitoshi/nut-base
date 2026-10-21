@@ -16,6 +16,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.BiConsumer;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -29,11 +31,139 @@ public class BasicSerializersTest
         assertEquals(value, serializer.deserialize(data));
     }
 
+    private static <T> void assertArrayRoundtrip(Serializer<T> serializer, T value, BiConsumer<T, T> assertEquals)
+    {
+        byte[] data = serializer.serialize(value);
+        assertNotNull(data);
+        assertEquals.accept(value, serializer.deserialize(data));
+    }
+
     @Test
     public void testString()
     {
         assertRoundtrip(BasicSerializers.STRING, "");
         assertRoundtrip(BasicSerializers.STRING, "hola ünïcödé ñ");
+    }
+
+    @Test
+    public void testBooleanArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.BOOLEAN_ARRAY, new boolean[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.BOOLEAN_ARRAY, new boolean[] { true, false, true, true }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testByteArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.BYTE_ARRAY, new byte[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.BYTE_ARRAY, new byte[] { 0, 1, -1, 127, -128 }, Assertions::assertArrayEquals);
+        byte[] data = { 10, 20, 30 };
+        assertSame(data, BasicSerializers.BYTE_ARRAY.serialize(data));
+        assertSame(data, BasicSerializers.BYTE_ARRAY.deserialize(data));
+    }
+
+    @Test
+    public void testCharArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.CHAR_ARRAY, new char[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.CHAR_ARRAY, new char[] { 'a', 'ñ', 'Z' }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testShortArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.SHORT_ARRAY, new short[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.SHORT_ARRAY, new short[] { 0, -1, Short.MAX_VALUE, Short.MIN_VALUE }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testIntArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.INT_ARRAY, new int[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.INT_ARRAY, new int[] { 0, -1, 42, Integer.MAX_VALUE, Integer.MIN_VALUE }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testLongArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.LONG_ARRAY, new long[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.LONG_ARRAY, new long[] { 0L, -1L, 42L, Long.MAX_VALUE, Long.MIN_VALUE }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testFloatArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.FLOAT_ARRAY, new float[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.FLOAT_ARRAY, new float[] { 0f, -1.5f, 3.25f, Float.MAX_VALUE }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testDoubleArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.DOUBLE_ARRAY, new double[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.DOUBLE_ARRAY, new double[] { 0d, -2.25d, 3.5d, Double.MAX_VALUE }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testStringArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.STRING_ARRAY, new String[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.STRING_ARRAY, new String[] { "", "hola", "ünïcödé ñ" }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testBigIntegerArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.BIG_INTEGER_ARRAY, new BigInteger[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.BIG_INTEGER_ARRAY,
+                new BigInteger[] { BigInteger.ZERO, BigInteger.valueOf(-1L),
+                        new BigInteger("12345678901234567890123456789012345678901234567890") }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testBigDecimalArray()
+    {
+        assertArrayRoundtrip(BasicSerializers.BIG_DECIMAL_ARRAY, new BigDecimal[0], Assertions::assertArrayEquals);
+        assertArrayRoundtrip(BasicSerializers.BIG_DECIMAL_ARRAY,
+                new BigDecimal[] { new BigDecimal("0.00"), new BigDecimal("-1.23456789012345678901234567890"),
+                        BigDecimal.TEN.setScale(5) }, Assertions::assertArrayEquals);
+    }
+
+    @Test
+    public void testNullArrays()
+    {
+        assertNull(BasicSerializers.BOOLEAN_ARRAY.serialize(null));
+        assertNull(BasicSerializers.BOOLEAN_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.BYTE_ARRAY.serialize(null));
+        assertNull(BasicSerializers.BYTE_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.CHAR_ARRAY.serialize(null));
+        assertNull(BasicSerializers.CHAR_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.SHORT_ARRAY.serialize(null));
+        assertNull(BasicSerializers.SHORT_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.INT_ARRAY.serialize(null));
+        assertNull(BasicSerializers.INT_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.LONG_ARRAY.serialize(null));
+        assertNull(BasicSerializers.LONG_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.FLOAT_ARRAY.serialize(null));
+        assertNull(BasicSerializers.FLOAT_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.DOUBLE_ARRAY.serialize(null));
+        assertNull(BasicSerializers.DOUBLE_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.STRING_ARRAY.serialize(null));
+        assertNull(BasicSerializers.STRING_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.BIG_INTEGER_ARRAY.serialize(null));
+        assertNull(BasicSerializers.BIG_INTEGER_ARRAY.deserialize(null));
+        assertNull(BasicSerializers.BIG_DECIMAL_ARRAY.serialize(null));
+        assertNull(BasicSerializers.BIG_DECIMAL_ARRAY.deserialize(null));
+    }
+
+    @Test
+    public void testInvalidArrayData()
+    {
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY.deserialize(new byte[] { 1, 2 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY.deserialize(new byte[] { 0, 0, 0, 5, 0, 0, 0, 1 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.INT_ARRAY.deserialize(new byte[] { -1, -1, -1, -1 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.DOUBLE_ARRAY.deserialize(new byte[] { 0, 0, 0, 1, 0 }));
+        assertThrows(IllegalArgumentException.class, () -> BasicSerializers.STRING_ARRAY.deserialize(new byte[] { 0, 0, 0, 1 }));
     }
 
     @Test
@@ -125,6 +255,17 @@ public class BasicSerializersTest
         types.add(LocalDateTime.class);
         types.add(ZonedDateTime.class);
         types.add(ZoneId.class);
+        types.add(boolean[].class);
+        types.add(byte[].class);
+        types.add(char[].class);
+        types.add(short[].class);
+        types.add(int[].class);
+        types.add(long[].class);
+        types.add(float[].class);
+        types.add(double[].class);
+        types.add(String[].class);
+        types.add(BigInteger[].class);
+        types.add(BigDecimal[].class);
         for (Class<?> type : types)
         {
             assertTrue(registry.isRegistered(type), "missing registration for " + type);
@@ -151,6 +292,17 @@ public class BasicSerializersTest
         assertEquals(BasicSerializers.ID_LOCAL_DATE_TIME, registry.getId(LocalDateTime.class));
         assertEquals(BasicSerializers.ID_ZONED_DATE_TIME, registry.getId(ZonedDateTime.class));
         assertEquals(BasicSerializers.ID_ZONE_ID, registry.getId(ZoneId.class));
+        assertEquals(BasicSerializers.ID_BOOLEAN_ARRAY, registry.getId(boolean[].class));
+        assertEquals(BasicSerializers.ID_BYTE_ARRAY, registry.getId(byte[].class));
+        assertEquals(BasicSerializers.ID_CHAR_ARRAY, registry.getId(char[].class));
+        assertEquals(BasicSerializers.ID_SHORT_ARRAY, registry.getId(short[].class));
+        assertEquals(BasicSerializers.ID_INT_ARRAY, registry.getId(int[].class));
+        assertEquals(BasicSerializers.ID_LONG_ARRAY, registry.getId(long[].class));
+        assertEquals(BasicSerializers.ID_FLOAT_ARRAY, registry.getId(float[].class));
+        assertEquals(BasicSerializers.ID_DOUBLE_ARRAY, registry.getId(double[].class));
+        assertEquals(BasicSerializers.ID_STRING_ARRAY, registry.getId(String[].class));
+        assertEquals(BasicSerializers.ID_BIG_INTEGER_ARRAY, registry.getId(BigInteger[].class));
+        assertEquals(BasicSerializers.ID_BIG_DECIMAL_ARRAY, registry.getId(BigDecimal[].class));
         assertEquals(types().size(), registry.size());
         assertEquals(BasicSerializers.STRING, registry.getById(BasicSerializers.ID_STRING));
         assertEquals(BasicSerializers.LOCAL_DATE, registry.getById(BasicSerializers.ID_LOCAL_DATE));
@@ -172,6 +324,17 @@ public class BasicSerializersTest
         ids.add(BasicSerializers.ID_LOCAL_DATE_TIME);
         ids.add(BasicSerializers.ID_ZONED_DATE_TIME);
         ids.add(BasicSerializers.ID_ZONE_ID);
+        ids.add(BasicSerializers.ID_BOOLEAN_ARRAY);
+        ids.add(BasicSerializers.ID_BYTE_ARRAY);
+        ids.add(BasicSerializers.ID_CHAR_ARRAY);
+        ids.add(BasicSerializers.ID_SHORT_ARRAY);
+        ids.add(BasicSerializers.ID_INT_ARRAY);
+        ids.add(BasicSerializers.ID_LONG_ARRAY);
+        ids.add(BasicSerializers.ID_FLOAT_ARRAY);
+        ids.add(BasicSerializers.ID_DOUBLE_ARRAY);
+        ids.add(BasicSerializers.ID_STRING_ARRAY);
+        ids.add(BasicSerializers.ID_BIG_INTEGER_ARRAY);
+        ids.add(BasicSerializers.ID_BIG_DECIMAL_ARRAY);
         return ids;
     }
 }
