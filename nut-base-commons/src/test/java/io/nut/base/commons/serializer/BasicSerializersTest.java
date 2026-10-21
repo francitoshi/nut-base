@@ -13,7 +13,9 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -130,5 +132,46 @@ public class BasicSerializersTest
         }
         byte[] data = registry.get(LocalDate.class).serialize(LocalDate.of(2026, 10, 20));
         assertEquals(LocalDate.of(2026, 10, 20), registry.get(LocalDate.class).deserialize(data));
+    }
+
+    @Test
+    public void testRegisterAllIds()
+    {
+        SerializerRegistry registry = new SerializerRegistry();
+        BasicSerializers.registerAll(registry);
+        assertEquals(BasicSerializers.ID_STRING, registry.getId(String.class));
+        assertEquals(BasicSerializers.ID_INTEGER, registry.getId(Integer.class));
+        assertEquals(BasicSerializers.ID_LONG, registry.getId(Long.class));
+        assertEquals(BasicSerializers.ID_FLOAT, registry.getId(Float.class));
+        assertEquals(BasicSerializers.ID_DOUBLE, registry.getId(Double.class));
+        assertEquals(BasicSerializers.ID_BIG_INTEGER, registry.getId(BigInteger.class));
+        assertEquals(BasicSerializers.ID_BIG_DECIMAL, registry.getId(BigDecimal.class));
+        assertEquals(BasicSerializers.ID_LOCAL_DATE, registry.getId(LocalDate.class));
+        assertEquals(BasicSerializers.ID_LOCAL_TIME, registry.getId(LocalTime.class));
+        assertEquals(BasicSerializers.ID_LOCAL_DATE_TIME, registry.getId(LocalDateTime.class));
+        assertEquals(BasicSerializers.ID_ZONED_DATE_TIME, registry.getId(ZonedDateTime.class));
+        assertEquals(BasicSerializers.ID_ZONE_ID, registry.getId(ZoneId.class));
+        assertEquals(types().size(), registry.size());
+        assertEquals(BasicSerializers.STRING, registry.getById(BasicSerializers.ID_STRING));
+        assertEquals(BasicSerializers.LOCAL_DATE, registry.getById(BasicSerializers.ID_LOCAL_DATE));
+        assertTrue(registry.isRegistered(BasicSerializers.ID_ZONE_ID));
+    }
+
+    private static Set<Integer> types()
+    {
+        Set<Integer> ids = new HashSet<>();
+        ids.add(BasicSerializers.ID_STRING);
+        ids.add(BasicSerializers.ID_INTEGER);
+        ids.add(BasicSerializers.ID_LONG);
+        ids.add(BasicSerializers.ID_FLOAT);
+        ids.add(BasicSerializers.ID_DOUBLE);
+        ids.add(BasicSerializers.ID_BIG_INTEGER);
+        ids.add(BasicSerializers.ID_BIG_DECIMAL);
+        ids.add(BasicSerializers.ID_LOCAL_DATE);
+        ids.add(BasicSerializers.ID_LOCAL_TIME);
+        ids.add(BasicSerializers.ID_LOCAL_DATE_TIME);
+        ids.add(BasicSerializers.ID_ZONED_DATE_TIME);
+        ids.add(BasicSerializers.ID_ZONE_ID);
+        return ids;
     }
 }

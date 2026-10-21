@@ -19,6 +19,35 @@ import java.util.Base64;
 public final class BasicSerializers
 {
 
+    /**
+     * Ids used to register the basic serializers in a {@link SerializerRegistry}.
+     */
+    public static final int ID_STRING = 1;
+
+    public static final int ID_INTEGER = 2;
+
+    public static final int ID_LONG = 3;
+
+    public static final int ID_FLOAT = 4;
+
+    public static final int ID_DOUBLE = 5;
+
+    public static final int ID_BIG_INTEGER = 6;
+
+    public static final int ID_BIG_DECIMAL = 7;
+
+    public static final int ID_LOCAL_DATE = 8;
+
+    public static final int ID_LOCAL_TIME = 9;
+
+    public static final int ID_LOCAL_DATE_TIME = 10;
+
+    public static final int ID_ZONED_DATE_TIME = 11;
+
+    public static final int ID_ZONE_ID = 12;
+
+    public static final int ID_BASE64 = 13;
+
     private BasicSerializers()
     {
     }
@@ -220,17 +249,17 @@ public final class BasicSerializers
 
     public static void registerAll(SerializerRegistry registry)
     {
-        registry.register(String.class, STRING);
-        registry.register(Integer.class, INTEGER);
-        registry.register(Long.class, LONG);
-        registry.register(Float.class, FLOAT);
-        registry.register(Double.class, DOUBLE);
-        registry.register(BigInteger.class, BIG_INTEGER);
-        registry.register(BigDecimal.class, BIG_DECIMAL);
-        registry.register(LocalDate.class, LOCAL_DATE);
-        registry.register(LocalTime.class, LOCAL_TIME);
-        registry.register(LocalDateTime.class, LOCAL_DATE_TIME);
-        registry.register(ZonedDateTime.class, ZONED_DATE_TIME);
-        registry.register(ZoneId.class, ZONE_ID);
+        registry.register(String.class, ID_STRING, STRING);
+        registry.register(Integer.class, ID_INTEGER, INTEGER);
+        registry.register(Long.class, ID_LONG, LONG);
+        registry.register(Float.class, ID_FLOAT, FLOAT);
+        registry.register(Double.class, ID_DOUBLE, DOUBLE);
+        registry.register(BigInteger.class, ID_BIG_INTEGER, BIG_INTEGER);
+        registry.register(BigDecimal.class, ID_BIG_DECIMAL, BIG_DECIMAL);
+        registry.register(LocalDate.class, ID_LOCAL_DATE, LOCAL_DATE);
+        registry.register(LocalTime.class, ID_LOCAL_TIME, LOCAL_TIME);
+        registry.register(LocalDateTime.class, ID_LOCAL_DATE_TIME, LOCAL_DATE_TIME);
+        registry.register(ZonedDateTime.class, ID_ZONED_DATE_TIME, ZONED_DATE_TIME);
+        registry.register(ZoneId.class, ID_ZONE_ID, ZONE_ID);
     }
 }
