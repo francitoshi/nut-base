@@ -6,6 +6,7 @@
 package io.nut.base.commons.cache.persistent;
 
 import io.nut.base.commons.serializer.BasicSerializers;
+import io.nut.base.commons.serializer.Serializer;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
@@ -284,6 +285,66 @@ public class FileCacheStoreTest
         assertThrows(IllegalStateException.class, () -> store.get("a"));
         assertThrows(IllegalStateException.class, () -> store.put("b", "2", Long.MAX_VALUE));
         store.close();
+    }
+
+    @Test
+    public void testSingleSerializerConstructor()
+    {
+        Path file = dir.resolve("single.bin");
+        try (FileCacheStore<String, String> store = new FileCacheStore<>(file, BasicSerializers.STRING))
+        {
+            store.put("a", "1", Long.MAX_VALUE);
+            store.put("b", "2", Long.MAX_VALUE);
+            assertEquals(2, store.size());
+            assertEquals("1", store.get("a"));
+            assertEquals("2", store.get("b"));
+        }
+        try (FileCacheStore<String, String> store = new FileCacheStore<>(file, BasicSerializers.STRING))
+        {
+            assertEquals(2, store.size());
+            assertEquals("1", store.get("a"));
+            assertEquals("2", store.get("b"));
+        }
+    }
+
+    @Test
+    public void testSingleSerializerConstructorWithOtherType()
+    {
+        Path file = dir.resolve("single-int.bin");
+        try (FileCacheStore<Integer, Integer> store = new FileCacheStore<>(file, BasicSerializers.INTEGER))
+        {
+            store.put(1, 10, Long.MAX_VALUE);
+            store.put(2, 20, Long.MAX_VALUE);
+            assertEquals(10, store.get(1));
+            assertEquals(20, store.get(2));
+        }
+        try (FileCacheStore<Integer, Integer> store = new FileCacheStore<>(file, BasicSerializers.INTEGER))
+        {
+            assertEquals(10, store.get(1));
+            assertEquals(20, store.get(2));
+        }
+    }
+
+    @Test
+    public void testSingleSerializerFactory()
+    {
+        Path file = dir.resolve("single-of.bin");
+        try (FileCacheStore<String, String> store = FileCacheStore.of(file, BasicSerializers.STRING))
+        {
+            store.put("a", "1", Long.MAX_VALUE);
+            assertEquals("1", store.get("a"));
+        }
+        try (FileCacheStore<String, String> store = FileCacheStore.of(file, BasicSerializers.STRING))
+        {
+            assertEquals("1", store.get("a"));
+        }
+    }
+
+    @Test
+    public void testNullSerializerRejected()
+    {
+        assertThrows(NullPointerException.class, () -> new FileCacheStore<>(file(), (Serializer<String>) null));
+        assertThrows(NullPointerException.class, () -> FileCacheStore.of(file(), null));
     }
 
     @Test

@@ -37,6 +37,8 @@ import java.util.zip.CRC32;
  * Keys and values are encoded with the {@link Serializer}s given at
  * construction time. Serializers are never invoked with {@code null}:
  * {@code null} keys and values are encoded with dedicated sentinel lengths.
+ * When keys and values share the same type, a single serializer can be given:
+ * see {@link #FileCacheStore(Path, Serializer)} and {@link #of(Path, Serializer)}.
  * <p>
  * Expiration is stored as wall-clock epoch millis so it survives restarts;
  * expired entries are ignored on read, discarded lazily and reclaimed by
@@ -76,33 +78,46 @@ public class FileCacheStore<K, V> implements CacheStore<K, V>
         this.file = Objects.requireNonNull(file, "file");
         this.keySerializer = Objects.requireNonNull(keySerializer, "keySerializer");
         this.valueSerializer = Objects.requireNonNull(valueSerializer, "valueSerializer");
-        RandomAccessFile opened = null;
-        try
-        {
-            Path parent = file.toAbsolutePath().getParent();
-            if (parent != null)
-            {
-                Files.createDirectories(parent);
-            }
-            opened = new RandomAccessFile(file.toFile(), "rw");
-            this.raf = opened;
-            replay();
-        }
-        catch (IOException e)
-        {
-            if (opened != null)
-            {
-                try
-                {
-                    opened.close();
-                }
-                catch (IOException ignored)
-                {
-                    // best effort on the error path
-                }
-            }
-            throw new UncheckedIOException("cannot open cache store file " + file, e);
-        }
+        open();
+    }
+
+    /**
+     * Creates a new store backed by the given file, using the same serializer
+     * for keys and values.
+     * <p>
+     * This constructor is meant for stores where keys and values share the
+     * same type, that is {@code FileCacheStore<T, T>}; the given serializer is
+     * used for keys and values alike.
+     *
+     * @param file the store file
+     * @param serializer the serializer used for both keys and values
+     * @param <T> the common type of keys and values
+     */
+    @SuppressWarnings("unchecked")
+    public <T> FileCacheStore(Path file, Serializer<T> serializer)
+    {
+        this.file = Objects.requireNonNull(file, "file");
+        Objects.requireNonNull(serializer, "serializer");
+        this.keySerializer = (Serializer<K>) serializer;
+        this.valueSerializer = (Serializer<V>) serializer;
+        open();
+    }
+
+    /**
+     * Creates a new store backed by the given file, using the same serializer
+     * for keys and values.
+     * <p>
+     * Unlike the constructor, this factory enforces at compile time that keys
+     * and values share the same type, that is {@code FileCacheStore<T, T>}.
+     *
+     * @param file the store file
+     * @param serializer the serializer used for both keys and values
+     * @param <T> the common type of keys and values
+     * @return a new store
+     */
+    public static <T> FileCacheStore<T, T> of(Path file, Serializer<T> serializer)
+    {
+        return new FileCacheStore<T, T>(file, serializer);
     }
 
     @Override
@@ -303,6 +318,37 @@ public class FileCacheStore<K, V> implements CacheStore<K, V>
     public Path getFile()
     {
         return file;
+    }
+
+    private void open()
+    {
+        RandomAccessFile opened = null;
+        try
+        {
+            Path parent = file.toAbsolutePath().getParent();
+            if (parent != null)
+            {
+                Files.createDirectories(parent);
+            }
+            opened = new RandomAccessFile(file.toFile(), "rw");
+            this.raf = opened;
+            replay();
+        }
+        catch (IOException e)
+        {
+            if (opened != null)
+            {
+                try
+                {
+                    opened.close();
+                }
+                catch (IOException ignored)
+                {
+                    // best effort on the error path
+                }
+            }
+            throw new UncheckedIOException("cannot open cache store file " + file, e);
+        }
     }
 
     private void appendRemove(K key) throws IOException
