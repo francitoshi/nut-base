@@ -36,13 +36,28 @@ import java.io.OutputStream;
  * This is a Base-128 encoding with a continuation bit, used specifically for disk storage 
  * (LevelDB, chainstate, etc.).
  * <p>
- * Rules:
+ * Each byte uses 7 bits for the value and 1 bit (MSB) as a "more bytes" indicator.
+ * The 7-bit groups are stored in little-endian order, so the least significant group comes first.
+ * The continuation bit is set on every byte except the last one.
+ * <p>
+ * Encoding rules:
  * <ul>
- *   <li>Each byte uses 7 bits for the value and 1 bit (MSB) as a "more bytes" indicator.</li>
- *   <li>Supports values from 0 to 2⁶⁴-1 (equivalent to uint64_t).</li>
- *   <li>Maximum of 10 bytes per number.</li>
+ *   <li>0..2⁷-1          → 1 byte</li>
+ *   <li>2⁷..2¹⁴-1        → 2 bytes</li>
+ *   <li>2¹⁴..2²¹-1       → 3 bytes</li>
+ *   <li>2²¹..2²⁸-1       → 4 bytes</li>
+ *   <li>2²⁸..2³⁵-1       → 5 bytes</li>
+ *   <li>2³⁵..2⁴²-1       → 6 bytes</li>
+ *   <li>2⁴²..2⁴⁹-1       → 7 bytes</li>
+ *   <li>2⁴⁹..2⁵⁶-1       → 8 bytes</li>
+ *   <li>2⁵⁶..2⁶³-1       → 9 bytes</li>
+ *   <li>2⁶³..2⁶⁴-1       → 10 bytes</li>
  * </ul>
- * 
+ * <p>
+ * Supports values from 0 to 2⁶⁴-1 (equivalent to uint64_t).
+ * In Java, values &gt; 2⁶³-1 cannot be represented, so only the maximum value (2⁶⁴-1, written as -1L)
+ * is supported in that range and it is encoded as {@code ff ff ff ff ff ff ff ff ff 01}.
+ * <p>
  * Fully compatible with Java 8. No external dependencies.
  * 
  * @author Grok (based on Bitcoin Core serialize.h implementation)
