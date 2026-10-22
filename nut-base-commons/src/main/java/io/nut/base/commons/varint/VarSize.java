@@ -19,6 +19,27 @@ import java.io.OutputStream;
  * <p>
  * The value {@code 0xFFFFFFFF} represents {@code -1} and is used to encode a
  * null value.
+ * <p>
+ * The value is split into groups of 7 bits,
+ * from the least significant to the most significant one, and every group but
+ * the last is stored with its most significant bit ({@code 0x80}) set.
+ *
+ * <table border="1">
+ *   <caption>VarSize encoding: value ranges and byte patterns</caption>
+ *   <tr><th>Bytes</th><th>Value range</th><th>Byte pattern</th></tr>
+ *   <tr><td>1</td><td>0x00 .. 0x7F (0 .. 127)</td><td>{@code 0xxxxxxx}</td></tr>
+ *   <tr><td>2</td><td>0x80 .. 0x3FFF (128 .. 16 383)</td><td>{@code 1xxxxxxx 0xxxxxxx}</td></tr>
+ *   <tr><td>3</td><td>0x4000 .. 0x1FFFFF (16 384 .. 2 097 151)</td><td>{@code 1xxxxxxx 1xxxxxxx 0xxxxxxx}</td></tr>
+ *   <tr><td>4</td><td>0x200000 .. 0x0FFFFFFF (2 097 152 .. 268 435 455)</td><td>{@code 1xxxxxxx 1xxxxxxx 1xxxxxxx 0xxxxxxx}</td></tr>
+ *   <tr><td>4</td><td>{@code -1} (null)</td><td>{@code 11111111 11111111 11111111 11111111}</td></tr>
+ * </table>
+ *
+ * <p>
+ * The 4 byte range holds the 28 bits that fit in the format; the null marker
+ * is the only 4 byte sequence with all its bits set, so it cannot collide
+ * with a valid value. Values above {@code 0x0FFFFFFF} do not fit in 4 bytes:
+ * they are currently encoded in 5 bytes, outside this format, and cannot be
+ * decoded back.
  */
 public final class VarSize
 {
