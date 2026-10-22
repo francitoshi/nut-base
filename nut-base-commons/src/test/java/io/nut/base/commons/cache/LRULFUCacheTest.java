@@ -13,6 +13,23 @@ public class LRULFUCacheTest
 {
 
     @Test
+    public void testRemove()
+    {
+        Cache<Integer, String> cache = new LRULFUCache<>(3);
+        cache.put(1, "one");
+        cache.put(2, "two");
+
+        cache.remove(1);
+        assertFalse(cache.containsKey(1));
+        assertNull(cache.get(1));
+        assertEquals(1, cache.size());
+        assertEquals("two", cache.get(2));
+
+        cache.remove(99);
+        assertEquals(1, cache.size());
+    }
+
+    @Test
     public void testMain()
     {
         Cache<Integer, String> cache = new LRULFUCache<>(3);

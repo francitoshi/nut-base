@@ -166,6 +166,16 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         }
     }
 
+    @Override
+    public void remove(K key)
+    {
+        Node<K, V> node = cache.get(key);
+        if (node != null)
+        {
+            removeNodeCompletely(node);
+        }
+    }
+
     private void removeNodeCompletely(Node<K, V> node)
     {
         cache.remove(node.key);

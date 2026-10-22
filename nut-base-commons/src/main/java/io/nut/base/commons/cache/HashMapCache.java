@@ -120,6 +120,12 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
     }
 
     @Override
+    public void remove(K key)
+    {
+        map.remove(key);
+    }
+
+    @Override
     public int size()
     {
         // Clean up expired items lazily to make size as accurate as possible

@@ -112,6 +112,16 @@ public class NullCache<K,V> extends AbstractCache<K, V> implements Cache<K, V>
     {        
     }
 
+    /**
+     * Does nothing. There are no entries to remove.
+     *
+     * @param key the key (ignored)
+     */
+    @Override
+    public void remove(K key)
+    {
+    }
+
     @Override
     public void purgeExpired()
     {

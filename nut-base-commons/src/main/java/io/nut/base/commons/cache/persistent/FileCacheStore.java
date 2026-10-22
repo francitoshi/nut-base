@@ -322,6 +322,28 @@ public class FileCacheStore<K,V> implements CacheStore<K,V>
     }
 
     @Override
+    public void remove(K key)
+    {
+        checkOpen();
+        Entry e = index.get(key);
+        if (e == null)
+        {
+            return;
+        }
+        try
+        {
+            appendRemove(key);
+        }
+        catch (IOException ex)
+        {
+            throw new UncheckedIOException("cannot append remove record to " + file, ex);
+        }
+        index.remove(key);
+        liveBytes -= e.recordLength;
+        maybeCompact();
+    }
+
+    @Override
     public boolean containsKey(K key)
     {
         checkOpen();
@@ -389,6 +411,20 @@ public class FileCacheStore<K,V> implements CacheStore<K,V>
             }
         }
         maybeCompact();
+    }
+
+    @Override
+    public void flush()
+    {
+        checkOpen();
+        try
+        {
+            raf.getFD().sync();
+        }
+        catch (IOException e)
+        {
+            throw new UncheckedIOException("cannot flush " + file, e);
+        }
     }
 
     @Override

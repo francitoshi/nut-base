@@ -49,6 +49,15 @@ public interface CacheStore<K, V> extends AutoCloseable
     void put(K key, V value, long expiresAtEpochMillis);
 
     /**
+     * Removes the mapping for the given key, if present.
+     * <p>
+     * Removing a key that is not present has no effect.
+     *
+     * @param key the key whose mapping is to be removed
+     */
+    void remove(K key);
+
+    /**
      * Returns {@code true} if a non-expired mapping exists for the key.
      *
      * @param key the key
@@ -82,6 +91,14 @@ public interface CacheStore<K, V> extends AutoCloseable
      * Removes all expired entries.
      */
     void purgeExpired();
+
+    /**
+     * Forces any pending writes to be written to the durable storage.
+     * <p>
+     * Implementations that write through to the storage on every operation
+     * may implement this as a no-op.
+     */
+    void flush();
 
     /**
      * Flushes and releases the underlying resources. Implementations should

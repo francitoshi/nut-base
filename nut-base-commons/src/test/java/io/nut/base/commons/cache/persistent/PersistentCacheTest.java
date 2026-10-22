@@ -257,4 +257,41 @@ public class PersistentCacheTest
             assertEquals("two", cache.get(2));
         }
     }
+
+    @Test
+    public void testRemoveFromBothTiers()
+    {
+        try (PersistentCache<String, Long> cache = open(CacheType.HASH_MAP, 16, 1, TimeUnit.HOURS))
+        {
+            cache.put("a", 1L);
+            cache.put("b", 2L);
+
+            cache.remove("a");
+            assertNull(cache.get("a"));
+            assertFalse(cache.containsKey("a"));
+            assertEquals(1, cache.size());
+            assertEquals(2L, cache.get("b"));
+
+            cache.remove("missing");
+            assertEquals(1, cache.size());
+        }
+        try (PersistentCache<String, Long> cache = open(CacheType.HASH_MAP, 16, 1, TimeUnit.HOURS))
+        {
+            assertNull(cache.get("a"));
+            assertFalse(cache.containsKey("a"));
+            assertEquals(2L, cache.get("b"));
+            assertEquals(1, cache.size());
+        }
+    }
+
+    @Test
+    public void testFlush()
+    {
+        try (PersistentCache<String, Long> cache = open(CacheType.HASH_MAP, 16, 1, TimeUnit.HOURS))
+        {
+            cache.put("a", 1L);
+            cache.flush();
+            assertEquals(1L, cache.get("a"));
+        }
+    }
 }

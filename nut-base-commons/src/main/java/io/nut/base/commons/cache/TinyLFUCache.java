@@ -316,6 +316,16 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         }
     }
 
+    @Override
+    public void remove(K key)
+    {
+        synchronized (lock)
+        {
+            windowCache.remove(key);
+            mainCache.remove(key);
+        }
+    }
+
     private void tryAdmitToMain(K key, AbstractCache.Item<V> value)
     {
         admitToMain(key, value, mainSize);

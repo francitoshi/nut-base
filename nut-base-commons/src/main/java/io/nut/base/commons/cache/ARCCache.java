@@ -285,6 +285,16 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
         map.put(key, newNode);
     }
 
+    @Override
+    public void remove(K key)
+    {
+        Node<K, V> node = map.get(key);
+        if (node != null)
+        {
+            removeNodeCompletely(node);
+        }
+    }
+
     private void replace(boolean isB2Hit, double targetP)
     {
         if (!t1.isEmpty() && ((double) t1.size() > targetP || (isB2Hit && (double) t1.size() == targetP)))

@@ -202,6 +202,18 @@ public class PersistentCache<K, V> extends AbstractCache<K, V> implements AutoCl
         memory.put(key, value);
     }
 
+    /**
+     * Removes the mapping for the given key from both tiers.
+     *
+     * @param key the key whose mapping is to be removed
+     */
+    @Override
+    public void remove(K key)
+    {
+        store.remove(key);
+        memory.remove(key);
+    }
+
     @Override
     public boolean containsKey(K key)
     {
@@ -233,6 +245,14 @@ public class PersistentCache<K, V> extends AbstractCache<K, V> implements AutoCl
     {
         store.purgeExpired();
         memory.purgeExpired();
+    }
+
+    /**
+     * Forces the durable tier to write any pending changes to disk.
+     */
+    public void flush()
+    {
+        store.flush();
     }
 
     /**

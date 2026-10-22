@@ -433,6 +433,49 @@ public class EncryptedFileCacheStoreTest
         }
     }
 
+    @Test
+    public void testRemoveEncrypted()
+    {
+        SecretKey key = key();
+        try (FileCacheStore<String, String> store = store(key))
+        {
+            store.put("a", "1", Long.MAX_VALUE);
+            store.put("b", "2", Long.MAX_VALUE);
+
+            store.remove("a");
+            assertNull(store.get("a"));
+            assertFalse(store.containsKey("a"));
+            assertEquals(1, store.size());
+            assertEquals("2", store.get("b"));
+
+            store.remove("missing");
+            assertEquals(1, store.size());
+        }
+        try (FileCacheStore<String, String> store = store(key))
+        {
+            assertFalse(store.containsKey("a"));
+            assertEquals("2", store.get("b"));
+            assertEquals(1, store.size());
+        }
+    }
+
+    @Test
+    public void testFlush()
+    {
+        SecretKey key = key();
+        try (FileCacheStore<String, String> store = store(key))
+        {
+            store.put("k", "v", Long.MAX_VALUE);
+            store.flush();
+            assertEquals("v", store.get("k"));
+        }
+        try (FileCacheStore<String, String> store = store(key))
+        {
+            store.close();
+            assertThrows(IllegalStateException.class, store::flush);
+        }
+    }
+
     /**
      * Flips a bit of the ciphertext of the first record and repairs its CRC,
      * so that only the authentication tag can detect the tampering.

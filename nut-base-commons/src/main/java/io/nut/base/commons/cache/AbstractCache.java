@@ -101,6 +101,15 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
         }
 
         @Override
+        public void remove(K key)
+        {
+            synchronized(lock)
+            {
+                cache.remove(key);
+            }
+        }
+
+        @Override
         public boolean containsKey(K key)
         {
             synchronized(lock)

@@ -356,4 +356,45 @@ public class FileCacheStoreTest
             assertTrue(store.containsKey("short"));
         }
     }
+
+    @Test
+    public void testRemove()
+    {
+        try (FileCacheStore<String, String> store = store())
+        {
+            store.put("a", "1", Long.MAX_VALUE);
+            store.put("b", "2", Long.MAX_VALUE);
+
+            store.remove("a");
+            assertNull(store.get("a"));
+            assertFalse(store.containsKey("a"));
+            assertEquals(1, store.size());
+            assertEquals("2", store.get("b"));
+
+            store.remove("missing");
+            assertEquals(1, store.size());
+        }
+        try (FileCacheStore<String, String> store = store())
+        {
+            assertFalse(store.containsKey("a"));
+            assertEquals("2", store.get("b"));
+            assertEquals(1, store.size());
+        }
+    }
+
+    @Test
+    public void testFlush()
+    {
+        try (FileCacheStore<String, String> store = store())
+        {
+            store.put("k", "v", Long.MAX_VALUE);
+            store.flush();
+            assertEquals("v", store.get("k"));
+        }
+        try (FileCacheStore<String, String> store = store())
+        {
+            store.close();
+            assertThrows(IllegalStateException.class, store::flush);
+        }
+    }
 }

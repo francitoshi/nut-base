@@ -71,6 +71,15 @@ public interface Cache<K, V>
     void put(K key, V value);
 
     /**
+     * Removes the mapping for the specified key from this cache, if present.
+     * <p>
+     * Removing a key that is not present has no effect.
+     *
+     * @param key the key whose mapping is to be removed
+     */
+    void remove(K key);
+
+    /**
      * Returns {@code true} if this cache contains a mapping for the specified
      * key and that mapping has not expired.
      *
