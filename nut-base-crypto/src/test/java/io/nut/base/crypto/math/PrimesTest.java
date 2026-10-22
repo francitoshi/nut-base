@@ -34,5 +34,27 @@ public class PrimesTest
             System.out.println("bits="+bits+" ms="+TimeUnit.NANOSECONDS.toMillis(t1-t0));
         }
     }
+    
+    @Test
+    public void testIsProbablePrime()
+    {
+        assertTrue(Primes.isProbablePrime(0,0));
+        assertTrue(Primes.isProbablePrime(1,0));
+        assertTrue(Primes.isProbablePrime(2,0));
+        assertTrue(Primes.isProbablePrime(3,0));
+        
+        assertFalse(Primes.isProbablePrime(0,1024));
+        assertFalse(Primes.isProbablePrime(1,1024));
+        assertFalse(Primes.isProbablePrime(4,1024));
+        assertFalse(Primes.isProbablePrime(8,1024));
+        
+        for(long prime : Primes.getSmallPrimes())
+        {
+            assertTrue(Primes.isProbablePrime((int)prime,1024));
+        }
 
+        assertEquals(true, Primes.isProbablePrime(100003L,1024));
+        assertEquals(false, Primes.isProbablePrime(10005L,1024));        
+    }
+    
 }

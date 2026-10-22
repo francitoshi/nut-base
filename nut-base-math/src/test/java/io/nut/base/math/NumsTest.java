@@ -100,7 +100,6 @@ public class NumsTest
         assertEquals(e, r);
     }
     
-
     @Test
     public void testCuberoot()
     {
@@ -981,31 +980,6 @@ public class NumsTest
         assertFalse(Maths.isPow2(-Short.MAX_VALUE-1L));
         assertFalse(Maths.isPow2(-Character.MAX_VALUE-1L));
         assertFalse(Maths.isPow2(-Integer.MAX_VALUE-1L));
-    }
-
-    /**
-     * Test of isProbablePrime method, of class FastMath.
-     */
-    @Test
-    public void testIsProbablePrime()
-    {
-        assertTrue(Nums.isProbablePrime(0,0));
-        assertTrue(Nums.isProbablePrime(1,0));
-        assertTrue(Nums.isProbablePrime(2,0));
-        assertTrue(Nums.isProbablePrime(3,0));
-        
-        assertFalse(Nums.isProbablePrime(0,1024));
-        assertFalse(Nums.isProbablePrime(1,1024));
-        assertFalse(Nums.isProbablePrime(4,1024));
-        assertFalse(Nums.isProbablePrime(8,1024));
-        
-        for(long prime : Nums.SmalPrimesHolder.SMALL_PRIMES)
-        {
-            assertTrue(Nums.isProbablePrime((int)prime,1024));
-        }
-
-        assertEquals(true, Nums.isProbablePrime(100003L,1024));
-        assertEquals(false, Nums.isProbablePrime(10005L,1024));        
     }
 
     /**

@@ -7,6 +7,7 @@ package io.nut.base.crypto.math;
 
 import java.math.BigInteger;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.BitSet;
 
 /**
@@ -58,8 +59,87 @@ public class Primes
     // The more primes we use here, the fewer times we'll call Miller-Rabin,
     // but the initialization cost of the sieve increases.
     // 2000-3000 is usually the sweet spot.
-    private static final int[] SMALL_PRIMES = getSmallPrimes(2000);
-
+    private static class SmalPrimesHolder
+    {
+        private static final int[] SMALL_PRIMES = getSmallPrimes(65521);
+    }
+    
+    /**
+     * Returns a clone of the internal table of small primes (primes up to ~65,536).
+     *
+     * @return a new array containing the small primes.
+     */
+    public static int[] getSmallPrimes()
+    {
+        return SmalPrimesHolder.SMALL_PRIMES.clone();
+    }
+    
+    /**
+     * Returns whether the given int value is probably prime.
+     * Uses a combination of trial division against small primes and
+     * {@link BigInteger#isProbablePrime(int)}.
+     *
+     * @param value the value to test.
+     * @param certainty a measure of the uncertainty that the caller is willing to tolerate.
+     * @return true if value is probably prime.
+     */
+    public static boolean isProbablePrime(int value, int certainty)
+    {
+        //if there is no certainty at all always true
+        if(certainty<=0)
+        {
+            return true;
+        }
+        //values less than 2 can't be primes
+        if(value<=1)
+        {
+            return false;
+        }
+        //evens values greater than 2 and can't be primes
+        if(value>3 && value%2==0)
+        {
+            return false;
+        }
+        
+        if(Arrays.binarySearch(SmalPrimesHolder.SMALL_PRIMES, value)>=0)
+        {
+            return true;
+        }            
+        
+        return BigInteger.valueOf(value).isProbablePrime(certainty);
+    }
+        
+    /**
+     * Returns whether the given long value is probably prime.
+     * Uses a combination of trial division against small primes and
+     * {@link BigInteger#isProbablePrime(int)}.
+     *
+     * @param value the value to test.
+     * @param certainty a measure of the uncertainty that the caller is willing to tolerate.
+     * @return true if value is probably prime.
+     */
+    public static boolean isProbablePrime(long value, int certainty)
+    {
+        //if there is no certainty at all always true
+        if(certainty<=0)
+        {
+            return true;
+        }
+        //values less than 2 can't be primes
+        if(value<=1)
+        {
+            return false;
+        }
+        //evens values greater than 2 and can't be primes
+        if(value>3 && value%2==0)
+        {
+            return false;
+        }
+        
+        int v = (int) value;
+        return (v==value) ? isProbablePrime(v,certainty) : BigInteger.valueOf(value).isProbablePrime(certainty);
+    }
+    
     private static final SecureRandom RAND = new SecureRandom();
 
     /**
@@ -99,7 +179,7 @@ public class Primes
             BitSet sieve = new BitSet(SIEVE_SIZE);
 
             // 3. Fase de Criba (Aritmética rápida con int)
-            for (int prime : SMALL_PRIMES)
+            for (int prime : SmalPrimesHolder.SMALL_PRIMES)
             {
                 // We get the remainder of baseQ against the small prime.
                 // BigInteger.remainder is slow, but we only do it once per search window.
@@ -188,5 +268,4 @@ public class Primes
             }
         }
     }
-    
 }

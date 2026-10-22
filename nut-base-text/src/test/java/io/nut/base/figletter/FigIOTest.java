@@ -32,14 +32,20 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.io.TempDir;
 
 @DisplayName("FigIO")
 class FigIOTest
 {
+    
+    @TempDir
+    Path dir;
+    
     // ── helpers ───────────────────────────────────────────────────────────────
 
     private static String buildMinimalFlf(int height)
@@ -314,7 +320,7 @@ class FigIOTest
     @Test
     public void testAll() throws Exception
     {
-        File tmp = new File(Java.JAVA_IO_TMPDIR);
+        File tmp = dir.toFile();
         File blockFlf = new File(tmp,"block.flf");
         File blockTlf = new File(tmp,"block.tlf");
         
