@@ -159,4 +159,33 @@ public class KrTest
         
         assertEquals(plainText, decText);
     }
+
+    @Test
+    public void testRandomBytesInt()
+    {
+        Kr instance = Kr.getInstance();
+
+        byte[] data = instance.randomBytes(32);
+        assertEquals(32, data.length);
+
+        assertFalse(java.util.Arrays.equals(data, instance.randomBytes(32)), "two draws must differ");
+
+        assertEquals(0, instance.randomBytes(0).length);
+        assertThrows(IllegalArgumentException.class, () -> instance.randomBytes(-1));
+    }
+
+    @Test
+    public void testRandomBytesArray()
+    {
+        Kr instance = Kr.getInstance();
+
+        byte[] data = new byte[32];
+        assertSame(data, instance.randomBytes(data));
+        assertFalse(java.util.Arrays.equals(data, new byte[32]), "the array must be filled");
+
+        assertNull(instance.randomBytes((byte[]) null));
+
+        byte[] empty = new byte[0];
+        assertSame(empty, instance.randomBytes(empty));
+    }
 }

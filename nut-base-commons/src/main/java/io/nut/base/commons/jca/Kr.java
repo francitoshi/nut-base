@@ -231,6 +231,53 @@ public class Kr
         return new SecureRandom();
     }
 
+    private static class RandomHolder
+    {
+        static final SecureRandom RANDOM = new SecureRandom();
+    }
+
+    /**
+     * Fills {@code data} with cryptographically strong random bytes.
+     * <p>
+     * The array is filled in place and returned, so it can be chained or
+     * passed directly to another method. A {@code null} or empty array is
+     * returned unchanged and nothing is drawn from the generator.
+     * <p>
+     * The shared generator is thread-safe, so this method can be called
+     * concurrently.
+     *
+     * @param data the array to fill; {@code null} or empty is returned unchanged
+     * @return the same array reference that was passed in
+     */
+    public byte[] randomBytes(byte[] data)
+    {
+        if (data != null && data.length > 0)
+        {
+            RandomHolder.RANDOM.nextBytes(data);
+        }
+        return data;
+    }
+
+    /**
+     * Returns a new array filled with {@code length} cryptographically strong
+     * random bytes.
+     * <p>
+     * The shared generator is thread-safe, so this method can be called
+     * concurrently.
+     *
+     * @param length the number of random bytes; must be non-negative
+     * @return a new array of {@code length} random bytes
+     * @throws IllegalArgumentException if {@code length} is negative
+     */
+    public byte[] randomBytes(int length)
+    {
+        if (length < 0)
+        {
+            throw new IllegalArgumentException("length cannot be negative: " + length);
+        }
+        return randomBytes(new byte[length]);
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     ///// Enums /////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////

@@ -7,7 +7,6 @@ package io.nut.base.commons.security;
 
 import io.nut.base.commons.io.IO;
 import io.nut.base.commons.jca.Kr;
-import io.nut.base.commons.jca.Rand;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -69,7 +68,6 @@ public final class KeyMaterial
      */
     public static final int DEFAULT_PBKDF2_ITERATIONS = 100_000;
 
-    private static final Rand RAND = Rand.getInstance();
     private static final Kr KRIPTO = Kr.getInstance();
 
     private KeyMaterial()
@@ -83,7 +81,7 @@ public final class KeyMaterial
      */
     public static byte[] randomKey()
     {
-        return RAND.nextBytes(new byte[KEY_BYTES]);
+        return KRIPTO.randomBytes(KEY_BYTES);
     }
 
     /**
@@ -94,7 +92,7 @@ public final class KeyMaterial
      */
     public static byte[] randomSalt()
     {
-        return RAND.nextBytes(new byte[SALT_BYTES]);
+        return KRIPTO.randomBytes(SALT_BYTES);
     }
 
     /**
