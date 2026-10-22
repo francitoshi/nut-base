@@ -29,7 +29,7 @@ public class KeyMaterialTest
         byte[] key = KeyMaterial.randomKey();
         assertEquals(KeyMaterial.KEY_BYTES, key.length);
         assertFalse(java.util.Arrays.equals(key, KeyMaterial.randomKey()));
-        KeyMaterial.wipe(key);
+        Wiper.wipe(key);
         assertTrue(Arrays.equals(new byte[KeyMaterial.KEY_BYTES], key));
     }
 

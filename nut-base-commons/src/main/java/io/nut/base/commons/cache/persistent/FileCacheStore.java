@@ -5,6 +5,7 @@
  */
 package io.nut.base.commons.cache.persistent;
 
+import io.nut.base.commons.io.IO;
 import io.nut.base.commons.serializer.Serializer;
 import java.io.EOFException;
 import java.io.IOException;
@@ -12,18 +13,13 @@ import java.io.RandomAccessFile;
 import java.io.UncheckedIOException;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
 import java.security.GeneralSecurityException;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.zip.CRC32;
 import javax.crypto.SecretKey;
 
@@ -464,7 +460,7 @@ public class FileCacheStore<K,V> implements CacheStore<K,V>
             }
             opened = new RandomAccessFile(file.toFile(), "rw");
             this.raf = opened;
-            restrictPermissions();
+            IO.setPrivate(file);
             validateHeader();
             replay();
         }
@@ -521,20 +517,6 @@ public class FileCacheStore<K,V> implements CacheStore<K,V>
                 throw new IOException("cache store file is encrypted but no key was provided: " + file);
             }
             throw new IOException("unsupported cache store file version " + version + ": " + file);
-        }
-    }
-
-    private void restrictPermissions()
-    {
-        try
-        {
-            Set<PosixFilePermission> permissions = EnumSet.of(
-                    PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
-            Files.setPosixFilePermissions(file, permissions);
-        }
-        catch (IOException | UnsupportedOperationException e)
-        {
-            // best effort: not every filesystem supports POSIX permissions
         }
     }
 
@@ -619,14 +601,7 @@ public class FileCacheStore<K,V> implements CacheStore<K,V>
             out.getFD().sync();
         }
         raf.close();
-        try
-        {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        }
-        catch (AtomicMoveNotSupportedException e)
-        {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-        }
+        IO.replaceAtomically(tmp, file);
         raf = new RandomAccessFile(file.toFile(), "rw");
         liveBytes = newTotal;
         totalBytes = newTotal;

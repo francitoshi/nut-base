@@ -35,6 +35,19 @@ public final class Wiper
     }
 
     /**
+     * Overwrites the given array with zeroes.
+     *
+     * @param data the array to wipe; {@code null} is ignored
+     */
+    public static void wipe(byte[] data)
+    {
+        if(data != null)
+        {
+            Arrays.fill(data, (byte) 0);
+        }
+    }
+
+    /**
      * Attempts to wipe the key material held by a {@link SecretKeySpec} via
      * reflection on its private {@code key} field.
      *

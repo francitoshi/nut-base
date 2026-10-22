@@ -5,24 +5,16 @@
  */
 package io.nut.base.commons.security;
 
+import io.nut.base.commons.io.IO;
 import io.nut.base.commons.jca.Kr;
 import io.nut.base.commons.jca.Rand;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.Objects;
-import java.util.Set;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -52,8 +44,8 @@ import javax.crypto.spec.PBEKeySpec;
  * </ul>
  * <p>
  * Key material is returned as plain {@code byte[]} arrays, so the caller owns
- * them and is responsible for wiping them with {@link Wiper} or
- * {@link Arrays#fill(byte[], byte)} once they are no longer needed.
+ * them and is responsible for wiping them with {@link Wiper#wipe(byte[])} once
+ * they are no longer needed.
  *
  * @see SecureSecretKey
  * @see SecureBytes
@@ -197,15 +189,8 @@ public final class KeyMaterial
             Files.createDirectories(parent);
         }
         Path tmp = file.resolveSibling(file.getFileName().toString() + ".tmp");
-        writeRestricted(tmp, key);
-        try
-        {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        }
-        catch (AtomicMoveNotSupportedException e)
-        {
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
-        }
+        IO.writePrivate(tmp, key);
+        IO.replaceAtomically(tmp, file);
     }
 
     /**
@@ -227,39 +212,5 @@ public final class KeyMaterial
             throw new IOException("invalid key file contents (length " + key.length + "): " + file);
         }
         return key;
-    }
-
-    /**
-     * Overwrites the given array with zeroes.
-     *
-     * @param data the array to wipe; {@code null} is ignored
-     */
-    public static void wipe(byte[] data)
-    {
-        if (data != null)
-        {
-            Arrays.fill(data, (byte) 0);
-        }
-    }
-
-    private static void writeRestricted(Path file, byte[] key) throws IOException
-    {
-        Set<PosixFilePermission> permissions = EnumSet.of(
-                PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
-        try
-        {
-            try (SeekableByteChannel channel = Files.newByteChannel(file,
-                    EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
-                            StandardOpenOption.WRITE),
-                    PosixFilePermissions.asFileAttribute(permissions)))
-            {
-                channel.write(ByteBuffer.wrap(key));
-            }
-        }
-        catch (UnsupportedOperationException e)
-        {
-            Files.write(file, key, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
-                    StandardOpenOption.WRITE);
-        }
     }
 }

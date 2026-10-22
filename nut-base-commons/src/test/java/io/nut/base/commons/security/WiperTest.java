@@ -35,6 +35,20 @@ public class WiperTest
         return ones;
     }
 
+    @Test
+    public void testWipeBytes()
+    {
+        byte[] data = ones();
+        Wiper.wipe(data);
+        assertArrayEquals(new byte[data.length], data);
+    }
+
+    @Test
+    public void testWipeBytesAcceptsNull()
+    {
+        Wiper.wipe(null);
+    }
+
     private static boolean reflectionAvailable()
     {
         try

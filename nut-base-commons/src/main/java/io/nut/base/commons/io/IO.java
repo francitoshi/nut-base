@@ -18,11 +18,21 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.ByteBuffer;
+import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.CopyOption;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.zip.GZIPInputStream;
 
 /**
@@ -586,5 +596,84 @@ public class IO
         PrintStream out = System.out;
         out.print(obj);
         out.flush();
+    }
+
+    /**
+     * Creates or truncates {@code file} with owner-only permissions and writes
+     * {@code data}.
+     * <p>
+     * On POSIX filesystems the file is created with {@code 0600} permissions,
+     * so it is readable only by its owner. On filesystems without POSIX
+     * permissions the operation still succeeds but the protection is the one
+     * of the directory.
+     *
+     * @param file the file to write
+     * @param data the bytes to write
+     * @throws IOException if the file cannot be written
+     */
+    public static void writePrivate(Path file, byte[] data) throws IOException
+    {
+        Set<PosixFilePermission> permissions = EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
+        try
+        {
+            try (SeekableByteChannel channel = Files.newByteChannel(file,
+                    EnumSet.of(StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                            StandardOpenOption.WRITE),
+                    PosixFilePermissions.asFileAttribute(permissions)))
+            {
+                ByteBuffer buffer = ByteBuffer.wrap(data);
+                while (buffer.hasRemaining())
+                {
+                    channel.write(buffer);
+                }
+            }
+        }
+        catch (UnsupportedOperationException e)
+        {
+            Files.write(file, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING,
+                    StandardOpenOption.WRITE);
+        }
+    }
+
+    /**
+     * Best-effort restriction of an existing file to owner-only permissions.
+     * <p>
+     * On POSIX filesystems the file gets {@code 0600} permissions. Filesystems
+     * without POSIX permissions, and files that cannot be changed, are
+     * silently ignored: this is a hardening measure, not a requirement.
+     *
+     * @param file the file to restrict
+     */
+    public static void setPrivate(Path file)
+    {
+        try
+        {
+            Set<PosixFilePermission> permissions = EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE);
+            Files.setPosixFilePermissions(file, permissions);
+        }
+        catch (IOException | UnsupportedOperationException e)
+        {
+            // best effort: not every filesystem supports POSIX permissions
+        }
+    }
+
+    /**
+     * Moves {@code source} over {@code target}, replacing it, and using an
+     * atomic move when the filesystem supports it.
+     *
+     * @param source the file to move
+     * @param target the destination file
+     * @throws IOException if the file cannot be moved
+     */
+    public static void replaceAtomically(Path source, Path target) throws IOException
+    {
+        try
+        {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        }
+        catch (AtomicMoveNotSupportedException e)
+        {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 }

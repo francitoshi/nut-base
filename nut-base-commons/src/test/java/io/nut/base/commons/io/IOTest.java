@@ -11,8 +11,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.EnumSet;
 import java.util.Random;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -82,5 +88,67 @@ public class IOTest
         PrintStream resultSame = IO.asPrintStream(ps);
         assertSame(ps, resultSame);
     }
-    
+
+    @Test
+    public void testWritePrivate(@TempDir Path dir) throws Exception
+    {
+        Path file = dir.resolve("secret.bin");
+        byte[] data = new byte[]{1, 2, 3};
+        IO.writePrivate(file, data);
+        assertArrayEquals(data, Files.readAllBytes(file));
+
+        byte[] other = new byte[]{4, 5};
+        IO.writePrivate(file, other);
+        assertArrayEquals(other, Files.readAllBytes(file));
+    }
+
+    @Test
+    public void testWritePrivateIsNotWorldReadable(@TempDir Path dir) throws Exception
+    {
+        Path file = dir.resolve("secret.bin");
+        IO.writePrivate(file, new byte[]{1});
+        try
+        {
+            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file);
+            assertEquals(EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
+                    permissions);
+        }
+        catch (UnsupportedOperationException e)
+        {
+            // not a POSIX filesystem
+        }
+    }
+
+    @Test
+    public void testSetPrivate(@TempDir Path dir) throws Exception
+    {
+        Path file = dir.resolve("secret.bin");
+        Files.write(file, new byte[]{1});
+        IO.setPrivate(file);
+        try
+        {
+            Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file);
+            assertEquals(EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
+                    permissions);
+        }
+        catch (UnsupportedOperationException e)
+        {
+            // not a POSIX filesystem
+        }
+    }
+
+    @Test
+    public void testReplaceAtomically(@TempDir Path dir) throws Exception
+    {
+        Path source = dir.resolve("source.tmp");
+        Path target = dir.resolve("target.bin");
+        Files.write(target, new byte[]{9, 9});
+        Files.write(source, new byte[]{1, 2, 3});
+
+        IO.replaceAtomically(source, target);
+
+        assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(target));
+        assertFalse(Files.exists(source));
+    }
+
 }
