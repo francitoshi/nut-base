@@ -7,9 +7,9 @@ package io.nut.base.commons.serializer;
 
 public interface Serializer<T>
 {
-    byte[] serialize(T object);
+    byte[] serialize(T t);
 
-    T deserialize(byte[] data);
+    T deserialize(byte[] bytes);
 
     /**
      * Marker for the serializers able to serialize any object, using the
