@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.cli.options;
+package io.nut.base.commons.options;
 
 import io.nut.base.commons.lang.Parsers;
 import java.math.BigDecimal;

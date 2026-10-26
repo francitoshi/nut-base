@@ -19,6 +19,7 @@ package io.nut.base.commons.lang;
  * @param <E> the type of interned values
  * @author franci
  */
+@FunctionalInterface
 public interface Interner<E>
 {
     /**

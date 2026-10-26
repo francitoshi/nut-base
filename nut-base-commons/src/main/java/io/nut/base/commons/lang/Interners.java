@@ -31,6 +31,23 @@ public final class Interners
      * interner is short-lived.
      *
      * @param <E> the type of interned values
+     * @param expectedSize initial size
+     * @return a new strong interner
+     */
+    public static <E> Interner<E> strong(int expectedSize)
+    {
+        return new StrongInterner<>(expectedSize);
+    }
+    
+    /**
+     * Returns a thread-safe interner that keeps strong references to the
+     * interned values.
+     * <p>
+     * Values remain interned as long as the interner itself is reachable. This
+     * is the fastest option when the set of values is bounded or when the
+     * interner is short-lived.
+     *
+     * @param <E> the type of interned values
      * @return a new strong interner
      */
     public static <E> Interner<E> strong()
@@ -38,6 +55,22 @@ public final class Interners
         return new StrongInterner<>();
     }
 
+    /**
+     * Returns a thread-safe interner that keeps only weak references to the
+     * interned values.
+     * <p>
+     * A value may be garbage collected when no one else holds a reference to
+     * it. This avoids retaining values indefinitely, at the cost of a slightly
+     * higher overhead than {@link #strong()}.
+     *
+     * @param <E> the type of interned values
+     * @param expectedSize initial size
+     * @return a new weak interner
+     */
+    public static <E> Interner<E> weak(int expectedSize)
+    {
+        return new WeakInterner<>(expectedSize);
+    }
     /**
      * Returns a thread-safe interner that keeps only weak references to the
      * interned values.
@@ -56,7 +89,16 @@ public final class Interners
 
     private static final class StrongInterner<E> implements Interner<E>
     {
-        private final ConcurrentHashMap<E,E> map = new ConcurrentHashMap<>();
+        private final ConcurrentHashMap<E,E> map;
+
+        public StrongInterner(int expectedSize)
+        {
+            this.map = new ConcurrentHashMap<>(expectedSize);
+        }
+        public StrongInterner()
+        {
+            this.map = new ConcurrentHashMap<>();
+        }
 
         @Override
         public E intern(E sample)
@@ -69,9 +111,19 @@ public final class Interners
 
     private static final class WeakInterner<E> implements Interner<E>
     {
-        private final ConcurrentHashMap<WeakKey<E>,WeakKey<E>> map = new ConcurrentHashMap<>();
+        private final ConcurrentHashMap<WeakKey<E>,WeakKey<E>> map;
         private final ReferenceQueue<E> queue = new ReferenceQueue<>();
 
+        public WeakInterner(int expectedSize)
+        {
+            this.map = new ConcurrentHashMap<>(expectedSize);
+        }
+        
+        public WeakInterner()
+        {
+            this.map = new ConcurrentHashMap<>();
+        }
+        
         @Override
         public E intern(E sample)
         {

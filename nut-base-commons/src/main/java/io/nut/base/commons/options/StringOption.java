@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
-package io.nut.base.cli.options;
+package io.nut.base.commons.options;
 
 // CAMBIAR LA HERENCIA POR UNA COMPOSICIÓN PARA FACILITAR LA DETECCIÓN DE ERRORES EN OptionParser.add
 
