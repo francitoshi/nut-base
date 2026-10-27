@@ -1,0 +1,236 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.github.francitoshi.nut.base.collections.ring;
+
+// Claude Sonnet 4.5
+
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.Objects;
+import java.util.function.Consumer;
+
+/**
+ * A fixed-size circular queue (ring buffer) implementation for {@code BigInteger} objects.
+ * <p>
+ * This structure operates with a fixed capacity. When elements are pushed into a full queue,
+ * the oldest element (head) is automatically removed/overwritten to make room for the new element.
+ * <p>
+ * This class extends {@link RingQueue} and only adds {@code BigInteger}-specific conveniences
+ * such as {@link #sum()}, {@link #average()}, {@link #peek()} and a no-argument {@link #array()}.
+ * All the generic ring-buffer behaviour is inherited from {@link RingQueue}.
+ * <p>
+ * <b>Performance:</b> when the capacity is a power of two, index arithmetic uses a
+ * bitmask ({@code index & (capacity - 1)}) instead of the modulo operator, which is
+ * significantly faster for push/pop and for traversals. For arbitrary capacities a
+ * modulo is used instead, so no benefit is obtained.
+ * <p>
+ * <b>Note:</b> This implementation is not thread-safe.
+ */
+public class RingQueueBigInteger extends RingQueue<BigInteger>
+{
+    /**
+     * Constructs a new RingQueueBigInteger with the specified capacity.
+     *
+     * @param capacity the maximum number of elements the queue can hold. When it is a
+     *                power of two, operations use a bitmask instead of a modulo,
+     *                which is faster.
+     * @throws IllegalArgumentException if the capacity is less than or equal to 0.
+     */
+    public RingQueueBigInteger(int capacity)
+    {
+        super(capacity);
+    }
+
+    public RingQueueBigInteger(BigInteger[] data)
+    {
+        super(Objects.requireNonNull(data, "data cannot be null").clone());
+    }
+
+    /**
+     * Retrieves the element at the head of the queue without removing it.
+     *
+     * @return the oldest element in the queue, or null if the queue is empty.
+     */
+    public BigInteger peek()
+    {
+        return get(0);
+    }
+
+    /**
+     * Returns an array containing all of the elements in this queue in proper sequence
+     * (from oldest to newest).
+     *
+     * @return a new BigInteger array containing the queue elements.
+     */
+    public BigInteger[] array()
+    {
+        return array(new BigInteger[size()]);
+    }
+
+    /**
+     * Calculates the sum of all values in the queue.
+     *
+     * @return the sum of all elements.
+     */
+    public BigInteger sum()
+    {
+        BigInteger total = BigInteger.ZERO;
+        for (BigInteger value : list())
+        {
+            total = total.add(value);
+        }
+        return total;
+    }
+
+    /**
+     * Calculates the arithmetic mean of the values in the queue.
+     *
+     * @return the average of the elements, or {@code BigDecimal.ZERO} if the
+     * queue is empty.
+     */
+    public BigDecimal average()
+    {
+        if (isEmpty())
+        {
+            return BigDecimal.ZERO;
+        }
+        return new BigDecimal(sum()).divide(BigDecimal.valueOf(size()));
+    }
+
+    public static RingQueueBigInteger getSynchronized(RingQueueBigInteger queue)
+    {
+        return new RingQueueBigInteger(1)
+        {
+            final Object lock = new Object();
+
+            @Override
+            public BigInteger push(BigInteger value)
+            {
+                synchronized(lock)
+                {
+                    return queue.push(value);
+                }
+            }
+
+            @Override
+            public void pushAll(BigInteger[] value)
+            {
+                synchronized(lock)
+                {
+                    queue.pushAll(value);
+                }
+            }
+
+            @Override
+            public BigInteger pop()
+            {
+                synchronized(lock)
+                {
+                    return queue.pop();
+                }
+            }
+
+            @Override
+            public BigInteger peek()
+            {
+                synchronized(lock)
+                {
+                    return queue.peek();
+                }
+            }
+
+            @Override
+            public BigInteger get(int n)
+            {
+                synchronized(lock)
+                {
+                    return queue.get(n);
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return queue.size();
+                }
+            }
+
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return queue.isEmpty();
+                }
+            }
+
+            @Override
+            public BigInteger[] array()
+            {
+                synchronized(lock)
+                {
+                    return queue.array();
+                }
+            }
+
+            @Override
+            public BigInteger[] array(BigInteger[] a)
+            {
+                synchronized(lock)
+                {
+                    return queue.array(a);
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<BigInteger> consumer)
+            {
+                synchronized(lock)
+                {
+                    queue.foreach(consumer);
+                }
+            }
+
+            @Override
+            public BigInteger max()
+            {
+                synchronized(lock)
+                {
+                    return queue.max();
+                }
+            }
+
+            @Override
+            public BigInteger min()
+            {
+                synchronized(lock)
+                {
+                    return queue.min();
+                }
+            }
+
+            @Override
+            public BigInteger sum()
+            {
+                synchronized(lock)
+                {
+                    return queue.sum();
+                }
+            }
+
+            @Override
+            public BigDecimal average()
+            {
+                synchronized(lock)
+                {
+                    return queue.average();
+                }
+            }
+        };
+    }
+}

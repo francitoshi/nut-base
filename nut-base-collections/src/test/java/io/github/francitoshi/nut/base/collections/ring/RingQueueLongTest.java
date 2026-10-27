@@ -1,0 +1,206 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.github.francitoshi.nut.base.collections.ring;
+
+import io.github.francitoshi.nut.base.collections.ring.RingQueueLong;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import java.util.ArrayList;
+import java.util.List;
+
+// Claude Sonnet 4.5
+class RingQueueLongTest
+{
+
+    private RingQueueLong queue;
+
+    @BeforeEach
+    void setUp()
+    {
+        queue = new RingQueueLong(5);
+    }
+
+    @Test
+    void testConstructorInvalidCapacity()
+    {
+        assertThrows(IllegalArgumentException.class, () -> new RingQueueLong(0));
+        assertThrows(IllegalArgumentException.class, () -> new RingQueueLong(-1));
+    }
+
+    @Test
+    void testPushAndSize()
+    {
+        assertEquals(0, queue.size());
+        queue.push(10L);
+        assertEquals(1, queue.size());
+        queue.push(20L);
+        assertEquals(2, queue.size());
+    }
+
+    @Test
+    void testPushOverflow()
+    {
+        for (int i = 1; i <= 5; i++)
+        {
+            assertEquals(0, queue.push(i * 10L));
+        }
+        assertEquals(5, queue.size());
+
+        long removed = queue.push(60L);
+        assertEquals(10L, removed);
+        assertEquals(5, queue.size());
+    }
+
+    @Test
+    void testPop()
+    {
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        assertEquals(10L, queue.pop());
+        assertEquals(2, queue.size());
+        assertEquals(20L, queue.pop());
+        assertEquals(1, queue.size());
+    }
+
+    @Test
+    void testPopEmpty()
+    {
+        assertEquals(0L, queue.pop());
+    }
+
+    @Test
+    void testForeach()
+    {
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        List<Long> values = new ArrayList<>();
+        queue.foreach(values::add);
+
+        assertArrayEquals(new Long[]
+        {
+            10L, 20L, 30L
+        }, values.toArray());
+    }
+
+    @Test
+    void testArray()
+    {
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        assertArrayEquals(new long[]
+        {
+            10L, 20L, 30L
+        }, queue.array());
+    }
+
+    @Test
+    void testSum()
+    {
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        assertEquals(60L, queue.sum());
+    }
+
+    @Test
+    void testAverage()
+    {
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        assertEquals(20.0, queue.average(), 0.001);
+    }
+
+    @Test
+    void testMin()
+    {
+        queue.push(30L);
+        queue.push(10L);
+        queue.push(20L);
+
+        assertEquals(10L, queue.min());
+    }
+
+    @Test
+    void testMax()
+    {
+        queue.push(30L);
+        queue.push(10L);
+        queue.push(50L);
+
+        assertEquals(50L, queue.max());
+    }
+
+    @Test
+    void testGet()
+    {
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        assertEquals(10L, queue.get(0));
+        assertEquals(20L, queue.get(1));
+        assertEquals(30L, queue.get(2));
+        assertEquals(0L, queue.get(3));
+        assertEquals(0L, queue.get(-1));
+    }
+
+    @Test
+    void testCircularBehavior()
+    {
+        for (int i = 1; i <= 7; i++)
+        {
+            queue.push(i * 10L);
+        }
+
+        assertArrayEquals(new long[]
+        {
+            30L, 40L, 50L, 60L, 70L
+        }, queue.array());
+    }
+    
+   @Test
+    void testPeek()
+    {
+        RingQueueLong queue = new RingQueueLong(3);
+        queue.push(10);
+        queue.push(20);
+        assertEquals(10, queue.peek());
+        assertEquals(10, queue.peek());
+        assertEquals(2, queue.size());
+    }
+    
+    @Test
+    void testGetSynchronized()
+    {
+        RingQueueLong queue = new RingQueueLong(5);
+        queue.push(10L);
+        queue.push(20L);
+        queue.push(30L);
+
+        RingQueueLong sync = RingQueueLong.getSynchronized(queue);
+
+        assertEquals(3, sync.size());
+        assertEquals(10L, sync.get(0));
+        assertEquals(20L, sync.get(1));
+        assertEquals(30L, sync.get(2));
+
+        sync.push(40L);
+
+        assertEquals(4, queue.size());
+        assertEquals(40L, queue.get(3));
+    }
+
+}

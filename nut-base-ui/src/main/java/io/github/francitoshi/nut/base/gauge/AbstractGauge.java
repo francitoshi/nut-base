@@ -1,0 +1,326 @@
+/*
+ * Copyright (C) 2012-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.github.francitoshi.nut.base.gauge;
+
+import io.github.francitoshi.nut.base.commons.time.JavaTime;
+import io.github.francitoshi.nut.base.commons.time.JavaTime.Resolution;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+/**
+ *
+ * @author franci
+ */
+public abstract class AbstractGauge implements Gauge, AutoCloseable
+{
+    //minimal difference to paint again
+    private static final long MIN_DIFF_NANOS = TimeUnit.SECONDS.toNanos(1);
+    //minimal time to evaluate and show time
+    private static final long MIN_SHOW_TIME = TimeUnit.SECONDS.toNanos(10);
+    //enough value to show times
+    private static final double MIN_SHOW_DONE = 0.0001;
+
+    private final Object lock = new Object();
+    //--- time variables
+    private volatile long accuNanos = 0;   // accumulated nanoseconds
+    private volatile long lastNanos = 0;   // time of the last calculation
+    private volatile long accuValue = 0;   // counter accumulator
+    private volatile long lastPaint = 0;   // time of the last paint
+    // --- value variables
+    private volatile int curValue = 0;     // current value
+    private volatile int maxValue = 100;   // maximum value
+    //--- percentages
+    private volatile double done = 0.0;  // current percentage
+    //--- others
+    private volatile boolean started=false;
+    private volatile boolean paused =false;
+    private volatile boolean force = false;
+    private volatile String prefix = "";
+    // --- modes
+    private volatile boolean showPrev = false;
+    private volatile boolean showNext = true;
+    private volatile boolean showFull = false;
+    
+    static final int FMT_TIME_MIN_ELEMENTS = 1;
+    static final int FMT_TIME_MAX_ELEMENTS = 3;
+    static final Resolution FMT_TIME_RES = Resolution.S;
+
+    @Override
+    public String getPrefix()
+    {
+        return prefix;
+    }
+
+    @Override
+    public void setPrefix(String prefix)
+    {
+        force = force || !prefix.equals(this.prefix);
+        this.prefix = prefix;
+    }
+
+    public AbstractGauge()
+    {
+        super();
+    }
+    @Override
+    public boolean isStarted()
+    {
+        return started;
+    }
+    @Override
+    public boolean isPaused()
+    {
+        return paused;
+    }
+
+    @Override
+    public void start()
+    {
+        start(100,"", 0);
+    }
+    @Override
+    public void start(int max)
+    {
+        start(max,"", 0);
+    }
+    @Override
+    public void start(int max, String prefix)
+    {
+        start(max,prefix, 0);
+    }    
+    
+    public void start(int max, String prefix, int curValue)
+    {
+        synchronized(lock)
+        {
+            this.started =true;
+            this.paused =false;
+            this.prefix = prefix;
+            this.accuNanos = 0;
+            this.lastNanos = nanoTime();
+            this.accuValue = 0;
+            this.lastPaint = 0;
+            this.curValue = curValue;
+            this.maxValue = max;
+            this.done = 0.0;
+            this.force = true;
+        }
+        this.paintLazy();
+    }
+
+    @Override
+    public void pause()
+    {
+        synchronized(lock)
+        {
+            setValue(curValue);
+            paused = true;
+            paintLazy();
+        }
+    }
+
+    @Override
+    public void resume()
+    {
+        synchronized(lock)
+        {
+            setValue(curValue);
+            paintLazy();
+        }
+    }
+
+    @Override
+    public void close()
+    {
+        synchronized(lock)
+        {
+            started = false;
+            curValue = maxValue;
+            force = true;
+        }
+        paintLazy();
+    }
+
+    @Override
+    public double getDone()
+    {
+        return done;
+    }
+
+    @Override
+    public int getVal()
+    {
+        return curValue;
+    }
+
+    @Override
+    public int getMax()
+    {
+        return maxValue;
+    }
+
+    private void setValue(int n)
+    {
+        synchronized(lock)
+        {
+            long now = nanoTime();
+            if(paused)
+            {
+                lastNanos = now;
+                paused = false;
+            }
+            accuNanos += (now-lastNanos);
+            accuValue += (n>curValue ? n-curValue : 0);
+            lastNanos  = now;
+            curValue   = n;
+        }
+    }
+    @Override
+    public void setVal(int n)
+    {
+        setValue(n);
+        paintLazy();
+    }
+
+    @Override
+    public void setMax(int n)
+    {
+        if(maxValue!=n)
+        {
+            synchronized(lock)
+            {
+                maxValue = n;
+            }
+            paintLazy();
+        }
+    }
+
+    @Override
+    public void step()
+    {
+        step(1);
+    }
+
+    @Override
+    public void step(int n)
+    {
+        synchronized(lock)
+        {
+            setVal(curValue+n);
+        }
+        paintLazy();
+    }
+
+    @Override
+    public abstract void paint(boolean started, int max, int val, double done, String prefix, String prev, String next, String full);
+
+    private void paintLazy()
+    {
+        synchronized(lock)
+        {
+            long nowNanos = nanoTime();
+            double curr = (double) curValue / (double) maxValue;
+            double diff = Math.abs(done - curr);
+            long diffNanos = nowNanos - lastPaint;
+
+            if (diff >= MIN_SHOW_DONE || diffNanos >= MIN_DIFF_NANOS || force)
+            {
+                done = curr;
+                lastPaint = nowNanos;
+
+                String prev = showPrev ? "" : null;
+                String next = showNext ? "" : null;
+                String full = showFull ? "" : null;
+
+                if (done >= MIN_SHOW_DONE || (accuNanos) >= MIN_SHOW_TIME)
+                {
+                    long unitNanos = accuValue>0 ? accuNanos/accuValue : 0;
+                    long prevNanos = accuNanos;
+                    long nextNanos = (maxValue-curValue)*unitNanos;
+                    long fullNanos = prevNanos + nextNanos;
+
+                    prev = showPrev ? fmtTime(prevNanos) : null;
+                    next = showNext ? fmtTime(nextNanos) : null;
+                    full = showFull ? fmtTime(fullNanos) : null;
+                }
+                force = false;
+                paint(started, maxValue, curValue, done, prefix, prev, next, full);
+            }
+        }
+    }
+
+    public boolean isShowPrev()
+    {
+        return showPrev;
+    }
+
+    public void setShowPrev(boolean showPrev)
+    {
+        this.showPrev = showPrev;
+    }
+
+    public boolean isShowNext()
+    {
+        return showNext;
+    }
+
+    public void setShowNext(boolean showNext)
+    {
+        this.showNext = showNext;
+    }
+
+    public boolean isShowFull()
+    {
+        return showFull;
+    }
+
+    public void setShowFull(boolean showFull)
+    {
+        this.showFull = showFull;
+    }
+    
+    @Override
+    public void setShow(boolean showPrev, boolean showNext, boolean showFull)
+    {
+        this.showPrev = showPrev;
+        this.showNext = showNext;
+        this.showFull = showFull;
+    }
+
+    final public void invalidate()
+    {
+        this.force = true;
+        paintLazy();
+    }
+    
+    protected long nanoTime()
+    {
+        return System.nanoTime();
+    }
+
+    protected long getAccuNanos()
+    {
+        return accuNanos;
+    }
+
+    protected long getAccuValue()
+    {
+        return accuValue;
+    }
+
+    public long getLastNanos()
+    {
+        return lastNanos;
+    }
+
+    private String fmtTime(long nanos)
+    {
+        Duration duration = Duration.ofNanos(nanos);
+        return JavaTime.toString(duration, FMT_TIME_MIN_ELEMENTS, FMT_TIME_MAX_ELEMENTS, FMT_TIME_RES);
+    }
+
+}

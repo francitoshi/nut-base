@@ -1,0 +1,480 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.github.francitoshi.nut.base.collections.ring;
+
+// Claude Sonnet 4.5
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.Consumer;
+
+/**
+ * A fixed-size circular queue (ring buffer) implementation for generic types.
+ * <p>
+ * This structure operates with a fixed capacity. When elements are pushed into a full queue,
+ * the oldest element (head) is automatically removed/overwritten to make room for the new element.
+ * <p>
+ * This implementation is backed by an array acting as a fixed-size buffer.
+ * <p>
+ * <b>Performance:</b> when the capacity is a power of two, index arithmetic uses a
+ * bitmask ({@code index & (capacity - 1)}) instead of the modulo operator, which is
+ * significantly faster for push/pop and for traversals. For arbitrary capacities a
+ * modulo is used instead, so no benefit is obtained.
+ * <p>
+ * <b>Note:</b> This implementation is not thread-safe.
+ *
+ * @param <E> the type of elements held in this queue.
+ */
+public class RingQueue<E>
+{
+    private final E[] buffer;
+    private final int capacity;
+    private final int mask;
+    private int head;
+    private int tail;
+    private int size;
+
+    /**
+     * Constructs a new RingQueue with the specified capacity.
+     *
+     * @param capacity the maximum number of elements the queue can hold. When it is a
+     *                power of two, operations use a bitmask instead of a modulo,
+     *                which is faster.
+     * @throws IllegalArgumentException if the capacity is less than or equal to 0.
+     */
+    @SuppressWarnings("unchecked")
+    public RingQueue(int capacity)
+    {
+        if (capacity <= 0)
+        {
+            throw new IllegalArgumentException("capacity must be positive, but was: " + capacity);
+        }
+        this.capacity = capacity;
+        this.mask = (capacity & (capacity - 1)) == 0 ? capacity - 1 : -1;
+        this.buffer = (E[]) new Object[capacity];
+        this.head = 0;
+        this.tail = 0;
+        this.size = 0;
+    }
+
+    public RingQueue(E[] data)
+    {
+        Objects.requireNonNull(data, "data cannot be null");
+        if (data.length <= 0)
+        {
+            throw new IllegalArgumentException("data cannot be empty");
+        }
+        this.capacity = data.length;
+        this.mask = (capacity & (capacity - 1)) == 0 ? capacity - 1 : -1;
+        this.buffer = data.clone();
+        this.head = 0;
+        this.tail = 0;
+        this.size = data.length;
+    }
+
+    /**
+     * Wraps an index around the buffer, using a bitmask when the capacity is a
+     * power of two and a modulo otherwise.
+     */
+    private int wrap(int index)
+    {
+        return mask >= 0 ? index & mask : index % capacity;
+    }
+
+    /**
+     * Adds a value to the end of the queue.
+     * <p>
+     * If the queue is currently at maximum capacity, the oldest element (at the head)
+     * is overwritten/removed to accommodate the new value.
+     *
+     * @param value the element to add.
+     * @return the element that was overwritten if the queue was full, otherwise {@code null}.
+     */
+    public E push(E value)
+    {
+        E removed = null;
+        if (size == capacity)
+        {
+            removed = buffer[head];
+            head = wrap(head + 1);
+            size--;
+        }
+        buffer[tail] = value;
+        tail = wrap(tail + 1);
+        size++;
+        return removed;
+    }
+
+    public void pushAll(E[] value)
+    {
+        int n = value.length;
+        if (n <= 0)
+        {
+            return;
+        }
+        int newSize = size + n;
+        int dropped = 0;
+        if (newSize > capacity)
+        {
+            dropped = newSize - capacity;
+            newSize = capacity;
+        }
+        int writePos = tail;
+        if (writePos + n <= capacity)
+        {
+            System.arraycopy(value, 0, buffer, writePos, n);
+        }
+        else
+        {
+            int first = capacity - writePos;
+            System.arraycopy(value, 0, buffer, writePos, first);
+            System.arraycopy(value, first, buffer, 0, n - first);
+        }
+        head = wrap(head + dropped);
+        tail = wrap(writePos + n - dropped);
+        size = newSize;
+    }
+
+    /**
+     * Removes and returns the element at the head of the queue.
+     *
+     * @return the oldest element in the queue, or {@code null} if the queue is empty.
+     */
+    public E pop()
+    {
+        if (size == 0)
+        {
+            return null;
+        }
+        E value = buffer[head];
+        buffer[head] = null; // Helps GC
+        head = wrap(head + 1);
+        size--;
+        return value;
+    }
+    
+    /**
+     * Retrieves the element at a specific index relative to the head of the queue.
+     * <p>
+     * Index 0 corresponds to the head (oldest element).
+     *
+     * @param n the relative index of the element to retrieve.
+     * @return the element at the specified index, or {@code null} if the index is out of bounds (n < 0 or n >= size).
+     */
+    public E get(int n)
+    {
+        if (n < 0 || n >= size)
+        {
+            return null;
+        }
+        return buffer[wrap(head + n)];
+    }
+
+    /**
+     * Performs the given action for each element in the queue.
+     * Elements are processed in order from head (oldest) to tail (newest).
+     *
+     * @param consumer the action to perform on each element.
+     */
+    public void foreach(Consumer<E> consumer)
+    {
+        for (int i = 0; i < size; i++)
+        {
+            consumer.accept(buffer[wrap(head + i)]);
+        }
+    }
+
+    public List<E> list()
+    {
+        List<E> result = new ArrayList<>(size);
+        for (int i = 0; i < size; i++)
+        {
+            result.add(buffer[wrap(head + i)]);
+        }
+        return result;
+    }
+
+    /**
+     * Returns an array containing all of the elements in this queue in proper sequence
+     * (from oldest to newest).
+     * <p>
+     * If the queue fits in the specified array (i.e., the array length equals the queue size),
+     * it is returned therein. Otherwise, a new array is allocated with the runtime type of
+     * the specified array and the exact size of this queue.
+     *
+     * @param a the array into which the elements of the queue are to be stored, if it is big enough;
+     *          otherwise, a new array of the same runtime type is allocated for this purpose.
+     * @return an array containing the elements of the queue.
+     */
+    public E[] array(E[] a)
+    {
+        if (a.length != size)
+        {
+            a = Arrays.copyOf(a, size);
+        }
+        for (int i = 0; i < size; i++)
+        {
+            a[i] = buffer[wrap(head + i)];
+        }
+        return a;
+    }
+
+    /**
+     * Returns the number of elements currently in the queue.
+     *
+     * @return the current size.
+     */
+    public int size()
+    {
+        return size;
+    }
+
+    public int getCapacity()
+    {
+        return capacity;
+    }
+
+    public boolean isEmpty()
+    {
+        return size==0;
+    }
+
+    /**
+     * Finds the minimum value currently in the queue based on the natural ordering of the elements.
+     *
+     * @return the smallest element, or {@code null} if the queue is empty.
+     * @throws ClassCastException if the elements in the queue are not {@link Comparable}.
+     */
+    @SuppressWarnings("unchecked")
+    public E min()
+    {
+        if (size == 0)
+        {
+            return null;
+        }
+
+        E minValue = buffer[head];
+        Comparable<E> comparable = (Comparable<E>) minValue;
+
+        for (int i = 1; i < size; i++)
+        {
+            E value = buffer[wrap(head + i)];
+            if (comparable.compareTo(value) > 0)
+            {
+                minValue = value;
+                comparable = (Comparable<E>) minValue;
+            }
+        }
+        return minValue;
+    }
+
+    /**
+     * Finds the minimum value currently in the queue using the provided {@link Comparator}.
+     *
+     * @param comparator the comparator to determine the order of the queue.
+     * @return the smallest element, or {@code null} if the queue is empty.
+     */
+    public E min(Comparator<E> comparator)
+    {
+        if (size == 0)
+        {
+            return null;
+        }
+
+        E minValue = buffer[head];
+        for (int i = 1; i < size; i++)
+        {
+            E value = buffer[wrap(head + i)];
+            if (comparator.compare(value, minValue) < 0)
+            {
+                minValue = value;
+            }
+        }
+        return minValue;
+    }
+
+    /**
+     * Finds the maximum value currently in the queue based on the natural ordering of the elements.
+     *
+     * @return the largest element, or {@code null} if the queue is empty.
+     * @throws ClassCastException if the elements in the queue are not {@link Comparable}.
+     */
+    @SuppressWarnings("unchecked")
+    public E max()
+    {
+        if (size == 0)
+        {
+            return null;
+        }
+
+        E maxValue = buffer[head];
+        Comparable<E> comparable = (Comparable<E>) maxValue;
+
+        for (int i = 1; i < size; i++)
+        {
+            E value = buffer[wrap(head + i)];
+            if (comparable.compareTo(value) < 0)
+            {
+                maxValue = value;
+                comparable = (Comparable<E>) maxValue;
+            }
+        }
+        return maxValue;
+    }
+
+    /**
+     * Finds the maximum value currently in the queue using the provided {@link Comparator}.
+     *
+     * @param comparator the comparator to determine the order of the queue.
+     * @return the largest element, or {@code null} if the queue is empty.
+     */
+    public E max(Comparator<E> comparator)
+    {
+        if (size == 0)
+        {
+            return null;
+        }
+
+        E maxValue = buffer[head];
+        for (int i = 1; i < size; i++)
+        {
+            E value = buffer[wrap(head + i)];
+            if (comparator.compare(value, maxValue) > 0)
+            {
+                maxValue = value;
+            }
+        }
+        return maxValue;
+    }
+    
+    public static <E> RingQueue<E> getSynchronized(RingQueue<E> queue)
+    {
+        return new RingQueue<E>(1)
+        {
+            final Object lock = new Object();
+
+            @Override
+            public E push(E value)
+            {
+                synchronized(lock)
+                {
+                    return queue.push(value);
+                }
+            }
+            
+            @Override
+            public void pushAll(E[] value)
+            {
+                synchronized(lock)
+                {
+                    queue.pushAll(value);
+                }
+            }
+            
+            @Override
+            public E pop()
+            {
+                synchronized(lock)
+                {
+                    return queue.pop();
+                }
+            }
+
+            @Override
+            public List<E> list()
+            {
+                synchronized(lock)
+                {
+                    return queue.list();
+                }
+            }
+
+            @Override
+            public E get(int n)
+            {
+                synchronized(lock)
+                {
+                    return queue.get(n);
+                }
+            }
+
+            @Override
+            public int size()
+            {
+                synchronized(lock)
+                {
+                    return queue.size();
+                }
+            }
+            
+            @Override
+            public boolean isEmpty()
+            {
+                synchronized(lock)
+                {
+                    return queue.isEmpty();
+                }
+            }
+            
+            @Override
+            public E[] array(E[] e)
+            {
+                synchronized(lock)
+                {
+                    return queue.array(e);
+                }
+            }
+
+            @Override
+            public void foreach(Consumer<E> consumer)
+            {
+                synchronized(lock)
+                {
+                    queue.foreach(consumer);
+                }
+            }
+
+            @Override
+            public E max()
+            {
+                synchronized(lock)
+                {
+                    return queue.max();
+                }
+            }
+
+            @Override
+            public E max(Comparator<E> comparator)
+            {
+                synchronized(lock)
+                {
+                    return queue.max(comparator);
+                }
+            }
+
+            @Override
+            public E min()
+            {
+                synchronized(lock)
+                {
+                    return queue.min();
+                }
+            }
+
+            @Override
+            public E min(Comparator<E> comparator)
+            {
+                synchronized(lock)
+                {
+                    return queue.min(comparator);
+                }
+            }
+        };
+    }
+}

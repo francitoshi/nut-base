@@ -1,0 +1,179 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.github.francitoshi.nut.base.crypto;
+
+import io.github.francitoshi.nut.base.crypto.Kripto;
+import io.github.francitoshi.nut.base.crypto.KeyStoreManager;
+import io.github.francitoshi.nut.base.crypto.Passphraser;
+import io.github.francitoshi.nut.base.crypto.X509CertificateBuilerBC;
+import io.github.francitoshi.nut.base.commons.jca.Kr;
+import io.github.francitoshi.nut.base.commons.jca.Kr.KeyStoreType;
+import java.nio.charset.StandardCharsets;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
+import java.security.*;
+import java.security.cert.X509Certificate;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
+
+public class KeyStoreManagerTest
+{
+
+    @Test
+    public void testMain() throws Exception
+    {
+//        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS));
+//        test(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS));
+        test(Kripto.getInstance(true).getKeyStoreManager(KeyStoreType.BCFKS));
+        test(Kripto.getInstance().getKeyStoreManagerPKCS12());
+    }
+    
+    public void test(KeyStoreManager manager) throws NoSuchAlgorithmException, Exception
+    {
+        String secretAlias = "secretAlias";
+        char[] secretProtectionPass = "secretProtectionPass".toCharArray();
+
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(256);
+        SecretKey secretKey1 = keyGen.generateKey();
+
+        manager.setSecretKey(secretAlias, secretKey1, secretProtectionPass);
+
+        SecretKey secretKey2 = manager.getSecretKey(secretAlias, secretProtectionPass);
+
+        assertEquals(secretKey1, secretKey2);
+
+        String privateAlias = "privateAlias";
+        char[] privateProtectionPass = "privateProtectionPass".toCharArray();
+
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
+        keyPairGen.initialize(2048);
+        KeyPair keyPair0 = keyPairGen.generateKeyPair();
+        PrivateKey privateKey1 = keyPair0.getPrivate();
+        PublicKey publicKey1 = keyPair0.getPublic();
+
+        X509Certificate[] certificateChain = new X509CertificateBuilerBC().buildCertificateChain(publicKey1, privateKey1, privateAlias);
+        manager.setPrivateKey(privateAlias, privateKey1, certificateChain, privateProtectionPass);
+
+        PrivateKey privateKey2 = manager.getPrivateKey(privateAlias, privateProtectionPass);
+
+        assertEquals(privateKey1, privateKey2);
+
+        String publicCertAlias = "publicCertAlias";
+
+        manager.setCertificate(publicCertAlias, certificateChain[0]);
+
+        PublicKey publicKey2 = manager.getCertificatePublicKey(publicCertAlias);
+
+        assertEquals(publicKey1, publicKey2);
+
+        byte[] secretKeyRaw1 = "this is a secreatKey".getBytes(StandardCharsets.UTF_8);
+        manager.setSecretKeyRaw(secretAlias, secretKeyRaw1, secretProtectionPass);
+        byte[] secretKeyRaw2 = manager.getSecretKeyRaw(secretAlias, secretProtectionPass);
+        assertArrayEquals(secretKeyRaw1, secretKeyRaw2);
+
+        byte[] secretKeyRaw3 = "this is a very very very long secret key to test a non standard key that should fail on some KeyStore types".getBytes(StandardCharsets.UTF_8);
+        manager.setSecretKeyRaw(secretAlias, secretKeyRaw3, secretProtectionPass);
+        byte[] secretKeyRaw4 = manager.getSecretKeyRaw(secretAlias, secretProtectionPass);
+        assertArrayEquals(secretKeyRaw3, secretKeyRaw4);
+
+        ////////// PASSPHRASES /////////////////////////////////////////////////
+        
+        String passphraseAlias = "passphraseAlias";
+        char[] passphrase = "this is a passphrase".toCharArray();
+        char[] protPassphrase = "entryPassphrase".toCharArray();
+        manager.setPassphrase(passphraseAlias, passphrase, protPassphrase);
+        char[] passphrase2 = manager.getPassphrase(passphraseAlias, protPassphrase);
+        assertArrayEquals(passphrase, passphrase2);
+
+        assertTrue(manager.isModified());
+    }
+
+    static final Passphraser PASSPHRASER = new Passphraser()
+    {
+        @Override
+        public byte[] bytes(byte[] info)
+        {
+            return bytes(new String(info));
+        }
+        @Override
+        public char[] chars(byte[] info)
+        {
+            return chars(new String(info));
+        }
+        @Override
+        public byte[] bytes(String seed)
+        {
+            return ("dummy" + seed).getBytes(StandardCharsets.UTF_8);
+        }
+        @Override
+        public char[] chars(String seed)
+        {
+            return ("dummy" + seed).toCharArray();
+        }
+    };
+
+    @Test
+    public void testMain2() throws Exception 
+    {
+//        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.JCEKS,PASSPHRASER));
+//        test2(Kripto.getInstance().getKeyStoreManager(KeyStoreType.BCFKS,PASSPHRASER));
+        test2(Kripto.getInstance(true).getKeyStoreManager(KeyStoreType.BCFKS,PASSPHRASER));
+        test2(Kripto.getInstance().getKeyStoreManagerPKCS12(PASSPHRASER));
+    }
+    
+    public void test2(KeyStoreManager manager) throws NoSuchAlgorithmException, Exception
+    {
+        String secretAlias = "secretAlias";
+
+        KeyGenerator keyGen = KeyGenerator.getInstance("AES");
+        keyGen.init(256);
+        SecretKey secretKey1 = keyGen.generateKey();
+
+        manager.setSecretKey(secretAlias, secretKey1);
+
+        SecretKey secretKey2 = manager.getSecretKey(secretAlias);
+
+        assertEquals(secretKey1, secretKey2);
+
+        String privateAlias = "privateAlias";
+
+        KeyPairGenerator keyPairGen = KeyPairGenerator.getInstance("RSA");
+        keyPairGen.initialize(2048);
+        KeyPair keyPair0 = keyPairGen.generateKeyPair();
+        PrivateKey privateKey1 = keyPair0.getPrivate();
+        PublicKey publicKey1 = keyPair0.getPublic();
+
+        X509Certificate[] certificateChain = new X509CertificateBuilerBC().buildCertificateChain(publicKey1, privateKey1, privateAlias);
+        manager.setPrivateKey(privateAlias, privateKey1, certificateChain);
+
+        PrivateKey privateKey2 = manager.getPrivateKey(privateAlias);
+
+        assertEquals(privateKey1, privateKey2);
+
+        byte[] secretKeyRaw1 = "this is a secreatKey".getBytes(StandardCharsets.UTF_8);
+        manager.setSecretKeyRaw(secretAlias, secretKeyRaw1);
+        byte[] secretKeyRaw2 = manager.getSecretKeyRaw(secretAlias);
+        assertArrayEquals(secretKeyRaw1, secretKeyRaw2);
+
+        byte[] secretKeyRaw3 = "this is a very very very long secret key to test a non standard key that should fail on some KeyStore types".getBytes(StandardCharsets.UTF_8);
+        manager.setSecretKeyRaw(secretAlias, secretKeyRaw3);
+        byte[] secretKeyRaw4 = manager.getSecretKeyRaw(secretAlias);
+        assertArrayEquals(secretKeyRaw3, secretKeyRaw4);
+
+        ////////// PASSPHRASES /////////////////////////////////////////////////
+        
+        String passphraseAlias = "passphraseAlias";
+        char[] passphrase = "this is a passphrase".toCharArray();
+        manager.setPassphrase(passphraseAlias, passphrase);
+        char[] passphrase2 = manager.getPassphrase(passphraseAlias);
+        assertArrayEquals(passphrase, passphrase2);
+
+        assertTrue(manager.isModified());
+    }
+}

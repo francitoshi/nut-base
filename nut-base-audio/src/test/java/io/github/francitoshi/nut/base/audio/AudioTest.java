@@ -1,0 +1,159 @@
+/*
+ * Copyright (C) 2025-2026 francitoshi@gmail.com
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ * See LICENSE file in the project root for full license text.
+ */
+package io.github.francitoshi.nut.base.audio;
+
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.zip.GZIPInputStream;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.LineUnavailableException;
+import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.UnsupportedAudioFileException;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.Test;
+
+public class AudioTest
+{
+    static final String MORSE1 = "morse1-quixote-8000-mono-u8.wav.gz";
+
+    static InputStream getIS() throws UnsupportedAudioFileException, IOException
+    {
+        return new BufferedInputStream(new GZIPInputStream(AudioEnergyTest.class.getResourceAsStream(MORSE1)));
+    }
+    
+    @Test
+    public void testGetFloatMono() throws LineUnavailableException, IOException, UnsupportedAudioFileException
+    {        
+        AudioInputStream ais = AudioSystem.getAudioInputStream(getIS());
+        AudioFormat fmt = Audio.getFloatMono(ais.getFormat(), false);
+        try (AudioInputStream mono = Audio.getAudioInputStream(ais, fmt))
+        {
+            byte[] buffer = new byte[(int)(fmt.getSampleRate()*Float.BYTES)];
+            while(mono.available()>0)
+            {
+                mono.read(buffer);
+            }
+        }
+    }
+    
+    @Test
+    public void testGetDoubleMono() throws LineUnavailableException, IOException, UnsupportedAudioFileException
+    {        
+        AudioInputStream ais = AudioSystem.getAudioInputStream(getIS());
+        AudioFormat fmt = Audio.getDoubleMono(ais.getFormat(), false);
+        try (AudioInputStream mono = Audio.getAudioInputStream(ais, fmt))
+        {
+            byte[] buffer = new byte[(int)(fmt.getSampleRate()*Double.BYTES)];
+            while(mono.available()>0)
+            {
+                mono.read(buffer);
+            }
+        }
+    }
+
+    /**
+     * Test of getAudioInputStream method, of class Audio.
+     */
+    @Test
+    public void testGetAudioInputStream_InputStream() throws Exception
+    {
+        InputStream src = getIS();
+
+        try (AudioInputStream ais = Audio.getAudioInputStream(src))
+        {
+            byte[] buffer = new byte[(int)(ais.getFormat().getSampleRate()*Double.BYTES)];
+            while(ais.available()>0)
+            {
+                ais.read(buffer);
+            }
+        }
+    }
+    
+    static final boolean ALLOW_SOUND = false;
+    static final boolean SHOW = false;
+    
+    /**
+     * Test of detectHz method, of class Audio.
+     */
+    @Test
+    public void testDetectHz1() throws LineUnavailableException
+    {
+        Wave wave = Wave.SINE;
+        AudioFormat format = Audio.PCM_8BIT_MONO;
+        AudioReader audioReader = AudioReader.getInstance(format);
+        SourceDataLine lineOut = ALLOW_SOUND ? Audio.getLineOut(format) : null;
+        
+        for(int hz=400;hz<1200; hz += 100)
+        {
+            byte[] cycle1 = wave.build(format, hz, 0.5);
+            byte[] cycle100 = new byte[cycle1.length*1000+1];
+            for(int i=0;i<cycle100.length;i++)
+            {
+                cycle100[i] = cycle1[i%cycle1.length];
+            }
+            float[] dst = audioReader.readFloats(cycle100, cycle100.length, format.isBigEndian(), null);
+            double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
+
+            if(lineOut!=null)
+            {
+                lineOut.write(cycle100, 0, cycle100.length);
+                lineOut.drain();
+            }            
+            if(SHOW)
+            {
+                System.out.printf("%d => %.1f\n", hz, result);
+            }
+            assertEquals(hz, result, 0.2);
+        }
+    }
+    @Test
+    public void testDetectHz2() throws LineUnavailableException
+    {
+        Wave wave = Wave.SINE;
+        AudioFormat format = Audio.PCM_CD_MONO;
+        AudioReader audioReader = new AudioReaderSigned16();
+        SourceDataLine lineOut = ALLOW_SOUND ? Audio.getLineOut(format) : null;
+        
+        for(int hz=400;hz<1200; hz += 100)
+        {
+            byte[] cycle1 = wave.build(format, hz, 0.33);
+            byte[] cycle100 = new byte[cycle1.length*1000+1];
+            for(int i=0;i<cycle100.length;i++)
+            {
+                cycle100[i] = cycle1[i%cycle1.length];
+            }
+            float[] dst = audioReader.readFloats(cycle100, cycle100.length, format.isBigEndian(), null);
+            double result = Audio.detectHz(dst, format.getSampleRate(), 0.01f);
+
+            if(lineOut!=null)
+            {
+                lineOut.write(cycle1, 0, cycle1.length);
+                lineOut.drain();
+            }
+            if(SHOW)
+            {
+                System.out.printf("%d => %.1f\n", hz, result);
+            }
+            assertEquals(hz, result, 0.1);
+        }
+    }
+
+    @Test
+    public void testWavetableSize()
+    {
+        assertEquals(441, Audio.wavetableSize(44100, 800));
+        assertEquals(441, Audio.wavetableSize(44100, 400));
+        assertEquals(441, Audio.wavetableSize(44100, 200));
+        assertEquals(441, Audio.wavetableSize(44100, 500));
+        assertEquals(2205, Audio.wavetableSize(44100, 440));
+        assertEquals(4900, Audio.wavetableSize(44100, 801));
+    }
+
+    
+}
