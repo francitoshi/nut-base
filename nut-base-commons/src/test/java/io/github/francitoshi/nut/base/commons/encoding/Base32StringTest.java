@@ -15,8 +15,6 @@
  */
 package io.github.francitoshi.nut.base.commons.encoding;
 
-import io.github.francitoshi.nut.base.commons.encoding.Base32String;
-import io.github.francitoshi.nut.base.commons.encoding.Base32String;
 import io.github.francitoshi.nut.base.commons.encoding.Base32String.DecodingException;
 import java.io.UnsupportedEncodingException;
 import static org.junit.jupiter.api.Assertions.*;
