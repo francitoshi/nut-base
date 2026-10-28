@@ -21,8 +21,7 @@ import javax.sound.sampled.AudioFormat;
  * <p>Typical usage:
  * <pre>{@code
  * AudioFormat format = new AudioFormat(44100, 16, 1, true, false);
- * byte[] buffer = new byte[44100 * 2]; // 1 second, 16-bit mono
- * Wave.SINE.build(format, 440, buffer, 0.8);
+ * byte[] buffer = Wave.SINE.build(format, 440, 0.8); // phase-accurate wavetable
  * }</pre>
  *
  * <p>All built-in waveform instances are stateless except {@link #BROWNIAN_NOISE},
@@ -165,8 +164,8 @@ public abstract class Wave
     /**
      * Pulse wave with a fixed 33 % duty cycle.
      *
-     * <p>The signal is at {@code +volume} for the first third of each period
-     * and at {@code -volume} for the remaining two-thirds. Timbre sits between
+     * <p>The signal is at {@code +volume} for the first 33 % of each period
+     * and at {@code -volume} for the remaining 67 %. Timbre sits between
      * {@link #DUTY_CYCLE_025} and the 50 % {@link #SQUARE} wave.
      */
     public static final Wave DUTY_CYCLE_033 = new Wave("DutyCycle0.33")
@@ -307,16 +306,16 @@ public abstract class Wave
     public static final Wave[] CLEAN_WAVES = { SINE, SQUARE, SAWTOOTH, TRIANGLE, DUTY_CYCLE_025, DUTY_CYCLE_033, PWM, FM, PARABOLIC, ADITIVE};
     
     /**
-     * Renders this waveform into an existing byte buffer using the given
-     * {@link AudioFormat}, with optional fade-in and fade-out.
+     * Renders this waveform into a new PCM byte buffer using the given
+     * {@link AudioFormat}.
      *
      * <p>Audio format parameters are extracted from {@code format} and forwarded
-     * to {@link #build(AudioFormat.Encoding, float, int, int, boolean, int, byte[], double, int)}.
+     * to {@link #build(AudioFormat.Encoding, float, int, int, boolean, int, double)}.
      *
      * @param format the target audio format.
      * @param hz     the tone frequency in Hz; pass {@code 0} to produce silence.
      * @param volume peak amplitude in the range {@code [0.0, 1.0]}.
-     * @return the same {@code bytes} array, now filled with rendered audio data.
+     * @return a newly allocated buffer containing the rendered wavetable.
      */
     public byte[] build(AudioFormat format, int hz, double volume)
     {
@@ -329,17 +328,14 @@ public abstract class Wave
     }
 
     /**
-     * Renders this waveform into an existing byte buffer using explicit audio
-     * parameters, with optional linear fade-in and fade-out.
+     * Renders this waveform into a new PCM byte buffer using explicit audio
+     * parameters.
      *
-     * <p>The number of samples is inferred from {@code bytes.length},
-     * {@code sampleBits}, and {@code channels}. If either {@code hz} or
-     * {@code volume} is zero, the buffer is returned unmodified (filled with
-     * whatever data it already contains, typically zeros).
-     *
-     * <p>When {@code fading > 0}, a linear amplitude ramp is applied over the
-     * first and last {@code fading} samples (clamped to at most one-third of
-     * the total sample count) to avoid click artefacts at buffer boundaries.
+     * <p>The buffer length is
+     * {@code wavetableSize(sampleRate, hz) * channels * (sampleBits / 8)}, where
+     * the wavetable size is the smallest number of samples that spans a whole
+     * number of periods. If either {@code hz} or {@code volume} is zero, the
+     * returned buffer contains silence.
      *
      * <p>Each sample is written to every channel in sequence, using the helper
      * methods appropriate to the encoding:
@@ -358,8 +354,10 @@ public abstract class Wave
      * @param bigEndian  {@code true} for big-endian byte order.
      * @param hz         tone frequency in Hz; {@code 0} produces silence.
      * @param volume     peak amplitude in the range {@code [0.0, 1.0]}.
-     * @return the same {@code bytes} array filled with rendered audio data.
-     * @throws NullPointerException if {@code bytes} is {@code null}.
+     * @return a newly allocated buffer containing the rendered wavetable.
+     * @throws NullPointerException if {@code encoding} is {@code null}.
+     * @throws IllegalArgumentException if {@code hz} is non-zero and
+     * {@code sampleRate} or {@code hz} is not positive.
      */
     public byte[] build(AudioFormat.Encoding encoding, float sampleRate, int sampleBits, int channels, boolean bigEndian, int hz, double volume)
     {

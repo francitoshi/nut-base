@@ -19,13 +19,13 @@ import java.util.logging.Logger;
  * {@link Transceiver}.
  *
  * <p>
- * Outgoing frames are retransmitted automatically until an ACK is received or
- * the maximum number of attempts ({@link #MAX_RETRIES}) is exhausted. The
- * retransmission back-off is linear: the {@code n}-th attempt waits
- * {@code n * }{@link #ACK_TIMEOUT_MILLIS} ms before the next send.
+ * Outgoing frames are retransmitted automatically until an ACK or NACK is
+ * received or the layer is closed. The retransmission back-off is linear: the
+ * wait before the {@code n}-th retransmission is
+ * {@code n * }{@link #ACK_TIMEOUT_MILLIS} ms.
  *
  * <p>
- * Incoming frames are dispatched to a {@link FrameListener} by type:
+ * Incoming frames are handled according to their type:
  * <ul>
  * <li>DATA – payload delivered to {@link FrameListener#onReceived}; an ACK is
  * sent back automatically.</li>
@@ -36,9 +36,10 @@ import java.util.logging.Logger;
  * </ul>
  *
  * <p>
- * <b>Threading:</b> {@code open()} starts two daemon-style threads
- * ({@code outgoingTask} and {@code incomingTask}). Both threads are stopped by
- * calling {@link #close()}.
+ * <b>Threading:</b> {@code open()} starts two worker threads (outgoing and
+ * incoming). {@link #close()} signals both threads to stop; they terminate once
+ * any blocking {@code DelayQueue.take()} or {@link Transceiver#read()} call
+ * returns.
  *
  * <p>
  * <b>Typical usage:</b>
@@ -48,7 +49,9 @@ import java.util.logging.Logger;
  *         .setListener(myListener)
  *         .open();
  *
- * short id = layer.send(payload);   // non-blocking; result notified via listener
+ * char dst = ...;
+ * byte[] payload = ...;
+ * char id = layer.send(dst, payload);   // non-blocking; result notified via listener
  * ...
  * layer.close();
  * }</pre>
@@ -61,10 +64,13 @@ public class DuplexLayer implements AutoCloseable
 
     // ── Protocol parameters (tunable) ───────────────────────────────────────
     /**
-     * Maximum number of send attempts for a single frame (1 initial send +
-     * {@code MAX_RETRIES - 1} retransmissions). When this limit is reached
-     * without receiving an ACK, {@link FrameListener#onFailed} is invoked with
-     * status code {@code -1}.
+     * Maximum number of send attempts intended for a single frame (1 initial
+     * send + {@code MAX_RETRIES - 1} retransmissions).
+     *
+     * <p>
+     * <b>Note:</b> the outgoing worker does not currently enforce this limit;
+     * retransmissions continue until an ACK or NACK is received or the layer is
+     * closed.
      */
     public static final int MAX_RETRIES = 5;
 
@@ -112,9 +118,8 @@ public class DuplexLayer implements AutoCloseable
          */
         volatile int triesCount;
         /**
-         * Set to {@code true} once an ACK or NACK has been received, or after
-         * {@link #MAX_RETRIES} attempts. Prevents duplicate delivery
-         * notifications and stops further retransmissions.
+         * Set to {@code true} once an ACK or NACK has been received. Prevents
+         * duplicate delivery notifications and stops further retransmissions.
          */
         volatile boolean acked;
 
@@ -173,24 +178,22 @@ public class DuplexLayer implements AutoCloseable
          * been received from the remote side.
          *
          * @param id identifier of the delivered frame, as returned by
-         * {@link DuplexLayer#send(byte[])}
+         * {@link DuplexLayer#send(char, byte[])}
          */
         void onDelivered(char id);
 
         /**
-         * Called when frame delivery has permanently failed, either because a
-         * NACK was received or because {@link #MAX_RETRIES} attempts elapsed
-         * without an ACK.
+         * Called when frame delivery has permanently failed because a NACK was
+         * received from the remote side.
          *
          * @param id identifier of the failed frame
-         * @param statusCode NACK status code provided by the remote side, or
-         * {@code -1} if the failure was caused by a timeout
+         * @param statusCode NACK status code provided by the remote side
          */
         void onFailed(char id, int statusCode);
 
         /**
          * Called when a DATA frame has been received from the remote side. An
-         * ACK is sent automatically before this method is invoked.
+         * ACK is sent automatically after this method returns.
          *
          * @param id identifier of the received frame
          * @param payload frame payload bytes (not including the frame header)
@@ -219,7 +222,11 @@ public class DuplexLayer implements AutoCloseable
     private volatile FrameListener listener;
 
     // ── Constructor ──────────────────────────────────────────────────────────
-
+    /**
+     * Creates a layer with a random source identifier and a fresh frame id
+     * counter. Use {@link #setTransceiver(Transceiver)} and
+     * {@link #setListener(FrameListener)} before calling {@link #open()}.
+     */
     public DuplexLayer()
     {
         this.src = getRandomSrc();
@@ -260,8 +267,7 @@ public class DuplexLayer implements AutoCloseable
     /**
      * Outgoing worker: dequeues frames whose retransmission deadline has
      * elapsed, writes them to the transceiver, and re-enqueues them with a
-     * longer delay until an ACK/NACK is received or {@link #MAX_RETRIES} is
-     * exhausted.
+     * longer delay until an ACK/NACK is received or the layer is closed.
      */
     private final Runnable outgoinTask = new Runnable()
     {
@@ -337,9 +343,10 @@ public class DuplexLayer implements AutoCloseable
     }
 
     /**
-     * Signals both worker threads to stop after their current operation.
-     * Already-queued frames will not be retransmitted after this call. This
-     * method returns immediately without waiting for threads to terminate.
+     * Signals both worker threads to stop. This method returns immediately
+     * without waiting for the threads to terminate; if a worker is blocked in
+     * {@code DelayQueue.take()} or {@link Transceiver#read()}, it will only
+     * observe the termination flag once that call returns.
      */
     @Override
     public void close()
@@ -349,12 +356,13 @@ public class DuplexLayer implements AutoCloseable
     
     // ── Public API ───────────────────────────────────────────────────────────
     /**
-     * Encodes {@code payload} into a DATA frame, assigns it a unique id, and
-     * enqueues it for delivery. The frame will be retransmitted up to
-     * {@link #MAX_RETRIES} times if no ACK is received within the timeout
-     * window. The result of the delivery attempt is reported asynchronously via
+     * Encodes {@code payload} into a DATA frame addressed to {@code dst},
+     * assigns it a unique id, and enqueues it for delivery. The frame is
+     * retransmitted if no ACK is received within the timeout window. The result
+     * of the delivery attempt is reported asynchronously via
      * {@link FrameListener#onDelivered} or {@link FrameListener#onFailed}.
      *
+     * @param dst destination identifier
      * @param payload raw payload bytes to send; must not be {@code null}
      * @return the frame identifier assigned to this transmission, which can be
      * used to correlate subsequent listener callbacks
@@ -370,8 +378,8 @@ public class DuplexLayer implements AutoCloseable
     /**
      * Enqueues a pre-built frame for transmission. The frame id is read
      * directly from the frame header via {@link Frame#getId(byte[])}. Prefer
-     * {@link #send(byte[])} for outgoing DATA frames; this method is intended
-     * for internal use (e.g. sending ACK frames).
+     * {@link #send(char, byte[])} for outgoing DATA frames; this method is
+     * intended for internal use (e.g. sending ACK frames).
      *
      * @param frameData complete frame bytes, including header; must not be
      * {@code null}
