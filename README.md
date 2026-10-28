@@ -11,7 +11,9 @@ Example Exception Messages:
 
 ## Adding a dependency
 
-Published on [JitPack](https://jitpack.io/#francitoshi/nut-base). Add the repository, then only the modules you use:
+Published on [JitPack](https://jitpack.io/#francitoshi/nut-base). JitPack publishes each
+module under the group `com.github.francitoshi.nut-base`. Add the repository, then only
+the modules you use:
 
 **Gradle**
 
@@ -23,16 +25,16 @@ repositories
 
 dependencies 
 {
-    implementation 'io.github.francitoshi.nut-base:nut-base-commons:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-collections:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-io:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-math:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-net:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-crypto:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-text:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-ui:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-util:0.2.8'
-    implementation 'io.github.francitoshi.nut-base:nut-base-audio:0.2.8'
+    implementation 'com.github.francitoshi.nut-base:nut-base-commons:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-collections:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-io:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-math:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-net:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-crypto:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-text:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-ui:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-util:0.2.16'
+    implementation 'com.github.francitoshi.nut-base:nut-base-audio:0.2.16'
 }
 ```
 
