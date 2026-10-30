@@ -36,6 +36,8 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
 
     private final BlockingQueue<Object> queue;
 
+    private final boolean rendezvous;
+
     private volatile boolean closed;
 
     private final Object lock = new Object();
@@ -55,6 +57,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             throw new IllegalArgumentException("capacity must be >= 0");
         }
         this.queue = capacity>0 ? new ArrayBlockingQueue<>(capacity) : new SynchronousQueue<>();
+        this.rendezvous = capacity == 0;
     }
 
     @Override
@@ -77,6 +80,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             try
             {
                 queue.put(value);
+                fireSignals();
                 return;
             }
             catch (InterruptedException ex)
@@ -112,7 +116,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
 
         if (timeout == 0)
         {
-            return queue.offer(value);
+            return fireIf(queue.offer(value));
         }
 
         long deadline = toDeadline(timeout, unit);
@@ -131,7 +135,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             try
             {
                 boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                return result;
+                return fireIf(result);
             }
             catch (InterruptedException ex)
             {
@@ -305,6 +309,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             lock.notifyAll();
             blockedWriters = writers.toArray(new Thread[writers.size()]);
         }
+        fireSignals();
         for (Thread writer : blockedWriters)
         {
             writer.interrupt();
@@ -372,5 +377,11 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 lock.wait();
             }
         }
+    }
+
+    @Override
+    boolean needsPolling()
+    {
+        return rendezvous;
     }
 }

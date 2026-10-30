@@ -49,6 +49,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 try
                 {
                     queue.put(value);
+                    fireSignals();
                     return;
                 }
                 catch (InterruptedException ex)
@@ -102,7 +103,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                     {
                         result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
                     }
-                    return result;
+                    return fireIf(result);
                 }
                 catch (InterruptedException ex)
                 {
@@ -255,6 +256,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         {
             closed = true;
             closeLock.notifyAll();
+            fireSignals();
 
             // Unblock pending readers even if the write lock below times out:
             // a reader blocked in take() is only woken by a POISON and, after

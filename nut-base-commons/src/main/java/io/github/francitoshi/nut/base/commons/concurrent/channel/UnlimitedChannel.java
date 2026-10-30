@@ -30,6 +30,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
         try
         {
             queue.put(value);
+            fireSignals();
         }
         catch (InterruptedException ex)
         {
@@ -45,7 +46,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
         long deadline = toDeadline(timeout, unit);
         try
         {
-            return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            return fireIf(queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
         }
         catch (InterruptedException ex)
         {

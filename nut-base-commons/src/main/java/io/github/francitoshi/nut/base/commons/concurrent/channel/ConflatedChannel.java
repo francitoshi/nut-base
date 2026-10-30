@@ -54,6 +54,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
+            fireSignals();
         }
         finally
         {
@@ -80,6 +81,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
+            fireSignals();
             return true;
         }
         finally

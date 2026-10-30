@@ -25,6 +25,9 @@ public final class UnbufferedChannel<E> extends Channel<E>
         Objects.requireNonNull(value, "value must not be null");
         try
         {
+            // A SynchronousQueue only exposes the value while the writer is parked:
+            // fire first, then block. Select compensates with a short poll slice.
+            fireSignals();
             queue.put(value);
         }
         catch (InterruptedException ex)
@@ -41,6 +44,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
         long deadline = toDeadline(timeout, unit);
         try
         {
+            fireSignals();
             return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
@@ -80,5 +84,11 @@ public final class UnbufferedChannel<E> extends Channel<E>
             closeIfCloseable();
             return null;
         }
+    }
+
+    @Override
+    boolean needsPolling()
+    {
+        return true;
     }
 }

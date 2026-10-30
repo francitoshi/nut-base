@@ -39,6 +39,7 @@ public final class BufferedChannel<E> extends Channel<E>
         try
         {
             queue.put(value);
+            fireSignals();
         }
         catch (InterruptedException ex)
         {
@@ -53,13 +54,13 @@ public final class BufferedChannel<E> extends Channel<E>
         Objects.requireNonNull(value, "value must not be null");
         if (timeout <= 0)
         {
-            return queue.offer(value);
+            return fireIf(queue.offer(value));
         }
 
         long deadline = toDeadline(timeout, unit);
         try
         {
-            return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            return fireIf(queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
         }
         catch (InterruptedException ex)
         {

@@ -58,6 +58,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
+            fireSignals();
         }
         finally
         {
@@ -88,6 +89,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
+            fireSignals();
             return true;
         }
         finally
@@ -107,6 +109,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         catch (InterruptedException ex)
         {
             handleInterruptedException(ex);
+            closeIfCloseable();
             return null;
         }
         boolean interrupted = false;
@@ -244,6 +247,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             closedFlag = true;
             notEmpty.signalAll();
             closed.signalAll();
+            fireSignals();
             return true;
         }
         finally

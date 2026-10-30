@@ -81,4 +81,36 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
         }
         return interrupted;
     }
+
+    /**
+     * Select support: a duplex channel is read from {@code in}, so it is
+     * {@code in} that has to fire the signals. If {@code in} is not a
+     * {@link Channel} the select falls back to polling.
+     */
+    @Override
+    boolean register(SelectSignal signal)
+    {
+        return in instanceof Channel && ((Channel<?>) in).register(signal);
+    }
+
+    @Override
+    void unregister(SelectSignal signal)
+    {
+        if (in instanceof Channel)
+        {
+            ((Channel<?>) in).unregister(signal);
+        }
+    }
+
+    @Override
+    boolean needsPolling()
+    {
+        return !(in instanceof Channel) || ((Channel<?>) in).needsPolling();
+    }
+
+    @Override
+    boolean isReadClosed()
+    {
+        return in instanceof ChannelCloser && ((ChannelCloser) in).isClosed();
+    }
 }

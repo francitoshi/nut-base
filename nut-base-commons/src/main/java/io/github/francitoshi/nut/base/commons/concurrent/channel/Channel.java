@@ -9,6 +9,7 @@ import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import java.util.Iterator;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 import io.github.francitoshi.nut.base.commons.tuple.Tuple2;
@@ -47,10 +48,17 @@ import io.github.francitoshi.nut.base.commons.tuple.Tuple2;
  * {@code false} only when {@code get()} yielded {@code null} while the
  * channel is closed, and the value obtained is remembered to be returned by
  * {@link Iterator#next()} regardless of whether it is null or not.
+ *
+ * <p><b>Select support.</b> Channels can be waited on together with
+ * {@link Select}. To make that possible without consuming data, every
+ * channel keeps a list of {@link SelectSignal}s that it fires after each
+ * successful {@code put} and when it is closed.
  */
 public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, Iterable<E>
 {
     private volatile boolean interrupted;
+
+    private final CopyOnWriteArrayList<SelectSignal> signals = new CopyOnWriteArrayList<>();
 
     /**
      * Returns an iterator over the values read from this channel.
@@ -118,6 +126,78 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
     final void markInterrupted()
     {
         interrupted = true;
+    }
+
+    // -----------------------------------------------------------------------
+    // Select support (package-private)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Registers a signal that will be fired whenever new data may be available
+     * for reading or the channel is closed.
+     *
+     * @param signal the signal to register
+     * @return {@code true} if this channel is able to fire the signal;
+     *         {@code false} if the caller must fall back to polling
+     */
+    boolean register(SelectSignal signal)
+    {
+        signals.add(signal);
+        return true;
+    }
+
+    /** Removes a signal previously registered with {@link #register}. */
+    void unregister(SelectSignal signal)
+    {
+        signals.remove(signal);
+    }
+
+    /** Number of registered signals (diagnostics and tests). */
+    final int registeredSignals()
+    {
+        return signals.size();
+    }
+
+    /**
+     * Wakes up every {@link Select} waiting on this channel. Subclasses must
+     * call it after a value has become readable and after closing. It never
+     * throws and never blocks on channel locks.
+     */
+    protected final void fireSignals()
+    {
+        if (!signals.isEmpty())
+        {
+            for (SelectSignal s : signals)
+            {
+                s.signal();
+            }
+        }
+    }
+
+    /** Fires the signals when {@code ok} is {@code true}; returns {@code ok}. */
+    protected final boolean fireIf(boolean ok)
+    {
+        if (ok)
+        {
+            fireSignals();
+        }
+        return ok;
+    }
+
+    /**
+     * Whether readiness of this channel can only be detected by polling
+     * (rendezvous channels: a value is only visible while a writer is parked,
+     * and the writer parks after having fired the signal).
+     */
+    boolean needsPolling()
+    {
+        return false;
+    }
+
+    /** Whether the read side of this channel is closed. */
+    boolean isReadClosed()
+    {
+        return this instanceof ChannelCloser && ((ChannelCloser) this).isClosed();
     }
 
     /**
