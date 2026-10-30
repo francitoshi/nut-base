@@ -81,7 +81,9 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
         {
             if (BatchActor.this.ownHub != null)
             {
-                BatchActor.this.ownHub.close(true);
+                // Never wait for the owner hub from a worker of that same hub:
+                // terminate() runs on the very thread the hub would wait for.
+                BatchActor.this.ownHub.shutdown();
             }
         };
 
@@ -151,6 +153,73 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
             if (batch != null)
             {
                 forward(batch);
+            }
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // Lifecycle: the private hub is part of this stage
+    // -----------------------------------------------------------------
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * When this stage owns a private hub, this also waits for that hub to
+     * terminate. The hub is shut down by its own worker, so the wait happens
+     * on the caller's thread and never inside the worker (which would wait for
+     * itself).
+     */
+    @Override
+    public boolean awaitTerminationUntilNanos(long untilNanos)
+    {
+        boolean innerTerminated = inner.awaitTerminationUntilNanos(untilNanos);
+        if (ownHub == null)
+        {
+            return innerTerminated;
+        }
+        return awaitOwnHub(untilNanos) && innerTerminated;
+    }
+
+    @Override
+    public boolean awaitTermination(int millis)
+    {
+        long untilNanos = Saturated.saturatedAdd(System.nanoTime(), TimeUnit.MILLISECONDS.toNanos(millis));
+        return awaitTerminationUntilNanos(untilNanos);
+    }
+
+    @Override
+    public BatchActor<T> awaitTermination()
+    {
+        awaitTermination(Integer.MAX_VALUE);
+        return this;
+    }
+
+    @Override
+    public void close()
+    {
+        shutdown();
+        awaitTermination();
+    }
+
+    /**
+     * Waits for the private hub within the given absolute deadline, splitting
+     * the wait in chunks because {@link ActorHub#awaitTermination(int)} takes
+     * an {@code int} while the deadline is expressed in nanoseconds.
+     */
+    private boolean awaitOwnHub(long untilNanos)
+    {
+        while (true)
+        {
+            long remaining = untilNanos - System.nanoTime();
+            if (remaining <= 0)
+            {
+                return ownHub.isTerminated();
+            }
+            long millis = TimeUnit.NANOSECONDS.toMillis(remaining);
+            int chunk = millis <= 0 ? 1 : (int) Math.min(Integer.MAX_VALUE, millis);
+            if (ownHub.awaitTermination(chunk))
+            {
+                return true;
             }
         }
     }
@@ -236,7 +305,11 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
         {
             if (BatchActor.this.ownHub != null)
             {
-                BatchActor.this.ownHub.close(true);
+                // This runs on a worker thread of ownHub: close(true) would wait
+                // for this very thread and deadlock, leaking the hub forever.
+                // Shut it down without blocking; awaitTermination()/close() on
+                // the stage wait for it from the caller's thread instead.
+                BatchActor.this.ownHub.shutdown();
             }
         }
 

@@ -19,6 +19,8 @@ import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -213,6 +215,31 @@ class BatchActorTest
 
         assertEquals(1, batches.size());
         assertEquals(Arrays.asList("a", "b"), batches.get(0));
+    }
+
+    @Test
+    void closeOnStandaloneBatchActorTerminatesItsPrivateHub() throws InterruptedException
+    {
+        List<List<Integer>> batches = new CopyOnWriteArrayList<>();
+        BatchActor<Integer> batch = new BatchActor<>(10, 0L); // high threshold, owns its hub
+        ActorHub privateHub = batch.getActorHub();
+        batch.linkTo(m -> batches.add(m));
+
+        assertNotNull(privateHub);
+        assertNotSame(actorHub, privateHub);
+
+        batch.accept(1);
+        batch.accept(2);
+        assertTrue(awaitInt(() -> batch.pending(), 2, 2000));
+
+        batch.close();
+
+        // Regression: the worker used to call privateHub.close(true) from its
+        // own thread, deadlocking and leaking the hub (and its thread) forever.
+        assertTrue(privateHub.isTerminated(), "the private hub must terminate after close()");
+        assertEquals(0, privateHub.getPoolSize());
+        assertEquals(1, batches.size());
+        assertEquals(Arrays.asList(1, 2), batches.get(0));
     }
 
     @Test
