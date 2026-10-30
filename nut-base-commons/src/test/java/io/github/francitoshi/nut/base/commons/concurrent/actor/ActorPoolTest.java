@@ -85,6 +85,112 @@ public class ActorPoolTest
     }
 
     @Test
+    public void forEachTasksAreTrackedUntilTheyComplete() throws Exception
+    {
+        try (ActorPool actorPool = new ActorPool(2, 2, 1000, false))
+        {
+            CountDownLatch started = new CountDownLatch(2);
+            CountDownLatch release = new CountDownLatch(1);
+            List<Integer> items = Arrays.asList(1, 2);
+
+            Thread forEach = new Thread(() -> actorPool.forEach(items, item ->
+            {
+                started.countDown();
+                try
+                {
+                    release.await();
+                }
+                catch (InterruptedException ex)
+                {
+                    Thread.currentThread().interrupt();
+                }
+            }), "forEach");
+            forEach.setDaemon(true);
+            forEach.start();
+
+            Thread waiter = new Thread(actorPool::waitForIdle, "wait-for-idle");
+            waiter.setDaemon(true);
+            try
+            {
+                assertTrue(started.await(2, TimeUnit.SECONDS), "forEach tasks did not start");
+
+                waiter.start();
+                waiter.join(250);
+
+                assertTrue(waiter.isAlive(), "waitForIdle() returned while forEach tasks were still running");
+                assertFalse(actorPool.isIdle(), "isIdle() must be false while forEach tasks run");
+            }
+            finally
+            {
+                release.countDown();
+            }
+
+            forEach.join(2000);
+            assertFalse(forEach.isAlive(), "forEach did not finish after releasing its tasks");
+            waiter.join(2000);
+            assertFalse(waiter.isAlive(), "waitForIdle() did not return after forEach tasks completed");
+            assertTrue(actorPool.isIdle());
+        }
+    }
+
+    @Test
+    public void spawnWaitingForAThreadIsVisibleToWaitForIdle() throws Exception
+    {
+        // callerWaitsPolicy parks the spawning thread instead of running the
+        // task inline, which is exactly the window waitForIdle() must cover.
+        try (ActorPool actorPool = new ActorPool(1, 1, 1000, true))
+        {
+            CountDownLatch blockerStarted = new CountDownLatch(1);
+            CountDownLatch releaseBlocker = new CountDownLatch(1);
+            actorPool.execute(() ->
+            {
+                blockerStarted.countDown();
+                try
+                {
+                    releaseBlocker.await();
+                }
+                catch (InterruptedException ex)
+                {
+                    Thread.currentThread().interrupt();
+                }
+            });
+            assertTrue(blockerStarted.await(2, TimeUnit.SECONDS), "the blocking task did not start");
+
+            CountDownLatch spawnedRan = new CountDownLatch(1);
+            Thread spawner = new Thread(() -> actorPool.spawn(spawnedRan::countDown), "spawner");
+            spawner.setDaemon(true);
+            spawner.start();
+
+            Thread waiter = new Thread(actorPool::waitForIdle, "wait-for-idle");
+            waiter.setDaemon(true);
+            try
+            {
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
+                while (actorPool.getActiveCount() < 2 && System.nanoTime() < deadline)
+                {
+                    Thread.sleep(5);
+                }
+                assertTrue(actorPool.getActiveCount() >= 2, "spawn() was not registered while waiting for a thread");
+
+                waiter.start();
+                waiter.join(250);
+                assertTrue(waiter.isAlive(), "waitForIdle() ignored a spawn() still waiting for a free thread");
+            }
+            finally
+            {
+                releaseBlocker.countDown();
+            }
+
+            spawner.join(2000);
+            assertFalse(spawner.isAlive(), "spawn() did not return after a thread became available");
+            assertTrue(spawnedRan.await(2, TimeUnit.SECONDS), "the spawned task did not run");
+            waiter.join(2000);
+            assertFalse(waiter.isAlive(), "waitForIdle() did not return after the spawned task completed");
+            assertTrue(actorPool.isIdle());
+        }
+    }
+
+    @Test
     public void constructorValidatesThreadPoolConstraints()
     {
         assertThrows(IllegalArgumentException.class, () -> new ActorPool(-1, 4, 1000, false));

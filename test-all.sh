@@ -5,6 +5,8 @@ set -euo pipefail
 # The order follows the `api project(':...')` declarations in each module's
 # build.gradle: a module only runs after all the modules it depends on.
 
+JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 MODULES=(

@@ -314,6 +314,27 @@ class ActorHubTest
     }
 
     @Test
+    void idleChecksIgnoreThePermanentWorkerOfALiveActor() throws Exception
+    {
+        CountDownLatch processed = new CountDownLatch(1);
+        Actor<String> actor = actorHub.actor(m -> processed.countDown());
+
+        actor.accept("m");
+        assertTrue(processed.await(2, TimeUnit.SECONDS), "the actor did not process the message");
+
+        // The actor's permanent worker is still alive, waiting on its channel.
+        // It must not keep the hub busy forever.
+        Thread waiter = new Thread(actorHub::waitForIdle, "wait-for-idle");
+        waiter.setDaemon(true);
+        waiter.start();
+        waiter.join(2000);
+
+        assertFalse(waiter.isAlive(), "waitForIdle() blocked on the actor's permanent worker");
+        assertTrue(actorHub.isIdle(), "isIdle() must ignore the actor's permanent worker");
+        assertEquals(0, actorHub.getActiveCount(), "getActiveCount() must ignore the actor's permanent worker");
+    }
+
+    @Test
     void poolSizingSetterWorksAndMaterializesTheCeiling()
     {
         ActorHub h = ActorHub.hub(3);

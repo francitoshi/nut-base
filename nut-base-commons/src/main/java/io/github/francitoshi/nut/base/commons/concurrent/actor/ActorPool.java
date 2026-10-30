@@ -413,39 +413,79 @@ public class ActorPool implements ActorLifecycle, Executor
     // -------------------------------------------------------------------------
 
     /**
-     * Wraps {@code task} with the execution phaser, registering a party when
-     * the task starts running and arriving/deregistering on completion. Used
-     * by {@link #spawn(Runnable)}, which already blocks until the task is
-     * running. All other execution paths pre-register in the submitting thread
-     * and use {@link #tracked(Runnable)} instead, so that queued tasks are
-     * visible to {@link #waitForIdle()} too.
+     * Runs {@code task} on the backing pool without registering it with the
+     * execution phaser. This is reserved for long-lived background workers,
+     * such as the permanent worker of an async {@link Actor}: they live for as
+     * long as the actor exists and would otherwise keep {@link #waitForIdle()}
+     * and {@link #isIdle()} forever busy. Their activity is tracked by the
+     * owning actor instead.
      *
-     * @param task the original task; must not be {@code null}
-     * @return the task, wrapped or not
+     * @param task the background task; must not be {@code null}
      */
-    private Runnable wrap(Runnable task)
+    void executeUntracked(Runnable task)
     {
-        if(phaser==null)
+        Objects.requireNonNull(task, "task must not be null");
+        if (synchronous)
         {
-            return task;
+            task.run();
+            return;
         }
-        
-        return () ->
+        this.threadPoolExecutor.execute(task);
+    }
+
+    /**
+     * Runs {@code supplier} on the pool as a tracked task, pre-registering it
+     * with the execution phaser <em>before</em> submission so that a task that
+     * is still queued is visible to {@link #waitForIdle()} and
+     * {@link #isIdle()}. The registration is released exactly once, whether
+     * the task runs or the submission is rejected.
+     *
+     * @param <U>      the result type
+     * @param supplier the computation to run; must not be {@code null}
+     * @return a future holding the computation result
+     */
+    private <U> CompletableFuture<U> trackedAsync(Supplier<U> supplier)
+    {
+        if (phaser == null)
         {
-            // Registers the task in the Phaser when it starts running, leaving
-            // it to the callers that pre-register on submission to manage the
-            // matching deregistration.
-            phaser.register();
-            try
+            return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
+        }
+        phaser.register();
+        AtomicBoolean arrived = new AtomicBoolean();
+        CompletableFuture<U> future;
+        try
+        {
+            future = CompletableFuture.supplyAsync(() ->
             {
-                task.run();
-            }
-            finally
+                try
+                {
+                    return supplier.get();
+                }
+                finally
+                {
+                    arrived.set(true);
+                    phaser.arriveAndDeregister();
+                    maybeShutdownWhenIdle();
+                }
+            }, this.threadPoolExecutor);
+        }
+        catch (RuntimeException ex)
+        {
+            if (arrived.compareAndSet(false, true))
             {
                 phaser.arriveAndDeregister();
                 maybeShutdownWhenIdle();
             }
-        };
+            throw ex;
+        }
+        return future.whenComplete((value, ex) ->
+        {
+            if (arrived.compareAndSet(false, true))
+            {
+                phaser.arriveAndDeregister();
+                maybeShutdownWhenIdle();
+            }
+        });
     }
     
     /**
@@ -483,6 +523,9 @@ public class ActorPool implements ActorLifecycle, Executor
      * Returns the number of tasks currently registered with the internal
      * {@link Phaser} (i.e. executing or about to execute on the pool), or
      * {@code -1} if active-task tracking was not enabled at construction time.
+     * Long-lived background workers started with
+     * {@link #executeUntracked(Runnable)} (such as the permanent workers of
+     * async Actors) are not counted.
      * <p>
      * <strong>Implementation note:</strong> the {@code Phaser} is initialised
      * with one permanent "owner" party (the party used by
@@ -503,7 +546,8 @@ public class ActorPool implements ActorLifecycle, Executor
      * executing, or if tracking is disabled and the pool reports no active
      * threads. When tracking is enabled this is an exact, lock-free check;
      * when disabled it relies on {@link ThreadPoolExecutor#getActiveCount()},
-     * which is an approximation.
+     * which is an approximation. Permanent background workers (see
+     * {@link #executeUntracked(Runnable)}) do not count as active tasks.
      *
      * @return {@code true} if the pool is idle
      */
@@ -534,8 +578,8 @@ public class ActorPool implements ActorLifecycle, Executor
             // the previous getPhase() / awaitAdvance(phase) pattern.
             //
             // The owner party (registered at construction) is the one
-            // calling arriveAndAwaitAdvance here; tasks register/
-            // deregister transiently around their execution via wrap().
+            // calling arriveAndAwaitAdvance here; tasks pre-register on
+            // submission and deregister around their execution.
             while (phaser.getRegisteredParties() > 1)
             {
                 phaser.arriveAndAwaitAdvance();
@@ -596,36 +640,10 @@ public class ActorPool implements ActorLifecycle, Executor
             task.run();
             return CompletableFuture.completedFuture(null);
         }
-        if(phaser==null)
+        return trackedAsync(() ->
         {
-            return CompletableFuture.runAsync(task, this.threadPoolExecutor);
-        }
-        // Pre-register like execute(Runnable) so queued tasks are visible to
-        // waitForIdle(). If the pool never runs the task (rejection), the
-        // whenComplete callback deregisters the pre-registered party exactly
-        // once; otherwise the task's own finally does.
-        phaser.register();
-        AtomicBoolean arrived = new AtomicBoolean();
-        Runnable registeredTask = () ->
-        {
-            try
-            {
-                task.run();
-            }
-            finally
-            {
-                arrived.set(true);
-                phaser.arriveAndDeregister();
-                maybeShutdownWhenIdle();
-            }
-        };
-        return CompletableFuture.runAsync(registeredTask, this.threadPoolExecutor).whenComplete((v, ex) ->
-        {
-            if (arrived.compareAndSet(false, true))
-            {
-                phaser.arriveAndDeregister();
-                maybeShutdownWhenIdle();
-            }
+            task.run();
+            return (Void) null;
         });
     }
 
@@ -644,35 +662,7 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             return CompletableFuture.completedFuture(supplier.get());
         }
-        if (phaser == null)
-        {
-            return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
-        }
-        // Pre-register on submission; see submit(Runnable) for the
-        // deregistration guarantee.
-        phaser.register();
-        AtomicBoolean arrived = new AtomicBoolean();
-        Supplier<U> registeredSupplier = () ->
-        {
-            try
-            {
-                return supplier.get();
-            }
-            finally
-            {
-                arrived.set(true);
-                phaser.arriveAndDeregister();
-                maybeShutdownWhenIdle();
-            }
-        };
-        return CompletableFuture.supplyAsync(registeredSupplier, this.threadPoolExecutor).whenComplete((v, ex) ->
-        {
-            if (arrived.compareAndSet(false, true))
-            {
-                phaser.arriveAndDeregister();
-                maybeShutdownWhenIdle();
-            }
-        });
+        return trackedAsync(supplier);
     }
 
     /**
@@ -694,11 +684,31 @@ public class ActorPool implements ActorLifecycle, Executor
 
         final CountDownLatch ready = new CountDownLatch(1);
 
-        this.threadPoolExecutor.execute(wrap(() ->
+        Runnable startingTask = () ->
         {
             ready.countDown(); // "my next instruction is task.run()"
             task.run();
-        }));
+        };
+
+        if (phaser == null)
+        {
+            this.threadPoolExecutor.execute(startingTask);
+        }
+        else
+        {
+            // Pre-register before handing the task to the pool: a spawned task
+            // still waiting for a free thread must be visible to waitForIdle().
+            phaser.register();
+            try
+            {
+                this.threadPoolExecutor.execute(tracked(startingTask));
+            }
+            catch (RuntimeException ex)
+            {
+                phaser.arriveAndDeregister();
+                throw ex;
+            }
+        }
 
         try
         {
@@ -744,7 +754,11 @@ public class ActorPool implements ActorLifecycle, Executor
         }
 
         List<CompletableFuture<Void>> futures = new ArrayList<>();
-        iterable.forEach(item -> futures.add(CompletableFuture.runAsync( () -> consumer.accept(item), this.threadPoolExecutor)));
+        iterable.forEach(item -> futures.add(trackedAsync(() ->
+        {
+            consumer.accept(item);
+            return (Void) null;
+        })));
 
         AtomicReference<Throwable> first = new AtomicReference<>();
         futures.forEach(future ->
@@ -855,10 +869,11 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Shuts the backing pool down if a deferred
      * ({@code shutdown(true)}) request is pending and the pool is now idle.
-     * Called from the completion hooks of {@link #wrap(Runnable)},
-     * {@link #tracked(Runnable)} and {@link #submit}, so it runs on the
-     * worker thread that just finished the last tracked task. Idempotent:
-     * clears {@link #shutdownWhenIdle} before invoking {@link #shutdown()}.
+     * Called from the completion hooks of {@link #tracked(Runnable)},
+     * {@link #trackedAsync(Supplier)}, {@link #spawn(Runnable)} and
+     * {@link #forEach}, so it runs on the worker thread that just finished the
+     * last tracked task. Idempotent: clears {@link #shutdownWhenIdle} before
+     * invoking {@link #shutdown()}.
      */
     private void maybeShutdownWhenIdle()
     {

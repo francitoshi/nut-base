@@ -160,7 +160,10 @@ abstract class AsyncActor<M> extends Actor<M>
         }
         try
         {
-            actorHub.execute(this::permanentLoop);
+            // The permanent worker lives as long as this actor: run it outside
+            // the hub's idle tracking so waitForIdle()/isIdle() do not consider
+            // an idle actor to be busy forever.
+            actorHub.executeUntracked(this::permanentLoop);
         }
         catch (Exception ex)
         {

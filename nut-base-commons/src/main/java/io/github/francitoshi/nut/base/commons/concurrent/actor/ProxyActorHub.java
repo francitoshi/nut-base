@@ -77,6 +77,12 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
     }
 
     @Override
+    void executeUntracked(Runnable task)
+    {
+        actorHub.executeUntracked(task);
+    }
+
+    @Override
     protected void terminated()
     {
         actorHub.terminated();
