@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
@@ -41,7 +42,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
             fireSignals();
@@ -73,7 +74,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
     @Override
     public E get(long timeout, TimeUnit unit)
     {
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
             return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);

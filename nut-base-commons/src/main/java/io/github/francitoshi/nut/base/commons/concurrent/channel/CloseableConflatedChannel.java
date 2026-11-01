@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
@@ -177,7 +178,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             }
         }
 
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
             lock.lockInterruptibly();

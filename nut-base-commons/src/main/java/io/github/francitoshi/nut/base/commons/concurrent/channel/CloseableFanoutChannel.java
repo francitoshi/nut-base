@@ -202,10 +202,21 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
     @Override
     public boolean close()
     {
+        // If the caller is interrupted while waiting for the writers it stops
+        // waiting, but it still closes the targets (that is also what unblocks
+        // writers stuck in a target) and restores its interrupt status. Giving up
+        // here would leave the fanout flagged as closed and its targets open
+        // forever, because later close() calls just return the cached result.
+        boolean interrupted = Thread.interrupted();
+        boolean writersDrained = true;
         synchronized (closeLock)
         {
             if (closed)
             {
+                if (interrupted)
+                {
+                    Thread.currentThread().interrupt();
+                }
                 return closeResult;
             }
             closed = true;
@@ -214,21 +225,30 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
             {
                 writer.interrupt();
             }
-            while (!writers.isEmpty())
+            if (interrupted)
             {
-                try
+                // do not wait: the caller asked to be left alone
+                writersDrained = writers.isEmpty();
+            }
+            else
+            {
+                while (!writers.isEmpty())
                 {
-                    closeLock.wait();
-                }
-                catch (InterruptedException ex)
-                {
-                    closeResult = false;
-                    return false;
+                    try
+                    {
+                        closeLock.wait();
+                    }
+                    catch (InterruptedException ex)
+                    {
+                        interrupted = true;
+                        writersDrained = false;
+                        break;
+                    }
                 }
             }
         }
 
-        boolean allClosed = true;
+        boolean allClosed = writersDrained;
         for (ChannelWriter<E> target : targets)
         {
             if (target instanceof ChannelCloser)
@@ -240,6 +260,10 @@ public final class CloseableFanoutChannel<E> extends FanoutChannel<E> implements
             }
         }
         closeResult = allClosed;
+        if (interrupted)
+        {
+            Thread.currentThread().interrupt();
+        }
         return allClosed;
     }
 

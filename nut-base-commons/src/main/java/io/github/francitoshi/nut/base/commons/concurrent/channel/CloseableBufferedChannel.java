@@ -6,6 +6,7 @@
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import io.github.francitoshi.nut.base.commons.lang.Saturated;
+import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -119,7 +120,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             return fireIf(queue.offer(value));
         }
 
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         while (true)
         {
             synchronized (lock)
@@ -213,7 +214,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             return drainAfterClosePoll();
         }
 
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         while (true)
         {
             if (closed)
@@ -299,6 +300,13 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
 
     public boolean close(long timeout, TimeUnit unit) throws InterruptedException
     {
+        // The irrevocable part of the close (mark closed, abort writers, wake the
+        // readers) must not be aborted by the caller's own interrupt status:
+        // otherwise the channel would be left closed with readers blocked forever.
+        // The interrupt is deferred and restored before the (interruptible) wait
+        // for the writers, so it still makes this method throw as documented.
+        boolean interrupted = Thread.interrupted();
+
         long timeoutNanos = unit.toNanos(timeout);
         long deadline = Saturated.saturatedAdd(System.nanoTime(), timeoutNanos);
 
@@ -320,7 +328,19 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
         // and, after closed = true, no real value will ever arrive.
         for (int i = 1; gets.get() > 0; i++)
         {
-            queue.offer(POISON, Math.min(i, 100), TimeUnit.MILLISECONDS);
+            try
+            {
+                queue.offer(POISON, Math.min(i, 100), TimeUnit.MILLISECONDS);
+            }
+            catch (InterruptedException ex)
+            {
+                interrupted = true;
+            }
+        }
+
+        if (interrupted)
+        {
+            Thread.currentThread().interrupt();
         }
 
         synchronized (lock)

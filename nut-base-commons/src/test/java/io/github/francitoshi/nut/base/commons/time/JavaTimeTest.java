@@ -15,6 +15,7 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -984,6 +985,135 @@ public class JavaTimeTest
         start = LocalDateTime.of(2020, 1, 1, 0, 0);
         result = JavaTime.atEndOfDay(start);
         assertEquals("2020-01-01T23:59:59.999999999", result.toString());
+    }
+
+    // -----------------------------------------------------------------------
+    // untilNanoTime
+    //
+    // Contract implemented by JavaTime:
+    //   1. timeout <= 0  -> returns the supplied nanoTime unchanged, i.e. the
+    //      deadline is "now" and therefore already expired.
+    //   2. timeout > 0   -> returns nanoTime + unit.toNanos(timeout), saturating
+    //      at Long.MAX_VALUE if the conversion or the addition overflows.
+    //
+    // The tests below pin down each branch, including negative nanoTime values
+    // and values that force saturation.
+    // -----------------------------------------------------------------------
+
+    private static final long ONE_SECOND_NANOS = 1_000_000_000L;
+
+    @Test
+    void untilNanoTimeZeroTimeoutReturnsNanoTime()
+    {
+        long now = 123_456_789L;
+
+        assertEquals(now, JavaTime.untilNanoTime(now, 0, TimeUnit.NANOSECONDS));
+        assertEquals(now, JavaTime.untilNanoTime(now, 0, TimeUnit.SECONDS));
+        assertEquals(now, JavaTime.untilNanoTime(now, 0, TimeUnit.DAYS));
+    }
+
+    @Test
+    void untilNanoTimePositiveTimeoutAddsNanos()
+    {
+        assertEquals(1_105L, JavaTime.untilNanoTime(1_100L, 5, TimeUnit.NANOSECONDS));
+        assertEquals(1_100L + 5 * ONE_SECOND_NANOS,
+                JavaTime.untilNanoTime(1_100L, 5, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void untilNanoTimeWorksWithNegativeNanoTime()
+    {
+        // System.nanoTime() is only required to be monotonic, not positive.
+        assertEquals(-95L, JavaTime.untilNanoTime(-100L, 5, TimeUnit.NANOSECONDS));
+        assertEquals(-100L + 2 * ONE_SECOND_NANOS,
+                JavaTime.untilNanoTime(-100L, 2, TimeUnit.SECONDS));
+    }
+
+    @Test
+    void untilNanoTimeNegativeTimeoutIsAlreadyExpired()
+    {
+        long now = 42L;
+
+        assertEquals(now, JavaTime.untilNanoTime(now, -1, TimeUnit.NANOSECONDS));
+        assertEquals(now, JavaTime.untilNanoTime(now, -1, TimeUnit.SECONDS));
+        assertEquals(now, JavaTime.untilNanoTime(now, Long.MIN_VALUE, TimeUnit.NANOSECONDS));
+        assertEquals(now, JavaTime.untilNanoTime(now, Long.MIN_VALUE, TimeUnit.DAYS));
+    }
+
+    /**
+     * Characterization test for a subtle point: a negative timeout is
+     * short-circuited to {@code nanoTime} instead of going through the saturating
+     * addition. Without the short-circuit, adding {@link Long#MIN_VALUE} would
+     * saturate to {@link Long#MIN_VALUE} (a deadline in the distant past). Both
+     * values expire immediately, but they differ in their raw representation.
+     */
+    @Test
+    void untilNanoTimeNegativeTimeoutReturnsNanoTimeInsteadOfSaturatingToMinValue()
+    {
+        long now = 0L;
+
+        assertEquals(now, JavaTime.untilNanoTime(now, Long.MIN_VALUE, TimeUnit.NANOSECONDS));
+        assertNotEquals(Long.MIN_VALUE, JavaTime.untilNanoTime(now, Long.MIN_VALUE, TimeUnit.NANOSECONDS));
+    }
+
+    @Test
+    void untilNanoTimeSaturatesAtMaxValue()
+    {
+        // Exact fit: no saturation needed, but the result is already Long.MAX_VALUE.
+        assertEquals(Long.MAX_VALUE,
+                JavaTime.untilNanoTime(Long.MAX_VALUE - 5, 5, TimeUnit.NANOSECONDS));
+
+        // Addition overflows.
+        assertEquals(Long.MAX_VALUE,
+                JavaTime.untilNanoTime(Long.MAX_VALUE - 5, 10, TimeUnit.NANOSECONDS));
+        assertEquals(Long.MAX_VALUE,
+                JavaTime.untilNanoTime(Long.MAX_VALUE, 1, TimeUnit.SECONDS));
+
+        // TimeUnit.toNanos itself saturates, then the addition saturates too.
+        assertEquals(Long.MAX_VALUE,
+                JavaTime.untilNanoTime(1L, Long.MAX_VALUE, TimeUnit.DAYS));
+        assertEquals(Long.MAX_VALUE,
+                JavaTime.untilNanoTime(Long.MAX_VALUE, Long.MAX_VALUE, TimeUnit.DAYS));
+    }
+
+    @Test
+    void untilNanoTimeDoesNotSaturateWhenNanoTimeIsNegative()
+    {
+        // unit.toNanos(Long.MAX_VALUE) saturates at Long.MAX_VALUE, but adding it
+        // to a negative base does not overflow: the result stays just below MAX.
+        assertEquals(Long.MAX_VALUE - 1,
+                JavaTime.untilNanoTime(-1L, Long.MAX_VALUE, TimeUnit.DAYS));
+    }
+
+    @Test
+    void untilNanoTimeOverloadUsesCurrentNanoTimeForPositiveTimeout()
+    {
+        long timeoutNanos = 60 * ONE_SECOND_NANOS;
+
+        long before = System.nanoTime();
+        long deadline = JavaTime.untilNanoTime(60, TimeUnit.SECONDS);
+        long after = System.nanoTime();
+
+        assertTrue(deadline >= before + timeoutNanos,
+                "deadline " + deadline + " must not be earlier than " + (before + timeoutNanos));
+        assertTrue(deadline <= after + timeoutNanos,
+                "deadline " + deadline + " must not be later than " + (after + timeoutNanos));
+    }
+
+    @Test
+    void untilNanoTimeOverloadUsesCurrentNanoTimeForNonPositiveTimeout()
+    {
+        long before = System.nanoTime();
+        long zeroDeadline = JavaTime.untilNanoTime(0, TimeUnit.SECONDS);
+        long afterZero = System.nanoTime();
+        assertTrue(zeroDeadline >= before && zeroDeadline <= afterZero,
+                "zero timeout must return the current nanoTime");
+
+        long beforeNegative = System.nanoTime();
+        long negativeDeadline = JavaTime.untilNanoTime(-1, TimeUnit.SECONDS);
+        long afterNegative = System.nanoTime();
+        assertTrue(negativeDeadline >= beforeNegative && negativeDeadline <= afterNegative,
+                "negative timeout must return the current nanoTime");
     }
 
 }

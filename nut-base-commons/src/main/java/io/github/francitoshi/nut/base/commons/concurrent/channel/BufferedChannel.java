@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -57,7 +58,7 @@ public final class BufferedChannel<E> extends Channel<E>
             return fireIf(queue.offer(value));
         }
 
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
             return fireIf(queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
@@ -93,7 +94,7 @@ public final class BufferedChannel<E> extends Channel<E>
             return queue.poll();
         }
 
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
             return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);

@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -89,6 +90,53 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
             public E next()
             {
                 return get();
+            }
+        };
+    }
+
+    /**
+     * Iterator that stops once the read side is closed: {@link Iterator#hasNext}
+     * blocks in {@link #get()}, keeps the value ready for {@link Iterator#next}
+     * and returns {@code false} only when {@code get()} yielded {@code null}
+     * while {@link #isReadClosed()} is {@code true}.
+     *
+     * <p>Shared by {@link CloseableChannel} and by {@link DuplexChannel}s whose
+     * input is closeable, so that a {@code for-each} over them terminates
+     * instead of spinning forever on {@code null}s.
+     */
+    final Iterator<E> terminatingIterator()
+    {
+        return new Iterator<E>()
+        {
+            private E saved;
+            private boolean hasSaved;
+
+            @Override
+            public boolean hasNext()
+            {
+                if (hasSaved)
+                {
+                    return true;
+                }
+                E value = get();
+                if (value == null && isReadClosed())
+                {
+                    return false;
+                }
+                saved = value;
+                hasSaved = true;
+                return true;
+            }
+
+            @Override
+            public E next()
+            {
+                if (!hasSaved)
+                {
+                    throw new NoSuchElementException();
+                }
+                hasSaved = false;
+                return saved;
             }
         };
     }
@@ -227,53 +275,24 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
         }
     }
 
-    /**
-     * Computes the point in time, in {@link System#nanoTime()} space, that is
-     * {@code timeout} away from now, saturating instead of overflowing.
-     * <p>
-     * Both the unit-to-nanos conversion and the addition are clamped so that an
-     * absurdly large timeout behaves as an almost infinite wait rather than
-     * wrapping around and expiring immediately.
-     *
-     * @param timeout the wait duration
-     * @param unit    the time unit of the timeout
-     * @return the saturated deadline in the same space as {@link System#nanoTime()}
-     */
-    static long toDeadline(long timeout, TimeUnit unit)
-    {
-        return Saturated.saturatedAdd(System.nanoTime(), toNanosSaturated(timeout, unit));
-    }
-
-    private static long toNanosSaturated(long timeout, TimeUnit unit)
-    {
-        if (timeout == 0 || unit == TimeUnit.NANOSECONDS)
-        {
-            return unit.toNanos(timeout);
-        }
-        long scaleNanos = unit.toNanos(1);
-        long maxTimeout = Long.MAX_VALUE / scaleNanos;
-        if (timeout > maxTimeout)
-        {
-            return Long.MAX_VALUE;
-        }
-        if (timeout < -maxTimeout)
-        {
-            return Long.MIN_VALUE;
-        }
-        return unit.toNanos(timeout);
-    }
+    /** Explicit capacity value requesting an unbounded channel in {@link #of(int)} and {@link #closeableOf(int)}. */
+    public static final int UNLIMITED = -1;
 
     /**
      * Creates the appropriate channel according to the given capacity:
      * <ul>
      *   <li><code> capacity == 0</code>: unbuffered (rendezvous)</li>
      *   <li><code> capacity &gt; 0</code>: buffered with that capacity</li>
-     *   <li><code> capacity &lt; 0</code>: unbounded capacity</li>
+     *   <li><code> capacity == {@link #UNLIMITED}</code>: unbounded capacity</li>
      * </ul>
+     * Any other negative value is rejected: a size coming from configuration,
+     * input or an arithmetic overflow must not silently turn into an unbounded
+     * queue (memory exhaustion).
      *
      * @param capacity the channel capacity, see semantics above
      * @param <T>      the element type
      * @return a channel matching the requested capacity
+     * @throws IllegalArgumentException if {@code capacity} is negative and not {@link #UNLIMITED}
      */
     public static <T> Channel<T> of(int capacity)
     {
@@ -285,7 +304,11 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
         {
             return new BufferedChannel<>(capacity);
         }
-        return new UnlimitedChannel<>();
+        if(capacity==UNLIMITED)
+        {
+            return new UnlimitedChannel<>();
+        }
+        throw new IllegalArgumentException("capacity must be >= 0 or Channel.UNLIMITED");
     }
 
     /**
@@ -294,6 +317,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
      * @param capacity the channel capacity, see {@link #of(int)}
      * @param <T>      the element type
      * @return a closeable channel matching the requested capacity
+     * @throws IllegalArgumentException if {@code capacity} is negative and not {@link #UNLIMITED}
      */
     public static <T> CloseableChannel<T> closeableOf(int capacity)
     {
@@ -305,7 +329,11 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
         {
             return new CloseableBufferedChannel<>(capacity);
         }
-        return new CloseableUnlimitedChannel<>();
+        if (capacity==UNLIMITED)
+        {
+            return new CloseableUnlimitedChannel<>();
+        }
+        throw new IllegalArgumentException("capacity must be >= 0 or Channel.UNLIMITED");
     }
 
     /**

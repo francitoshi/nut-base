@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -143,7 +144,7 @@ public final class Select
         }
 
         final int n = channels.length;
-        final long deadline = timed ? Channel.toDeadline(timeout, unit) : 0;
+        final long deadline = timed ? JavaTime.untilNanoTime(timeout, unit) : 0;
         final boolean[] exhausted = new boolean[n];
         int open = n;
 

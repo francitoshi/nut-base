@@ -17,10 +17,12 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import io.github.francitoshi.nut.base.commons.lang.Exceptions;
+import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
@@ -1388,5 +1390,53 @@ public class JavaTime
     public static LocalDateTime asLocalDateTime(Instant instant)
     {
         return instant.atZone(UTC).toLocalDateTime();
-    }   
+    }
+    
+    /**
+     * Returns the deadline in {@link System#nanoTime()} space reached after
+     * waiting for {@code timeout} from the given reference instant.
+     * <p>
+     * A non-positive {@code timeout} means "no wait": the method returns
+     * {@code nanoTime} unchanged, so the resulting deadline is already expired.
+     * A positive {@code timeout} is converted to nanoseconds and added to
+     * {@code nanoTime}, saturating both the conversion and the addition at
+     * {@link Long#MAX_VALUE} instead of overflowing into the past.
+     *
+     * @param nanoTime the reference instant in {@link System#nanoTime()} space
+     * @param timeout  the wait duration; values less than or equal to zero
+     *                 expire immediately
+     * @param unit     the time unit of {@code timeout}; ignored when
+     *                 {@code timeout} is not positive
+     * @return the deadline in {@link System#nanoTime()} space, or {@code nanoTime}
+     *         when {@code timeout} is not positive
+     */
+    public static long untilNanoTime(long nanoTime, long timeout, TimeUnit unit)
+    {
+        if(timeout<=0)
+        {
+            return nanoTime;
+        }
+        return Saturated.saturatedAdd(nanoTime, unit.toNanos(timeout));
+    }
+    
+    /**
+     * Returns the deadline in {@link System#nanoTime()} space reached after
+     * waiting for {@code timeout} from the current instant.
+     * <p>
+     * Equivalent to {@link #untilNanoTime(long, long, TimeUnit)} using
+     * {@link System#nanoTime()} as the reference instant. See that method for
+     * the handling of non-positive timeouts and saturation.
+     *
+     * @param timeout the wait duration; values less than or equal to zero
+     *                expire immediately
+     * @param unit    the time unit of {@code timeout}; ignored when
+     *                {@code timeout} is not positive
+     * @return the deadline in {@link System#nanoTime()} space
+     * @see #untilNanoTime(long, long, TimeUnit)
+     */
+    public static long untilNanoTime(long timeout, TimeUnit unit)
+    {
+        return untilNanoTime(System.nanoTime(), timeout, unit);
+    }
+    
 }

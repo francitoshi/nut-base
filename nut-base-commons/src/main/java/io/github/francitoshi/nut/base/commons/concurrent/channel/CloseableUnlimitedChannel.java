@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -75,7 +76,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
 
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         while (true)
         {
             if (closed)
@@ -177,7 +178,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             return drainAfterClosePoll();
         }
 
-        long deadline = toDeadline(timeout, unit);
+        long deadline = JavaTime.untilNanoTime(timeout, unit);
         while (true)
         {
             if (closed)
@@ -252,6 +253,13 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
 
     public boolean close(long timeout, TimeUnit unit) throws InterruptedException
     {
+        // The irrevocable part of the close (mark closed, wake the readers) must
+        // not be aborted by the caller's own interrupt status, or the channel
+        // would be left closed with readers blocked forever. The interrupt is
+        // deferred and restored before the (interruptible) wait for the writers,
+        // so it still makes this method throw as documented.
+        boolean interrupted = Thread.interrupted();
+
         synchronized (closeLock)
         {
             closed = true;
@@ -264,7 +272,12 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             int count = gets.get();
             for (int i = 0; i < count; i++)
             {
-                queue.put(POISON);
+                queue.offer(POISON); // unbounded: never blocks, never throws InterruptedException
+            }
+
+            if (interrupted)
+            {
+                Thread.currentThread().interrupt();
             }
 
             boolean acquired = rwLock.writeLock().tryLock(timeout, unit);

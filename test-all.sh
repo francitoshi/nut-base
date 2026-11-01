@@ -6,6 +6,8 @@ set -euo pipefail
 # build.gradle: a module only runs after all the modules it depends on.
 
 JAVA_HOME="/usr/lib/jvm/java-8-openjdk-amd64"
+#JAVA_HOME="/usr/lib/jvm/java-21-openjdk-amd64"
+#JAVA_HOME="/usr/lib/jvm/java-25-openjdk-amd64"
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -29,7 +31,7 @@ do
     echo "Running tests: $module"
     echo "==================================================================="
     cd "$ROOT_DIR/$module"
-    "$ROOT_DIR/gradlew" --configure-on-demand --rerun-tasks -x check test
+    "$ROOT_DIR/gradlew" --console=plain --configure-on-demand --rerun-tasks -x check test
 done
 
 echo

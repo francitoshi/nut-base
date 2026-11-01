@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -51,6 +52,19 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     public E get(long timeout, TimeUnit unit)
     {
         return in.get(timeout, unit);
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * If the input is closeable ({@link ChannelCloser}) the iteration ends once
+     * it is closed and drained; otherwise it behaves as a plain {@link Channel}
+     * iteration, which never ends.
+     */
+    @Override
+    public Iterator<E> iterator()
+    {
+        return in instanceof ChannelCloser ? terminatingIterator() : super.iterator();
     }
 
     @Override
