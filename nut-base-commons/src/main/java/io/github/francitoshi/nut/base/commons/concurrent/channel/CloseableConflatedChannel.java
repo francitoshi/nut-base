@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -59,7 +60,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
-            fireSignals();
+            notifyOperation(Operation.PUT, value);
         }
         finally
         {
@@ -90,13 +91,53 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
-            fireSignals();
+            notifyOperation(Operation.PUT, value);
             return true;
         }
         finally
         {
             lock.unlock();
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public Optional<E> tryGet()
+    {
+        E result = null;
+        boolean received = false;
+        lock.lock();
+        try
+        {
+            if (hasValue)
+            {
+                result = (E) this.value;
+                this.value = null;
+                hasValue = false;
+                received = true;
+            }
+        }
+        finally
+        {
+            lock.unlock();
+        }
+        if (received)
+        {
+            notifyOperation(Operation.GET, result);
+            return Optional.of(result);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public boolean tryPut(E value)
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        if (closedFlag)
+        {
+            return false;
+        }
+        return put(value, 0L, TimeUnit.NANOSECONDS);
     }
 
     @SuppressWarnings("unchecked")
@@ -139,6 +180,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                 result = (E) this.value;
                 this.value = null;
                 hasValue = false;
+                notifyOperation(Operation.GET, result);
             }
         }
         finally
@@ -160,22 +202,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     {
         if (timeout == 0)
         {
-            lock.lock();
-            try
-            {
-                if (!hasValue)
-                {
-                    return null;
-                }
-                E result = (E) this.value;
-                this.value = null;
-                hasValue = false;
-                return result;
-            }
-            finally
-            {
-                lock.unlock();
-            }
+            return tryGet().orElse(null);
         }
 
         long deadline = JavaTime.untilNanoTime(timeout, unit);
@@ -220,6 +247,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
                 result = (E) this.value;
                 this.value = null;
                 hasValue = false;
+                notifyOperation(Operation.GET, result);
             }
         }
         finally
@@ -248,7 +276,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
             closedFlag = true;
             notEmpty.signalAll();
             closed.signalAll();
-            fireSignals();
+            notifyOperation(Operation.CLOSE, null);
             return true;
         }
         finally

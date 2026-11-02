@@ -9,6 +9,7 @@ import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.HashSet;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -81,7 +82,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             try
             {
                 queue.put(value);
-                fireSignals();
+                notifyOperation(Operation.PUT, value);
                 return;
             }
             catch (InterruptedException ex)
@@ -117,7 +118,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
 
         if (timeout == 0)
         {
-            return fireIf(queue.offer(value));
+            return tryPut(value);
         }
 
         long deadline = JavaTime.untilNanoTime(timeout, unit);
@@ -136,7 +137,11 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             try
             {
                 boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                return fireIf(result);
+                if (result)
+                {
+                    notifyOperation(Operation.PUT, value);
+                }
+                return result;
             }
             catch (InterruptedException ex)
             {
@@ -181,7 +186,12 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 }
 
                 Object item = queue.take();
-                return item == POISON ? null : (E) item;
+                if (item == POISON)
+                {
+                    return null;
+                }
+                notifyOperation(Operation.GET, (E) item);
+                return (E) item;
             }
             catch (InterruptedException ex)
             {
@@ -204,12 +214,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
     @Override
     public E get(long timeout, TimeUnit unit)
     {
-        if (closed)
-        {
-            return drainAfterClosePoll();
-        }
-
-        if (timeout == 0)
+        if (closed || timeout == 0)
         {
             return drainAfterClosePoll();
         }
@@ -236,6 +241,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
                 {
                     return null;
                 }
+                notifyOperation(Operation.GET, (E) item);
                 return (E) item;
             }
             catch (InterruptedException ex)
@@ -256,6 +262,36 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
     }
 
     @SuppressWarnings("unchecked")
+    @Override
+    public Optional<E> tryGet()
+    {
+        Object item = queue.poll();
+        if (item == null || item == POISON)
+        {
+            return Optional.empty();
+        }
+        E value = (E) item;
+        notifyOperation(Operation.GET, value);
+        return Optional.of(value);
+    }
+
+    @Override
+    public boolean tryPut(E value)
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        if (closed)
+        {
+            return false;
+        }
+        if (queue.offer(value))
+        {
+            notifyOperation(Operation.PUT, value);
+            return true;
+        }
+        return false;
+    }
+
+    @SuppressWarnings("unchecked")
     private E drainAfterClosePoll()
     {
         Object item = queue.poll();
@@ -263,8 +299,8 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
         {
             return null;
         }
-        @SuppressWarnings("unchecked")
         E result = (E) item;
+        notifyOperation(Operation.GET, result);
         return result;
     }
 
@@ -276,6 +312,10 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             Object item = queue.poll();
             if (item != null)
             {
+                if (item != POISON)
+                {
+                    notifyOperation(Operation.GET, (E) item);
+                }
                 return (item == POISON) ? null : (E) item;
             }
 
@@ -317,7 +357,7 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             lock.notifyAll();
             blockedWriters = writers.toArray(new Thread[writers.size()]);
         }
-        fireSignals();
+        notifyOperation(Operation.CLOSE, null);
         for (Thread writer : blockedWriters)
         {
             writer.interrupt();

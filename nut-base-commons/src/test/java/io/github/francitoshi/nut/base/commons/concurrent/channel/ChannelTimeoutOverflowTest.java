@@ -98,12 +98,12 @@ class ChannelTimeoutOverflowTest
     }
 
     @Test
-    void selectWithExtremelyNegativeTimeoutReturnsImmediately() throws Exception
+    void selectGetWithExtremelyNegativeTimeoutReturnsImmediately() throws Exception
     {
         for (long timeout : EXTREME_NEGATIVES)
         {
-            Object result = callWithin("Select.select(" + timeout + ", SECONDS)",
-                    () -> Select.select(timeout, TimeUnit.SECONDS, new BufferedChannel<String>(1)));
+            Object result = callWithin("selectGet(" + timeout + ", SECONDS)",
+                    () -> Channel.selectGet(timeout, TimeUnit.SECONDS, new BufferedChannel<String>(1)));
             assertNull(result);
         }
     }

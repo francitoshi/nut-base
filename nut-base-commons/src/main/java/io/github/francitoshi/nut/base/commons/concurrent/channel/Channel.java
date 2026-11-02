@@ -5,13 +5,19 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
-import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import io.github.francitoshi.nut.base.commons.tuple.Tuple2;
 
@@ -37,8 +43,11 @@ import io.github.francitoshi.nut.base.commons.tuple.Tuple2;
  * delivering its value. If the channel is closeable, the aborting operation
  * additionally requests a shutdown via {@link ChannelCloser#close()} (see
  * {@link #closeIfCloseable()}). The interruption request is marked in the
- * channel ({@link #isInterrupted()}) but it is not signaled again in the
- * thread, because it has already been processed by the operation.
+ * channel ({@link #isInterrupted()}), and everything else is processed by the
+ * installed {@link Channel.InterruptedExceptionListener}: the listener is the
+ * explicit decision point for applying the interruption to the thread. The
+ * default listener just logs the interruption and leaves the thread's
+ * interrupt flag cleared.
  *
  * <p><b>Iteration contract.</b> Every channel is an {@link Iterable} that,
  * on each call to {@link #iterator()}, creates an iterator specific to that
@@ -50,16 +59,31 @@ import io.github.francitoshi.nut.base.commons.tuple.Tuple2;
  * channel is closed, and the value obtained is remembered to be returned by
  * {@link Iterator#next()} regardless of whether it is null or not.
  *
- * <p><b>Select support.</b> Channels can be waited on together with
- * {@link Select}. To make that possible without consuming data, every
- * channel keeps a list of {@link SelectSignal}s that it fires after each
- * successful {@code put} and when it is closed.
+ * <p><b>Select support.</b> {@link #selectGet} and {@link #selectPut} wait on
+ * several channels at once using the non-blocking primitives
+ * {@link ChannelReader#tryGet} and {@link ChannelWriter#tryPut}. To make that
+ * possible without polling, every channel keeps a list of
+ * {@link ChannelObservable.OperationListener}s that implementations fire after
+ * each successful operation, when a rendezvous operation starts waiting and
+ * when the channel is closed.
  */
 public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, Iterable<E>
 {
+    private static final Logger LOG = Logger.getLogger(Channel.class.getName());
+
+    /** Slice between re-scans when a participant can only be caught by polling. */
+    private static final long POLL_NANOS = TimeUnit.MICROSECONDS.toNanos(200);
+
     private volatile boolean interrupted;
 
-    private final CopyOnWriteArrayList<SelectSignal> signals = new CopyOnWriteArrayList<>();
+    /**
+     * Listener used by {@link #handleInterruptedException}; defaults to
+     * {@link #DEFAULT_INTERRUPTED_EXCEPTION_LISTENER}.
+     */
+    private volatile InterruptedExceptionListener interruptedExceptionListener =
+            DEFAULT_INTERRUPTED_EXCEPTION_LISTENER;
+
+    private final List<OperationListener<E>> operationListeners = new CopyOnWriteArrayList<>();
 
     /**
      * Returns an iterator over the values read from this channel.
@@ -176,66 +200,490 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
         interrupted = true;
     }
 
-    // -----------------------------------------------------------------------
-    // Select support (package-private)
-    // -----------------------------------------------------------------------
+    /**
+     * Listener that processes the {@link InterruptedException}s raised while a
+     * channel operation is waiting.
+     * <p>
+     * The listener is the explicit decision point for applying the
+     * interruption to the thread: the channel marks its own
+     * {@link #isInterrupted()} flag and delegates everything else, so a
+     * listener that needs the standard contract of a re-marked thread must
+     * call {@code Thread.currentThread().interrupt()} itself (see
+     * {@link #DEFAULT_INTERRUPTED_EXCEPTION_LISTENER} for the default,
+     * leave-no-trace behavior).
+     */
+    @FunctionalInterface
+    public interface InterruptedExceptionListener
+    {
+        /**
+         * Processes an interruption raised while waiting on a channel
+         * operation.
+         *
+         * @param exception the interruption to process
+         */
+        void processInterruptedException(InterruptedException exception);
+    }
 
     /**
-     * Registers a signal that will be fired whenever new data may be available
-     * for reading or the channel is closed.
+     * Default interruption listener, which logs the interruption and leaves
+     * no trace on the thread.
+     * <p>
+     * With this listener an interrupted {@link ChannelReader#get()} returns
+     * {@code null} and an interrupted {@link ChannelWriter#put(Object)}
+     * returns without delivering its value, exactly as if no interruption
+     * had happened: the exception is considered fully processed and nothing
+     * else is required but to return. Only {@link #isInterrupted()} keeps a
+     * record of it.
+     * <p>
+     * The interrupt status of the thread is deliberately <em>not</em> marked
+     * again: blocking calls clear it when they throw
+     * {@link InterruptedException}, and it stays cleared after processing.
+     * Marking it here could permanently pollute recycled executor and worker
+     * pool threads whose tasks happen to use channels.
+     * <p>
+     * Applying an interruption by marking the thread afterwards is a decision
+     * for the creator of the channel, taken explicitly by installing its own
+     * {@link Channel.InterruptedExceptionListener} with
+     * {@link #setInterruptedExceptionListener}.
+     */
+    public static final InterruptedExceptionListener DEFAULT_INTERRUPTED_EXCEPTION_LISTENER =
+            Channel::processInterruptedException;
+
+    /**
+     * Logs an interruption, leaving the thread un-marked. The placeholder
+     * behind {@link #DEFAULT_INTERRUPTED_EXCEPTION_LISTENER}.
      *
-     * @param signal the signal to register
-     * @return {@code true} if this channel is able to fire the signal;
-     *         {@code false} if the caller must fall back to polling
+     * @param exception the interruption to log
      */
-    boolean register(SelectSignal signal)
+    public static void processInterruptedException(InterruptedException exception)
     {
-        signals.add(signal);
-        return true;
-    }
-
-    /** Removes a signal previously registered with {@link #register}. */
-    void unregister(SelectSignal signal)
-    {
-        signals.remove(signal);
-    }
-
-    /** Number of registered signals (diagnostics and tests). */
-    final int registeredSignals()
-    {
-        return signals.size();
+        LOG.log(Level.WARNING, "Interrupted while waiting on a channel operation", exception);
     }
 
     /**
-     * Wakes up every {@link Select} waiting on this channel. Subclasses must
-     * call it after a value has become readable and after closing. It never
-     * throws and never blocks on channel locks.
+     * Returns the listener used when a blocking operation is interrupted.
+     *
+     * @return the listener; never {@code null}
      */
-    protected final void fireSignals()
+    public final InterruptedExceptionListener getInterruptedExceptionListener()
     {
-        if (!signals.isEmpty())
+        return interruptedExceptionListener;
+    }
+
+    /**
+     * Sets the listener used when a blocking operation is interrupted.
+     * <p>
+     * Installing a listener here is the explicit opt-in for how the
+     * interruption is applied afterwards. {@link Channel} itself never
+     * restores the thread's interrupt flag: with the default listener the
+     * interruption is swallowed (processed and no further reaction is
+     * required but to return, which keeps recycled executor threads
+     * un-marked), and with a custom listener the flag is restored only if
+     * that listener marks the thread itself, e.g. with
+     * {@code Thread.currentThread().interrupt()}.
+     *
+     * @param listener the listener to use; must not be {@code null}
+     */
+    public void setInterruptedExceptionListener(InterruptedExceptionListener listener)
+    {
+        interruptedExceptionListener = Objects.requireNonNull(listener, "listener");
+    }
+
+    // -----------------------------------------------------------------------
+    // Operation listeners
+    // -----------------------------------------------------------------------
+
+    /**
+     * Registers a listener notified on channel activity: every successful get
+     * or put, every rendezvous operation that starts waiting, and every
+     * {@link ChannelCloser#close()}.
+     *
+     * @param listener the listener to register
+     */
+    public final void addOperationListener(OperationListener<E> listener)
+    {
+        operationListeners.add(Objects.requireNonNull(listener, "listener"));
+    }
+
+    /**
+     * Removes a previously registered operation listener.
+     *
+     * @param listener the listener to remove
+     */
+    public final void removeOperationListener(OperationListener<E> listener)
+    {
+        operationListeners.remove(listener);
+    }
+
+    /**
+     * Notifies that a get, a put or a close has changed this channel's
+     * observable state.
+     * <p>
+     * Concrete implementations must call this method after every successful
+     * {@link ChannelReader#get()}, {@link ChannelWriter#put(Object)} and their
+     * timed/non-blocking variants. A rendezvous implementation must also call
+     * it when an operation starts waiting, because that is when the opposite
+     * operation becomes possible. Closeable implementations must call it after
+     * closing with {@link Operation#CLOSE}. This is the hook that allows
+     * {@link #selectGet} and {@link #selectPut} to wake up and retry their
+     * cases.
+     *
+     * @param operation the operation that changed the channel
+     * @param value the value that was received or sent, or {@code null} when a
+     *        pending get is being announced or the channel was closed
+     */
+    protected final void notifyOperation(Operation operation, E value)
+    {
+        Objects.requireNonNull(operation, "operation");
+        for (OperationListener<E> listener : operationListeners)
         {
-            for (SelectSignal s : signals)
+            try
             {
-                s.signal();
+                listener.onOperation(this, operation, value);
+            }
+            catch (RuntimeException ex)
+            {
+                LOG.log(Level.WARNING, "Channel operation listener failed", ex);
             }
         }
     }
 
-    /** Fires the signals when {@code ok} is {@code true}; returns {@code ok}. */
-    protected final boolean fireIf(boolean ok)
+    // -----------------------------------------------------------------------
+    // Select
+    // -----------------------------------------------------------------------
+
+    /**
+     * Waits until one of the readers has a value and returns it.
+     * <p>
+     * Readers are checked in argument order, so if several are ready at the
+     * same time the first one wins. The value is consumed as part of the
+     * select.
+     *
+     * @param <E> the element type
+     * @param readers the readers to observe
+     * @return the value read from the first ready reader
+     * @throws InterruptedException if the current thread is interrupted while
+     *         waiting
+     */
+    @SafeVarargs
+    public static <E> E selectGet(ChannelReader<E>... readers) throws InterruptedException
     {
-        if (ok)
-        {
-            fireSignals();
-        }
-        return ok;
+        return doSelectGet(-1L, readers);
     }
 
     /**
-     * Whether readiness of this channel can only be detected by polling
-     * (rendezvous channels: a value is only visible while a writer is parked,
-     * and the writer parks after having fired the signal).
+     * Waits at most the given time until one of the readers has a value and
+     * returns it.
+     * <p>
+     * {@code selectGet(0, unit, readers)} does not wait: it scans once and
+     * returns {@code null} when no reader is ready, like Go's
+     * {@code select} with a {@code default:} case.
+     *
+     * @param <E> the element type
+     * @param timeout maximum time to wait; {@code 0} means do not wait
+     * @param unit the unit of {@code timeout}
+     * @param readers the readers to observe
+     * @return the value read from the first ready reader, or {@code null} if
+     *         none became ready within the timeout or every closeable reader
+     *         is already closed and drained
+     * @throws InterruptedException if the current thread is interrupted while
+     *         waiting
+     */
+    @SafeVarargs
+    public static <E> E selectGet(long timeout, TimeUnit unit,
+            ChannelReader<E>... readers) throws InterruptedException
+    {
+        Objects.requireNonNull(unit, "unit");
+        return doSelectGet(Math.max(0L, unit.toNanos(timeout)), readers);
+    }
+
+    /**
+     * Waits until one of the writers accepts the value.
+     * <p>
+     * Writers are checked in argument order, so if several can accept the
+     * value at the same time the first one wins.
+     *
+     * @param <E> the element type
+     * @param value the value to put
+     * @param writers the writers to observe
+     * @return the writer that accepted the value
+     * @throws InterruptedException if the current thread is interrupted while
+     *         waiting
+     */
+    @SafeVarargs
+    public static <E> ChannelWriter<E> selectPut(E value, ChannelWriter<E>... writers)
+            throws InterruptedException
+    {
+        return doSelectPut(-1L, value, writers);
+    }
+
+    /**
+     * Waits at most the given time until one of the writers accepts the value.
+     *
+     * @param <E> the element type
+     * @param timeout maximum time to wait; {@code 0} means do not wait
+     * @param unit the unit of {@code timeout}
+     * @param value the value to put
+     * @param writers the writers to observe
+     * @return the writer that accepted the value, or {@code null} if none
+     *         accepted it within the timeout or every closeable writer is
+     *         already closed
+     * @throws InterruptedException if the current thread is interrupted while
+     *         waiting
+     */
+    @SafeVarargs
+    public static <E> ChannelWriter<E> selectPut(long timeout, TimeUnit unit,
+            E value, ChannelWriter<E>... writers) throws InterruptedException
+    {
+        Objects.requireNonNull(unit, "unit");
+        return doSelectPut(Math.max(0L, unit.toNanos(timeout)), value, writers);
+    }
+
+    @SafeVarargs
+    private static <E> E doSelectGet(long nanos, ChannelReader<E>... readers)
+            throws InterruptedException
+    {
+        Objects.requireNonNull(readers, "readers");
+        if (readers.length == 0)
+        {
+            throw new IllegalArgumentException("select without readers");
+        }
+        for (ChannelReader<E> reader : readers)
+        {
+            Objects.requireNonNull(reader, "reader");
+        }
+
+        Signal signal = new Signal();
+        OperationListener<E> listener = (channel, operation, value) -> signal.signal();
+        for (ChannelReader<E> reader : readers)
+        {
+            reader.addOperationListener(listener);
+        }
+        try
+        {
+            long start = System.nanoTime();
+            while (true)
+            {
+                for (ChannelReader<E> reader : readers)
+                {
+                    Optional<E> value = reader.tryGet();
+                    if (value.isPresent())
+                    {
+                        return value.get();
+                    }
+                }
+
+                if (allClosed(readers))
+                {
+                    return null;
+                }
+
+                if (nanos == 0L)
+                {
+                    return null;
+                }
+
+                long remaining = -1L;
+                if (nanos > 0L)
+                {
+                    remaining = nanos - (System.nanoTime() - start);
+                    if (remaining <= 0L)
+                    {
+                        return null;
+                    }
+                }
+                signal.await(remaining, pollingReaders(readers));
+            }
+        }
+        finally
+        {
+            for (ChannelReader<E> reader : readers)
+            {
+                reader.removeOperationListener(listener);
+            }
+        }
+    }
+
+    @SafeVarargs
+    private static <E> ChannelWriter<E> doSelectPut(long nanos, E value,
+            ChannelWriter<E>... writers) throws InterruptedException
+    {
+        Objects.requireNonNull(writers, "writers");
+        if (writers.length == 0)
+        {
+            throw new IllegalArgumentException("select without writers");
+        }
+        for (ChannelWriter<E> writer : writers)
+        {
+            Objects.requireNonNull(writer, "writer");
+        }
+
+        Signal signal = new Signal();
+        OperationListener<E> listener = (channel, operation, eventValue) -> signal.signal();
+        for (ChannelWriter<E> writer : writers)
+        {
+            writer.addOperationListener(listener);
+        }
+        try
+        {
+            long start = System.nanoTime();
+            while (true)
+            {
+                for (ChannelWriter<E> writer : writers)
+                {
+                    if (writer.tryPut(value))
+                    {
+                        return writer;
+                    }
+                }
+
+                if (allClosed(writers))
+                {
+                    return null;
+                }
+
+                if (nanos == 0L)
+                {
+                    return null;
+                }
+
+                long remaining = -1L;
+                if (nanos > 0L)
+                {
+                    remaining = nanos - (System.nanoTime() - start);
+                    if (remaining <= 0L)
+                    {
+                        return null;
+                    }
+                }
+                signal.await(remaining, pollingWriters(writers));
+            }
+        }
+        finally
+        {
+            for (ChannelWriter<E> writer : writers)
+            {
+                writer.removeOperationListener(listener);
+            }
+        }
+    }
+
+    @SafeVarargs
+    private static <T> boolean pollingReaders(ChannelReader<T>... readers)
+    {
+        boolean polling = false;
+        for (ChannelReader<T> reader : readers)
+        {
+            if (reader instanceof Channel && ((Channel<T>) reader).needsPolling())
+            {
+                polling = true;
+            }
+        }
+        return polling;
+    }
+
+    @SafeVarargs
+    private static <T> boolean pollingWriters(ChannelWriter<T>... writers)
+    {
+        boolean polling = false;
+        for (ChannelWriter<T> writer : writers)
+        {
+            if (writer instanceof Channel && ((Channel<T>) writer).needsPolling())
+            {
+                polling = true;
+            }
+        }
+        return polling;
+    }
+
+    /**
+     * Returns whether every given channel is closeable and already closed.
+     * Select loops use it to stop waiting once no observed channel can ever
+     * produce or accept another value.
+     *
+     * @param channels the channels to check
+     * @return {@code true} if there is at least one channel and all of them
+     *         are closed
+     */
+    private static boolean allClosed(Object[] channels)
+    {
+        for (Object channel : channels)
+        {
+            if (!(channel instanceof ChannelCloser))
+            {
+                return false;
+            }
+            if (!((ChannelCloser) channel).isClosed())
+            {
+                return false;
+            }
+        }
+        return channels.length > 0;
+    }
+
+    /**
+     * Coordinates one thread waiting for several channel operations. The
+     * listener installed on every involved channel signals this object, and
+     * the select loop then rechecks all its channels. When {@code polling} is
+     * true (a rendezvous participant whose counterpart may already be parked)
+     * the wait is capped to a short slice so the loop re-scans soon.
+     */
+    private static final class Signal
+    {
+        private final ReentrantLock lock = new ReentrantLock();
+        private final Condition changed = lock.newCondition();
+        private boolean signaled;
+
+        void signal()
+        {
+            lock.lock();
+            try
+            {
+                signaled = true;
+                changed.signalAll();
+            }
+            finally
+            {
+                lock.unlock();
+            }
+        }
+
+        void await(long nanos, boolean polling) throws InterruptedException
+        {
+            lock.lock();
+            try
+            {
+                if (signaled)
+                {
+                    signaled = false;
+                    return;
+                }
+                if (polling && (nanos < 0L || nanos > POLL_NANOS))
+                {
+                    nanos = POLL_NANOS;
+                }
+                if (nanos < 0L)
+                {
+                    changed.await();
+                }
+                else
+                {
+                    changed.awaitNanos(nanos);
+                }
+                signaled = false;
+            }
+            finally
+            {
+                lock.unlock();
+            }
+        }
+    }
+
+    /**
+     * Whether readiness of this channel can only be caught reliably with
+     * polling (rendezvous channels: a waiting operation announces itself
+     * before parking, so a select may wake up a moment too early, miss the
+     * counterpart and wait again; short re-scan slices cover that window).
      */
     boolean needsPolling()
     {
@@ -250,16 +698,18 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
 
     /**
      * Handles an interruption received during a blocking operation.
-     * The interruption request is marked in the channel but it is not
-     * signaled again in the thread, because it has already been processed
-     * by the interrupted operation. Must be invoked by the subclasses inside
-     * their {@code catch (InterruptedException ex)} blocks.
+     * Marking the channel ({@link #isInterrupted()}) is internal to this
+     * family; the rest of the reaction is delegated to the installed
+     * {@link Channel.InterruptedExceptionListener}, which decides whether the
+     * thread is marked again (by default it is not). Must be invoked by the
+     * subclasses inside their {@code catch (InterruptedException ex)} blocks.
      *
      * @param ex the caught interruption exception
      */
-    protected void handleInterruptedException(InterruptedException ex)
+    protected final void handleInterruptedException(InterruptedException ex)
     {
         markInterrupted();
+        interruptedExceptionListener.processInterruptedException(ex);
     }
 
     /**

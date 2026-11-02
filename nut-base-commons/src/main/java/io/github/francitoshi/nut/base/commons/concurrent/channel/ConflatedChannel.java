@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -55,7 +56,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
-            fireSignals();
+            notifyOperation(Operation.PUT, value);
         }
         finally
         {
@@ -67,28 +68,26 @@ public final class ConflatedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        try
-        {
-            lock.lockInterruptibly();
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
-            return false;
-        }
+        return tryPut(value);
+    }
+
+    @Override
+    public boolean tryPut(E value)
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        lock.lock();
         try
         {
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
-            fireSignals();
-            return true;
         }
         finally
         {
             lock.unlock();
         }
+        notifyOperation(Operation.PUT, value);
+        return true;
     }
 
     @Override
@@ -122,6 +121,7 @@ public final class ConflatedChannel<E> extends Channel<E>
             E result = value;
             value = null;
             hasValue = false;
+            notifyOperation(Operation.GET, result);
             return result;
         }
         finally
@@ -133,24 +133,9 @@ public final class ConflatedChannel<E> extends Channel<E>
     @Override
     public E get(long timeout, TimeUnit unit)
     {
-        if (timeout == 0)
+        if (timeout <= 0)
         {
-            lock.lock();
-            try
-            {
-                if (!hasValue)
-                {
-                    return null;
-                }
-                E result = value;
-                value = null;
-                hasValue = false;
-                return result;
-            }
-            finally
-            {
-                lock.unlock();
-            }
+            return tryGet().orElse(null);
         }
 
         long deadline = JavaTime.untilNanoTime(timeout, unit);
@@ -187,11 +172,40 @@ public final class ConflatedChannel<E> extends Channel<E>
             E result = value;
             value = null;
             hasValue = false;
+            notifyOperation(Operation.GET, result);
             return result;
         }
         finally
         {
             lock.unlock();
         }
+    }
+
+    @Override
+    public Optional<E> tryGet()
+    {
+        E result = null;
+        boolean received = false;
+        lock.lock();
+        try
+        {
+            if (hasValue)
+            {
+                result = value;
+                value = null;
+                hasValue = false;
+                received = true;
+            }
+        }
+        finally
+        {
+            lock.unlock();
+        }
+        if (received)
+        {
+            notifyOperation(Operation.GET, result);
+            return Optional.of(result);
+        }
+        return Optional.empty();
     }
 }

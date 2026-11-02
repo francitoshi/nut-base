@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -26,9 +27,10 @@ public final class UnbufferedChannel<E> extends Channel<E>
         Objects.requireNonNull(value, "value must not be null");
         try
         {
-            // A SynchronousQueue only exposes the value while the writer is parked:
-            // fire first, then block. Select compensates with a short poll slice.
-            fireSignals();
+            // A value is only visible while the writer is parked: announce the
+            // pending put FIRST (it may wake a selectGet that retries tryGet),
+            // then block until the rendezvous happens.
+            notifyOperation(Operation.PUT, value);
             queue.put(value);
         }
         catch (InterruptedException ex)
@@ -43,10 +45,15 @@ public final class UnbufferedChannel<E> extends Channel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
         long deadline = JavaTime.untilNanoTime(timeout, unit);
+        long remaining = Math.max(0, deadline - System.nanoTime());
+        if (remaining == 0)
+        {
+            return tryPut(value);
+        }
         try
         {
-            fireSignals();
-            return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            notifyOperation(Operation.PUT, value);
+            return queue.offer(value, remaining, TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
         {
@@ -61,7 +68,12 @@ public final class UnbufferedChannel<E> extends Channel<E>
     {
         try
         {
-            return queue.take();
+            // Announce the pending get FIRST: it may wake a selectPut whose
+            // value becomes deliverable as soon as the reader is parked.
+            notifyOperation(Operation.GET, null);
+            E value = queue.take();
+            notifyOperation(Operation.GET, value);
+            return value;
         }
         catch (InterruptedException ex)
         {
@@ -75,9 +87,20 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public E get(long timeout, TimeUnit unit)
     {
         long deadline = JavaTime.untilNanoTime(timeout, unit);
+        long remaining = Math.max(0, deadline - System.nanoTime());
+        if (remaining == 0)
+        {
+            return tryGet().orElse(null);
+        }
         try
         {
-            return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            notifyOperation(Operation.GET, null);
+            E value = queue.poll(remaining, TimeUnit.NANOSECONDS);
+            if (value != null)
+            {
+                notifyOperation(Operation.GET, value);
+            }
+            return value;
         }
         catch (InterruptedException ex)
         {
@@ -85,6 +108,33 @@ public final class UnbufferedChannel<E> extends Channel<E>
             closeIfCloseable();
             return null;
         }
+    }
+
+    @Override
+    public Optional<E> tryGet()
+    {
+        // Non-blocking: a value is only reachable if a writer is already
+        // parked, which is observable by poll(0).
+        E value = queue.poll();
+        if (value != null)
+        {
+            notifyOperation(Operation.GET, value);
+            return Optional.of(value);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public boolean tryPut(E value)
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        if (queue.offer(value))
+        {
+            // A waiting plain get() is not notified through notifyOperation
+            // by the offering side; the taker notifies on success.
+            return true;
+        }
+        return false;
     }
 
     @Override

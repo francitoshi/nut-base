@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +32,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
         try
         {
             queue.put(value);
-            fireSignals();
+            notifyOperation(Operation.PUT, value);
         }
         catch (InterruptedException ex)
         {
@@ -44,10 +45,20 @@ public final class UnlimitedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
+        if (timeout <= 0)
+        {
+            return tryPut(value);
+        }
+
         long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
-            return fireIf(queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS));
+            if (queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS))
+            {
+                notifyOperation(Operation.PUT, value);
+                return true;
+            }
+            return false;
         }
         catch (InterruptedException ex)
         {
@@ -62,7 +73,9 @@ public final class UnlimitedChannel<E> extends Channel<E>
     {
         try
         {
-            return queue.take();
+            E value = queue.take();
+            notifyOperation(Operation.GET, value);
+            return value;
         }
         catch (InterruptedException ex)
         {
@@ -75,10 +88,20 @@ public final class UnlimitedChannel<E> extends Channel<E>
     @Override
     public E get(long timeout, TimeUnit unit)
     {
+        if (timeout <= 0)
+        {
+            return tryGet().orElse(null);
+        }
+
         long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
-            return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            E value = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            if (value != null)
+            {
+                notifyOperation(Operation.GET, value);
+            }
+            return value;
         }
         catch (InterruptedException ex)
         {
@@ -86,5 +109,29 @@ public final class UnlimitedChannel<E> extends Channel<E>
             closeIfCloseable();
             return null;
         }
+    }
+
+    @Override
+    public Optional<E> tryGet()
+    {
+        E value = queue.poll();
+        if (value != null)
+        {
+            notifyOperation(Operation.GET, value);
+            return Optional.of(value);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public boolean tryPut(E value)
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        if (queue.offer(value))
+        {
+            notifyOperation(Operation.PUT, value);
+            return true;
+        }
+        return false;
     }
 }

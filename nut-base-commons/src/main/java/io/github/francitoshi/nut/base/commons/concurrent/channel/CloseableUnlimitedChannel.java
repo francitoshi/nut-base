@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -50,7 +51,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 try
                 {
                     queue.put(value);
-                    fireSignals();
+                    notifyOperation(Operation.PUT, value);
                     return;
                 }
                 catch (InterruptedException ex)
@@ -98,13 +99,17 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                     boolean result;
                     if (timeout == 0)
                     {
-                        result = queue.offer(value);
+                        return tryPut(value);
                     }
                     else
                     {
                         result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
                     }
-                    return fireIf(result);
+                    if (result)
+                    {
+                        notifyOperation(Operation.PUT, value);
+                    }
+                    return result;
                 }
                 catch (InterruptedException ex)
                 {
@@ -145,7 +150,12 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 }
 
                 Object item = queue.take();
-                return item == POISON ? null : (E) item;
+                if (item == POISON)
+                {
+                    return null;
+                }
+                notifyOperation(Operation.GET, (E) item);
+                return (E) item;
             }
             catch (InterruptedException ex)
             {
@@ -200,6 +210,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
                 {
                     return null;
                 }
+                notifyOperation(Operation.GET, (E) item);
                 return (E) item;
             }
             catch (InterruptedException ex)
@@ -220,6 +231,36 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
     }
 
     @SuppressWarnings("unchecked")
+    @Override
+    public Optional<E> tryGet()
+    {
+        Object item = queue.poll();
+        if (item == null || item == POISON)
+        {
+            return Optional.empty();
+        }
+        E value = (E) item;
+        notifyOperation(Operation.GET, value);
+        return Optional.of(value);
+    }
+
+    @Override
+    public boolean tryPut(E value)
+    {
+        Objects.requireNonNull(value, "value must not be null");
+        if (closed)
+        {
+            return false;
+        }
+        if (queue.offer(value))
+        {
+            notifyOperation(Operation.PUT, value);
+            return true;
+        }
+        return false;
+    }
+
+    @SuppressWarnings("unchecked")
     private E drainAfterClosePoll()
     {
         Object item = queue.poll();
@@ -227,8 +268,8 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         {
             return null;
         }
-        @SuppressWarnings("unchecked")
         E result = (E) item;
+        notifyOperation(Operation.GET, result);
         return result;
     }
 
@@ -240,6 +281,10 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
             Object item = queue.poll();
             if (item != null)
             {
+                if (item != POISON)
+                {
+                    notifyOperation(Operation.GET, (E) item);
+                }
                 return (item == POISON) ? null : (E) item;
             }
 
@@ -264,7 +309,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         {
             closed = true;
             closeLock.notifyAll();
-            fireSignals();
+            notifyOperation(Operation.CLOSE, null);
 
             // Unblock pending readers even if the write lock below times out:
             // a reader blocked in take() is only woken by a POISON and, after

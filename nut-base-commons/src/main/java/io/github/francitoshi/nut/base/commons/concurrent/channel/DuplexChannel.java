@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import java.util.Iterator;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -20,6 +21,16 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     private final ChannelReader<E> in;
     private final ChannelWriter<E> out;
 
+    /**
+     * Forwards the observable state of the delegates to this channel, so a
+     * {@code select} registered on this duplex wakes up when {@code in} or
+     * {@code out} report activity.
+     */
+    private final ChannelObservable.OperationListener<E> inListener =
+            (channel, operation, value) -> notifyOperation(operation, value);
+    private final ChannelObservable.OperationListener<E> outListener =
+            (channel, operation, value) -> notifyOperation(operation, value);
+
     public DuplexChannel(ChannelReader<E> in, ChannelWriter<E> out)
     {
         this.in = Objects.requireNonNull(in, "in must not be null");
@@ -28,6 +39,8 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
         {
             throw new IllegalArgumentException("in and out must be different objects");
         }
+        in.addOperationListener(inListener);
+        out.addOperationListener(outListener);
     }
 
     @Override
@@ -52,6 +65,18 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     public E get(long timeout, TimeUnit unit)
     {
         return in.get(timeout, unit);
+    }
+
+    @Override
+    public Optional<E> tryGet()
+    {
+        return in.tryGet();
+    }
+
+    @Override
+    public boolean tryPut(E value)
+    {
+        return out.tryPut(value);
     }
 
     /**
@@ -97,29 +122,41 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     }
 
     /**
-     * Select support: a duplex channel is read from {@code in}, so it is
-     * {@code in} that has to fire the signals. If {@code in} is not a
-     * {@link Channel} the select falls back to polling.
+     * {@inheritDoc}
+     * <p>
+     * The listener is installed on this channel <em>and</em> propagated to the
+     * delegates that implement {@link Channel}, because that is where the
+     * blocking operations actually wait and get interrupted. Non-{@link
+     * Channel} delegates are left untouched.
      */
     @Override
-    boolean register(SelectSignal signal)
+    @SuppressWarnings("unchecked")
+    public void setInterruptedExceptionListener(InterruptedExceptionListener listener)
     {
-        return in instanceof Channel && ((Channel<?>) in).register(signal);
-    }
-
-    @Override
-    void unregister(SelectSignal signal)
-    {
+        super.setInterruptedExceptionListener(listener);
         if (in instanceof Channel)
         {
-            ((Channel<?>) in).unregister(signal);
+            ((Channel<E>) in).setInterruptedExceptionListener(listener);
+        }
+        if (out instanceof Channel)
+        {
+            ((Channel<E>) out).setInterruptedExceptionListener(listener);
         }
     }
 
+    /**
+     * Select support: a duplex channel can only announce activity through its
+     * delegates, so select must re-scan in short slices when a delegate itself
+     * can only be caught reliably by polling (rendezvous or non-{@link Channel}
+     * delegates).
+     */
     @Override
     boolean needsPolling()
     {
-        return !(in instanceof Channel) || ((Channel<?>) in).needsPolling();
+        return !(in instanceof Channel)
+                || !(out instanceof Channel)
+                || ((Channel<?>) in).needsPolling()
+                || ((Channel<?>) out).needsPolling();
     }
 
     @Override

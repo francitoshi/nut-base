@@ -136,12 +136,19 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
      * Forces the current partial batch out immediately, regardless of how
      * many messages it holds and of {@code maxWaitMillis}. Safe to call from
      * any thread; the pending items are moved to the downstream stage.
+     * <p>
+     * In asynchronous mode the flush first quiesces: every message already
+     * accepted (still queued in the internal channel, or in transit between
+     * the worker's read and its push into the pending batch) is absorbed into
+     * the batch, so a caller that stopped accepting can be sure that flush
+     * emits everything it sent. The quiesce is bounded by a deadline so that
+     * a stream that keeps accepting cannot block the flush forever.
      */
     public void flush()
     {
         if (!syncMode)
         {
-            ((BatchDrainer) inner).flush();
+            ((BatchDrainer) inner).quiesceAndFlush();
         }
         else
         {
@@ -349,7 +356,7 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
                 {
                     if (channel.isClosed())
                     {
-                        flush();
+                        flushPending();
                     }
                     return;
                 }
@@ -375,11 +382,11 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
                         }
                         batchSize = push(m);
                     }
-                    flush();
+                    flushPending();
                 }
                 else if (batchSize >= maxSize)
                 {
-                    flush();
+                    flushPending();
                 }
             }
         }
@@ -401,7 +408,40 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
             return size;
         }
 
-        private void flush()
+        /**
+         * Public flush entry point: first absorbs every accepted message that
+         * is still queued in the internal channel or in transit between the
+         * worker's read and its push into the pending batch, then emits the
+         * current batch.
+         * <p>
+         * {@code counters.first} counts messages accepted but not yet pushed
+         * into the pending batch, so once it reaches zero no worker thread can
+         * still add a message to the batch. The repeat loop guards against a
+         * message accepted while we were polling the channel. The wait is
+         * bounded by a deadline so a producer that keeps accepting cannot
+         * block this flush forever.
+         */
+        private void quiesceAndFlush()
+        {
+            long deadline = Saturated.saturatedAdd(System.nanoTime(),
+                    TimeUnit.MILLISECONDS.toNanos(1000L));
+            while (true)
+            {
+                T m;
+                while ((m = channel.get(0L, TimeUnit.NANOSECONDS)) != null)
+                {
+                    push(m);
+                }
+                if (counters.getFirst() == 0 || System.nanoTime() >= deadline)
+                {
+                    break;
+                }
+                Thread.yield();
+            }
+            flushPending();
+        }
+
+        private void flushPending()
         {
             List<T> batch;
             synchronized (pending)
