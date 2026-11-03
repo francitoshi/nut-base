@@ -57,7 +57,7 @@ class ChannelTimeoutOverflowTest
         channels.add(new UnlimitedChannel<>());
         channels.add(new ConflatedChannel<>());
         channels.add(new CloseableBufferedChannel<>(4));
-        channels.add(new CloseableBufferedChannel<>(0));
+        channels.add(new CloseableUnbufferedChannel<>());
         channels.add(new CloseableUnlimitedChannel<>());
         channels.add(new CloseableConflatedChannel<>());
 
@@ -84,7 +84,7 @@ class ChannelTimeoutOverflowTest
         channels.add(full);
         channels.add(closeableFull);
         channels.add(new UnbufferedChannel<>());          // nobody is reading
-        channels.add(new CloseableBufferedChannel<>(0));  // nobody is reading
+        channels.add(new CloseableUnbufferedChannel<>());  // nobody is reading
 
         for (Channel<String> ch : channels)
         {

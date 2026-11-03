@@ -94,14 +94,19 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
      * {@link Iterator#next} is hooked directly to {@link #get()}, blocking
      * until the next value is available.
      *
-     * <p>Closeable channels ({@link CloseableChannel}) override this method to
-     * stop iteration once the channel has been closed.
+     * <p>Closeable channels ({@link CloseableChannel}) stop iteration once the
+     * channel has been closed: this dispatch is centralized here, so the
+     * {@code CloseableX} subclasses do not need to override {@code iterator()}.
      *
      * @return a new {@code Iterator} reading from this channel
      */
     @Override
     public Iterator<E> iterator()
     {
+        if (this instanceof ChannelCloser)
+        {
+            return terminatingIterator();
+        }
         return new Iterator<E>()
         {
             @Override
@@ -198,6 +203,86 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
     final void markInterrupted()
     {
         interrupted = true;
+    }
+
+    // -----------------------------------------------------------------------
+    // Close state (only meaningful on CloseableChannel subclasses)
+    // -----------------------------------------------------------------------
+
+    /**
+     * Whether {@link ChannelCloser#close()} has been called. Written by
+     * {@link #markClosed()} through the closeable implementations and read
+     * freely; on non-closeable channels it is never set, so
+     * {@link #isClosed()} stays {@code false} for their whole lifetime.
+     */
+    protected volatile boolean closed;
+
+    /**
+     * Returns whether this channel has been closed via
+     * {@link ChannelCloser#close()}. On non-closeable channels it always
+     * returns {@code false} ({@code close()} only exists on the
+     * {@link CloseableChannel} family).
+     *
+     * @return {@code true} if a closeable channel has been closed
+     */
+    public boolean isClosed()
+    {
+        return closed;
+    }
+
+    /**
+     * Marks the channel as closed and wakes every {@link #join()} waiter.
+     * <p>
+     * Internal to the {@link CloseableChannel} implementations: their
+     * {@code close()} calls it once the close has taken effect on their own
+     * engine (under the same lock that stops further puts, so no further
+     * value slips in after the transition).
+     */
+    protected final void markClosed()
+    {
+        closed = true;
+        wakeJoiners();
+    }
+
+    /**
+     * Blocks the current thread until this closeable channel is closed. If
+     * the channel is already closed, returns immediately.
+     *
+     * @throws IllegalStateException if the channel cannot ever be closed
+     *         (it is not part of the {@link CloseableChannel} family)
+     * @throws InterruptedException if the current thread is interrupted while
+     *         waiting
+     */
+    public void join() throws InterruptedException
+    {
+        if (!(this instanceof ChannelCloser))
+        {
+            throw new IllegalStateException("not a closeable channel");
+        }
+        synchronized (joinLock)
+        {
+            while (!closed)
+            {
+                joinLock.wait();
+            }
+        }
+    }
+
+    /** Wakes the threads waiting in {@link #join()}; called by {@link #markClosed()}. */
+    private final void wakeJoiners()
+    {
+        synchronized (joinLock)
+        {
+            joinLock.notifyAll();
+        }
+    }
+
+    private final Object joinLock = new Object();
+
+    /** Whether the read side of this channel is closed. */
+    boolean isReadClosed()
+    {
+        return closed;
     }
 
     /**
@@ -688,12 +773,6 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
     boolean needsPolling()
     {
         return false;
-    }
-
-    /** Whether the read side of this channel is closed. */
-    boolean isReadClosed()
-    {
-        return this instanceof ChannelCloser && ((ChannelCloser) this).isClosed();
     }
 
     /**

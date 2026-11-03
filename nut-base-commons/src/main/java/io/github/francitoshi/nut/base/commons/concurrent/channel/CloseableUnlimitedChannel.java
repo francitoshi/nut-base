@@ -13,15 +13,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
+public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> implements CloseableChannel<E>
 {
     private static final Object POISON = new Object();
 
     private final AtomicInteger gets = new AtomicInteger();
 
     private final LinkedBlockingQueue<Object> queue = new LinkedBlockingQueue<>();
-
-    private volatile boolean closed;
 
     private final ReentrantReadWriteLock rwLock = new ReentrantReadWriteLock(true);
 
@@ -307,7 +305,7 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
 
         synchronized (closeLock)
         {
-            closed = true;
+            markClosed();
             closeLock.notifyAll();
             notifyOperation(Operation.CLOSE, null);
 
@@ -350,27 +348,6 @@ public final class CloseableUnlimitedChannel<E> extends CloseableChannel<E>
         {
             Thread.currentThread().interrupt();
             return false;
-        }
-    }
-
-    @Override
-    public boolean isClosed()
-    {
-        return closed;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void join() throws InterruptedException
-    {
-        synchronized (closeLock)
-        {
-            while (!closed)
-            {
-                closeLock.wait();
-            }
         }
     }
 }

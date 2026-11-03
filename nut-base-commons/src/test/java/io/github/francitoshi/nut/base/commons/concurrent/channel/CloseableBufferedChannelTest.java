@@ -39,9 +39,11 @@ public class CloseableBufferedChannelTest
     }
 
     @Test
-    public void testZeroValidCapacity()
+    public void testZeroCapacityIsRejected()
     {
-        assertNotNull(new CloseableBufferedChannel<>(0));
+        // capacity 0 is the rendezvous channel, which is its own class
+        assertThrows(IllegalArgumentException.class, () -> new CloseableBufferedChannel<>(0));
+        assertNotNull(new CloseableUnbufferedChannel<>());
     }
 
     @Test

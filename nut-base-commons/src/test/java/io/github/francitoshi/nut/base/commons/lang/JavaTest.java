@@ -46,7 +46,10 @@ public class JavaTest
     @Test
     public void testSomeMethod()
     {
-        assertEquals(8, Java.JAVA_INT_VERSION);
+        // JAVA_INT_VERSION reports the JDK the library is running on; the
+        // minimum supported version is Java 8.
+        assertTrue(Java.JAVA_INT_VERSION >= 8, "the library must run on Java 8 or newer");
+        assertEquals(Integer.parseInt(System.getProperty("java.specification.version")), Java.JAVA_INT_VERSION);
     }
     
     @Test

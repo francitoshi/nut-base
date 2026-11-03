@@ -78,11 +78,16 @@ public class LocalesTest
             String iso3 = COUNTRIES[i][2];
             String num3 = COUNTRIES[i][3];
             
+            // The display name has to be looked up at runtime: the CLDR data
+            // bundled in the JDK renames countries over time (e.g. JDK 25
+            // renamed Turkey to "Türkiye"), so the expected name is taken from
+            // the same source the implementation was built from.
+            String displayName = new Locale("", iso2.toUpperCase(), "").getDisplayCountry(Locale.US);
             assertEquals(iso2, Locales.getISO2Country(iso2));
             assertEquals(iso2, Locales.getISO2Country(iso3));
-            assertEquals(iso2, Locales.getISO2Country(name));
-            assertEquals(iso2, Locales.getISO2Country(name.toLowerCase()));
-            assertEquals(iso2, Locales.getISO2Country(name.toUpperCase()));
+            assertEquals(iso2, Locales.getISO2Country(displayName));
+            assertEquals(iso2, Locales.getISO2Country(displayName.toLowerCase()));
+            assertEquals(iso2, Locales.getISO2Country(displayName.toUpperCase()));
         }
     }
 
@@ -134,9 +139,14 @@ public class LocalesTest
                 assertEquals(iso2, Locales.getISO2Language(old3), name+"@19");
             }
             
-            assertEquals(iso2, Locales.getISO2Language(name), name+"@20");
-            assertEquals(iso2, Locales.getISO2Language(name.toLowerCase()), name+"@21");
-            assertEquals(iso2, Locales.getISO2Language(name.toUpperCase()), name+"@22");
+            // The display name has to be looked up at runtime: the CLDR data
+            // bundled in the JDK renames languages over time (e.g. JDK 25
+            // spells Fulah as "Fula"), so the expected name is taken from the
+            // same source the implementation was built from.
+            String displayName = new Locale(iso2, "", "").getDisplayLanguage(Locale.US);
+            assertEquals(iso2, Locales.getISO2Language(displayName), name+"@20");
+            assertEquals(iso2, Locales.getISO2Language(displayName.toLowerCase()), name+"@21");
+            assertEquals(iso2, Locales.getISO2Language(displayName.toUpperCase()), name+"@22");
         }
     }
 
@@ -162,11 +172,13 @@ public class LocalesTest
             String iso3 = COUNTRIES[i][2].toUpperCase();
             String num3 = COUNTRIES[i][3];
             
+            // See the note on CLDR renames in testGetISO2Country.
+            String displayName = new Locale("", iso2, "").getDisplayCountry(Locale.US);
             assertEquals(iso3, Locales.getISO3Country(iso2),i+"@1");
             assertEquals(iso3, Locales.getISO3Country(iso3),i+"@2");
-            assertEquals(iso3, Locales.getISO3Country(name),i+"@3");
-            assertEquals(iso3, Locales.getISO3Country(name.toLowerCase()),i+"@4");
-            assertEquals(iso3, Locales.getISO3Country(name.toUpperCase()),i+"@5");
+            assertEquals(iso3, Locales.getISO3Country(displayName),i+"@3");
+            assertEquals(iso3, Locales.getISO3Country(displayName.toLowerCase()),i+"@4");
+            assertEquals(iso3, Locales.getISO3Country(displayName.toUpperCase()),i+"@5");
         }
         
     }

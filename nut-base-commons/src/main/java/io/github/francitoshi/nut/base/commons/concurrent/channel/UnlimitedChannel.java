@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  * value is always enqueued and returns immediately (except for memory
  * exhaustion).
  */
-public final class UnlimitedChannel<E> extends Channel<E>
+public class UnlimitedChannel<E> extends Channel<E>
 {
     private final LinkedBlockingQueue<E> queue = new LinkedBlockingQueue<>();
 

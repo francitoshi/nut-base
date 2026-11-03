@@ -17,7 +17,7 @@ import java.util.concurrent.TimeUnit;
  * so put()/get() delegate directly to SynchronousQueue, adding only
  * interruption-tracking state.
  */
-public final class UnbufferedChannel<E> extends Channel<E>
+public class UnbufferedChannel<E> extends Channel<E>
 {
     private final SynchronousQueue<E> queue = new SynchronousQueue<>();
 

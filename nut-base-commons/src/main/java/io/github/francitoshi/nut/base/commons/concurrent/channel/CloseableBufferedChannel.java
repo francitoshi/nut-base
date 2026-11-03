@@ -5,106 +5,70 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
-import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
-import java.util.HashSet;
+import java.util.ArrayDeque;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Closeable channel with a fixed-capacity buffer, or an unbuffered
- * (rendezvous) channel when created with capacity {@code 0}.
+ * Closeable channel with a fixed-capacity buffer (capacity must be positive;
+ * for an unbuffered rendezvous channel see {@link CloseableUnbufferedChannel}).
  * <p>
- * A capacity of {@code 0} is valid and makes this channel behave as an
- * unbuffered channel backed by a {@link SynchronousQueue}: a blocked
- * {@link #put} only completes when a reader calls {@link #get}.
+ * The engine keeps the queue and the count of puts in flight under a single
+ * {@link ReentrantLock}, the same invariant of the {@code concurrent.chann}
+ * family: checking {@code closed} while holding the lock that also guards the
+ * queue turns the drain-after-close into an ordinary predicate, so the hot
+ * path carries no {@code POISON}, no reader counters and no thread
+ * bookkeeping. The closing state, {@link #join()} and the terminating
+ * iteration are inherited from {@link CloseableChannel} support in
+ * {@link Channel}.
  * <p>
  * {@link #close()} marks the channel as closed, unblocks all pending readers
  * (they drain the remaining buffered elements and then return {@code null})
  * and aborts any {@link #put} in progress: a blocked {@code put} returns
  * without delivering its value and the timed variant returns {@code false}.
+ *
+ * @param <E> the element type
  */
-public class CloseableBufferedChannel<E> extends CloseableChannel<E>
+public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements CloseableChannel<E>
 {
-    private static final Object POISON = new Object();
+    private final int capacity;
 
-    private final AtomicInteger gets = new AtomicInteger();
+    private final ArrayDeque<E> items;
 
-    private final BlockingQueue<Object> queue;
+    private final ReentrantLock lock = new ReentrantLock();
 
-    private final boolean rendezvous;
+    private final Condition notEmpty = lock.newCondition();
 
-    private volatile boolean closed;
-
-    private final Object lock = new Object();
-
-    private int activeWriters;
-
-    private final Set<Thread> writers = new HashSet<>();
+    private final Condition notFull = lock.newCondition();
 
     /**
-     * @param capacity the buffer capacity, or {@code 0} for an unbuffered
-     *                 (rendezvous) channel; must not be negative
+     * Signalled when the count of puts in flight reaches zero: it wakes the
+     * {@code close(timeout, unit)} waiters and the {@link #join()} callers.
+     */
+    private final Condition drained = lock.newCondition();
+
+    /** Puts in flight, guarded by {@link #lock}. */
+    private int activeWriters;
+
+    /**
+     * @param capacity the buffer capacity; must be positive
      */
     public CloseableBufferedChannel(int capacity)
     {
-        if (capacity < 0)
-        {
-            throw new IllegalArgumentException("capacity must be >= 0");
-        }
-        this.queue = capacity>0 ? new ArrayBlockingQueue<>(capacity) : new SynchronousQueue<>();
-        this.rendezvous = capacity == 0;
+        super(capacity);
+        this.capacity = capacity;
+        this.items = new ArrayDeque<>(capacity);
     }
 
     @Override
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-
-        while (true)
-        {
-            synchronized (lock)
-            {
-                if (closed)
-                {
-                    throw new IllegalStateException("closed");
-                }
-                activeWriters++;
-                writers.add(Thread.currentThread());
-            }
-            boolean interrupted = false;
-            try
-            {
-                queue.put(value);
-                notifyOperation(Operation.PUT, value);
-                return;
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-                interrupted = true;
-            }
-            finally
-            {
-                synchronized (lock)
-                {
-                    activeWriters--;
-                    writers.remove(Thread.currentThread());
-                    lock.notifyAll();
-                }
-            }
-            if (interrupted)
-            {
-                closeIfCloseable();
-                return;
-            }
-        }
+        putBounded(value, -1L);
     }
 
     @Override
@@ -115,293 +79,294 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
         {
             return false;
         }
-
         if (timeout == 0)
         {
             return tryPut(value);
         }
-
-        long deadline = JavaTime.untilNanoTime(timeout, unit);
-        while (true)
-        {
-            synchronized (lock)
-            {
-                if (closed)
-                {
-                    return false;
-                }
-                activeWriters++;
-                writers.add(Thread.currentThread());
-            }
-            boolean interrupted = false;
-            try
-            {
-                boolean result = queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                if (result)
-                {
-                    notifyOperation(Operation.PUT, value);
-                }
-                return result;
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-                interrupted = true;
-            }
-            finally
-            {
-                synchronized (lock)
-                {
-                    activeWriters--;
-                    writers.remove(Thread.currentThread());
-                    lock.notifyAll();
-                }
-            }
-            if (interrupted)
-            {
-                closeIfCloseable();
-                return false;
-            }
-        }
+        return putBounded(value, JavaTime.untilNanoTime(timeout, unit));
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public E get()
     {
-        while (true)
-        {
-            if (closed)
-            {
-                return drainAfterClose();
-            }
-
-            gets.incrementAndGet();
-            boolean interrupted = false;
-            try
-            {
-                if (closed)
-                {
-                    return drainAfterClose();
-                }
-
-                Object item = queue.take();
-                if (item == POISON)
-                {
-                    return null;
-                }
-                notifyOperation(Operation.GET, (E) item);
-                return (E) item;
-            }
-            catch (InterruptedException ex)
-            {
-                handleInterruptedException(ex);
-                interrupted = true;
-            }
-            finally
-            {
-                gets.decrementAndGet();
-            }
-            if (interrupted)
-            {
-                closeIfCloseable();
-                return null;
-            }
-        }
+        return getBounded(-1L, TimeUnit.NANOSECONDS, true);
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public E get(long timeout, TimeUnit unit)
     {
-        if (closed || timeout == 0)
-        {
-            return drainAfterClosePoll();
-        }
+        return getBounded(timeout, unit, false);
+    }
 
-        long deadline = JavaTime.untilNanoTime(timeout, unit);
-        while (true)
+    // -------------------------------------------------------------------
+    // Core engine
+    // -------------------------------------------------------------------
+
+    /**
+     * Bounded put with a single lock acquisition. When {@code deadline} is
+     * negative the put blocks until interrupted, closed, or room appears.
+     * {@link #activeWriters} counts the put from right after the closed
+     * check until it finishes, so {@code close(timeout, unit)} can wait for
+     * the puts in flight without tracking threads.
+     *
+     * @param deadline absolute deadline in nanos; negative blocks forever
+     * @return {@code true} if the value was delivered; {@code false} on
+     *         interruption, timeout or close (the blocking variant also
+     *         handles the delegated {@link #put(Object)} case with its
+     *         {@link IllegalStateException})
+     */
+    private boolean putBounded(E value, long deadline)
+    {
+        boolean inserted = false;
+        boolean aborted = false;
+        InterruptedException interrupted = null;
+
+        lock.lock();
+        try
         {
+            activeWriters++;
             if (closed)
             {
-                return drainAfterClosePoll();
+                if (deadline < 0L)
+                {
+                    throw new IllegalStateException("closed");
+                }
+                return false;
             }
-
-            gets.incrementAndGet();
-            boolean interrupted = false;
-            try
+            while (items.size() >= capacity)
             {
+                try
+                {
+                    if (deadline < 0L)
+                    {
+                        notFull.await();
+                    }
+                    else
+                    {
+                        long remaining = deadline - System.nanoTime();
+                        if (remaining <= 0L)
+                        {
+                            return false;
+                        }
+                        notFull.awaitNanos(remaining);
+                    }
+                }
+                catch (InterruptedException ex)
+                {
+                    interrupted = ex;
+                    return false;
+                }
                 if (closed)
                 {
-                    return drainAfterClosePoll();
+                    // woken by close(): fresh out of the wait, same outcome
+                    // as an interruption per the interruption contract
+                    aborted = true;
+                    return false;
                 }
-
-                Object item = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                if (item == null || item == POISON)
-                {
-                    return null;
-                }
-                notifyOperation(Operation.GET, (E) item);
-                return (E) item;
             }
-            catch (InterruptedException ex)
+            items.addLast(value);
+            notEmpty.signalAll();
+            inserted = true;
+            return true;
+        }
+        finally
+        {
+            activeWriters--;
+            if (activeWriters == 0)
             {
-                handleInterruptedException(ex);
-                interrupted = true;
+                drained.signalAll();
             }
-            finally
+            lock.unlock();
+            // decision points run outside the lock: they may close the
+            // channel or dispatch listeners
+            if (interrupted != null)
             {
-                gets.decrementAndGet();
-            }
-            if (interrupted)
-            {
+                handleInterruptedException(interrupted);
                 closeIfCloseable();
-                return null;
+            }
+            if (aborted)
+            {
+                // the put was ended by close(), not by a real interrupt, but
+                // the observable contract is the one of an aborted operation
+                handleInterruptedException(new InterruptedException("aborted by close()"));
+            }
+            if (inserted)
+            {
+                notifyOperation(Operation.PUT, value);
             }
         }
     }
 
-    @SuppressWarnings("unchecked")
+    private E getBounded(long timeout, TimeUnit unit, boolean block)
+    {
+        // a negative (or zero, in the timed variants) timeout makes an
+        // immediate non-blocking attempt; the untimed get() blocks forever
+        long deadline = block ? -1L : JavaTime.untilNanoTime(timeout, unit);
+
+        E result = null;
+        boolean received = false;
+        InterruptedException interrupted = null;
+
+        lock.lock();
+        try
+        {
+            // An open channel waits for items; a closed one drains the
+            // remaining items one per call and then yields null.
+            while (items.isEmpty())
+            {
+                if (closed || (!block && timeout <= 0L))
+                {
+                    return null;
+                }
+                if (block)
+                {
+                    notEmpty.await();
+                }
+                else
+                {
+                    long remaining = deadline - System.nanoTime();
+                    if (remaining <= 0L)
+                    {
+                        return null;
+                    }
+                    notEmpty.awaitNanos(remaining);
+                }
+            }
+            result = items.removeFirst();
+            notFull.signalAll();
+            received = true;
+            return result;
+        }
+        catch (InterruptedException ex)
+        {
+            interrupted = ex;
+            return null;
+        }
+        finally
+        {
+            lock.unlock();
+            if (interrupted != null)
+            {
+                handleInterruptedException(interrupted);
+                closeIfCloseable();
+            }
+            if (received)
+            {
+                notifyOperation(Operation.GET, result);
+            }
+        }
+    }
+
     @Override
     public Optional<E> tryGet()
     {
-        Object item = queue.poll();
-        if (item == null || item == POISON)
+        E result = null;
+        boolean received = false;
+
+        lock.lock();
+        try
         {
-            return Optional.empty();
+            if (!items.isEmpty())
+            {
+                result = items.removeFirst();
+                notFull.signalAll();
+                received = true;
+            }
         }
-        E value = (E) item;
-        notifyOperation(Operation.GET, value);
-        return Optional.of(value);
+        finally
+        {
+            lock.unlock();
+        }
+        if (received)
+        {
+            notifyOperation(Operation.GET, result);
+            return Optional.of(result);
+        }
+        return Optional.empty();
     }
 
     @Override
     public boolean tryPut(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        if (closed)
+        boolean inserted = false;
+
+        lock.lock();
+        try
         {
-            return false;
+            if (!closed && items.size() < capacity)
+            {
+                items.addLast(value);
+                notEmpty.signalAll();
+                inserted = true;
+            }
         }
-        if (queue.offer(value))
+        finally
+        {
+            lock.unlock();
+        }
+        if (inserted)
         {
             notifyOperation(Operation.PUT, value);
-            return true;
         }
-        return false;
+        return inserted;
     }
 
-    @SuppressWarnings("unchecked")
-    private E drainAfterClosePoll()
-    {
-        Object item = queue.poll();
-        if (item == null || item == POISON)
-        {
-            return null;
-        }
-        E result = (E) item;
-        notifyOperation(Operation.GET, result);
-        return result;
-    }
-
-    @SuppressWarnings("unchecked")
-    private E drainAfterClose()
-    {
-        for(int i=1;;i++)
-        {
-            Object item = queue.poll();
-            if (item != null)
-            {
-                if (item != POISON)
-                {
-                    notifyOperation(Operation.GET, (E) item);
-                }
-                return (item == POISON) ? null : (E) item;
-            }
-
-            synchronized (lock)
-            {
-                if (activeWriters == 0)
-                {
-                    return null;
-                }
-                try
-                {
-                    lock.wait(Math.min(i,100));
-                }
-                catch (InterruptedException ex)
-                {
-                    handleInterruptedException(ex);
-                    return null;
-                }
-            }
-        }
-    }
-
+    /**
+     * Closes the channel: marks it closed and wakes every waiter. A put in
+     * flight aborts itself on its next wake-up (it re-checks {@code closed}
+     * while holding {@link #lock}), so the close never has to interrupt any
+     * thread. The wait below is for the puts in flight to reach their
+     * {@code finally}, the same contract of the previous engine.
+     *
+     * @return {@code true} if the puts in flight finished within the timeout
+     */
     public boolean close(long timeout, TimeUnit unit) throws InterruptedException
     {
-        // The irrevocable part of the close (mark closed, abort writers, wake the
-        // readers) must not be aborted by the caller's own interrupt status:
-        // otherwise the channel would be left closed with readers blocked forever.
-        // The interrupt is deferred and restored before the (interruptible) wait
-        // for the writers, so it still makes this method throw as documented.
+        // The irrevocable part of the close (mark closed, wake readers and
+        // writers) must not be aborted by the caller's own interrupt status:
+        // it is deferred and restored right before the one interruptible
+        // wait, so it still surfaces as documented.
         boolean interrupted = Thread.interrupted();
 
-        long timeoutNanos = unit.toNanos(timeout);
-        long deadline = Saturated.saturatedAdd(System.nanoTime(), timeoutNanos);
+        long nanos = unit.toNanos(timeout);
 
-        Thread[] blockedWriters;
-        synchronized (lock)
+        lock.lock();
+        try
         {
-            closed = true;
-            lock.notifyAll();
-            blockedWriters = writers.toArray(new Thread[writers.size()]);
+            markClosed();
+            notEmpty.signalAll();
+            notFull.signalAll();
+            drained.signalAll();
+        }
+        finally
+        {
+            lock.unlock();
         }
         notifyOperation(Operation.CLOSE, null);
-        for (Thread writer : blockedWriters)
-        {
-            writer.interrupt();
-        }
 
-        // Unblock pending readers even if the close times out waiting for the
-        // writers below: a reader blocked in take() is only woken by a POISON
-        // and, after closed = true, no real value will ever arrive.
-        for (int i = 1; gets.get() > 0; i++)
+        lock.lock();
+        try
         {
-            try
+            if (interrupted)
             {
-                queue.offer(POISON, Math.min(i, 100), TimeUnit.MILLISECONDS);
+                // already processed: surface it in the interruptible wait
+                Thread.currentThread().interrupt();
             }
-            catch (InterruptedException ex)
-            {
-                interrupted = true;
-            }
-        }
-
-        if (interrupted)
-        {
-            Thread.currentThread().interrupt();
-        }
-
-        synchronized (lock)
-        {
             while (activeWriters > 0)
             {
-                if (timeoutNanos <= 0)
+                if (nanos <= 0)
                 {
                     return false;
                 }
-                long timeoutMillis = TimeUnit.NANOSECONDS.toMillis(timeoutNanos);
-                if (timeoutMillis <= 0)
-                {
-                    timeoutMillis = 1;
-                }
-                lock.wait(timeoutMillis);
-                timeoutNanos = deadline - System.nanoTime();
+                nanos = drained.awaitNanos(nanos);
             }
+            return true;
         }
-
-        return true;
+        finally
+        {
+            lock.unlock();
+        }
     }
 
     @Override
@@ -416,32 +381,5 @@ public class CloseableBufferedChannel<E> extends CloseableChannel<E>
             Thread.currentThread().interrupt();
             return false;
         }
-    }
-
-    @Override
-    public boolean isClosed()
-    {
-        return closed;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void join() throws InterruptedException
-    {
-        synchronized (lock)
-        {
-            while (!closed)
-            {
-                lock.wait();
-            }
-        }
-    }
-
-    @Override
-    boolean needsPolling()
-    {
-        return rendezvous;
     }
 }

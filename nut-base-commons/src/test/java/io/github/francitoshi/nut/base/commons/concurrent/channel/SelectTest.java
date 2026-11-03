@@ -31,10 +31,10 @@ class SelectTest
             kind("unlimited", () -> Channel.<String>unlimited()),
             kind("conflated", () -> Channel.<String>conflated()),
             kind("unbuffered", () -> Channel.<String>unbuffered()),
-            kind("closeableBuffered", () -> Channel.<String>closeableBuffered(2)),
-            kind("closeableUnbuffered", () -> Channel.<String>closeableUnbuffered()),
-            kind("closeableUnlimited", () -> Channel.<String>closeableUnlimited()),
-            kind("closeableConflated", () -> Channel.<String>closeableConflated()));
+            kind("closeableBuffered", () -> new CloseableBufferedChannel<String>(2)),
+            kind("closeableUnbuffered", CloseableUnbufferedChannel::new),
+            kind("closeableUnlimited", CloseableUnlimitedChannel::new),
+            kind("closeableConflated", CloseableConflatedChannel::new));
     }
 
     private static <T> Arguments kind(String name, java.util.function.Supplier<Channel<T>> s)
@@ -293,7 +293,7 @@ class SelectTest
     {
         return java.util.stream.Stream.of(
             kind("buffered", () -> Channel.<Integer>buffered(1)),
-            kind("closeableBuffered", () -> Channel.<Integer>closeableBuffered(1)));
+            kind("closeableBuffered", () -> new CloseableBufferedChannel<Integer>(1)));
     }
 
     @Test

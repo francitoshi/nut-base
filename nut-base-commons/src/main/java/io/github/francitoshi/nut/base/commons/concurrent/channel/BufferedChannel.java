@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  * value is stored in the buffer and put() returns as soon as there is room
  * available (up to "capacity" elements in transit).
  */
-public final class BufferedChannel<E> extends Channel<E>
+public class BufferedChannel<E> extends Channel<E>
 {
     private final ArrayBlockingQueue<E> queue;
 

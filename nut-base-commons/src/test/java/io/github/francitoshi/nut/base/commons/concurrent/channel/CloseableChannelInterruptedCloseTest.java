@@ -81,7 +81,6 @@ class CloseableChannelInterruptedCloseTest
     @Test
     void unbufferedChannelReadersAreWokenWhenClosedByInterruptedThread() throws Exception
     {
-        assertReadersAreWokenByInterruptedCloser(new CloseableBufferedChannel<>(0));
         assertReadersAreWokenByInterruptedCloser(new CloseableUnbufferedChannel<>());
     }
 

@@ -27,15 +27,13 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @param <E> the element type
  */
-public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
+public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> implements CloseableChannel<E>
 {
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition notEmpty = lock.newCondition();
-    private final Condition closed = lock.newCondition();
 
     private E value;
     private boolean hasValue;
-    private volatile boolean closedFlag;
 
     @Override
     public void put(E value)
@@ -53,7 +51,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         }
         try
         {
-            if (closedFlag)
+            if (closed)
             {
                 throw new IllegalStateException("closed");
             }
@@ -84,7 +82,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         }
         try
         {
-            if (closedFlag)
+            if (closed)
             {
                 return false;
             }
@@ -133,7 +131,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
     public boolean tryPut(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        if (closedFlag)
+        if (closed)
         {
             return false;
         }
@@ -160,7 +158,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         {
             while (!hasValue)
             {
-                if (closedFlag)
+                if (closed)
                 {
                     return null;
                 }
@@ -222,7 +220,7 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         {
             while (!hasValue)
             {
-                if (closedFlag)
+                if (closed)
                 {
                     return null;
                 }
@@ -269,38 +267,15 @@ public final class CloseableConflatedChannel<E> extends CloseableChannel<E>
         lock.lock();
         try
         {
-            if (closedFlag)
+            if (closed)
             {
                 return true;
             }
-            closedFlag = true;
+            // the notifying of the join() waiters goes through markClosed()
+            markClosed();
             notEmpty.signalAll();
-            closed.signalAll();
             notifyOperation(Operation.CLOSE, null);
             return true;
-        }
-        finally
-        {
-            lock.unlock();
-        }
-    }
-
-    @Override
-    public boolean isClosed()
-    {
-        return closedFlag;
-    }
-
-    @Override
-    public void join() throws InterruptedException
-    {
-        lock.lockInterruptibly();
-        try
-        {
-            while (!closedFlag)
-            {
-                closed.await();
-            }
         }
         finally
         {

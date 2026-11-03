@@ -29,7 +29,7 @@ import java.util.concurrent.locks.ReentrantLock;
  *
  * @param <E> the element type
  */
-public final class ConflatedChannel<E> extends Channel<E>
+public class ConflatedChannel<E> extends Channel<E>
 {
     private final ReentrantLock lock = new ReentrantLock();
     private final Condition notEmpty = lock.newCondition();
