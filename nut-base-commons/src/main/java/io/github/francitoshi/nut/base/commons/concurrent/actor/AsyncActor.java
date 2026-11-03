@@ -38,6 +38,17 @@ abstract class AsyncActor<M> extends Actor<M>
     protected boolean permanentWorkerStarted;
     protected boolean shutdownWhenEmpty;
 
+    /**
+     * Slice between drain passes in {@link #workerDone(boolean)} while a
+     * message is still in transit (its producer holds a counter entry but the
+     * channel does not hold the message yet). A non-blocking pass cannot see
+     * such messages, so the previous hot poll loop burned a core for as long
+     * as the producer stayed descheduled; this tiny timed slice parks the
+     * worker instead, which costs nothing when nothing arrives in time and
+     * keeps the message latency bounded well below a scheduling quantum.
+     */
+    private static final long IN_TRANSIT_SLICE_MILLIS = 2;
+
     protected AsyncActor(ActorHub actorHub, int threads, int queueSize)
     {
         super(actorHub);
@@ -297,6 +308,19 @@ abstract class AsyncActor<M> extends Actor<M>
             while (counters.getFirst() > 0)
             {
                 drain(0);
+                if (counters.getFirst() > 0)
+                {
+                    // Messages still in transit: a producer already holds its
+                    // counter entry but has not reached the channel yet (or
+                    // its rendezvous put is waiting for this short window to
+                    // hand the value over). The previous non-blocking pass
+                    // could not see such a message, so re-polling it in a
+                    // tight loop burned CPU for as long as the producer
+                    // stayed slow (preemption, scheduling, GC pause). A tiny
+                    // timed hand-off parks the worker instead of spinning,
+                    // which costs nothing when nothing arrives.
+                    drain(IN_TRANSIT_SLICE_MILLIS);
+                }
             }
 
             boolean close = false;

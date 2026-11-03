@@ -80,8 +80,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
      * Listener used by {@link #handleInterruptedException}; defaults to
      * {@link #DEFAULT_INTERRUPTED_EXCEPTION_LISTENER}.
      */
-    private volatile InterruptedExceptionListener interruptedExceptionListener =
-            DEFAULT_INTERRUPTED_EXCEPTION_LISTENER;
+    private volatile InterruptedExceptionListener interruptedExceptionListener = DEFAULT_INTERRUPTED_EXCEPTION_LISTENER;
 
     private final List<OperationListener<E>> operationListeners = new CopyOnWriteArrayList<>();
 
@@ -331,8 +330,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
      * {@link Channel.InterruptedExceptionListener} with
      * {@link #setInterruptedExceptionListener}.
      */
-    public static final InterruptedExceptionListener DEFAULT_INTERRUPTED_EXCEPTION_LISTENER =
-            Channel::processInterruptedException;
+    public static final InterruptedExceptionListener DEFAULT_INTERRUPTED_EXCEPTION_LISTENER = Channel::processInterruptedException;
 
     /**
      * Logs an interruption, leaving the thread un-marked. The placeholder

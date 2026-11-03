@@ -1165,6 +1165,21 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * {@link ActorLifecycle} contract explicitly allows: it is only as long as
      * necessary to guarantee that forwards already in flight are never lost.
      *
+     * <p><b>Design note: the drain wait is unbounded on purpose.</b> The
+     * semantic of {@code onlyWhenEmpty == true} is "wait for as long as there
+     * is work", so while there is work the caller waits: the drain loop below
+     * has no deadline and does not honor the caller's interrupt status (the
+     * per-actor {@code waitForIdle()} passes swallow interruptions while they
+     * wait for idleness). As long as new work keeps arriving, the loop keeps
+     * deferring the close; the loop can only end while the graph is actually
+     * quiescent. Callers that need a bounded wait must not use
+     * {@code onlyWhenEmpty == true} on this thread: either shut down without
+     * draining, or run the call on a thread whose termination another party
+     * controls (e.g. with its own timeout). There is deliberately no timed
+     * variant: a graph closed halfway would silently discard exactly the
+     * in-flight work a caller would have given up on, and preserving that
+     * work is the whole reason this wait exists.
+     *
      * @param onlyWhenEmpty if {@code true}, the ActorHub drains until the whole
      *                      graph is quiescent before shutting down; if
      *                      {@code false}, shutdown starts immediately
@@ -1379,6 +1394,10 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     /**
      * Shuts down this ActorHub and blocks until every registered Actor has
      * terminated and the pool has shut down.
+     * <p>
+     * With {@code onlyWhenEmpty == true} the wait is unbounded on purpose: the
+     * semantic is "wait for as long as there is work" — see the design note in
+     * {@link #shutdown(boolean)}.
      *
      * @param onlyWhenEmpty if {@code true}, each Actor defers its shutdown until
      *                      its queue is empty; if {@code false}, shutdown starts

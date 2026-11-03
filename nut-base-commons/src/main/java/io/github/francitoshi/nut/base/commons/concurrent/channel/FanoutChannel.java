@@ -182,7 +182,7 @@ public class FanoutChannel<E> implements ChannelWriter<E>
         Objects.requireNonNull(listener, "listener");
         for (ChannelWriter<E> target : targets)
         {
-            Forwarder forwarder = new Forwarder(listener);
+            Forwarder forwarder = new Forwarder(target, listener);
             forwarders.add(forwarder);
             target.addOperationListener(forwarder);
         }
@@ -198,19 +198,27 @@ public class FanoutChannel<E> implements ChannelWriter<E>
     {
         for (int all = forwarders.size(), i = all - 1; i >= 0; i--)
         {
-            if (forwarders.get(i).user == listener)
+            Forwarder forwarder = forwarders.get(i);
+            if (forwarder.user == listener)
             {
+                // the forwarded copy must also leave the target, or the target
+                // keeps notifying a listener nobody observes anymore (and each
+                // select would leak one Signal per target)
+                forwarder.target.removeOperationListener(forwarder);
                 forwarders.remove(i);
             }
         }
     }
 
+    /** One forwarding wrapper per registered operation listener per target. */
     private final class Forwarder implements OperationListener<E>
     {
         final OperationListener<E> user;
+        final ChannelWriter<E> target;
 
-        Forwarder(OperationListener<E> user)
+        Forwarder(ChannelWriter<E> target, OperationListener<E> user)
         {
+            this.target = target;
             this.user = user;
         }
 

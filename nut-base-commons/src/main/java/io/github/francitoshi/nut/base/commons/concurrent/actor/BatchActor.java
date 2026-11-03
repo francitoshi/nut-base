@@ -452,10 +452,26 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
                 }
                 batch = drainLocked();
             }
-            forward(batch);
-            for (int i = 0; i < batch.size(); i++)
+            try
             {
-                counters.decrementSecond();
+                forward(batch);
+            }
+            catch (Exception ex)
+            {
+                // the stage survives a failing downstream: record the failure
+                // like the receive path does; swallowing it silently would
+                // strand the worker thread
+                BatchActor.this.handleException(ex);
+            }
+            finally
+            {
+                // must always run: if the batch's in-flight counter entries are
+                // ever skipped, counters never reach zero again and
+                // waitForIdle()/shutdown(onlyWhenEmpty) hang forever
+                for (int i = 0; i < batch.size(); i++)
+                {
+                    counters.decrementSecond();
+                }
             }
             if (counters.isZero())
             {

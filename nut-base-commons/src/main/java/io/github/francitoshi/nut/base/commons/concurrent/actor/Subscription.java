@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -21,7 +22,7 @@ public class Subscription<T> implements AutoCloseable
     private final String tag;
     private final Consumer<T> consumer;
     private final Runnable onClose;
-    private volatile boolean closed;
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     /**
      * Creates a new subscription.
@@ -46,9 +47,10 @@ public class Subscription<T> implements AutoCloseable
     @Override
     public void close()
     {
-        if (!closed)
+        // CAS: racing closes run onClose (deregistration + internal-actor
+        // shutdown) exactly once, never twice
+        if (closed.compareAndSet(false, true))
         {
-            closed = true;
             onClose.run();
         }
     }
@@ -60,7 +62,7 @@ public class Subscription<T> implements AutoCloseable
      */
     public boolean isClosed()
     {
-        return closed;
+        return closed.get();
     }
 
     /**
@@ -86,6 +88,6 @@ public class Subscription<T> implements AutoCloseable
     @Override
     public String toString()
     {
-        return "Subscription[tag=" + tag + ", closed=" + closed + "]";
+        return "Subscription[tag=" + tag + ", closed=" + closed.get() + "]";
     }
 }

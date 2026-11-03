@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -26,7 +27,7 @@ public class Publisher<T> implements Consumer<T>, AutoCloseable
 {
     private final String tag;
     private final PubSub<T> pubSub;
-    private volatile boolean closed;
+    private final AtomicBoolean closed = new AtomicBoolean();
 
     /**
      * Creates a new publisher.
@@ -49,7 +50,7 @@ public class Publisher<T> implements Consumer<T>, AutoCloseable
     @Override
     public void accept(T event)
     {
-        if (closed)
+        if (closed.get())
         {
             throw new IllegalStateException("Publisher for tag '" + tag + "' is closed");
         }
@@ -59,14 +60,18 @@ public class Publisher<T> implements Consumer<T>, AutoCloseable
     /**
      * Closes this publisher: any further {@link #accept(Object)} throws an
      * {@link IllegalStateException}, and this publisher's reference on the
-     * backing {@code PubSub} entry is released. Idempotent.
+     * backing {@code PubSub} entry is released. Idempotent: the reference is
+     * released exactly once even under concurrent closes, so the backing
+     * entry's publisher count can never go negative.
      */
     @Override
     public void close()
     {
-        if (!closed)
+        // the CAS makes the release-once guarantee: two racing closers never
+        // both pass, so the entry is never double-decremented (which would pin
+        // it or its count below zero in the registry)
+        if (closed.compareAndSet(false, true))
         {
-            closed = true;
             pubSub.releasePublisher();
         }
     }
@@ -78,7 +83,7 @@ public class Publisher<T> implements Consumer<T>, AutoCloseable
      */
     public boolean isClosed()
     {
-        return closed;
+        return closed.get();
     }
 
     /**
@@ -94,6 +99,6 @@ public class Publisher<T> implements Consumer<T>, AutoCloseable
     @Override
     public String toString()
     {
-        return "Publisher[tag=" + tag + ", closed=" + closed + "]";
+        return "Publisher[tag=" + tag + ", closed=" + closed.get() + "]";
     }
 }
