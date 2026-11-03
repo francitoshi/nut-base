@@ -1394,8 +1394,8 @@ public class StringsTest
     @Test
     public void testCommonPrefix()
     {
-        assertEquals("", Strings.commonPrefix(null));
-        assertEquals("", Strings.commonPrefix(null));
+        assertEquals("", Strings.commonPrefix((String) null));
+        assertEquals("", Strings.commonPrefix((String) null));
         assertEquals("", Strings.commonPrefix(new String[] {}));
         assertEquals("abc", Strings.commonPrefix(new String[] {"abc"}));
         assertEquals("", Strings.commonPrefix(new String[] {null, null}));
@@ -1412,6 +1412,30 @@ public class StringsTest
         assertEquals("", Strings.commonPrefix(new String[] {"abcde", "xyz"}));
         assertEquals("", Strings.commonPrefix(new String[] {"xyz", "abcde"}));
         assertEquals("i am a ", Strings.commonPrefix(new String[] {"i am a machine", "i am a robot"}));
+    }
+
+    /**
+     * Test of commonSuffix method, of class Strings.
+     */
+    @Test
+    public void testCommonSuffix()
+    {
+        assertEquals("", Strings.commonSuffix((String) null));
+        assertEquals("", Strings.commonSuffix());
+        assertEquals("abc", Strings.commonSuffix("abc"));
+        assertEquals("", Strings.commonSuffix(null, null));
+        assertEquals("", Strings.commonSuffix("", ""));
+        assertEquals("", Strings.commonSuffix("", null));
+        assertEquals("", Strings.commonSuffix("abc", null, null));
+        assertEquals("", Strings.commonSuffix(null, null, "abc"));
+        assertEquals("", Strings.commonSuffix("", "abc"));
+        assertEquals("", Strings.commonSuffix("abc", ""));
+        assertEquals("abc", Strings.commonSuffix("abc", "abc"));
+        assertEquals("", Strings.commonSuffix("abc", "a"));
+        assertEquals("xyz", Strings.commonSuffix("abxyz", "xyz"));
+        assertEquals("", Strings.commonSuffix("abcde", "xyz"));
+        assertEquals("", Strings.commonSuffix("xyz", "abcde"));
+        assertEquals("", Strings.commonSuffix("i am a machine", "i am a robot"));
     }
 
     /**

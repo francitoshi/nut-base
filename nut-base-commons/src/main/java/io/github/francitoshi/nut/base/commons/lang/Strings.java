@@ -2554,7 +2554,7 @@ public class Strings
      * in the array; empty String if the array is null, the elements are all null 
      * or if there is no common prefix. 
      */
-    public static String commonPrefix(String[] strs) 
+    public static String commonPrefix(String... strs) 
     {
         if(strs == null || strs.length == 0) 
         {
@@ -2588,6 +2588,78 @@ public class Strings
             }
         }
         return strs[0].substring(0, min);
+    }
+    
+    /**
+     * <p>Compares all Strings in an array and returns the final sequence of 
+     * characters that is common to all of them. This is the mirror method of
+     * {@link #commonPrefix(String...)}.</p>
+     *
+     * <p>For example,
+     * <code>Strings.commonSuffix("i am a machine", "i am a robot") -> " machine"</code></p>
+     *
+     * <pre>
+     * Strings.commonSuffix(null)                              = ""
+     * Strings.commonSuffix()                                  = ""
+     * Strings.commonSuffix("abc")                             = "abc"
+     * Strings.commonSuffix(null, null)                        = ""
+     * Strings.commonSuffix("", "")                            = ""
+     * Strings.commonSuffix("", null)                          = ""
+     * Strings.commonSuffix("abc", null, null)                 = ""
+     * Strings.commonSuffix(null, null, "abc")                 = ""
+     * Strings.commonSuffix("", "abc")                         = ""
+     * Strings.commonSuffix("abc", "")                         = ""
+     * Strings.commonSuffix("abc", "abc")                      = "abc"
+     * Strings.commonSuffix("abc", "a")                        = ""
+     * Strings.commonSuffix("abxyz", "xyz")                    = "xyz"
+     * Strings.commonSuffix("abcde", "xyz")                    = ""
+     * Strings.commonSuffix("xyz", "abcde")                    = ""
+     * Strings.commonSuffix("i am a machine", "i am a robot")  = ""
+     * </pre>
+     *
+     * @param strs  array of String objects, entries may be null
+     * @return the final sequence of characters that are common to all Strings
+     * in the array; empty String if the array is null, the elements are all null 
+     * or if there is no common suffix. 
+     */
+    public static String commonSuffix(String... strs) 
+    {
+        if(strs == null || strs.length == 0) 
+        {
+            return EMPTY;
+        }
+        if(strs.length==1)
+        {
+            return strs[0]!=null ? strs[0] : EMPTY;
+        }
+        
+        int min = Integer.MAX_VALUE;
+        for (String s : strs)
+        {
+            if(s==null)
+            {
+                return EMPTY;
+            }
+            min = Math.min(min, s.length());
+        }
+        if(min==0)
+        {
+            return EMPTY;
+        }
+        
+        for(int i=1;i<=min;i++)    
+        {
+            char c = strs[0].charAt(strs[0].length()-i);
+            for(int j=1;j<strs.length;j++)
+            {
+                char cc = strs[j].charAt(strs[j].length()-i);
+                if(c!=cc)
+                {
+                    return i==1 ? EMPTY : strs[0].substring(strs[0].length()-(i-1));
+                }
+            }
+        }
+        return strs[0].substring(strs[0].length()-min);
     }
     
     /**
