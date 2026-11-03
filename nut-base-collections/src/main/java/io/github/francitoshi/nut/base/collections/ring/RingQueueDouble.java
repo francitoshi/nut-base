@@ -169,7 +169,7 @@ public class RingQueueDouble
      * Index 0 corresponds to the head (oldest element).
      *
      * @param n the relative index of the element to retrieve.
-     * @return the element at the specified index, or 0 if the index is out of bounds (n < 0 or n >= size).
+     * @return the element at the specified index, or 0 if the index is out of bounds {@code (n < 0 or n >= size)}.
      */
     public double get(int n)
     {
