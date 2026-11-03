@@ -41,27 +41,29 @@ public class ConflatedChannel<E> extends Channel<E>
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
+        lock.lock();
         try
         {
-            lock.lockInterruptibly();
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
-            return;
-        }
-        try
-        {
+            if (Thread.interrupted())
+            {
+                // pre-marked, or interrupted while queued for the lock: the
+                // status is consumed and the put aborts without touching
+                // the slot, exactly per the pre-acquisition contract
+                handleInterruptedException(new InterruptedException("interrupted before delivering"));
+                closeIfCloseable();
+                return;
+            }
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
-            notifyOperation(Operation.PUT, value);
         }
         finally
         {
             lock.unlock();
         }
+        // the notification runs outside the lock: listeners must never be
+        // dispatched while the parked counterpart is trying to take it
+        notifyOperation(Operation.PUT, value);
     }
 
     @Override
@@ -93,18 +95,20 @@ public class ConflatedChannel<E> extends Channel<E>
     @Override
     public E get()
     {
+        E result = null;
+        boolean received = false;
+        lock.lock();
         try
         {
-            lock.lockInterruptibly();
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
-            return null;
-        }
-        try
-        {
+            if (Thread.interrupted())
+            {
+                // pre-marked, or interrupted while queued for the lock: the
+                // status is consumed and the get aborts without touching
+                // the slot, so it can never deliver a stale value
+                handleInterruptedException(new InterruptedException("interrupted before receiving"));
+                closeIfCloseable();
+                return null;
+            }
             while (!hasValue)
             {
                 try
@@ -118,15 +122,20 @@ public class ConflatedChannel<E> extends Channel<E>
                     return null;
                 }
             }
-            E result = value;
+            result = value;
             value = null;
             hasValue = false;
-            notifyOperation(Operation.GET, result);
+            received = true;
             return result;
         }
         finally
         {
             lock.unlock();
+            // the notification runs outside the lock, same as put()
+            if (received)
+            {
+                notifyOperation(Operation.GET, result);
+            }
         }
     }
 
@@ -139,18 +148,18 @@ public class ConflatedChannel<E> extends Channel<E>
         }
 
         long deadline = JavaTime.untilNanoTime(timeout, unit);
+        lock.lock();
+        E result = null;
+        boolean received = false;
         try
         {
-            lock.lockInterruptibly();
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
-            return null;
-        }
-        try
-        {
+            if (Thread.interrupted())
+            {
+                // same post-acquisition contract as the untimed get()
+                handleInterruptedException(new InterruptedException("interrupted before receiving"));
+                closeIfCloseable();
+                return null;
+            }
             while (!hasValue)
             {
                 long remaining = deadline - System.nanoTime();
@@ -169,15 +178,20 @@ public class ConflatedChannel<E> extends Channel<E>
                     return null;
                 }
             }
-            E result = value;
+            result = value;
             value = null;
             hasValue = false;
-            notifyOperation(Operation.GET, result);
+            received = true;
             return result;
         }
         finally
         {
             lock.unlock();
+            // the notification runs outside the lock, same as get()
+            if (received)
+            {
+                notifyOperation(Operation.GET, result);
+            }
         }
     }
 

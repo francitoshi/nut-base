@@ -5,13 +5,10 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
-import java.lang.reflect.Field;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -21,25 +18,15 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Same scenario as CloseableBufferedChannelCloseTest and
- * CloseableUnbufferedChannelCloseTest, adapted to the unlimited channel.
+ * Same scenario as CloseableBufferedChannelCloseTest, adapted to the
+ * unlimited channel.
  *
- * Unlike the buffered/unbuffered cases, put() on an unlimited channel never
- * blocks for lack of room (LinkedBlockingQueue has no capacity limit), so
- * there is no natural way to catch a put() "in flight" inside the readLock
- * section for long enough to race a close() against it.
- *
- * To still exercise the close(timeout, unit) barrier under contention, this
- * test grabs the channel's internal readLock directly via reflection from a
- * background thread, simulating a put() that is momentarily suspended
- * inside its critical section (e.g. due to a scheduling delay or GC pause)
- * right when close() is called. This is exactly the situation the barrier
- * in close() is meant to detect.
- *
- * Before the fix, close(timeout, unit) set "closed = true" even on timeout,
- * and a later close() call would short-circuit to "return true" without
- * ever running the poisoning loop, leaving pending get()s unresolved while
- * callers believed the channel was cleanly closed.
+ * On the current engine a put() never blocks for lack of room, so there is no
+ * write barrier to race a close() against: close(timeout, unit) completes
+ * immediately and its result is always true, while values already committed
+ * before the close are still delivered. These tests pin that contract down,
+ * including that a caller with its interrupt status set can close a channel
+ * whose readers are parked.
  */
 class CloseableUnlimitedChannelCloseTest
 {
@@ -54,82 +41,56 @@ class CloseableUnlimitedChannelCloseTest
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private static ReentrantReadWriteLock extractRwLock(CloseableUnlimitedChannel<?> channel) throws Exception
-    {
-        Field field = CloseableUnlimitedChannel.class.getDeclaredField("rwLock");
-        field.setAccessible(true);
-        return (ReentrantReadWriteLock) field.get(channel);
-    }
-
     @Test
-    void closeWithShortTimeout_returnsFalse_whenReadLockIsHeld_andSucceedsOnceReleased() throws Exception
+    void closeCompletesWhilePuttersAreInFlight_andDrainsCommittedValues() throws Exception
     {
         executor = Executors.newFixedThreadPool(3);
 
         CloseableUnlimitedChannel<String> channel = new CloseableUnlimitedChannel<>();
-        ReentrantReadWriteLock rwLock = extractRwLock(channel);
+        AtomicBoolean running = new AtomicBoolean(true);
 
-        // Simulate a put() that is suspended mid-flight, still holding the
-        // readLock, right before close() runs its barrier.
-        CountDownLatch lockAcquired = new CountDownLatch(1);
-        CountDownLatch releaseSignal = new CountDownLatch(1);
-        Future<?> holder = executor.submit(() ->
+        for (int p = 0; p < 3; p++)
         {
-            rwLock.readLock().lock();
-            try
+            executor.submit(() ->
             {
-                lockAcquired.countDown();
-                releaseSignal.await();
-            }
-            catch (InterruptedException ignored)
-            {
-                Thread.currentThread().interrupt();
-            }
-            finally
-            {
-                rwLock.readLock().unlock();
-            }
-        });
+                int putted = 0;
+                while (running.get() && putted < 100_000)
+                {
+                    try
+                    {
+                        channel.put("v-" + putted++);
+                    }
+                    catch (IllegalStateException closedUnderneath)
+                    {
+                        break; // a normal way to stop once the close wins the race
+                    }
+                }
+                return null;
+            });
+        }
+        // let the putters commit a good number of values first
+        Thread.sleep(50);
 
-        assertTrue(lockAcquired.await(2, TimeUnit.SECONDS), "reader lock was not acquired in time");
+        // the close always completes: nothing on this engine can block it
+        assertTrue(channel.close(300, TimeUnit.MILLISECONDS), "close must complete immediately");
+        assertTrue(channel.close(1, TimeUnit.MILLISECONDS), "idempotent close keeps returning true");
+        assertTrue(channel.isClosed());
 
-        // A real value that was already fully enqueued before the "stuck"
-        // put() simulation started, so we can confirm it survives close().
-        channel.put("already committed");
+        // stop the survivors and check they only stopped by the closed door
+        running.set(false);
 
-        // First close attempt: the writeLock barrier cannot be acquired
-        // because the readLock is being held. Must be honest about the
-        // failure, not silently succeed.
-        boolean firstAttempt = channel.close(300, TimeUnit.MILLISECONDS);
-        assertFalse(firstAttempt, "close() must return false while the readLock is still held");
-        assertTrue(channel.isClosed(), "isClosed() is true as soon as close() is invoked");
+        // values committed before the close must be delivered, then null
+        int drained = 0;
+        while (channel.get() != null)
+        {
+            drained++;
+        }
+        assertTrue(drained > 0, "values committed before the close must be drained");
+        assertNull(channel.get(), "the channel must stay drained");
 
-        // Retrying close() again before releasing the lock must still be
-        // honest and return false (the old code used to short-circuit to
-        // "return true" here instead).
-        boolean secondAttemptStillBlocked = channel.close(200, TimeUnit.MILLISECONDS);
-        assertFalse(secondAttemptStillBlocked, "retry must not lie about success while still blocked");
-
-        // Release the simulated in-flight put().
-        releaseSignal.countDown();
-        holder.get(2, TimeUnit.SECONDS);
-
-        // Now that nothing holds the readLock anymore, close() must be able
-        // to acquire the barrier and finish normally.
-        boolean finalAttempt = channel.close();
-        assertTrue(finalAttempt, "close() must succeed once the readLock has been released");
-
-        // The value committed before close() must still be delivered.
-        assertEqualsFirstThenNull(channel, "already committed");
-    }
-
-    private static void assertEqualsFirstThenNull(CloseableUnlimitedChannel<String> channel, String expected)
-            throws InterruptedException
-    {
-        String value = channel.get();
-        assertTrue(expected.equals(value), "expected '" + expected + "' but got '" + value + "'");
-        assertNull(channel.get(), "channel should be drained and closed, get() must return null");
+        // puts after close are rejected
+        assertFalse(channel.tryPut("late"));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> channel.put("later"));
     }
 
     @Test
@@ -143,5 +104,13 @@ class CloseableUnlimitedChannelCloseTest
         assertTrue(channel.isClosed());
 
         assertEqualsFirstThenNull(channel, "only");
+    }
+
+    private static void assertEqualsFirstThenNull(CloseableUnlimitedChannel<String> channel, String expected)
+            throws InterruptedException
+    {
+        String value = channel.get();
+        assertTrue(expected.equals(value), "expected '" + expected + "' but got '" + value + "'");
+        assertNull(channel.get(), "channel should be drained and closed, get() must return null");
     }
 }

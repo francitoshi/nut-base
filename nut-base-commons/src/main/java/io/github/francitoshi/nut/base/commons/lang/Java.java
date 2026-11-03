@@ -14,7 +14,7 @@ import java.lang.management.RuntimeMXBean;
  */
 public class Java
 {
-    private static int parseVersion(String s)
+    protected static int parseVersion(String s)
     {
         try
         {

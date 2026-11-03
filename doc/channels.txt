@@ -1,6 +1,6 @@
 - When a channel receives an interruption request it returns null; if it is closeable, it additionally requests a shutdown().
 
-- The interruption request is marked in the channel but it is not signaled again in the thread, because it has already been processed.
+- The interruption request is marked in the channel (isInterrupted()) and everything else is processed by the installed Channel.InterruptedExceptionListener: the listener is the explicit decision point for applying the interruption to the thread. The default listener (Channel.DEFAULT_INTERRUPTED_EXCEPTION_LISTENER) logs the interruption and leaves the thread's interrupt flag cleared; a custom listener installed with setInterruptedExceptionListener may re-mark the thread (Thread.currentThread().interrupt()) or do anything else. On a DuplexChannel the listener is propagated to the delegates that implement Channel.
 
 - Channels implement the Iterable<E> interface: they create an Iterator<E> specific to that occasion to be thread-safe if there are other loops using the channel.
 
@@ -8,3 +8,7 @@
 
 - In closeable channels, Iterator<E>.hasNext() is hooked to Channel<E>.get(); if the returned value is null and the channel is closed (isClosed()==true) it returns false, otherwise it returns true. Iterator<E>.next() always returns the saved value obtained with Channel<E>.get(),
 regardless of whether it is null or not.
+
+- Channel.selectGet(readers...) / Channel.selectGet(timeout, unit, readers...) wait until one of the readers yields a value and consume it as part of the select; they return null on timeout or when every closeable reader is closed and drained. Channel.selectPut(value, writers...) / Channel.selectPut(timeout, unit, value, writers...) let one of the writers accept a value and return the writer that took it, or null on timeout or when every closeable writer is closed. Both throw InterruptedException if the waiting thread is interrupted; the interruption is not re-marked on the thread and no observed channel is closed.
+
+- Select is built on the non-blocking primitives ChannelReader.tryGet() (Optional) and ChannelWriter.tryPut(value) (boolean) plus the listener system shared with Chann: every channel reports successful gets, puts and closes through addOperationListener/notifyOperation, and a rendezvous channel announces a pending operation before it parks, so the select wakes up and retries its cases. Only rendezvous channels (unbuffered) and duplex channels over polling-only delegates fall back to short re-scan slices (200 µs).
