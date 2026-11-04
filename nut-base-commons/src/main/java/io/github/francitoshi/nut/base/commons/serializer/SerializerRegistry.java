@@ -331,8 +331,9 @@ public class SerializerRegistry
      * @throws NullPointerException     If the value is null.
      * @throws IllegalArgumentException If the type of the value has no
      *                                  serializer registered or the serialized
-     *                                  object is longer than
-     *                                  {@link SmallInt#MAX_VALUE} bytes.
+     *                                  object is longer than what
+     *                                  {@link io.github.francitoshi.nut.base.commons.varint.VarSize}
+     *                                  can encode.
      */
     public byte[] serializeObject(Object value)
     {

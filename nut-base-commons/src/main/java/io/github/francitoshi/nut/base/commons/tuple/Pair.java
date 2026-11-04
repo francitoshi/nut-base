@@ -154,7 +154,7 @@ public class Pair<K,V>
     /**
      * Creates a new pair from the given left and right values. This is a
      * convenience factory method equivalent to calling
-     * {@link #Pair(Object, Object) new Pair<>(left, right)}.
+     * {@code new Pair<>(left, right)}.
      *
      * @param <K> the type of the left element (key)
      * @param <V> the type of the right element (value)

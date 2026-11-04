@@ -151,7 +151,7 @@ public final class Unchecked
      * @param t      the throwable to rethrow
      * @return this method never returns; the return type is declared so that
      *         the compiler accepts {@code throw sneakyThrow(t)} in any context
-     * @throws Throwable always throws {@code t}
+     * @throws E always throws {@code t}
      */
     @SuppressWarnings("unchecked")
     public static <E extends Throwable> RuntimeException sneakyThrow(Throwable t) throws E

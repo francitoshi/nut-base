@@ -505,7 +505,7 @@ public final class Retry
          *
          * @param initial the initial delay in milliseconds; must be greater than 0
          * @return an exponential backoff strategy; never {@code null}
-         * @throws IllegalArgumentException if {@code initial} is <= 0
+         * @throws IllegalArgumentException if {@code initial} is &lt;= 0
          */
         public static Backoff exponential(long initial)
         {

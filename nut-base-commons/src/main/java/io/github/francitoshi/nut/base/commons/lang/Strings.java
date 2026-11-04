@@ -922,10 +922,10 @@ public class Strings
      *
      * <p>The String is trimmed using {@link String#trim()}.
      * Trim removes start and end characters &lt;= 32.
-     * To strip whitespace use {@link #strip(String)}.</p>
+     * To strip whitespace use {@link #trimWhitespaces(String)}.</p>
      *
-     * <p>To trim your choice of characters, use the
-     * {@link #strip(String, String)} methods.</p>
+     * <p>Trimming a custom set of characters is not provided by this
+     * utility class.</p>
      *
      * <pre>
      * Strings.trim(null)          = null
@@ -950,10 +950,10 @@ public class Strings
      *
      * <p>The CharSequence is trimmed using {@link String#trim()}.
      * Trim removes start and end characters &lt;= 32.
-     * To strip whitespace use {@link #strip(String)}.</p>
+     * To strip whitespace use {@link #trimWhitespaces(String)}.</p>
      *
-     * <p>To trim your choice of characters, use the
-     * {@link #strip(String, String)} methods.</p>
+     * <p>Trimming a custom set of characters is not provided by this
+     * utility class.</p>
      *
      * <pre>
      * Strings.trim(null)          = null
@@ -978,7 +978,7 @@ public class Strings
      *
      * <p>The String is trimmed using {@link String#trim()}.
      * Trim removes start and end characters &lt;= 32.
-     * To strip whitespace use {@link #stripToNull(String)}.</p>
+     * To strip whitespace use {@link #trimWhitespaces(String)}.</p>
      *
      * <pre>
      * Strings.trimToNull(null)          = null
@@ -1005,7 +1005,7 @@ public class Strings
      *
      * <p>The String is trimmed using {@link String#trim()}.
      * Trim removes start and end characters &lt;= 32.
-     * To strip whitespace use {@link #stripToEmpty(String)}.</p>
+     * To strip whitespace use {@link #trimWhitespaces(String)}.</p>
      *
      * <pre>
      * Strings.trimToEmpty(null)          = ""

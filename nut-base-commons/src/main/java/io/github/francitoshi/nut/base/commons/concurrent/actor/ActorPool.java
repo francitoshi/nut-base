@@ -30,10 +30,11 @@ import java.util.concurrent.Phaser;
  * A managed thread-pool with a rich task-execution API.
  * <p>
  * {@code ActorPool} wraps a {@link ThreadPoolExecutor} and exposes five execution
- * modes that cover every combination of <em>who executes</em> and
- * <em>whether a result is returned</em>:
+ * methods, grouped by <em>when control returns to the caller</em> and by
+ * <em>whether a result is produced</em>:
  *
  * <table border="1">
+ *   <caption>Execution methods grouped by completion semantics and result type</caption>
  *   <tr><th></th><th>void</th><th>Future&lt;U&gt;</th></tr>
  *   <tr><td>fire &amp; forget</td><td>{@link #execute}</td><td>{@link #submit(Runnable)} / {@link #submit(Supplier)}</td></tr>
  *   <tr><td>guaranteed start</td><td>{@link #spawn}</td><td>—</td></tr>
@@ -83,8 +84,25 @@ public class ActorPool implements ActorLifecycle, Executor
      * shrinks down to) the core floor. Core threads are never timed out.
      */
     public static final int DEFAULT_KEEP_ALIVE_MILLIS = 30_000;
+
+    /**
+     * Default saturation policy: {@code false} selects
+     * {@link ThreadPoolExecutor.CallerRunsPolicy}, which runs the overflowing
+     * task in the calling thread when no worker thread is available.
+     */
     public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
+
+    /**
+     * Default active-task tracking: {@code false} keeps the {@link Phaser}
+     * tracker enabled, which backs {@link #isIdle()},
+     * {@link #getActiveCount()} and {@link #waitForIdle()}.
+     */
     public static final boolean DEFAULT_AVOID_TRACKER = false;
+
+    /**
+     * Default worker threading: {@code false} creates ordinary non-daemon
+     * threads, which keep the JVM alive while tasks are running.
+     */
     public static final boolean DEFAULT_DAEMON = false;
 
     /**
@@ -121,6 +139,14 @@ public class ActorPool implements ActorLifecycle, Executor
      */
     private final ThreadPoolExecutor threadPoolExecutor;
 
+    /**
+     * Active-task tracker used by {@link #getActiveCount()},
+     * {@link #isIdle()} and {@link #waitForIdle()}. It is initialised with one
+     * permanent "owner" party (the one {@link #waitForIdle()} synchronises on)
+     * and tasks pre-register on submission and deregister around their
+     * execution. {@code null} when active-task tracking was disabled at
+     * construction ({@code avoidTracker == true}) or in synchronous mode.
+     */
     private final Phaser phaser;
 
     /**
@@ -186,11 +212,11 @@ public class ActorPool implements ActorLifecycle, Executor
      * The backing pool has no task queue: a {@link SynchronousQueue} hands every
      * submitted task directly to a worker thread, so the pool grows threads on
      * demand from the {@code coreThreads} floor up to {@code maxThreads} without
-     * parked work. {@link ThreadPoolExecutor#allowCoreThreadTimeOut} is never
-     * enabled, so the core threads stay alive permanently; only the threads above
-     * the floor are reclaimed once idle for {@code keepAliveMillis}. Subclasses
-     * such as {@link ActorHub} may resize the pool later via
-     * {@link #resizePool(int, int)}.
+     * a task ever waiting in a queue. {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
+     * is never enabled, so the core threads stay alive permanently; only the
+     * threads above the floor are reclaimed once idle for
+     * {@code keepAliveMillis}. Subclasses such as {@link ActorHub} may resize
+     * the pool later via {@link #resizePool(int, int)}.
      *
      * @param coreThreads      the minimum number of threads kept permanently
      *                         alive; must be &ge; 0 and &le; {@code maxThreads}
@@ -326,6 +352,9 @@ public class ActorPool implements ActorLifecycle, Executor
     // -------------------------------------------------------------------------
 
     /**
+     * Static factory for an ActorPool with default (elastic, CPU-core-sized)
+     * settings, equivalent to {@link #ActorPool()}.
+     *
      * @return a new ActorPool with default (elastic, CPU-core-sized) settings.
      */
     public static ActorPool actorPool()
@@ -334,6 +363,8 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
+     * Static factory for an elastic ActorPool with {@code maxThreads = 2 * coreThreads}.
+     *
      * @param coreThreads the floor of permanently alive threads
      * @return a new elastic ActorPool with {@code maxThreads = 2 * coreThreads}
      *         ({@code 0} selects the synchronous mode)
@@ -344,6 +375,9 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
+     * Static factory for an ActorPool with explicit bounds and keep-alive,
+     * equivalent to {@link #ActorPool(int, int, int)}.
+     *
      * @param coreThreads      the floor of permanently alive threads
      * @param maxThreads       the absolute maximum number of live threads
      * @param keepAliveMillis  keep-alive time for the threads above the core
@@ -356,6 +390,9 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
+     * Static factory for an ActorPool with an explicit saturation policy,
+     * equivalent to {@link #ActorPool(int, int, int, boolean)}.
+     *
      * @param coreThreads       the floor of permanently alive threads
      * @param maxThreads        the absolute maximum number of live threads
      * @param keepAliveMillis   keep-alive time for the threads above the core
@@ -542,12 +579,12 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Returns {@code true} if tracking is enabled and no task is currently
-     * executing, or if tracking is disabled and the pool reports no active
-     * threads. When tracking is enabled this is an exact, lock-free check;
-     * when disabled it relies on {@link ThreadPoolExecutor#getActiveCount()},
-     * which is an approximation. Permanent background workers (see
-     * {@link #executeUntracked(Runnable)}) do not count as active tasks.
+     * Returns {@code true} if no task is currently active. When tracking is
+     * enabled this is an exact, lock-free check based on the {@link Phaser}
+     * registry; when disabled it relies on
+     * {@link ThreadPoolExecutor#getActiveCount()}, which is an approximation.
+     * Permanent background workers (see {@link #executeUntracked(Runnable)})
+     * do not count as active tasks. Synchronous mode is always idle.
      *
      * @return {@code true} if the pool is idle
      */
@@ -565,6 +602,8 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Blocks the calling thread until all running tasks have finished. If there
      * are no tasks running or queued, returns immediately.
+     *
+     * @return this ActorPool, for fluent chaining
      */
     @Override
     public ActorPool waitForIdle()
@@ -668,9 +707,16 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Submits {@code task} to the thread pool and blocks until the worker is
      * guaranteed to be executing {@code task.run()} as its very next
-     * instruction, then returns. See class-level documentation for details.
+     * instruction, then returns. Unlike {@link #execute}, this guarantees the
+     * task is actually running (not merely queued) when the call returns.
+     * <p>
+     * Not responsive to interruption: if the <em>calling</em> thread is
+     * interrupted while waiting on the readiness handshake, the wait is
+     * abandoned and the interrupt flag is re-marked, but the task was already
+     * accepted by the pool and still runs exactly once in the background.
      *
      * @param task the task to spawn; must not be {@code null}
+     * @return this ActorPool, for fluent chaining
      */
     public ActorPool spawn(Runnable task)
     {
@@ -794,9 +840,15 @@ public class ActorPool implements ActorLifecycle, Executor
     // -------------------------------------------------------------------------
 
     /**
-     * Called by the underlying {@link ThreadPoolExecutor} after it has
-     * terminated. Subclasses may override to perform post-termination cleanup.
-     * The default implementation does nothing.
+     * Overridable hook for post-termination cleanup.
+     * <p>
+     * <strong>This hook is never invoked automatically.</strong> The
+     * {@code terminated()} callback of {@link ThreadPoolExecutor} belongs to
+     * the executor's own class, and {@code ActorPool} delegates to a plain
+     * executor instance instead of subclassing it, so nothing wires the
+     * automatic notification. Subclasses that need the callback must invoke
+     * this method from their own code path ( {@link ProxyActorHub} overrides
+     * it to forward to its delegate).
      */
     protected void terminated()
     {
@@ -980,8 +1032,11 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Returns the maximum allowed number of threads in the pool. Never exceeds
-     * the configured {@link #getMaxThreads()} ceiling.
+     * Returns the maximum allowed number of threads in the pool. This is the
+     * configured {@link #getMaxThreads()} ceiling in ordinary operation; the
+     * Actor-driven sizing of an {@link ActorHub} may lift the effective
+     * maximum to the number of registered non-synchronous Actors when that
+     * count exceeds the ceiling (see the class-level documentation).
      *
      * @return maximum pool size
      */

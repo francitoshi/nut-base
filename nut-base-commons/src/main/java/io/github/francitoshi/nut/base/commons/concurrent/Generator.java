@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  * iterate over elements as they are produced.
  * </p>
  *
- * <h3>Usage Example:</h3>
+ * <h2>Usage Example</h2>
  * <pre>{@code
  * Generator<Integer> myGen = new Generator<>() 
  * {

@@ -265,7 +265,7 @@ public class Maths
      *
      * @param n the value to test.
      * @param delta the maximum absolute value considered to be zero.
-     * @return true if |n| <= |delta|.
+     * @return true if |n| &lt;= |delta|.
      */
     public static boolean isZero(float n, float delta)
     {
@@ -277,7 +277,7 @@ public class Maths
      *
      * @param n the value to test.
      * @param delta the maximum absolute value considered to be zero.
-     * @return true if |n| <= |delta|.
+     * @return true if |n| &lt;= |delta|.
      */
     public static boolean isZero(double n, double delta)
     {

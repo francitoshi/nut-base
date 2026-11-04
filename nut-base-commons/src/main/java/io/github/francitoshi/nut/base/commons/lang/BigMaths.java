@@ -160,7 +160,7 @@ public class BigMaths
      *
      * @param n the value to test.
      * @param delta the maximum absolute value considered to be zero.
-     * @return true if |n| <= |delta|.
+     * @return true if |n| &lt;= |delta|.
      */
     public static boolean isZero(BigDecimal n, BigDecimal delta)
     {
@@ -194,7 +194,7 @@ public class BigMaths
      *
      * @param n the value to test.
      * @param delta the maximum absolute value considered to be zero.
-     * @return true if n is null or |n| <= |delta|.
+     * @return true if n is null or |n| &lt;= |delta|.
      */
     public static boolean isNullOrZero(BigDecimal n, BigDecimal delta)
     {
