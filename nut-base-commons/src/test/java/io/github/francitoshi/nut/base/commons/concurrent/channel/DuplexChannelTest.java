@@ -60,7 +60,7 @@ public class DuplexChannelTest
     {
         CloseableUnbufferedChannel<String> inChan = new CloseableUnbufferedChannel<>();
         CloseableUnbufferedChannel<String> outChan = new CloseableUnbufferedChannel<>();
-        DuplexChannel<String> duplex = Channel.duplex(inChan, outChan);
+        DuplexChannel<String> duplex = ChannelTestSupport.quiet(Channel.duplex(inChan, outChan));
         assertFalse(duplex.isInterrupted());
 
         CountDownLatch started = new CountDownLatch(1);

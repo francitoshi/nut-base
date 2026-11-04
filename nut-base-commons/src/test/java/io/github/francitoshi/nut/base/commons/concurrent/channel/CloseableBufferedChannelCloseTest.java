@@ -47,7 +47,7 @@ class CloseableBufferedChannelCloseTest
 
         // Capacity 1: after filling it, any further put() blocks until
         // someone drains an item.
-        CloseableBufferedChannel<String> channel = new CloseableBufferedChannel<>(1);
+        CloseableBufferedChannel<String> channel = ChannelTestSupport.quiet(new CloseableBufferedChannel<>(1));
 
         // Fill the only slot in the buffer.
         channel.put("first");

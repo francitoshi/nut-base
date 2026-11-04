@@ -109,7 +109,7 @@ public class UnbufferedChannelTest
     @Test
     public void testPutInterrupted_marksInterruptedAndAborts() throws Exception
     {
-        UnbufferedChannel<Integer> channel = new UnbufferedChannel<>();
+        UnbufferedChannel<Integer> channel = ChannelTestSupport.quiet(new UnbufferedChannel<>());
         CountDownLatch entered = new CountDownLatch(1);
         AtomicBoolean putReturned = new AtomicBoolean(false);
         AtomicBoolean flagRestored = new AtomicBoolean(true);
@@ -140,7 +140,7 @@ public class UnbufferedChannelTest
     @Test
     public void testGetInterrupted_returnsNullAndMarksInterrupted() throws Exception
     {
-        UnbufferedChannel<Integer> channel = new UnbufferedChannel<>();
+        UnbufferedChannel<Integer> channel = ChannelTestSupport.quiet(new UnbufferedChannel<>());
         CountDownLatch entered = new CountDownLatch(1);
         AtomicReference<Object> result = new AtomicReference<>(MISSING);
         AtomicBoolean flagRestored = new AtomicBoolean(true);

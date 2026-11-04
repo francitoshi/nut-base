@@ -104,7 +104,7 @@ public class BufferedChannelTest
     @Test
     public void testPutInterruptedWhenFull_marksInterruptedAndAborts() throws Exception
     {
-        BufferedChannel<Integer> channel = new BufferedChannel<>(1);
+        BufferedChannel<Integer> channel = ChannelTestSupport.quiet(new BufferedChannel<>(1));
         channel.put(1);
 
         CountDownLatch entered = new CountDownLatch(1);
@@ -135,7 +135,7 @@ public class BufferedChannelTest
     @Test
     public void testGetInterruptedWhenEmpty_returnsNullAndMarksInterrupted() throws Exception
     {
-        BufferedChannel<Integer> channel = new BufferedChannel<>(4);
+        BufferedChannel<Integer> channel = ChannelTestSupport.quiet(new BufferedChannel<>(4));
         CountDownLatch entered = new CountDownLatch(1);
         AtomicReference<Object> result = new AtomicReference<>(MISSING);
 

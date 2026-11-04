@@ -11,9 +11,15 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -107,15 +113,55 @@ class ActorTest
     {
         RuntimeException boom = new RuntimeException("boom");
         RecordingActor<String> actor = new RecordingActor<>();
-        actor.dryLogger(); // avoid noisy SEVERE log output for this expected failure
         actor.withAction(m ->
         {
             throw boom;
         });
 
-        actor.accept("x");
+        // the SEVERE log entry is part of the hook contract (Actor.handleException
+        // logs before calling the hook): capture it via a handler instead of
+        // switching the logger off with dryLogger(), so the log itself stays
+        // under test and nothing spills to the console
+        Logger logger = Logger.getLogger(Actor.class.getName());
+        List<LogRecord> records = new CopyOnWriteArrayList<>();
+        Handler capture = new Handler()
+        {
+            @Override
+            public void publish(LogRecord record)
+            {
+                if (record.getLevel().intValue() >= Level.SEVERE.intValue())
+                {
+                    records.add(record);
+                }
+            }
+            @Override
+            public void flush()
+            {
+            }
+            @Override
+            public void close()
+            {
+            }
+        };
+
+        boolean useParentHandlers = logger.getUseParentHandlers();
+        logger.setUseParentHandlers(false);
+        logger.addHandler(capture);
+        try
+        {
+            actor.accept("x");
+        }
+        finally
+        {
+            logger.removeHandler(capture);
+            logger.setUseParentHandlers(useParentHandlers);
+        }
+
         assertSame(boom, actor.getException());
         assertSame(boom, actor.lastException.get());
+        assertTrue(records.stream()
+                        .anyMatch(r -> r.getThrown() == boom),
+                "the failure must be logged before the hook runs");
     }
 
     @Test

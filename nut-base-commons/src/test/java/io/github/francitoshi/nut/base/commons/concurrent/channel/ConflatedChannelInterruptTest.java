@@ -45,7 +45,7 @@ class ConflatedChannelInterruptTest
     @Test
     void aPreInterruptedTimedGetAbortsEvenWhenAValueIsReady()
     {
-        ConflatedChannel<Integer> channel = new ConflatedChannel<>();
+        ConflatedChannel<Integer> channel = quiet(new ConflatedChannel<>());
         channel.put(7);
 
         Thread.currentThread().interrupt();
@@ -88,7 +88,7 @@ class ConflatedChannelInterruptTest
     @Test
     void anInterruptionWhileParkedStillAbortsTheGet() throws Exception
     {
-        ConflatedChannel<Integer> channel = new ConflatedChannel<>();
+        ConflatedChannel<Integer> channel = quiet(new ConflatedChannel<>());
 
         Thread getter = startDaemon("conflated-get", channel::get);
         awaitBlocked(getter);

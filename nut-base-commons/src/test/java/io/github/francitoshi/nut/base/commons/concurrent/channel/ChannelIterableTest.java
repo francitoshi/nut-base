@@ -179,7 +179,7 @@ public class ChannelIterableTest
     @Test
     public void testNonCloseableIterator_interruptedNext_returnsNull() throws Exception
     {
-        Channel<Integer> channel = Channel.unbuffered();
+        Channel<Integer> channel = ChannelTestSupport.quiet(Channel.unbuffered());
         Iterator<Integer> it = channel.iterator();
         assertTrue(it.hasNext());
 
@@ -279,7 +279,7 @@ public class ChannelIterableTest
     @Test
     public void testCloseableIterator_interruptedGet_terminatesAndCloses() throws Exception
     {
-        CloseableChannel<Integer> channel = Channel.closeableUnbuffered();
+        CloseableChannel<Integer> channel = ChannelTestSupport.quiet(Channel.closeableUnbuffered());
         Iterator<Integer> it = channel.iterator();
         AtomicInteger count = new AtomicInteger();
 

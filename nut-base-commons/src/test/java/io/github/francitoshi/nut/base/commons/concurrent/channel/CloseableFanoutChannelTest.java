@@ -63,7 +63,7 @@ class CloseableFanoutChannelTest
         // Unbuffered target: with no consumer waiting, the broadcast blocks in
         // target.put(). close() must abort it in bounded time. Regression test
         // for the old deadlock between an in-flight put() and close().
-        CloseableChannel<String> dest = new CloseableUnbufferedChannel<>();
+        CloseableChannel<String> dest = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
         CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
 
         CountDownLatch putStarted = new CountDownLatch(1);

@@ -67,6 +67,7 @@ subprojects
     {
         options.encoding = 'UTF-8'
 //        options.compilerArgs += ['-Xlint']
+//        options.deprecation = true  //does not allow to use deprecated classes or methods
     }
 
     publishing

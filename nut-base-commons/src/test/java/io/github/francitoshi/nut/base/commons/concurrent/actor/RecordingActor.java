@@ -26,7 +26,6 @@ class RecordingActor<M> implements Consumer<M>, Linkable
     final AtomicBoolean terminated = new AtomicBoolean(false);
     final AtomicReference<Exception> lastException = new AtomicReference<>();
     private volatile Consumer<M> action;
-    private volatile boolean allowLogger = true;
     private volatile Exception ex;
 
     private final Actor<M> inner;
@@ -174,7 +173,7 @@ class RecordingActor<M> implements Consumer<M>, Linkable
 
     public RecordingActor<M> dryLogger()
     {
-        this.allowLogger = false;
+        inner.dryLogger();
         return this;
     }
 

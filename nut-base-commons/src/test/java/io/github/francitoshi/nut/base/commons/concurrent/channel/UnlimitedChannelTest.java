@@ -86,7 +86,7 @@ public class UnlimitedChannelTest
     @Test
     public void testGetInterruptedWhenEmpty_returnsNullAndMarksInterrupted() throws Exception
     {
-        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
+        UnlimitedChannel<Integer> channel = ChannelTestSupport.quiet(new UnlimitedChannel<>());
         CountDownLatch entered = new CountDownLatch(1);
         AtomicReference<Object> result = new AtomicReference<>(MISSING);
 

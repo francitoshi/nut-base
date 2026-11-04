@@ -401,7 +401,7 @@ public class ChannelConflatedTest
         @Test
         public void testInterruptedGetClosesChannel() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            CloseableConflatedChannel<Integer> ch = ChannelTestSupport.quiet(new CloseableConflatedChannel<>());
             CountDownLatch started = new CountDownLatch(1);
             AtomicReference<Integer> result = new AtomicReference<>();
             AtomicReference<Thread> consumerThread = new AtomicReference<>();

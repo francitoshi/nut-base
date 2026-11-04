@@ -10,6 +10,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -27,18 +31,53 @@ class ChannelInterruptedListenerTest
     void theDefaultListenerLeavesTheThreadUnmarkedButMarksTheChannel()
     {
         Channel<Integer> channel = Channel.buffered(1);
-        Thread.currentThread().interrupt();
+
+        // the default listener IS the logging one, and the log entry is part
+        // of its contract: capture it instead of letting it spill to the
+        // console, staying silent while the default listener keeps being the
+        // one under test
+        Logger logger = Logger.getLogger(Channel.class.getName());
+        List<LogRecord> records = new CopyOnWriteArrayList<>();
+        Handler capture = new Handler()
+        {
+            @Override
+            public void publish(LogRecord record)
+            {
+                if (record.getLevel().intValue() >= Level.WARNING.intValue())
+                {
+                    records.add(record);
+                }
+            }
+            @Override
+            public void flush()
+            {
+            }
+            @Override
+            public void close()
+            {
+            }
+        };
+
+        boolean useParentHandlers = logger.getUseParentHandlers();
+        logger.setUseParentHandlers(false);
+        logger.addHandler(capture);
         try
         {
+            Thread.currentThread().interrupt();
             assertNull(channel.get(), "the pre-interrupted blocking get aborts");
-            assertFalse(Thread.currentThread().isInterrupted(),
-                    "the default listener must not re-mark the thread");
+            assertFalse(Thread.currentThread().isInterrupted(), "the default listener must not re-mark the thread");
             assertTrue(channel.isInterrupted(), "the channel keeps its own record");
         }
         finally
         {
+            logger.removeHandler(capture);
+            logger.setUseParentHandlers(useParentHandlers);
             Thread.interrupted();
         }
+
+        assertTrue(records.stream()
+                        .anyMatch(r -> r.getThrown() instanceof InterruptedException),
+                "the default listener must log the interruption");
     }
 
     @Test

@@ -35,7 +35,7 @@ class CloseableUnbufferedChannelCloseInvariantTest
     {
         for (int i = 0; i < ITERATIONS; i++)
         {
-            CloseableUnbufferedChannel<String> ch = new CloseableUnbufferedChannel<>();
+            CloseableUnbufferedChannel<String> ch = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
             List<String> postCloseDeliveries = new ArrayList<>();
 
             // two writers: a rendezvous can only complete between writer and
@@ -102,7 +102,7 @@ class CloseableUnbufferedChannelCloseInvariantTest
     {
         for (int i = 0; i < ITERATIONS; i++)
         {
-            CloseableUnbufferedChannel<String> ch = new CloseableUnbufferedChannel<>();
+            CloseableUnbufferedChannel<String> ch = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
             final int stripe = i;
 
             // two mutually unaware readers: neither can rendezvous with the
@@ -131,7 +131,7 @@ class CloseableUnbufferedChannelCloseInvariantTest
     {
         for (int i = 0; i < ITERATIONS; i++)
         {
-            CloseableUnbufferedChannel<String> ch = new CloseableUnbufferedChannel<>();
+            CloseableUnbufferedChannel<String> ch = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
             final int stripe = i;
 
             Thread putter = ChannelTestSupport.startDaemon("put-t-" + stripe, () ->

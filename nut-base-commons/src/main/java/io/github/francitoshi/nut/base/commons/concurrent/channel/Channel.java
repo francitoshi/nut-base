@@ -330,17 +330,34 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
      * {@link Channel.InterruptedExceptionListener} with
      * {@link #setInterruptedExceptionListener}.
      */
-    public static final InterruptedExceptionListener DEFAULT_INTERRUPTED_EXCEPTION_LISTENER = Channel::processInterruptedException;
+    public static final InterruptedExceptionListener DEFAULT_INTERRUPTED_EXCEPTION_LISTENER = Channel::logInterruptedException;
 
     /**
      * Logs an interruption, leaving the thread un-marked. The placeholder
-     * behind {@link #DEFAULT_INTERRUPTED_EXCEPTION_LISTENER}.
+     * behind {@link #DEFAULT_INTERRUPTED_EXCEPTION_LISTENER}; when the log
+     * entry is unwanted, for example in tests that interrupt on purpose,
+     * install {@link #ignoreInterruptedException} instead.
      *
      * @param exception the interruption to log
      */
-    public static void processInterruptedException(InterruptedException exception)
+    public static void logInterruptedException(InterruptedException exception)
     {
         LOG.log(Level.WARNING, "Interrupted while waiting on a channel operation", exception);
+    }
+
+    /**
+     * Discards an interruption silently: nothing is logged, and like
+     * {@link #logInterruptedException} the thread is never re-marked.
+     * <p>
+     * Useful as the installed listener (see
+     * {@link #setInterruptedExceptionListener}) in tests and other contexts
+     * that intentionally interrupt channel operations and do not want the
+     * warning that the default listener produces.
+     *
+     * @param exception the interruption to discard
+     */
+    public static void ignoreInterruptedException(InterruptedException exception)
+    {
     }
 
     /**

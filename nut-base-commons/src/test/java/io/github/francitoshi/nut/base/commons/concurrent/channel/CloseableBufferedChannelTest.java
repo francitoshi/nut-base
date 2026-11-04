@@ -139,7 +139,7 @@ public class CloseableBufferedChannelTest
     @Test
     public void testCloseTimeoutExpiresWithBlockedPut() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(1);
+        CloseableBufferedChannel<Integer> channel = ChannelTestSupport.quiet(new CloseableBufferedChannel<>(1));
         channel.put(1);
 
         CountDownLatch entered = new CountDownLatch(1);

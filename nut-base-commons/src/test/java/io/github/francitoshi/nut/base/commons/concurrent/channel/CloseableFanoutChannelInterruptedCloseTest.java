@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.awaitBlocked;
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.joinOrFail;
+import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.quiet;
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.startDaemon;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,8 +28,8 @@ class CloseableFanoutChannelInterruptedCloseTest
     @Test
     void interruptedCloseStillClosesTheTargetsAndKeepsTheInterruptStatus() throws Exception
     {
-        CloseableBufferedChannel<String> t1 = new CloseableBufferedChannel<>(1);
-        CloseableBufferedChannel<String> t2 = new CloseableBufferedChannel<>(1);
+        CloseableBufferedChannel<String> t1 = quiet(new CloseableBufferedChannel<>(1));
+        CloseableBufferedChannel<String> t2 = quiet(new CloseableBufferedChannel<>(1));
         CloseableFanoutChannel<String> fan = new CloseableFanoutChannel<>(t1, t2);
 
         t1.put("fill");                                   // t1 full: the next put blocks on it

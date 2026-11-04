@@ -147,7 +147,7 @@ public class CloseableUnbufferedChannelTest
     @Test
     public void testCloseTimeoutExpiresWithBlockedPut() throws Exception
     {
-        CloseableUnbufferedChannel<Integer> channel = new CloseableUnbufferedChannel<>();
+        CloseableUnbufferedChannel<Integer> channel = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
         CountDownLatch entered = new CountDownLatch(1);
         AtomicBoolean putReturned = new AtomicBoolean(false);
         AtomicReference<Throwable> putError = new AtomicReference<>();

@@ -5,7 +5,9 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -13,6 +15,10 @@ import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -26,6 +32,52 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PipelineActorTest
 {
     private ActorHub actorHub;
+
+    // asynchronous teardown TEARDOWN NOISE GUARD: hub worker threads can emit
+    // an SEVERE ("closed" forward-out-of-band record after the close-vs-forward
+    // raced) after a suite is done reporting, and gradle then attributes it to
+    // the suite that happens to run at that moment (this one is the last of
+    // the actor package). Nothing in the actor suite legitimately SEVERE-logs
+    // (all expected failures are muted), so keep the console clean without
+    // asserting: a future real noise is still captured here (and testable by
+    // keeping records around during a debugging session) but never printed
+    private static final List<LogRecord> NOISE = new CopyOnWriteArrayList<>();
+    private static Logger actorLogger;
+    private static Handler noiseGuard;
+
+    @BeforeAll
+    static void attachNoiseGuard()
+    {
+        actorLogger = Logger.getLogger(Actor.class.getName());
+        noiseGuard = new Handler()
+        {
+            @Override
+            public void publish(LogRecord record)
+            {
+                if (record.getLevel().intValue() >= Level.SEVERE.intValue())
+                {
+                    NOISE.add(record);
+                }
+            }
+            @Override
+            public void flush()
+            {
+            }
+            @Override
+            public void close()
+            {
+            }
+        };
+        actorLogger.addHandler(noiseGuard);
+        actorLogger.setUseParentHandlers(false);
+    }
+
+    @AfterAll
+    static void detachNoiseGuard()
+    {
+        actorLogger.setUseParentHandlers(true);
+        actorLogger.removeHandler(noiseGuard);
+    }
 
     @BeforeEach
     void setUp()
@@ -309,8 +361,11 @@ class PipelineActorTest
     {
         PipelineActor<Integer,String> pipeline = actorHub.pipeline((Integer i) -> "v=" + i);
         PipeActor<Integer,?> head = pipeline.sink(s -> {});
-        head.shutdown();
         head.dryLogger();
+        head.shutdown();
+        // fully closed and drained before sending: the rejected send cannot
+        // race the close and no partial delivery reaches the loop
+        assertTrue(head.awaitTermination(2000), "the head must terminate before sending");
 
         assertThrows(IllegalStateException.class, () -> pipeline.accept(1));
     }

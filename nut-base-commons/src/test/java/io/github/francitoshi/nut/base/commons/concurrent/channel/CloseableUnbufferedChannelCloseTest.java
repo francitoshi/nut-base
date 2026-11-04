@@ -45,7 +45,7 @@ class CloseableUnbufferedChannelCloseTest
     {
         executor = Executors.newFixedThreadPool(2);
 
-        CloseableUnbufferedChannel<String> channel = new CloseableUnbufferedChannel<>();
+        CloseableUnbufferedChannel<String> channel = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
 
         // No get() is waiting yet, so this put() blocks inside the
         // SynchronousQueue until some get() rendezvous with it.

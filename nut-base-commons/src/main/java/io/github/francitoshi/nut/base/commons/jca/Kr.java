@@ -291,16 +291,13 @@ public class Kr
     
     public enum MessageDigestAlgorithm
     {
-        @Deprecated
-        MD5("MD5"),
-        @Deprecated
-        SHA1("SHA1"),
-        @Deprecated
-        SHA224("SHA-224"),
-        SHA256("SHA-256"), //GOOD
-        SHA384("SHA-384"), //GOOD
-        SHA512("SHA-512"), //GOOD
-        RIPEMD160("RIPEMD160");                                                 //GOOD
+        MD5("MD5"),         //OBSOLETE
+        SHA1("SHA1"),       //OBSOLETE
+        SHA224("SHA-224"),  //OBSOLETE
+        SHA256("SHA-256"),  //GOOD
+        SHA384("SHA-384"),  //GOOD
+        SHA512("SHA-512"),  //GOOD
+        RIPEMD160("RIPEMD160");//GOOD
 
         MessageDigestAlgorithm(String code)
         {

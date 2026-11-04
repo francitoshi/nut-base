@@ -54,6 +54,14 @@ class FanoutChannelRemoveOperationListenerTest
             Channel.selectPut(1, java.util.concurrent.TimeUnit.MILLISECONDS, "v", fan);
         }
 
+        // the accepted selects leave up to the buffer capacity of "v" pending
+        // (FIFO); drain them so the flush round-trip below starts on an empty
+        // channel instead of parking forever on a full one
+        while (dest.tryGet().isPresent())
+        {
+            // drained
+        }
+
         fan.put("flush");
         assertEquals("flush", dest.get());
 

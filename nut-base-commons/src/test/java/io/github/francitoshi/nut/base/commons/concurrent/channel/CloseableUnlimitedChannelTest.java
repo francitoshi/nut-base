@@ -125,7 +125,7 @@ public class CloseableUnlimitedChannelTest
     @Test
     public void testGetInterruptedWhenEmpty_returnsNullAndCloses() throws Exception
     {
-        CloseableUnlimitedChannel<Integer> channel = new CloseableUnlimitedChannel<>();
+        CloseableUnlimitedChannel<Integer> channel = ChannelTestSupport.quiet(new CloseableUnlimitedChannel<>());
         CountDownLatch entered = new CountDownLatch(1);
         AtomicReference<Object> result = new AtomicReference<>(MISSING);
 
