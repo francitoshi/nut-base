@@ -172,6 +172,118 @@ public class PersistentCache<K, V> extends AbstractCache<K, V> implements AutoCl
         return new PersistentCache<>(memory, store, ttlNanos);
     }
 
+    /**
+     * Opens (or creates) a persistent cache backed by a directory with one
+     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
+     * serializers and an in-memory cache of the given {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttl time-to-live of entries
+     * @param timeUnit the unit of {@code ttl}
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        return openPerEntry(dir, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a directory with one
+     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
+     * serializers and an in-memory cache of the given {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttl time-to-live of entries
+     * @param timeUnit the unit of {@code ttl}
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param key the AES key used to encrypt the entry files; {@code null}
+     *            keeps the values in clear
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
+    {
+        return openPerEntry(dir, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer, key);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a directory with one
+     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
+     * serializers and an in-memory cache of the given {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttlNanos time-to-live of entries in nanoseconds
+     * ({@link Long#MAX_VALUE} for no expiration)
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        Sha256FileCacheStore<K, V> store = new Sha256FileCacheStore<>(dir, keySerializer, valueSerializer);
+        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
+        return new PersistentCache<>(memory, store, ttlNanos);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a directory with one
+     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
+     * serializers and an in-memory cache of the given {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     * <p>
+     * When a key is given, each entry file is written in the encrypted format
+     * (version 2) and its value is encrypted and authenticated with
+     * AES-256-GCM. The key is never written to the entry files.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttlNanos time-to-live of entries in nanoseconds
+     * ({@link Long#MAX_VALUE} for no expiration)
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param key the AES key used to encrypt the entry files; {@code null}
+     *            keeps the values in clear
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
+    {
+        Sha256FileCacheStore<K, V> store = new Sha256FileCacheStore<>(dir, keySerializer, valueSerializer, key);
+        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
+        return new PersistentCache<>(memory, store, ttlNanos);
+    }
+
     @Override
     public V get(K key, Function<? super K, ? extends V> create)
     {
