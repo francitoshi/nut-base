@@ -279,9 +279,24 @@ public class EncryptedBitcask implements Closeable
      */
     public void put(byte[] key, byte[] value) throws IOException
     {
+        put(key, value, now());
+    }
+
+    /**
+     * Stores a value under a key with an explicit entry timestamp. The
+     * tstamp of an entry is informational, but callers that build semantics
+     * over this store (such as {@link EncryptedBitcaskCacheStore}, which
+     * encodes an expiry in it) need to control it.
+     *
+     * @param key the key, 1 to 65535 bytes long
+     * @param value the value, 0 to maximum bytes; empty values allowed
+     * @param tstamp the timestamp in seconds since epoch to record
+     * @throws IOException if the entry cannot be written
+     */
+    public void put(byte[] key, byte[] value, int tstamp) throws IOException
+    {
         BitcaskFormat.validateSizes(key, value);
 
-        int tstamp = now();
         byte[] plaintext = plaintext(key, value, tstamp);
 
         lock.writeLock().lock();
@@ -540,6 +555,130 @@ public class EncryptedBitcask implements Closeable
     }
 
     // ------------------------------------------------------------ internals
+
+    /**
+     * Returns the keydir entry recorded for the given key, if the key is
+     * live. Pure memory lookup: no data file is read and nothing is
+     * decrypted. Callers that build store semantics over this class, such
+     * as {@link EncryptedBitcaskCacheStore}, use it for expiry checks.
+     *
+     * @param key the key bytes
+     * @return the keydir entry, or null if the key is absent
+     */
+    public KeyDirEntry locate(byte[] key)
+    {
+        BitcaskFormat.validateKeySize(key);
+
+        lock.readLock().lock();
+        try
+        {
+            checkOpen();
+            return keydir.get(key);
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Calls the visitor for every live key and its keydir entry, in no
+     * particular order, without touching any data file. Weakly consistent:
+     * changes made during the visit may or may not be observed, never with
+     * errors.
+     *
+     * @param visitor the procedure to run
+     */
+    public void forEachEntry(Bitcask.EntryVisitor visitor)
+    {
+        lock.readLock().lock();
+        try
+        {
+            checkOpen();
+            keydir.forEach((key, entry) -> visitor.visit(key, entry));
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Forces the active data file to the storage device
+     * ({@code force(false)}); intended for cache-like users that sync
+     * {@link SyncMode#NONE} but want to flush on demand.
+     *
+     * @throws IOException if the file cannot be flushed
+     */
+    public void flush() throws IOException
+    {
+        lock.writeLock().lock();
+        try
+        {
+            checkOpen();
+
+            if (activeChannel != null && activeChannel.isOpen())
+            {
+                activeChannel.force(false);
+                lastSyncMillis = System.currentTimeMillis();
+            }
+        }
+        finally
+        {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Returns the total number of bytes occupied by the data files of the
+     * store, live and dead.
+     *
+     * @return the sum of the sizes of every data file
+     * @throws IOException if a file size cannot be queried
+     */
+    public long totalDataBytes() throws IOException
+    {
+        lock.readLock().lock();
+        try
+        {
+            checkOpen();
+
+            long total = 0;
+            for (FileChannel channel : channels.values())
+            {
+                total += channel.size();
+            }
+            return total;
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Removes every key and deletes every data file without a merge: the
+     * store is left with one new empty active file.
+     *
+     * @throws IOException if a file cannot be deleted
+     */
+    public void clear() throws IOException
+    {
+        lock.writeLock().lock();
+        try
+        {
+            checkOpen();
+
+            keydir.clear();
+            activeChannel = null;
+            deleteOldFiles(activeId);
+            createActiveFile();
+        }
+        finally
+        {
+            lock.writeLock().unlock();
+        }
+    }
 
     private int now()
     {

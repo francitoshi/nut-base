@@ -253,9 +253,25 @@ public class Bitcask implements Closeable
      */
     public void put(byte[] key, byte[] value) throws IOException
     {
+        put(key, value, now());
+    }
+
+    /**
+     * Stores a value under a key with an explicit entry timestamp. The
+     * tstamp of a Bitcask entry is informational, but callers that build
+     * semantics over this store (such as {@link BitcaskCacheStore}, which
+     * encodes an expiry in it) need to control it.
+     *
+     * @param key the key, 1 to 65535 bytes long
+     * @param value the value, 0 to MAX_VALUE_SIZE bytes long
+     * @param tstamp the timestamp in seconds since epoch to record
+     * @throws IOException if the entry cannot be written
+     * @throws IllegalStateException if the store is closed
+     */
+    public void put(byte[] key, byte[] value, int tstamp) throws IOException
+    {
         BitcaskFormat.validateSizes(key, value);
 
-        int tstamp = now();
         byte[] entry = BitcaskFormat.encode(key, value, tstamp);
 
         lock.writeLock().lock();
@@ -458,6 +474,155 @@ public class Bitcask implements Closeable
     }
 
     // -------------------------------------------------------------- internals
+
+    /**
+     * Returns the keydir entry recorded for the given key, if the key is
+     * live. This is a pure memory lookup: no data file is read. The expiry
+     * (tstamp) and the size of the entry are available to callers that
+     * implement store semantics over the file, such as
+     * {@link BitcaskCacheStore}.
+     *
+     * @param key the key bytes
+     * @return the keydir entry, or null if the key is absent
+     * @throws IllegalStateException if the store is closed
+     */
+    public KeyDirEntry locate(byte[] key)
+    {
+        BitcaskFormat.validateKeySize(key);
+
+        lock.readLock().lock();
+        try
+        {
+            checkOpen();
+            return keydir.get(key);
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * A procedure over one live key and its keydir entry.
+     */
+    public interface EntryVisitor
+    {
+        /**
+         * Accepts one live key and its recorded entry. The key array is
+         * internal and must not be modified or retained; copying is the
+         * caller's job.
+         *
+         * @param key the key bytes, internal array
+         * @param entry the recorded position of the key's most recent entry
+         */
+        void visit(byte[] key, KeyDirEntry entry);
+    }
+
+    /**
+     * Calls the visitor for every live key and its keydir entry, in no
+     * particular order, without touching any data file. The iteration is a
+     * weakly consistent snapshot: entries added or removed during the visit
+     * may or may not be observed, never with errors.
+     *
+     * @param visitor the procedure to run
+     * @throws IllegalStateException if the store is closed
+     */
+    public void forEachEntry(EntryVisitor visitor)
+    {
+        lock.readLock().lock();
+        try
+        {
+            checkOpen();
+            keydir.forEach((key, entry) -> visitor.visit(key, entry));
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Forces the active data file to the storage device ({@code force(false)},
+     * data but no metadata). Cheap: intended for cache-like users that sync
+     * {@link SyncMode#NONE} but want to flush on demand.
+     *
+     * @throws IOException if the file cannot be flushed
+     * @throws IllegalStateException if the store is closed
+     */
+    public void flush() throws IOException
+    {
+        lock.writeLock().lock();
+        try
+        {
+            checkOpen();
+
+            if (activeChannel != null && activeChannel.isOpen())
+            {
+                activeChannel.force(false);
+                lastSyncMillis = System.currentTimeMillis();
+            }
+        }
+        finally
+        {
+            lock.writeLock().unlock();
+        }
+    }
+
+    /**
+     * Returns the total number of bytes occupied by the data files of the
+     * store, live and dead. Cheap position stats, no reads.
+     *
+     * @return the sum of the sizes of every data file
+     * @throws IOException if a file size cannot be queried
+     * @throws IllegalStateException if the store is closed
+     */
+    public long totalDataBytes() throws IOException
+    {
+        lock.readLock().lock();
+        try
+        {
+            checkOpen();
+
+            long total = 0;
+            for (FileChannel channel : channels.values())
+            {
+                total += channel.size();
+            }
+            return total;
+        }
+        finally
+        {
+            lock.readLock().unlock();
+        }
+    }
+
+    /**
+     * Removes every key and deletes every data file without a merge: the
+     * store is left with one empty active file. Useful for cache semantics
+     * (bulk removal), unlike the proper merge.
+     *
+     * @throws IOException if a file cannot be deleted
+     * @throws IllegalStateException if the store is closed
+     */
+    public void clear() throws IOException
+    {
+        lock.writeLock().lock();
+        try
+        {
+            checkOpen();
+
+            keydir.clear();
+            activeChannel = null;
+            deleteOldFiles(activeId);
+            createActiveFile();
+        }
+        finally
+        {
+            lock.writeLock().unlock();
+        }
+    }
+
+    // -------------------------------------------------------------- internals2
 
     /**
      * The blocking merge of section 6.7: copies every live key to fresh data
