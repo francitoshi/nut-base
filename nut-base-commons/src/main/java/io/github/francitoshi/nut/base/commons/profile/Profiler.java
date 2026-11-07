@@ -35,6 +35,7 @@ public class Profiler
         private volatile long counter;
         private volatile long minNanos = Long.MAX_VALUE;
         private volatile long maxNanos = 0L;
+        private final LatencyHistogram histogram = new LatencyHistogram();
 
         public Task(String label)
         {
@@ -81,6 +82,7 @@ public class Profiler
                 this.minNanos = Math.min(this.stepNanos, this.minNanos);
                 this.maxNanos = Math.max(this.stepNanos, this.maxNanos);
                 this.accumNanos += this.stepNanos;
+                this.histogram.record(this.stepNanos, 1);
                 this.stepNanos = 0L;
                 this.counter++;
             }
@@ -107,6 +109,7 @@ public class Profiler
                 this.minNanos = Math.min(this.stepNanos/steps, this.minNanos);
                 this.maxNanos = Math.max(this.stepNanos/steps, this.maxNanos);
                 this.accumNanos += this.stepNanos;
+                this.histogram.record(this.stepNanos / steps, steps);
                 this.stepNanos = 0L;
                 this.counter += steps;
             }
@@ -140,17 +143,63 @@ public class Profiler
         
         String[] data(JavaTime.Resolution resolution)
         {
+            return data(resolution, DEFAULT_PERCENTILES);
+        }
+
+        String[] data(JavaTime.Resolution resolution, double[] percentiles)
+        {
             long ns = nanos();
-            return new String[]
+            String[] cells = new String[7 + percentiles.length];
+            cells[0] = label;
+            cells[1] = Long.toString(counter);
+            cells[2] = JavaTime.toString(Duration.ofNanos(ns), 2, resolution);
+            cells[3] = counter > 0 ? JavaTime.toString(Duration.ofNanos(ns/counter), 2, resolution): "";
+            cells[4] = counter > 0 ? perSecond(ns, counter) : "";
+            cells[5] = JavaTime.toString(Duration.ofNanos(minNanos), 2, resolution);
+            cells[6] = JavaTime.toString(Duration.ofNanos(maxNanos), 2, resolution);
+
+            for (int i = 0; i < percentiles.length; i++)
             {
-                label,
-                Long.toString(counter),
-                JavaTime.toString(Duration.ofNanos(ns), 2, resolution), 
-                counter > 0 ? JavaTime.toString(Duration.ofNanos(ns/counter), 2, resolution): "", 
-                counter > 0 ? perSecond(ns, counter) : "",
-                JavaTime.toString(Duration.ofNanos(minNanos), 2, resolution),
-                JavaTime.toString(Duration.ofNanos(maxNanos), 2, resolution)
-            };
+                cells[7 + i] = counter > 0
+                    ? JavaTime.toString(Duration.ofNanos(nanosAtPercentile(percentiles[i])), 2, resolution)
+                    : "";
+            }
+
+            return cells;
+        }
+
+        /**
+         * Returns an estimate of the duration at the given percentile, 0 to
+         * 100, from the histogram the task keeps: 0 is the exact minimum,
+         * 100 the exact maximum and values in between interpolate inside the
+         * log-buckets.
+         *
+         * @param percentile the percentile, 0 exclusive to 100 inclusive
+         * @return the estimated duration in nanoseconds
+         */
+        public long nanosAtPercentile(double percentile)
+        {
+            if (percentile <= 0 || percentile > 100)
+            {
+                throw new IllegalArgumentException("percentile must be in (0, 100], got " + percentile);
+            }
+
+            synchronized (lock)
+            {
+                return histogram.quantileNanos(percentile / 100);
+            }
+        }
+
+        /**
+         * Returns an estimate of the duration at the given percentile, 0 to
+         * 100, in milliseconds.
+         *
+         * @param percentile the percentile, 0 exclusive to 100 inclusive
+         * @return the estimated duration in milliseconds
+         */
+        public long millisAtPercentile(double percentile)
+        {
+            return TimeUnit.NANOSECONDS.toMillis(nanosAtPercentile(percentile));
         }
 
         public String toString(JavaTime.Resolution resolution)
@@ -171,14 +220,72 @@ public class Profiler
 
     }
 
+    /** The default percentile columns: the upper tail of the distribution. */
+    public static final double[] DEFAULT_PERCENTILES = {90, 99, 99.9, 99.99};
+
     private final HashMap<String, Task> map = new HashMap<>();
     private final JavaTime.Resolution resolution;
     private final boolean sortByTime;
+    private final double[] percentiles;
 
     public Profiler(JavaTime.Resolution resolution, boolean sortByTime)
     {
+        this(resolution, sortByTime, DEFAULT_PERCENTILES);
+    }
+
+    /**
+     * Creates a profiler that shows the given percentile columns on print.
+     *
+     * @param resolution the time resolution of the printed values
+     * @param sortByTime true to sort the tasks by accumulated time
+     * @param percentiles the percentiles to show, each in (0, 100], ascending;
+     *                    50 is the median, 99.9 the upper tail; 0 (the
+     *                    minimum) and 100 (the maximum) are always shown by
+     *                    their own min/max columns
+     */
+    public Profiler(JavaTime.Resolution resolution, boolean sortByTime, double[] percentiles)
+    {
         this.resolution = resolution;
         this.sortByTime = sortByTime;
+        this.percentiles = validatePercentiles(percentiles);
+    }
+
+    private static double[] validatePercentiles(double[] percentiles)
+    {
+        if (percentiles == null || percentiles.length == 0)
+        {
+            throw new IllegalArgumentException("at least one percentile is required");
+        }
+
+        double[] copy = percentiles.clone();
+
+        for (int i = 0; i < copy.length; i++)
+        {
+            if (Double.isNaN(copy[i]) || copy[i] <= 0 || copy[i] > 100)
+            {
+                throw new IllegalArgumentException("percentile must be in (0, 100], got " + copy[i]);
+            }
+
+            if (i > 0 && copy[i] <= copy[i - 1])
+            {
+                throw new IllegalArgumentException("percentiles must be ascending: " + Arrays.toString(copy));
+            }
+        }
+
+        return copy;
+    }
+
+    /**
+     * Returns the column label of a percentile: p50, p99.9, ...
+     *
+     * @param percentile the percentile value
+     * @return the label
+     */
+    static String percentileLabel(double percentile)
+    {
+        return percentile == Math.rint(percentile)
+            ? "p" + (long) percentile
+            : "p" + percentile;
     }
     public Profiler(JavaTime.Resolution resolution)
     {
@@ -232,19 +339,26 @@ public class Profiler
         String[][] cells = new String[tasks.length][];
         for(int i=0;i<cells.length;i++)
         {
-            cells[i] = tasks[i].data(resolution);
+            cells[i] = tasks[i].data(resolution, percentiles);
         }
-        
-        boolean[] right = new boolean[COL_NAMES.length];
+
+        String[] colNames = new String[COL_NAMES.length + percentiles.length];
+        System.arraycopy(COL_NAMES, 0, colNames, 0, COL_NAMES.length);
+        for(int i=0;i<percentiles.length;i++)
+        {
+            colNames[COL_NAMES.length + i] = percentileLabel(percentiles[i]);
+        }
+
+        boolean[] right = new boolean[colNames.length];
         for(int col=1;col<right.length;col++)
         {
             right[col] = true;
         }
-        
-        int[] widths = new int[COL_NAMES.length];
+
+        int[] widths = new int[colNames.length];
         for(int col=0;col<widths.length;col++)
         {
-            widths[col] = COL_NAMES[col].length();
+            widths[col] = colNames[col].length();
             for(int row=0;row<cells.length;row++)
             {
                 int len = cells[row][col].length();
@@ -301,7 +415,7 @@ public class Profiler
         };
         
         out.println(border.apply("┌", "┬")+"┐");
-        out.println(format.apply(COL_NAMES, right));
+        out.println(format.apply(colNames, right));
         out.println(border.apply("├", "┼")+"┤");
         for(int row=0;row<cells.length;row++)
         {
