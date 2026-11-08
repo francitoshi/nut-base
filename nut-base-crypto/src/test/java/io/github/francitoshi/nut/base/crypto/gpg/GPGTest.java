@@ -54,6 +54,14 @@ public class GPGTest
     public static final String SC   = GPG.SC;
     
     static final String THIS_IS_THE_COMMENT = "this is the comment";
+
+    // Shared keys, generated once in testGenKey (@Order(1)) and reused by the
+    // other tests that would otherwise have to generate their own keys again.
+    // Keys live in the temporary gpg homedir created in @BeforeAll and are
+    // deleted by testDeleteSecKeys (@Order(99)) / cleanupGpg (@AfterAll).
+    static final String SHARED_RSA_NAME      = GPG.class.getName() + ".shared-rsa";
+    static final String SHARED_SIGNER_NAME   = GPG.class.getName() + ".shared-signer";
+    static final String SHARED_RECIPIENT_NAME = GPG.class.getName() + ".shared-recipient";
     
     @Test
     @Order(1)
@@ -61,11 +69,13 @@ public class GPGTest
     {
         Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG);
-        String name = GPG.class.getName()+System.nanoTime();
-        
-        assertEquals(0, gpg.genKey(RSA1024, SCA, NISTP521, E, name, "1", EMAIL, PASSPHRASE.toCharArray(), "4y"));
-        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, name, "3", EMAIL, PASSPHRASE.toCharArray(), "4y"));
 
+        // RSA key shared with testEditKeyAddKey (it adds subkeys to it).
+        assertEquals(0, gpg.genKey(RSA1024, SCA, NISTP521, E, SHARED_RSA_NAME, "1", EMAIL, PASSPHRASE.toCharArray(), "4y"));
+
+        // Curve25519 keys shared with testEncryptAndSign, testListPackets2...
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, SHARED_SIGNER_NAME, "3", EMAIL, PASSPHRASE.toCharArray(), "4y"));
+        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, SHARED_RECIPIENT_NAME, "3", EMAIL, PASSPHRASE.toCharArray(), "4y"));
     }
     
     @Test
@@ -74,18 +84,17 @@ public class GPGTest
     {
         Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG);
-        String name = GPG.class.getName()+System.nanoTime();
+
+        // Reuse the RSA key generated in testGenKey (@Order(1)) instead of
+        // generating a new one; only the addKey* operations are under test here.
+        SecKey[] keys = gpg.getSecKeys(SHARED_RSA_NAME);
         
-        assertEquals(0, gpg.genKey(RSA1024, S, name, "1", EMAIL, "PASSPHRASE".toCharArray(), "4y"));
-        SecKey[] keys = gpg.getSecKeys(name);
-        
+        assertTrue(keys.length > 0);
         String id = keys[0].main.getFingerprint();
 
         assertEquals(0, gpg.addKeyRSA(id, 1024, true, true, true, "1y", PASSPHRASE.toCharArray()));
         
         assertEquals(0, gpg.addKeyECC(id, true, false, true, 1, "3y", PASSPHRASE.toCharArray()));
-        
-        assertEquals(0, gpg.deleteSecKeys(id));
     }
 
     @Test
@@ -99,11 +108,10 @@ public class GPGTest
         byte[] plaindata = plaintext.getBytes("UTF-8");
         char[] passphrase = PASSPHRASE.toCharArray();
 
-        String signerId = "signer";
-        String recipientId1 = "recipient1";
+        String signerId = SHARED_SIGNER_NAME;
+        String recipientId1 = SHARED_RECIPIENT_NAME;
 
-        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, signerId, "", EMAIL, PASSPHRASE.toCharArray(), "4y"));
-        assertEquals(0, gpg.genKey(CURVE25519, S, CURVE25519, E, recipientId1, "", EMAIL, PASSPHRASE.toCharArray(), "4y"));
+        // Reuse the keys generated in testGenKey (@Order(1)).
 
         // Cifrar y firmar
         byte[] encryptedSigned = gpg.encryptAndSign(plaindata, signerId, passphrase, recipientId1);
@@ -209,18 +217,18 @@ public class GPGTest
 
     }
     @Test
+    @Order(5)
     public void testListPackets2() throws Exception
     {
         Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
         GPG gpg = new GPG().setDebug(DEBUG).setArmor(true).setEmitVersion(true).setComment(THIS_IS_THE_COMMENT);
 
-        gpg.genKey(NISTP256, SCA, NISTP256, E, "alice", "1", "alice@gpgtest.io", PASSPHRASE.toCharArray(), "4y");
-        gpg.genKey(NISTP256, SCA, NISTP256, E, "bob", "1", "bob@gpgtest.io", PASSPHRASE.toCharArray(), "4y");
-        
+        // Reuse the keys generated in testGenKey (@Order(1)); both directions
+        // still exercise listPackets on freshly encrypted/signed messages.
         byte[] plaintext = "hello world!!!".getBytes(StandardCharsets.UTF_8);
         
-        byte[] a = gpg.encryptAndSign(plaintext, "alice@gpgtest.io", PASSPHRASE.toCharArray(), "bob@gpgtest.io");
-        byte[] b = gpg.encryptAndSign(plaintext, "bob@gpgtest.io", PASSPHRASE.toCharArray(), "alice@gpgtest.io");
+        byte[] a = gpg.encryptAndSign(plaintext, SHARED_SIGNER_NAME, PASSPHRASE.toCharArray(), SHARED_RECIPIENT_NAME);
+        byte[] b = gpg.encryptAndSign(plaintext, SHARED_RECIPIENT_NAME, PASSPHRASE.toCharArray(), SHARED_SIGNER_NAME);
         
         System.out.println(new String(a));
         System.out.println("--------------------------------------------------------------------------------");
@@ -243,14 +251,6 @@ public class GPGTest
         
         assertEquals(THIS_IS_THE_COMMENT, r4.comment);
         assertNotNull(r4.version);
-        
-        
-        SecKey[] secs = gpg.getSecKeys("alice", "bob");
-        
-        for(SecKey sk : secs)
-        {
-            gpg.deleteSecAndPubKeys(sk.main.getFingerprint());
-        }
     }
 
     /**
