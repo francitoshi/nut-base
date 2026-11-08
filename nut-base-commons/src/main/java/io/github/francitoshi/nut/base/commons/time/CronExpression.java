@@ -5,8 +5,10 @@
  */
 package io.github.francitoshi.nut.base.commons.time;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.BitSet;
 import java.util.HashMap;
@@ -72,10 +74,10 @@ public final class CronExpression
 
     private final String command;
     private final boolean reboot;
-    private final java.time.Duration everyDuration;
-    private final java.time.ZoneId zoneId;
+    private final Duration everyDuration;
+    private final ZoneId zoneId;
 
-    private CronExpression(String expression, BitSet secondBits, BitSet minuteBits, BitSet hourBits, BitSet dayOfMonthBits, BitSet monthBits, BitSet dayOfWeekBits, BitSet yearBits, boolean orDayOf, String command, boolean reboot, java.time.Duration everyDuration, java.time.ZoneId zoneId)
+    private CronExpression(String expression, BitSet secondBits, BitSet minuteBits, BitSet hourBits, BitSet dayOfMonthBits, BitSet monthBits, BitSet dayOfWeekBits, BitSet yearBits, boolean orDayOf, String command, boolean reboot, Duration everyDuration, ZoneId zoneId)
     {
         this.expression = expression;
         this.secondBits = secondBits;
@@ -115,8 +117,8 @@ public final class CronExpression
         String first = parts[0].toLowerCase();
         boolean isAlias = first.startsWith("@");
         boolean reboot = false;
-        java.time.Duration everyDuration = null;
-        java.time.ZoneId zoneId = null;
+        Duration everyDuration = null;
+        ZoneId zoneId = null;
         String mappedCron = null;
         String exprName = null;
 
@@ -190,9 +192,9 @@ public final class CronExpression
                 }
                 exprName = "@at " + parts[1];
 
-                if (parts.length >= 3 && java.time.ZoneId.getAvailableZoneIds().contains(parts[2]))
+                if (parts.length >= 3 && ZoneId.getAvailableZoneIds().contains(parts[2]))
                 {
-                    zoneId = java.time.ZoneId.of(parts[2]);
+                    zoneId = ZoneId.of(parts[2]);
                 }
             }
             else
@@ -355,11 +357,11 @@ public final class CronExpression
         return new CronExpression(exprName, secondBits, minuteBits, hourBits, domBits, monthBits, dowBits, yearBits, orDayOf, command, reboot, everyDuration, zoneId);
     }
 
-    private static java.time.Duration parseDuration(String s)
+    private static Duration parseDuration(String s)
     {
         java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("(\\d+)(ns|us|µs|ms|s|m|h)");
         java.util.regex.Matcher matcher = pattern.matcher(s);
-        java.time.Duration duration = java.time.Duration.ZERO;
+        Duration duration = Duration.ZERO;
         boolean matched = false;
         int lastEnd = 0;
         while (matcher.find())
@@ -716,12 +718,12 @@ public final class CronExpression
         return reboot;
     }
 
-    public java.time.Duration getEveryDuration()
+    public Duration getEveryDuration()
     {
         return everyDuration;
     }
 
-    public java.time.ZoneId getZoneId()
+    public ZoneId getZoneId()
     {
         return zoneId;
     }

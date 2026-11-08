@@ -10,7 +10,9 @@ import io.github.francitoshi.nut.base.commons.cache.persistent.FileCacheStore;
 import io.github.francitoshi.nut.base.commons.profile.Profiler;
 import io.github.francitoshi.nut.base.commons.serializer.BasicSerializers;
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Arrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -161,7 +163,7 @@ public class BitcaskCacheStoreBenchmarkTest
     private String bigString(int bytes)
     {
         byte[] big = new byte[bytes];
-        java.util.Arrays.fill(big, (byte) 'x');
-        return new String(big, java.nio.charset.StandardCharsets.ISO_8859_1);
+        Arrays.fill(big, (byte) 'x');
+        return new String(big, StandardCharsets.ISO_8859_1);
     }
 }

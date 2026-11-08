@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -58,7 +59,7 @@ public class ActorPoolTest
         actorPool.execute(() -> holder[0] = "executed");
         assertEquals("executed", holder[0]);
 
-        java.util.function.Supplier<String> supplier = () -> "submitted";
+        Supplier<String> supplier = () -> "submitted";
         try
         {
             assertEquals("submitted", actorPool.submit(supplier).get());

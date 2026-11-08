@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.bitcask;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -292,7 +293,7 @@ public class BitcaskCompleteExampleTest
     private byte[] readAllDataFiles(Path directory) throws IOException
     {
         List<Long> ids = listDataIds(directory);
-        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
 
         for (long id : ids)
         {

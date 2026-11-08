@@ -6,6 +6,7 @@
 package io.github.francitoshi.nut.base.ui;
 
 import io.github.francitoshi.nut.base.ui.terminal.BoxPrinter;
+import java.awt.Color;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -201,8 +202,8 @@ public class PromptManagerTest
 
         // ── S4. Menu with Custom Colors ──────────────────────────────────────
         SwingPromptManager swCustom = new SwingPromptManager(-1)
-                .setHeaderColor(new java.awt.Color(0x1B5E20), java.awt.Color.WHITE)
-                .setErrorColor(new java.awt.Color(0xB71C1C), java.awt.Color.WHITE)
+                .setHeaderColor(new Color(0x1B5E20), java.awt.Color.WHITE)
+                .setErrorColor(new Color(0xB71C1C), Color.WHITE)
                 .setDialogWidth(520);
 
         PromptManager.MenuItem ms4 = swCustom.menu("SERVICE CONTROL",

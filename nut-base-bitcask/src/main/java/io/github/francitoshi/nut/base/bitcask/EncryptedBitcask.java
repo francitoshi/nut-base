@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
@@ -1523,7 +1524,7 @@ public class EncryptedBitcask implements Closeable
             ByteBuffer fileIdBuf = ByteBuffer.allocate(8);
             fileIdBuf.putLong(fileId);
 
-            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            Mac mac = Mac.getInstance("HmacSHA256");
             mac.init(masterKey);
             mac.update(FILE_KEY_INFO);
             mac.update(fileIdBuf.array());

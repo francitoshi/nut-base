@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.awaitBlocked;
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.joinOrFail;
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.startDaemon;
+import java.util.Arrays;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -93,8 +94,7 @@ class CloseableChannelInterruptedCloseTest
     @Test
     void timedCloseFromInterruptedThreadAlsoWakesReaders() throws Exception
     {
-        for (CloseableChannel<String> ch : java.util.Arrays.<CloseableChannel<String>>asList(
-                new CloseableBufferedChannel<String>(4), new CloseableUnlimitedChannel<String>()))
+        for (CloseableChannel<String> ch : Arrays.<CloseableChannel<String>>asList(new CloseableBufferedChannel<String>(4), new CloseableUnlimitedChannel<String>()))
         {
             AtomicReference<String> value = new AtomicReference<>("<not returned>");
             Thread reader = startDaemon("reader", () -> value.set(ch.get()));

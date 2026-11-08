@@ -11,6 +11,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -117,7 +118,7 @@ public class BitcaskMergeTest
 
         long activeId = ids.get(ids.size() - 1); // sorted ascending by listDataFileIds
         List<Long> sorted = new ArrayList<>(ids);
-        java.util.Collections.sort(sorted);
+        Collections.sort(sorted);
         activeId = sorted.get(sorted.size() - 1);
 
         for (long id : sorted)

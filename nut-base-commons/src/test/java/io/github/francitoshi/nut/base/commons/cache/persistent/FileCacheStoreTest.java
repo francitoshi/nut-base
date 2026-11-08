@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -214,7 +215,7 @@ public class FileCacheStoreTest
     @Test
     public void testCompaction()
     {
-        String value = String.join("", java.util.Collections.nCopies(64, "x"));
+        String value = String.join("", Collections.nCopies(64, "x"));
         FileCacheStore<String, String> store = store();
         for (int i = 0; i < 400; i++)
         {

@@ -11,6 +11,7 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.List;
@@ -280,7 +281,7 @@ public class SwingPromptManager extends PromptManager
             root.add(btnPanel, BorderLayout.SOUTH);
 
             // Double-click confirms
-            list.addMouseListener(new java.awt.event.MouseAdapter()
+            list.addMouseListener(new MouseAdapter()
             {
                 @Override
                 public void mouseClicked(java.awt.event.MouseEvent e)

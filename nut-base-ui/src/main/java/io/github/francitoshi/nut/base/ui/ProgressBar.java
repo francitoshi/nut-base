@@ -314,7 +314,7 @@ public class ProgressBar implements AutoCloseable
             return "";
         }
         char[] arr = new char[times];
-        java.util.Arrays.fill(arr, c);
+        Arrays.fill(arr, c);
         return new String(arr);
     }
 

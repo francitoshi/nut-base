@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.collections;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.Iterator;
@@ -420,9 +421,9 @@ public final class Iterables
     public static <T> long count(Iterable<T> source)
     {
         Objects.requireNonNull(source, "source must not be null");
-        if (source instanceof java.util.Collection)
+        if (source instanceof Collection)
         {
-            return ((java.util.Collection<?>) source).size();
+            return ((Collection<?>) source).size();
         }
         long count = 0;
         for (T ignored : source)

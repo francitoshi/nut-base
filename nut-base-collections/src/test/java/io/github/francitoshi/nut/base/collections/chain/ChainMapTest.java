@@ -13,6 +13,7 @@ import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -515,12 +516,12 @@ public class ChainMapTest
                 return false;
             }
             Entry<?,?> e = (Entry<?,?>) o;
-            return java.util.Objects.equals(this.key, e.getKey()) && java.util.Objects.equals(this.value, e.getValue());
+            return Objects.equals(this.key, e.getKey()) && Objects.equals(this.value, e.getValue());
         }
         @Override
         public int hashCode()
         {
-            return java.util.Objects.hashCode(this.key) ^ java.util.Objects.hashCode(this.value);
+            return Objects.hashCode(this.key) ^ Objects.hashCode(this.value);
         }
         @Override
         public String toString()

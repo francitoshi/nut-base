@@ -5,6 +5,8 @@
  */
 package io.github.francitoshi.nut.base.commons.lang;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -170,8 +172,8 @@ public class EitherTest
         Either<String, String> left = Either.left("1");
         Either<String, String> right = Either.right("2");
 
-        java.util.List<String> leftValues = new java.util.ArrayList<>();
-        java.util.List<String> rightValues = new java.util.ArrayList<>();
+        List<String> leftValues = new ArrayList<>();
+        List<String> rightValues = new ArrayList<>();
 
         left.peek(
                 l -> leftValues.add(l),

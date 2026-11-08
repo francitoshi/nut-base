@@ -9,6 +9,7 @@ import io.github.francitoshi.nut.base.commons.cache.persistent.CacheStore;
 import io.github.francitoshi.nut.base.commons.serializer.Serializer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -226,7 +227,7 @@ public abstract class AbstractBitcaskCacheStore<K,V> implements CacheStore<K,V>
     @Override
     public void purgeExpired()
     {
-        List<byte[]> expired = new java.util.ArrayList<>();
+        List<byte[]> expired = new ArrayList<>();
 
         storeForEachEntry((key, entry) ->
         {

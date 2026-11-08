@@ -6,6 +6,8 @@
 package io.github.francitoshi.nut.base.bitcask;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -227,7 +229,7 @@ public class BitcaskFormatTest
 
     private static byte[] bytes(String s)
     {
-        java.nio.charset.Charset utf8 = java.nio.charset.StandardCharsets.UTF_8;
+        Charset utf8 = StandardCharsets.UTF_8;
         return s.getBytes(utf8);
     }
 }

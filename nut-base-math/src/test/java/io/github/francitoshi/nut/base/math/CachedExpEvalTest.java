@@ -10,6 +10,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -217,7 +218,7 @@ public class CachedExpEvalTest
         final int threads = 8;
         final int iterations = 100;
         List<Thread> pool = new ArrayList<>();
-        java.util.concurrent.atomic.AtomicReference<Throwable> failure = new java.util.concurrent.atomic.AtomicReference<>();
+        AtomicReference<Throwable> failure = new AtomicReference<>();
         for (int t = 0; t < threads; t++)
         {
             Thread worker = new Thread(() ->

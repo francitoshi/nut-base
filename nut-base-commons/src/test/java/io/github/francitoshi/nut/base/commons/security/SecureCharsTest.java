@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.security;
 
 import io.github.francitoshi.nut.base.commons.jca.Kr;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
@@ -148,7 +149,7 @@ public class SecureCharsTest
             char[] second = instance.getChars();
             assertNotSame(first, second);
 
-            java.util.Arrays.fill(first, '\0');
+            Arrays.fill(first, '\0');
             assertArrayEquals(HELLO_WORLD.toCharArray(), instance.getChars());
         }
     }

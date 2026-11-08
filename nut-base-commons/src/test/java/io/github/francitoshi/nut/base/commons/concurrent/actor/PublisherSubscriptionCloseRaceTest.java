@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,6 +13,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,7 +63,7 @@ class PublisherSubscriptionCloseRaceTest
      */
     private static int publisherCount(ActorHub hub, String tag) throws Exception
     {
-        java.lang.reflect.Field registryField = ActorHub.class.getDeclaredField("pubSubRegistry");
+        Field registryField = ActorHub.class.getDeclaredField("pubSubRegistry");
         registryField.setAccessible(true);
         ConcurrentHashMap<String, ?> registry = (ConcurrentHashMap<String, ?>) registryField.get(hub);
         Object entry = registry.get(tag);
@@ -69,14 +71,14 @@ class PublisherSubscriptionCloseRaceTest
         {
             return 0;
         }
-        java.lang.reflect.Field countField = PubSub.class.getDeclaredField("publisherCount");
+        Field countField = PubSub.class.getDeclaredField("publisherCount");
         countField.setAccessible(true);
         return countField.getInt(entry);
     }
 
     private static boolean registryContains(ActorHub hub, String tag) throws Exception
     {
-        java.lang.reflect.Field registryField = ActorHub.class.getDeclaredField("pubSubRegistry");
+        Field registryField = ActorHub.class.getDeclaredField("pubSubRegistry");
         registryField.setAccessible(true);
         ConcurrentHashMap<String, ?> registry = (ConcurrentHashMap<String, ?>) registryField.get(hub);
         return registry.containsKey(tag);
@@ -111,7 +113,7 @@ class PublisherSubscriptionCloseRaceTest
             }
             for (Future<Void> closer : closers)
             {
-                closer.get(5, java.util.concurrent.TimeUnit.SECONDS);
+                closer.get(5, TimeUnit.SECONDS);
             }
 
             assertTrue(publisher.isClosed(), "trial " + trial + ": publisher must end closed");
@@ -152,7 +154,7 @@ class PublisherSubscriptionCloseRaceTest
         }
         for (Future<Void> closer : closers)
         {
-            closer.get(5, java.util.concurrent.TimeUnit.SECONDS);
+            closer.get(5, TimeUnit.SECONDS);
         }
 
         assertTrue(sub.isClosed());

@@ -11,10 +11,12 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntPredicate;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -89,7 +91,7 @@ public class BitcaskRecoveryTest
         byte[] tombstone = BitcaskFormat.encodeTombstone(bytes("survivor"), 1);
         long lastId = maxId(directory);
         Path data = directory.resolve(lastId + Bitcask.DATA_SUFFIX);
-        Files.write(data, java.util.Arrays.copyOfRange(tombstone, 0, 8), StandardOpenOption.APPEND);
+        Files.write(data, Arrays.copyOfRange(tombstone, 0, 8), StandardOpenOption.APPEND);
 
         try (Bitcask bitcask = Bitcask.open(directory))
         {
@@ -326,7 +328,7 @@ public class BitcaskRecoveryTest
      * Reads every expected key back after recovery and checks that the
      * surviving values match what was written at their last put or delete.
      */
-    private void assertKeyValuesConsistent(Bitcask bitcask, java.util.function.IntPredicate live) throws IOException
+    private void assertKeyValuesConsistent(Bitcask bitcask, IntPredicate live) throws IOException
     {
         for (int i = 0; i < 60; i++)
         {

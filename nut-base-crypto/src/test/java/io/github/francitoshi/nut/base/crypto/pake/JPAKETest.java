@@ -152,8 +152,8 @@ public class JPAKETest
         bob.validateRound2PayloadReceived(aliceR2);
  
         // Round 3
-        java.math.BigInteger aliceKey = alice.calculateKeyingMaterial();
-        java.math.BigInteger bobKey   = bob.calculateKeyingMaterial();
+        BigInteger aliceKey = alice.calculateKeyingMaterial();
+        BigInteger bobKey   = bob.calculateKeyingMaterial();
         String aliceR3 = alice.createRound3PayloadToSend(aliceKey);
         String bobR3   = bob.createRound3PayloadToSend(bobKey);
         alice.validateRound3PayloadReceived(bobR3, aliceKey);

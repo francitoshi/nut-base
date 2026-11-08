@@ -13,6 +13,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -403,7 +404,7 @@ public class BitcaskCacheStoreTest
     private String bigValue()
     {
         byte[] big = new byte[400];
-        java.util.Arrays.fill(big, (byte) 'x');
+        Arrays.fill(big, (byte) 'x');
         return new String(big, StandardCharsets.UTF_8);
     }
 

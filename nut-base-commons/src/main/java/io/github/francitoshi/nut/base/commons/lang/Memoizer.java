@@ -8,6 +8,7 @@ package io.github.francitoshi.nut.base.commons.lang;
 import io.github.francitoshi.nut.base.commons.cache.Cache;
 import io.github.francitoshi.nut.base.commons.cache.CacheFactory;
 import io.github.francitoshi.nut.base.commons.cache.CacheType;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
@@ -37,15 +38,14 @@ public final class Memoizer
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Key key = (Key) o;
-            return Objects.equals(memoized, key.memoized) &&
-                   java.util.Arrays.equals(params, key.params);
+            return Objects.equals(memoized, key.memoized) && Arrays.equals(params, key.params);
         }
 
         @Override
         public int hashCode()
         {
             int result = Objects.hashCode(memoized);
-            result = 31 * result + java.util.Arrays.hashCode(params);
+            result = 31 * result + Arrays.hashCode(params);
             return result;
         }
     }

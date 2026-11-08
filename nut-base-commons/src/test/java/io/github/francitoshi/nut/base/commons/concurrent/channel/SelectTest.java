@@ -15,6 +15,8 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.*;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @Timeout(value = 10, unit = TimeUnit.SECONDS)
@@ -24,9 +26,9 @@ class SelectTest
     // helpers
     // ------------------------------------------------------------------
 
-    static java.util.stream.Stream<Arguments> kinds()
+    static Stream<Arguments> kinds()
     {
-        return java.util.stream.Stream.of(
+        return Stream.of(
             kind("buffered", () -> Channel.<String>buffered(2)),
             kind("unlimited", () -> Channel.<String>unlimited()),
             kind("conflated", () -> Channel.<String>conflated()),
@@ -37,7 +39,7 @@ class SelectTest
             kind("closeableConflated", CloseableConflatedChannel::new));
     }
 
-    private static <T> Arguments kind(String name, java.util.function.Supplier<Channel<T>> s)
+    private static <T> Arguments kind(String name, Supplier<Channel<T>> s)
     {
         return Arguments.of(name, s);
     }
@@ -125,7 +127,7 @@ class SelectTest
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("kinds")
-    void selectGetWorksOnEveryChannelKind(String name, java.util.function.Supplier<Channel<String>> factory) throws Exception
+    void selectGetWorksOnEveryChannelKind(String name, Supplier<Channel<String>> factory) throws Exception
     {
         Channel<String> other = Channel.buffered(1);
         Channel<String> ch = factory.get();
@@ -280,7 +282,7 @@ class SelectTest
 
     @ParameterizedTest(name = "{0}")
     @MethodSource("putKinds")
-    void selectPutSkipsFullWritersOfEveryKind(String name, java.util.function.Supplier<Channel<Integer>> factory) throws Exception
+    void selectPutSkipsFullWritersOfEveryKind(String name, Supplier<Channel<Integer>> factory) throws Exception
     {
         Channel<Integer> full = factory.get();
         full.tryPut(1);
@@ -289,9 +291,9 @@ class SelectTest
         assertSame(empty, Channel.selectPut(2, full, empty));
     }
 
-    static java.util.stream.Stream<Arguments> putKinds()
+    static Stream<Arguments> putKinds()
     {
-        return java.util.stream.Stream.of(
+        return Stream.of(
             kind("buffered", () -> Channel.<Integer>buffered(1)),
             kind("closeableBuffered", () -> new CloseableBufferedChannel<Integer>(1)));
     }

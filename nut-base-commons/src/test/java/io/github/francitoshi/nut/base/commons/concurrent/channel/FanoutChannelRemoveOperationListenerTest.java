@@ -5,7 +5,9 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import java.lang.reflect.Field;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,7 +53,7 @@ class FanoutChannelRemoveOperationListenerTest
         // `dest` is also observed... it registers none, so expect zero)
         for (int i = 0; i < 10; i++)
         {
-            Channel.selectPut(1, java.util.concurrent.TimeUnit.MILLISECONDS, "v", fan);
+            Channel.selectPut(1, TimeUnit.MILLISECONDS, "v", fan);
         }
 
         // the accepted selects leave up to the buffer capacity of "v" pending
@@ -65,7 +67,7 @@ class FanoutChannelRemoveOperationListenerTest
         fan.put("flush");
         assertEquals("flush", dest.get());
 
-        java.lang.reflect.Field field = null;
+        Field field = null;
         try
         {
             field = Channel.class.getDeclaredField("operationListeners");

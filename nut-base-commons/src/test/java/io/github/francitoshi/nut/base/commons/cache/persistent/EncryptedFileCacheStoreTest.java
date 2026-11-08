@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermission;
+import java.util.Collections;
 import java.util.Set;
 import java.util.zip.CRC32;
 import javax.crypto.SecretKey;
@@ -299,7 +300,7 @@ public class EncryptedFileCacheStoreTest
     public void testCompaction()
     {
         SecretKey key = key();
-        String value = String.join("", java.util.Collections.nCopies(64, "x"));
+        String value = String.join("", Collections.nCopies(64, "x"));
         FileCacheStore<String, String> store = store(key);
         for (int i = 0; i < 400; i++)
         {

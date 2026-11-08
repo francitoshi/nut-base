@@ -7,6 +7,7 @@ package io.github.francitoshi.nut.base.commons.security;
 
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -174,7 +175,7 @@ public class SecureBytesTest
             byte[] second = instance.getBytes();
             assertNotSame(first, second);
 
-            java.util.Arrays.fill(first, (byte) 0);
+            Arrays.fill(first, (byte) 0);
             assertArrayEquals(hello(), instance.getBytes());
         }
     }

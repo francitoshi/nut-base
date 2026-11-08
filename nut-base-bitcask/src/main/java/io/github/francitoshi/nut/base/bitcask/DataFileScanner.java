@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.bitcask;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
@@ -141,7 +142,7 @@ public final class DataFileScanner
 
             if (read < 0)
             {
-                throw new java.io.EOFException("unexpected end of file at position " + position);
+                throw new EOFException("unexpected end of file at position " + position);
             }
 
             position += read;

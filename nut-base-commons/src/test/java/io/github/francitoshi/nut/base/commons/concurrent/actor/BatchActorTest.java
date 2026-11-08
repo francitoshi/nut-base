@@ -272,7 +272,7 @@ class BatchActorTest
     void linkToReturnsTheSameNextInstanceForFluentChaining()
     {
         BatchActor<Integer> batch = new BatchActor<>(3, 100L);
-        java.util.function.Consumer<List<Integer>> consumer = m -> {};
+        Consumer<List<Integer>> consumer = m -> {};
         Consumer<List<Integer>> next = m -> consumer.accept(m);
 
         Consumer<List<Integer>> returned = batch.linkTo(next);

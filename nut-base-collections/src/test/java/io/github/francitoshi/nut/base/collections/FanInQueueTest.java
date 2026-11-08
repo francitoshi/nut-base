@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Timeout;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -286,7 +287,7 @@ class FanInQueueTest
     @Test
     void testRemainingCapacitySumsSources()
     {
-        BlockingQueue<Integer> bounded = new java.util.concurrent.ArrayBlockingQueue<>(3);
+        BlockingQueue<Integer> bounded = new ArrayBlockingQueue<>(3);
         FanInQueue<Integer> fan = new FanInQueue<>(bounded);
 
         assertEquals(3, fan.remainingCapacity());

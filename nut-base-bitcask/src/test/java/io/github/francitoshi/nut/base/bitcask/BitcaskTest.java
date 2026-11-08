@@ -10,7 +10,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -225,9 +227,9 @@ public class BitcaskTest
         assertThrows(IllegalStateException.class, () -> bitcask.get(bytes("k")));
     }
 
-    private static java.util.List<Long> listIds(Path directory) throws IOException
+    private static List<Long> listIds(Path directory) throws IOException
     {
-        java.util.List<Long> ids = new java.util.ArrayList<>();
+        List<Long> ids = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory, "*" + Bitcask.DATA_SUFFIX))
         {
             for (Path path : stream)

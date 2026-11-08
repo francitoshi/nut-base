@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.profile;
 
+import java.util.Random;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -97,7 +98,7 @@ public class LatencyHistogramTest
     {
         LatencyHistogram histogram = new LatencyHistogram();
 
-        java.util.Random random = new java.util.Random(42);
+        Random random = new Random(42);
         for (int i = 0; i < 10_000; i++)
         {
             histogram.record(1 + (long) (random.nextDouble() * random.nextDouble() * 1_000_000), 1);

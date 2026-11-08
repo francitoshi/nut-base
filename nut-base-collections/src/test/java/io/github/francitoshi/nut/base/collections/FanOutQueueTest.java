@@ -6,6 +6,7 @@
 package io.github.francitoshi.nut.base.collections;
 
 import io.github.francitoshi.nut.base.collections.FanOutQueue;
+import java.util.ArrayList;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -388,7 +389,7 @@ class FanOutQueueTest
         assertThrows(UnsupportedOperationException.class, fan::remove);
         assertThrows(UnsupportedOperationException.class, fan::element);
         assertThrows(UnsupportedOperationException.class, fan::peek);
-        assertThrows(UnsupportedOperationException.class, () -> fan.drainTo(new java.util.ArrayList<>()));
+        assertThrows(UnsupportedOperationException.class, () -> fan.drainTo(new ArrayList<>()));
     }
 
     @Test

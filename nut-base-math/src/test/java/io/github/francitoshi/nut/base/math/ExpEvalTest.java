@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.math;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.HashMap;
@@ -98,7 +99,7 @@ public class ExpEvalTest
         eval.addFunction("max", MethodOf("max", double.class, double.class));
     }
 
-    private static java.lang.reflect.Method MethodOf(String name, Class<?>... params)
+    private static Method MethodOf(String name, Class<?>... params)
     {
         try
         {
@@ -722,7 +723,7 @@ public class ExpEvalTest
     @Test
     public void testRegisterNonStaticMethod() throws Exception
     {
-        java.lang.reflect.Method m = ExpEvalTest.class.getMethod("nonStatic");
+        Method m = ExpEvalTest.class.getMethod("nonStatic");
         assertThrows(IllegalArgumentException.class, () -> eval.addFunction("nonStatic", m));
     }
 
@@ -732,7 +733,7 @@ public class ExpEvalTest
     @Test
     public void testRegisterNullFunction()
     {
-        java.lang.reflect.Method m = null;
+        Method m = null;
         assertThrows(NullPointerException.class, () -> eval.addFunction("f", m));
     }
 

@@ -115,7 +115,7 @@ class FilterActorTest
     @Test
     void filterWithPipeFormALogicalChain() throws InterruptedException
     {
-        java.util.List<String> result = new CopyOnWriteArrayList<>();
+        List<String> result = new CopyOnWriteArrayList<>();
         FilterActor<Integer> filter = actorHub.filter(i -> i % 2 == 0);
         PipeActor<Integer,String> pipe = actorHub.pipe(i -> "even=" + i);
         pipe.linkTo(actorHub.actor(result::add));
@@ -206,7 +206,7 @@ class FilterActorTest
     @Test
     void hubFilterFactoryWithQueueSizeParameter() throws InterruptedException
     {
-        java.util.List<Integer> result = new CopyOnWriteArrayList<>();
+        List<Integer> result = new CopyOnWriteArrayList<>();
         FilterActor<Integer> filter = actorHub.filter(20, 10, i -> i > 0);
         filter.linkTo(actorHub.actor(result::add));
 

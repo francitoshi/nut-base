@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -119,17 +120,17 @@ class IterablesTest
 
         assertThrows(NullPointerException.class, () -> 
         {
-            java.util.function.Supplier<Map<String, Object>> sup = () -> new HashMap<>();
+            Supplier<Map<String, Object>> sup = () -> new HashMap<>();
             Iterables.associateBy(null, Object::toString, sup);
         });
         assertThrows(NullPointerException.class, () ->
         {
-            java.util.function.Supplier<Map<String, Object>> sup = () -> new HashMap<>();
+            Supplier<Map<String, Object>> sup = () -> new HashMap<>();
             Iterables.associateBy(Collections.emptyList(), null, sup);
         });
         assertThrows(NullPointerException.class, () -> 
         {
-            java.util.function.Supplier<Map<String, Object>> sup = null;
+            Supplier<Map<String, Object>> sup = null;
             Iterables.associateBy(Collections.emptyList(), Object::toString, sup);
         });
 
@@ -184,14 +185,14 @@ class IterablesTest
         assertEquals('c', map2.get(6));
 
         // 3. associateBy(source, keyFunction, mapSupplier)
-        java.util.function.Supplier<Map<Integer, String>> mapSupplier3 = () -> new TreeMap<>();
+        Supplier<Map<Integer, String>> mapSupplier3 = () -> new TreeMap<>();
         Map<Integer, String> map3 = Iterables.associateBy(list, String::length, mapSupplier3);
         assertTrue(map3 instanceof TreeMap);
         assertEquals("apple", map3.get(5));
         assertEquals("cherry", map3.get(6));
 
         // 4. associateBy(source, keyFunction, valueFunction, mapSupplier)
-        java.util.function.Supplier<Map<Integer, Character>> mapSupplier4 = () -> new TreeMap<>();
+        Supplier<Map<Integer, Character>> mapSupplier4 = () -> new TreeMap<>();
         Map<Integer, Character> map4 = Iterables.associateBy(list, String::length, s -> s.charAt(0), mapSupplier4);
         assertTrue(map4 instanceof TreeMap);
         assertEquals('a', map4.get(5));

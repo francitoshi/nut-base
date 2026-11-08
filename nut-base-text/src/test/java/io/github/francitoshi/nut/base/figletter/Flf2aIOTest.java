@@ -147,7 +147,7 @@ class Flf2aIOTest
         @DisplayName("Throws IllegalArgumentException for non-FLF header")
         void throwsOnBadHeader()
         {
-            java.util.List<String> lines = java.util.Arrays.asList("not_a_valid_header rest");
+            List<String> lines = Arrays.asList("not_a_valid_header rest");
             assertThrows(IllegalArgumentException.class, () -> io.load("bad.flf", lines));
         }
 
@@ -177,9 +177,9 @@ class Flf2aIOTest
         }
 
         // Helper: convert String to List<String> as the parser expects
-        private java.util.List<String> toFlfLines(String s)
+        private List<String> toFlfLines(String s)
         {
-            return new java.util.ArrayList<>(java.util.Arrays.asList(s.split("\\r?\\n", -1)));
+            return new ArrayList<>(java.util.Arrays.asList(s.split("\\r?\\n", -1)));
         }
     }
 
@@ -232,7 +232,7 @@ class Flf2aIOTest
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             io.export(glyphs, null, bos);
 
-            java.util.List<String> lines = new java.util.ArrayList<>(
+            List<String> lines = new ArrayList<>(
                     java.util.Arrays.asList(bos.toString(StandardCharsets.UTF_8.name()).split("\\r?\\n", -1)));
             Glyphs reloaded = io.load("rt.flf", lines);
 
@@ -296,7 +296,7 @@ class Flf2aIOTest
             ByteArrayOutputStream bos = new ByteArrayOutputStream();
             io.export(original, "round-trip test", bos);
 
-            List<String> lines = new java.util.ArrayList<>(Arrays.asList(bos.toString(StandardCharsets.UTF_8.name()).split("\\r?\\n", -1)));
+            List<String> lines = new ArrayList<>(Arrays.asList(bos.toString(StandardCharsets.UTF_8.name()).split("\\r?\\n", -1)));
             Glyphs reloaded = io.load("rt.flf", lines);
 
             // Spot-check: glyph 'A'

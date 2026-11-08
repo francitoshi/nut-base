@@ -13,6 +13,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 import static io.github.francitoshi.nut.base.commons.concurrent.channel.ChannelTestSupport.callWithin;
+import java.util.stream.StreamSupport;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -99,14 +100,14 @@ class DuplexChannelIterationTest
     void spliteratorAndStreamsAlsoTerminate() throws Exception
     {
         CloseableBufferedChannel<String> in = new CloseableBufferedChannel<>(4);
-        DuplexChannel<String> duplex = Channel.duplex(in, new CloseableBufferedChannel<String>(1));
+        DuplexChannel<String> duplex = Channel.duplex(in, new CloseableBufferedChannel<>(1));
         in.put("s");
         in.close();
 
         List<String> seen = callWithin("duplex stream", () ->
         {
             List<String> l = new ArrayList<>();
-            java.util.stream.StreamSupport.stream(duplex.spliterator(), false).limit(10).forEach(l::add);
+            StreamSupport.stream(duplex.spliterator(), false).limit(10).forEach(l::add);
             return l;
         });
         assertEquals(Arrays.asList("s"), seen);

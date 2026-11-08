@@ -29,19 +29,19 @@ public class Note
             if (f >= 10000d)
             {
                     f = f / 1000d;
-                    f = java.lang.Math.round(f * 100d) / 100d;
+                    f = Math.round(f * 100d) / 100d;
                     unit = "kHz";
             }
             else {
                     if (f >= 1000)
                     {
                             f = f / 1000d;
-                            f = java.lang.Math.round(f * 100d) / 100d;
+                            f = Math.round(f * 100d) / 100d;
                             unit = "kHz";
                     }
                     else
                     {							
-                            f = java.lang.Math.round(f * 10d) / 10d;
+                            f = Math.round(f * 10d) / 10d;
                             unit = "Hz";
                     }
             }		

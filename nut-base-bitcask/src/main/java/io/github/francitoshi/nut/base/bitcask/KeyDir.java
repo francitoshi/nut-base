@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.bitcask;
 
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -22,11 +23,11 @@ public class KeyDir
 
     /**
      * Constructs an empty keydir backed by a
-     * {@link java.util.concurrent.ConcurrentHashMap}.
+     * {@link ConcurrentHashMap}.
      */
     public KeyDir()
     {
-        this.map = new java.util.concurrent.ConcurrentHashMap<>();
+        this.map = new ConcurrentHashMap<>();
     }
 
     /**
