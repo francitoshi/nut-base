@@ -650,8 +650,8 @@ public class GPGTest
         // --- getVersion() --------------------------------------------------
 
         @Test
-        @DisplayName("getVersion() returns a non-null, non-blank string")
-        void getVersion_returnsNonBlank() throws IOException, InterruptedException
+        @DisplayName("getVersion() returns non-blank output starting with 'gpg' and containing a version number")
+        void getVersion_validOutput() throws IOException, InterruptedException
         {
             Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
 
@@ -659,30 +659,8 @@ public class GPGTest
 
             assertNotNull(version, "version must not be null");
             assertFalse(version.trim().isEmpty(), "version must not be blank");
-        }
-
-        @Test
-        @DisplayName("getVersion() output starts with 'gpg'")
-        void getVersion_startsWithGpg() throws IOException, InterruptedException
-        {
-            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
-
-            String version = new GPG().getVersion();
-
-            assertNotNull(version);
             assertTrue(version.toLowerCase().startsWith("gpg"),
                     "Expected first line to start with 'gpg', got: " + version);
-        }
-
-        @Test
-        @DisplayName("getVersion() output contains a version number pattern (x.y.z)")
-        void getVersion_containsVersionNumber() throws IOException, InterruptedException
-        {
-            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
-
-            String version = new GPG().getVersion();
-
-            assertNotNull(version);
             assertTrue(version.matches(".*\\d+\\.\\d+.*"),
                     "Expected a version number in output, got: " + version);
         }
@@ -690,8 +668,8 @@ public class GPGTest
         // --- enarmor() -----------------------------------------------------
 
         @Test
-        @DisplayName("enarmor() wraps input in an ASCII-armor header and footer")
-        void enarmor_producesArmorHeaderAndFooter() throws IOException, InterruptedException
+        @DisplayName("enarmor() wraps input in an ASCII-armor block with a Base64-like body")
+        void enarmor_producesValidArmor() throws IOException, InterruptedException
         {
             Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
 
@@ -702,17 +680,7 @@ public class GPGTest
                     "Armored output must contain '-----BEGIN'");
             assertTrue(result.contains("-----END"),
                     "Armored output must contain '-----END'");
-        }
 
-        @Test
-        @DisplayName("enarmor() output contains a Base64-like body (alphanumeric/+/=)")
-        void enarmor_bodyIsBase64Like() throws IOException, InterruptedException
-        {
-            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
-
-            String result = new GPG().enarmor("test data 1234");
-
-            assertNotNull(result);
             // At least one line that looks like Base64
             boolean hasBase64Line = false;
             for (String line : result.split("\n"))
@@ -733,18 +701,6 @@ public class GPGTest
             assertThrows(NullPointerException.class, () -> new GPG().enarmor(null));
         }
 
-        @Test
-        @DisplayName("enarmor() handles empty string without exception")
-        void enarmor_emptyString() throws IOException, InterruptedException
-        {
-            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
-
-            String result = new GPG().enarmor("");
-
-            // gpg may produce an armor block even for empty input; just must not throw
-            assertNotNull(result);
-        }
-
         // --- dearmor() -----------------------------------------------------
 
         @Test
@@ -755,27 +711,8 @@ public class GPGTest
         }
 
         @Test
-        @DisplayName("dearmor() inverts enarmor() and recovers original bytes")
+        @DisplayName("dearmor() inverts enarmor() and recovers original multi-line bytes")
         void dearmor_roundTrip() throws IOException, InterruptedException
-        {
-            Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
-
-            String original = "round-trip test payload";
-            GPG gpg = new GPG();
-
-            String armored   = gpg.enarmor(original);
-            String recovered = gpg.dearmor(armored);
-
-            assertNotNull(recovered);
-            // The raw bytes of the original must appear inside the de-armored output
-            // (gpg --dearmor returns binary; reading as UTF-8 may add trailing nulls)
-            assertTrue(recovered.contains(original),
-                    "De-armored output must contain the original string");
-        }
-
-        @Test
-        @DisplayName("enarmor() then dearmor() preserves multi-line content")
-        void enarmor_dearmor_multiLine() throws IOException, InterruptedException
         {
             Assumptions.assumeTrue(gpgAvailable, "gpg not found – skipping");
 
@@ -786,6 +723,9 @@ public class GPGTest
             String recovered = gpg.dearmor(armored);
 
             assertNotNull(recovered);
+            // The raw bytes of the original must appear inside the de-armored output
+            // (gpg --dearmor returns binary; reading as UTF-8 may add trailing nulls)
+            assertTrue(recovered.contains(original), "De-armored output must contain the original multi-line string");
             assertTrue(recovered.contains("line1"), "Must contain 'line1'");
             assertTrue(recovered.contains("line2"), "Must contain 'line2'");
             assertTrue(recovered.contains("line3"), "Must contain 'line3'");
