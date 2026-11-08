@@ -190,9 +190,23 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
     @Override
     public void put(K key, V value)
     {
+        long exp = calculateExpiration(System.nanoTime(), ttlNanos);
+        put(key, new AbstractCache.Item<>(value, exp));
+    }
+
+    /**
+     * Inserts an entry with the exact expiration given, bypassing the
+     * time-to-live of the cache. See {@link AbstractCache#restore}.
+     */
+    @Override
+    public void restore(K key, long expirationNanoTime, V value)
+    {
+        put(key, new AbstractCache.Item<>(value, expirationNanoTime));
+    }
+
+    private void put(K key, AbstractCache.Item<V> item)
+    {
         long now = System.nanoTime();
-        long exp = calculateExpiration(now, ttlNanos);
-        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
 
         Node<K, V> node = map.get(key);
         if (node != null)

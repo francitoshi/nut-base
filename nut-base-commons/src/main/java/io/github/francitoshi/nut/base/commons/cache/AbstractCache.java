@@ -63,6 +63,31 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
         return get(key, null);
     }
 
+    /**
+     * Inserts an entry with an exact expiration time, bypassing the
+     * time-to-live of the cache. It is the hook used to repopulate a cache
+     * tier from a durable copy without re-basing the age of the entry.
+     * <p>
+     * The default implementation delegates to {@link #put(Object, Object)},
+     * which applies a fresh time-to-live; implementations that keep their
+     * entries in a private {@code Item} override it so the given expiration
+     * is honored exactly.
+     * <p>
+     * This method is an implementation hook of the caching framework and not
+     * part of the {@link Cache} contract: it exists so that persistence code
+     * can restore an entry with the expiration it had when it was stored.
+     *
+     * @param key the key to restore
+     * @param expirationNanoTime the absolute {@link System#nanoTime()}
+     *        expiration instant; {@link Long#MAX_VALUE} restores an entry
+     *        that never expires
+     * @param value the value to restore
+     */
+    public void restore(K key, long expirationNanoTime, V value)
+    {
+        put(key, value);
+    }
+
     private static class SynchronizedCache<K,V> implements Cache<K,V>
     {
         private final Object lock = new Object();

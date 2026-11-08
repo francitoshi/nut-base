@@ -8,13 +8,9 @@ package io.github.francitoshi.nut.base.commons.cache.persistent;
 import io.github.francitoshi.nut.base.commons.cache.AbstractCache;
 import io.github.francitoshi.nut.base.commons.cache.Cache;
 import io.github.francitoshi.nut.base.commons.cache.CacheFactory;
-import io.github.francitoshi.nut.base.commons.cache.CacheType;
-import io.github.francitoshi.nut.base.commons.serializer.Serializer;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import javax.crypto.SecretKey;
 
 /**
  * A persistent (write-through) {@link Cache} that combines an in-memory cache
@@ -24,7 +20,11 @@ import javax.crypto.SecretKey;
  * The in-memory tier is any implementation created with
  * {@link CacheFactory} (bounded, subject to its eviction policy) and acts as
  * a hot accelerator. The store tier is the permanent source of truth and
- * survives JVM restarts.
+ * survives JVM restarts. The concrete stores provide static {@code open}
+ * helpers that wire the memory tier, the store and the time-to-live for
+ * their own layout ({@code FileCacheStore}, {@code Sha256FileCacheStore});
+ * this class itself only pairs an existing memory tier with an existing
+ * store.
  * <ul>
  * <li>{@link #put(Object, Object)} writes to the store first (durability),
  * then to memory.</li>
@@ -37,20 +37,23 @@ import javax.crypto.SecretKey;
  * </ul>
  * Expiration uses a single logical TTL. On the store it is kept as wall-clock
  * epoch millis (surviving restarts); on the memory tier the existing
- * implementations apply it via {@link System#nanoTime()}. When memory repopulates
- * itself from the store, the memory entry receives a fresh TTL starting at
- * repopulation time, so the memory tier may serve an entry for up to the TTL
- * after the store considers it expired; the store itself always expires on
- * time. Call {@link #purgeExpired()} periodically to bound this drift.
+ * implementations apply it via {@link System#nanoTime()}. When memory
+ * repopulates itself from the store, the memory entry keeps the time-to-live
+ * already burned by the store entry (see
+ * {@link CacheStore#expiresAtEpochMillis}), so the memory tier expires in
+ * step with the store; the store itself always expires on time. A store that
+ * does not report the expiration of its entries restores a fresh TTL, in
+ * which case call {@link #purgeExpired()} periodically to bound the drift.
  * <p>
  * Following the rest of the package, this class is <strong>not
  * thread-safe</strong>; wrap it with {@link #synchronizedCache()} for
  * concurrent access. A single instance (and thus a single process) should own
  * a given store file at a time.
  * <p>
- * As with the {@code HashMapCache} implementation, {@code null} values are
- * allowed but {@code get(key, creator)} cannot distinguish a stored
- * {@code null} from a miss and will invoke the creator again.
+ * Following the {@code HashMapCache} implementation, {@code null} values are
+ * allowed: {@code get(key, creator)} distinguishes a stored {@code null}
+ * from a miss and does not invoke the creator again for keys mapped to
+ * {@code null}.
  *
  * @param <K> the type of keys maintained by this cache
  * @param <V> the type of mapped values
@@ -78,212 +81,6 @@ public class PersistentCache<K, V> extends AbstractCache<K, V> implements AutoCl
         this.ttlNanos = ttlNanos;
     }
 
-    /**
-     * Opens (or creates) a persistent cache backed by a single file, wiring a
-     * {@link FileCacheStore} with the given serializers and an in-memory
-     * cache of the given {@link CacheType}.
-     *
-     * @param file the store file
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttl time-to-live of entries
-     * @param timeUnit the unit of {@code ttl}
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer)
-    {
-        return open(file, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer);
-    }
-
-    /**
-     * Opens (or creates) a persistent cache backed by a single file, wiring a
-     * {@link FileCacheStore} with the given serializers and an in-memory
-     * cache of the given {@link CacheType}.
-     *
-     * @param file the store file
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttl time-to-live of entries
-     * @param timeUnit the unit of {@code ttl}
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param key the AES key used to encrypt the store file; {@code null}
-     *            keeps the content in clear
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
-    {
-        return open(file, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer, key);
-    }
-
-    /**
-     * Opens (or creates) a persistent cache backed by a single file, wiring a
-     * {@link FileCacheStore} with the given serializers and an in-memory
-     * cache of the given {@link CacheType}.
-     *
-     * @param file the store file
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttlNanos time-to-live of entries in nanoseconds
-     * ({@link Long#MAX_VALUE} for no expiration)
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer)
-    {
-        return open(file, type, capacity, ttlNanos, keySerializer, valueSerializer, null);
-    }
-
-    /**
-     * Opens (or creates) a persistent cache backed by a single file, wiring a
-     * {@link FileCacheStore} with the given serializers and an in-memory
-     * cache of the given {@link CacheType}.
-     * <p>
-     * When a key is given, the store file is written in the encrypted format
-     * (version 2) and its content is encrypted and authenticated with
-     * AES-256-GCM. The key is never written to the file.
-     *
-     * @param file the store file
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttlNanos time-to-live of entries in nanoseconds
-     * ({@link Long#MAX_VALUE} for no expiration)
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param key the AES key used to encrypt the store file; {@code null}
-     *            keeps the content in clear
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
-    {
-        FileCacheStore<K, V> store = new FileCacheStore<>(file, keySerializer, valueSerializer, key);
-        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
-        return new PersistentCache<>(memory, store, ttlNanos);
-    }
-
-    /**
-     * Opens (or creates) a persistent cache backed by a directory with one
-     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
-     * serializers and an in-memory cache of the given {@link CacheType}.
-     * <p>
-     * The names of the entry files are the SHA-256 of the serialized keys, in
-     * lower case hexadecimal, which makes this combination the natural fit
-     * for caches of large values, such as images downloaded by URL.
-     *
-     * @param dir the cache directory
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttl time-to-live of entries
-     * @param timeUnit the unit of {@code ttl}
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer)
-    {
-        return openPerEntry(dir, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer);
-    }
-
-    /**
-     * Opens (or creates) a persistent cache backed by a directory with one
-     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
-     * serializers and an in-memory cache of the given {@link CacheType}.
-     * <p>
-     * The names of the entry files are the SHA-256 of the serialized keys, in
-     * lower case hexadecimal, which makes this combination the natural fit
-     * for caches of large values, such as images downloaded by URL.
-     *
-     * @param dir the cache directory
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttl time-to-live of entries
-     * @param timeUnit the unit of {@code ttl}
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param key the AES key used to encrypt the entry files; {@code null}
-     *            keeps the values in clear
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
-    {
-        return openPerEntry(dir, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer, key);
-    }
-
-    /**
-     * Opens (or creates) a persistent cache backed by a directory with one
-     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
-     * serializers and an in-memory cache of the given {@link CacheType}.
-     * <p>
-     * The names of the entry files are the SHA-256 of the serialized keys, in
-     * lower case hexadecimal, which makes this combination the natural fit
-     * for caches of large values, such as images downloaded by URL.
-     *
-     * @param dir the cache directory
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttlNanos time-to-live of entries in nanoseconds
-     * ({@link Long#MAX_VALUE} for no expiration)
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer)
-    {
-        Sha256FileCacheStore<K, V> store = new Sha256FileCacheStore<>(dir, keySerializer, valueSerializer);
-        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
-        return new PersistentCache<>(memory, store, ttlNanos);
-    }
-
-    /**
-     * Opens (or creates) a persistent cache backed by a directory with one
-     * file per entry, wiring a {@link Sha256FileCacheStore} with the given
-     * serializers and an in-memory cache of the given {@link CacheType}.
-     * <p>
-     * The names of the entry files are the SHA-256 of the serialized keys, in
-     * lower case hexadecimal, which makes this combination the natural fit
-     * for caches of large values, such as images downloaded by URL.
-     * <p>
-     * When a key is given, each entry file is written in the encrypted format
-     * (version 2) and its value is encrypted and authenticated with
-     * AES-256-GCM. The key is never written to the entry files.
-     *
-     * @param dir the cache directory
-     * @param type the in-memory cache implementation
-     * @param capacity the in-memory cache capacity
-     * @param ttlNanos time-to-live of entries in nanoseconds
-     * ({@link Long#MAX_VALUE} for no expiration)
-     * @param keySerializer serializer for keys of type {@code K}
-     * @param valueSerializer serializer for values of type {@code V}
-     * @param key the AES key used to encrypt the entry files; {@code null}
-     *            keeps the values in clear
-     * @param <K> the type of keys
-     * @param <V> the type of values
-     * @return a new persistent cache
-     */
-    public static <K, V> PersistentCache<K, V> openPerEntry(Path dir, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
-    {
-        Sha256FileCacheStore<K, V> store = new Sha256FileCacheStore<>(dir, keySerializer, valueSerializer, key);
-        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
-        return new PersistentCache<>(memory, store, ttlNanos);
-    }
-
     @Override
     public V get(K key, Function<? super K, ? extends V> create)
     {
@@ -295,8 +92,14 @@ public class PersistentCache<K, V> extends AbstractCache<K, V> implements AutoCl
         value = store.get(key);
         if (value != null)
         {
-            memory.put(key, value);
+            restoreFromStore(key, value, store.expiresAtEpochMillis(key));
             return value;
+        }
+        if (containsKey(key))
+        {
+            // a {@code null} value is explicitly stored in the cache or the
+            // store: it is a hit, the creator must not be invoked again
+            return null;
         }
         if (create == null)
         {
@@ -305,6 +108,69 @@ public class PersistentCache<K, V> extends AbstractCache<K, V> implements AutoCl
         value = create.apply(key);
         put(key, value);
         return value;
+    }
+
+    /**
+     * Populates the memory tier from a store hit, keeping the time-to-live
+     * already burned by the store entry instead of starting a fresh one.
+     * <p>
+     * When the store reports an expiration (see
+     * {@link CacheStore#expiresAtEpochMillis}), the restored entry expires in
+     * memory exactly when the store copies expire, so the memory tier cannot
+     * serve an entry after the store has considered it expired. When the
+     * store does not report it ({@code Long.MAX_VALUE}), the entry is
+     * restored with a fresh time-to-live, as before.
+     */
+    private void restoreFromStore(K key, V value, long expiresAtEpochMillis)
+    {
+        long remainingNanos;
+        if (expiresAtEpochMillis == Long.MAX_VALUE)
+        {
+            remainingNanos = ttlNanos;
+        }
+        else
+        {
+            long remainingMillis = expiresAtEpochMillis - System.currentTimeMillis();
+            if (remainingMillis <= 0)
+            {
+                // unreachable when the store expires on time, but the
+                // wall-clock expiration cannot be trusted beyond itself
+                return;
+            }
+            long remaining;
+            if (remainingMillis > Long.MAX_VALUE / 1_000_000L)
+            {
+                remaining = Long.MAX_VALUE;
+            }
+            else
+            {
+                remaining = remainingMillis * 1_000_000L;
+            }
+            remainingNanos = ttlNanos == Long.MAX_VALUE ? remaining : Math.min(remaining, ttlNanos);
+        }
+
+        long expirationNanoTime;
+        if (remainingNanos == Long.MAX_VALUE)
+        {
+            expirationNanoTime = Long.MAX_VALUE;
+        }
+        else
+        {
+            long now = System.nanoTime();
+            long exp = now + remainingNanos;
+            expirationNanoTime = remainingNanos > 0 && exp < now ? Long.MAX_VALUE : exp;
+        }
+
+        if (memory instanceof AbstractCache)
+        {
+            @SuppressWarnings("unchecked")
+            AbstractCache<K, V> abstractMemory = (AbstractCache<K, V>) memory;
+            abstractMemory.restore(key, expirationNanoTime, value);
+        }
+        else
+        {
+            memory.put(key, value);
+        }
     }
 
     @Override

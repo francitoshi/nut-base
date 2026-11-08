@@ -5,6 +5,9 @@
  */
 package io.github.francitoshi.nut.base.commons.cache.persistent;
 
+import io.github.francitoshi.nut.base.commons.cache.Cache;
+import io.github.francitoshi.nut.base.commons.cache.CacheFactory;
+import io.github.francitoshi.nut.base.commons.cache.CacheType;
 import io.github.francitoshi.nut.base.commons.io.IO;
 import io.github.francitoshi.nut.base.commons.serializer.Serializer;
 import java.io.EOFException;
@@ -20,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import javax.crypto.SecretKey;
 
@@ -238,6 +242,100 @@ public class FileCacheStore<K,V> implements CacheStore<K,V>
         return new FileCacheStore<T, T>(file, serializer, key);
     }
 
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class,
+     * with an in-memory cache of the given {@link CacheType}.
+     *
+     * @param file the store file
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttlNanos time-to-live of entries in nanoseconds
+     * ({@link Long#MAX_VALUE} for no expiration)
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        return open(file, type, capacity, ttlNanos, keySerializer, valueSerializer, null);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class,
+     * with an in-memory cache of the given {@link CacheType}.
+     * <p>
+     * When a key is given, the store file is written in the encrypted format
+     * (version 2) and its content is encrypted and authenticated with
+     * AES-256-GCM. The key is never written to the file.
+     *
+     * @param file the store file
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttlNanos time-to-live of entries in nanoseconds
+     * ({@link Long#MAX_VALUE} for no expiration)
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param key the AES key used to encrypt the store file; {@code null}
+     *            keeps the content in clear
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
+    {
+        FileCacheStore<K, V> store = new FileCacheStore<>(file, keySerializer, valueSerializer, key);
+        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
+        return new PersistentCache<>(memory, store, ttlNanos);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class,
+     * with an in-memory cache of the given {@link CacheType}.
+     *
+     * @param file the store file
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttl time-to-live of entries
+     * @param timeUnit the unit of {@code ttl}
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        return open(file, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer, null);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class,
+     * with an in-memory cache of the given {@link CacheType}.
+     * <p>
+     * When a key is given, the store file is written in the encrypted format
+     * (version 2) and its content is encrypted and authenticated with
+     * AES-256-GCM. The key is never written to the file.
+     *
+     * @param file the store file
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttl time-to-live of entries
+     * @param timeUnit the unit of {@code ttl}
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param key the AES key used to encrypt the store file; {@code null}
+     *            keeps the content in clear
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path file, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
+    {
+        return open(file, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer, key);
+    }
+
     @Override
     public V get(K key)
     {
@@ -349,6 +447,14 @@ public class FileCacheStore<K,V> implements CacheStore<K,V>
         checkOpen();
         Entry e = index.get(key);
         return e != null && !isExpired(e.expiresAtMillis, System.currentTimeMillis());
+    }
+
+    @Override
+    public long expiresAtEpochMillis(K key)
+    {
+        checkOpen();
+        Entry e = index.get(key);
+        return e == null ? Long.MAX_VALUE : e.expiresAtMillis;
     }
 
     @Override

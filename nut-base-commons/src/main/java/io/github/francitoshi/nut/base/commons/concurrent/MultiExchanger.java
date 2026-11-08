@@ -9,6 +9,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.Exchanger;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -121,7 +122,7 @@ public final class MultiExchanger<V>
 
     private static final class JdkExchangerDelegate<V> implements ExchangerDelegate<V>
     {
-        private final java.util.concurrent.Exchanger<V> exchanger = new java.util.concurrent.Exchanger<>();
+        private final Exchanger<V> exchanger = new Exchanger<>();
 
         @Override
         public V exchange(V x) throws InterruptedException

@@ -5,6 +5,8 @@
  */
 package io.github.francitoshi.nut.base.commons.cache;
 
+import java.util.function.Function;
+
 /**
  * A no-op implementation of the {@link Cache} interface that never stores
  * anything.
@@ -87,7 +89,7 @@ public class NullCache<K,V> extends AbstractCache<K, V> implements Cache<K, V>
      * @return {@code null}
      */
     @Override
-    public V get(K key, java.util.function.Function<? super K, ? extends V> creator)
+    public V get(K key, Function<? super K, ? extends V> creator)
     {
         return creator != null ? creator.apply(key) : null;
     }

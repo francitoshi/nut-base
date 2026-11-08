@@ -8,6 +8,7 @@ package io.github.francitoshi.nut.base.commons.cache;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 
 /**
  * A simple {@link Cache} implementation backed by a plain {@link HashMap}.
@@ -68,7 +69,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
     }
 
     @Override
-    public V get(K key, java.util.function.Function<? super K, ? extends V> creator)
+    public V get(K key, Function<? super K, ? extends V> creator)
     {
         AbstractCache.Item<V> item = map.get(key);
         if (item != null)
@@ -117,6 +118,16 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
         long now = System.nanoTime();
         long exp = calculateExpiration(now, ttlNanos);
         map.put(key, new AbstractCache.Item<>(value, exp));
+    }
+
+    /**
+     * Inserts an entry with the exact expiration given, bypassing the
+     * time-to-live of the cache. See {@link AbstractCache#restore}.
+     */
+    @Override
+    public void restore(K key, long expirationNanoTime, V value)
+    {
+        map.put(key, new AbstractCache.Item<>(value, expirationNanoTime));
     }
 
     @Override

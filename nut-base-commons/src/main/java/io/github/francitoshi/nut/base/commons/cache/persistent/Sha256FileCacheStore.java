@@ -5,6 +5,9 @@
  */
 package io.github.francitoshi.nut.base.commons.cache.persistent;
 
+import io.github.francitoshi.nut.base.commons.cache.Cache;
+import io.github.francitoshi.nut.base.commons.cache.CacheFactory;
+import io.github.francitoshi.nut.base.commons.cache.CacheType;
 import io.github.francitoshi.nut.base.commons.encoding.Hex;
 import io.github.francitoshi.nut.base.commons.io.IO;
 import io.github.francitoshi.nut.base.commons.jca.Kr;
@@ -27,6 +30,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 import javax.crypto.SecretKey;
 
@@ -271,6 +275,120 @@ public class Sha256FileCacheStore<K, V> implements CacheStore<K, V>
         return new Sha256FileCacheStore<>(dir, serializer, key);
     }
 
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class
+     * (one file per entry), with an in-memory cache of the given
+     * {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttlNanos time-to-live of entries in nanoseconds
+     * ({@link Long#MAX_VALUE} for no expiration)
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path dir, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        return open(dir, type, capacity, ttlNanos, keySerializer, valueSerializer, null);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class
+     * (one file per entry), with an in-memory cache of the given
+     * {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     * <p>
+     * When a key is given, each entry file is written in the encrypted format
+     * (version 2) and its value is encrypted and authenticated with
+     * AES-256-GCM. The key is never written to the entry files.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttlNanos time-to-live of entries in nanoseconds
+     * ({@link Long#MAX_VALUE} for no expiration)
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param key the AES key used to encrypt the entry files; {@code null}
+     *            keeps the values in clear
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path dir, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
+    {
+        Sha256FileCacheStore<K, V> store = new Sha256FileCacheStore<>(dir, keySerializer, valueSerializer, key);
+        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
+        return new PersistentCache<>(memory, store, ttlNanos);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class
+     * (one file per entry), with an in-memory cache of the given
+     * {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttl time-to-live of entries
+     * @param timeUnit the unit of {@code ttl}
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path dir, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        return open(dir, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer, null);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class
+     * (one file per entry), with an in-memory cache of the given
+     * {@link CacheType}.
+     * <p>
+     * The names of the entry files are the SHA-256 of the serialized keys, in
+     * lower case hexadecimal, which makes this combination the natural fit
+     * for caches of large values, such as images downloaded by URL.
+     * <p>
+     * When a key is given, each entry file is written in the encrypted format
+     * (version 2) and its value is encrypted and authenticated with
+     * AES-256-GCM. The key is never written to the entry files.
+     *
+     * @param dir the cache directory
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttl time-to-live of entries
+     * @param timeUnit the unit of {@code ttl}
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param key the AES key used to encrypt the entry files; {@code null}
+     *            keeps the values in clear
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path dir, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer, SecretKey key)
+    {
+        return open(dir, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer, key);
+    }
+
     @Override
     public V get(K key)
     {
@@ -423,6 +541,30 @@ public class Sha256FileCacheStore<K, V> implements CacheStore<K, V>
             deleteQuietly(entry);
         }
         return !expired;
+    }
+
+    /**
+     * Reads the expiration of the entry file, which lives in the clear right
+     * after the header, without reading the value itself. Absent, corrupt,
+     * truncated or already expired entries report {@link Long#MAX_VALUE}.
+     */
+    @Override
+    public long expiresAtEpochMillis(K key)
+    {
+        checkOpen();
+        try
+        {
+            Long expiresAt = headExpires(entry(key));
+            if (expiresAt == null || isExpired(expiresAt, System.currentTimeMillis()))
+            {
+                return Long.MAX_VALUE;
+            }
+            return expiresAt;
+        }
+        catch (IOException e)
+        {
+            throw new UncheckedIOException("cannot read the expiration of the cache entry of " + key + " in " + dir, e);
+        }
     }
 
     @Override

@@ -139,7 +139,7 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     }
 
     @Override
-    public V get(K key, java.util.function.Function<? super K, ? extends V> creator)
+    public V get(K key, Function<? super K, ? extends V> creator)
     {
         synchronized (lock)
         {
@@ -257,13 +257,27 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     @Override
     public void put(K key, V value)
     {
+        long exp = calculateExpiration(System.nanoTime(), ttlNanos);
+        put(key, new AbstractCache.Item<>(value, exp));
+    }
+
+    /**
+     * Inserts an entry with the exact expiration given, bypassing the
+     * time-to-live of the cache. See {@link AbstractCache#restore}.
+     */
+    @Override
+    public void restore(K key, long expirationNanoTime, V value)
+    {
+        put(key, new AbstractCache.Item<>(value, expirationNanoTime));
+    }
+
+    private void put(K key, AbstractCache.Item<V> item)
+    {
         synchronized (lock)
         {
             sketch.increment(key);
 
             long now = System.nanoTime();
-            long exp = calculateExpiration(now, ttlNanos);
-            AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
 
             // Check if already exists in window cache
             if (windowCache.contains(key))

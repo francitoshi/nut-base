@@ -49,6 +49,26 @@ public interface CacheStore<K, V> extends AutoCloseable
     void put(K key, V value, long expiresAtEpochMillis);
 
     /**
+     * Returns the wall-clock expiration instant stored for the given key.
+     * <p>
+     * {@code Long.MAX_VALUE} is returned both for a key that never expires
+     * and when the store does not report per-entry expirations; in the
+     * latter case a consumer (e.g. {@link PersistentCache} repopulating its
+     * memory tier) applies a fresh time-to-live, as if no information were
+     * available.
+     *
+     * @implSpec The default implementation returns {@code Long.MAX_VALUE}.
+     *
+     * @param key the key
+     * @return the expiration in epoch milliseconds, or {@code Long#MAX_VALUE}
+     *         if the key is absent, never expires or is not reported
+     */
+    default long expiresAtEpochMillis(K key)
+    {
+        return Long.MAX_VALUE;
+    }
+
+    /**
      * Removes the mapping for the given key, if present.
      * <p>
      * Removing a key that is not present has no effect.

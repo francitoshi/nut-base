@@ -5,7 +5,9 @@
  */
 package io.github.francitoshi.nut.base.commons.cache;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -127,9 +129,23 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     @Override
     public void put(K key, V value)
     {
+        long exp = calculateExpiration(System.nanoTime(), ttlNanos);
+        put(key, new AbstractCache.Item<>(value, exp));
+    }
+
+    /**
+     * Inserts an entry with the exact expiration given, bypassing the
+     * time-to-live of the cache. See {@link AbstractCache#restore}.
+     */
+    @Override
+    public void restore(K key, long expirationNanoTime, V value)
+    {
+        put(key, new AbstractCache.Item<>(value, expirationNanoTime));
+    }
+
+    private void put(K key, AbstractCache.Item<V> item)
+    {
         long now = System.nanoTime();
-        long exp = calculateExpiration(now, ttlNanos);
-        AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
 
         Node<K, V> node = cache.get(key);
 
@@ -261,7 +277,7 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     public void purgeExpired()
     {
         long now = System.nanoTime();
-        java.util.List<Node<K, V>> nodes = new java.util.ArrayList<>(cache.values());
+        List<Node<K, V>> nodes = new ArrayList<>(cache.values());
         for (Node<K, V> node : nodes)
         {
             if (node.value != null && node.value.isExpired(now))

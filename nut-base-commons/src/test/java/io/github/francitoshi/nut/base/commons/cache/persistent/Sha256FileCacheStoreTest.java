@@ -470,7 +470,7 @@ public class Sha256FileCacheStoreTest
     @Test
     public void testPersistentCacheIntegration()
     {
-        try (PersistentCache<String, String> cache = PersistentCache.openPerEntry(dir, CacheType.TINY_LFU, 64, 1, TimeUnit.HOURS, BasicSerializers.STRING, BasicSerializers.STRING))
+        try (PersistentCache<String, String> cache = Sha256FileCacheStore.open(dir, CacheType.TINY_LFU, 64, 1, TimeUnit.HOURS, BasicSerializers.STRING, BasicSerializers.STRING))
         {
             assertTrue(cache.isEmpty());
             assertEquals("first", cache.get("one", k -> "first"));
@@ -478,7 +478,7 @@ public class Sha256FileCacheStoreTest
             assertEquals("second", cache.get("other", k -> "second"));
             assertFalse(cache.isEmpty());
         }
-        try (PersistentCache<String, String> cache = PersistentCache.openPerEntry(dir, CacheType.TINY_LFU, 64, 1, TimeUnit.HOURS, BasicSerializers.STRING, BasicSerializers.STRING))
+        try (PersistentCache<String, String> cache = Sha256FileCacheStore.open(dir, CacheType.TINY_LFU, 64, 1, TimeUnit.HOURS, BasicSerializers.STRING, BasicSerializers.STRING))
         {
             assertFalse(cache.isEmpty());
             assertEquals("first", cache.get("one"));

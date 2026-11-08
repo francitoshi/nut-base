@@ -28,8 +28,7 @@ public class PersistentCacheTest
 
     private PersistentCache<String, Long> open(CacheType type, int capacity, long ttl, TimeUnit unit)
     {
-        return PersistentCache.open(file(), type, capacity, ttl, unit,
-                BasicSerializers.STRING, BasicSerializers.LONG);
+        return FileCacheStore.open(file(), type, capacity, ttl, unit, BasicSerializers.STRING, BasicSerializers.LONG);
     }
 
     @Test
@@ -148,14 +147,57 @@ public class PersistentCacheTest
     }
 
     @Test
+    public void testRepopulatedEntryKeepsTheRemainingTtlOfTheStore() throws InterruptedException
+    {
+        try (PersistentCache<String, Long> cache = open(CacheType.HASH_MAP, 16, 500, TimeUnit.MILLISECONDS))
+        {
+            cache.put("k", 1L);
+        }
+        Thread.sleep(100);
+        try (PersistentCache<String, Long> cache = open(CacheType.HASH_MAP, 16, 1, TimeUnit.HOURS))
+        {
+            // the store entry has some 400ms left; the memory tier must not
+            // receive a fresh 1h TTL or it would outlive the store forever
+            assertEquals(1L, cache.get("k"));
+            Thread.sleep(600);
+            assertNull(cache.get("k"));
+        }
+    }
+
+    @Test
+    public void testStoredNullDoesNotInvokeTheCreator()
+    {
+        AtomicInteger calls = new AtomicInteger();
+        try (PersistentCache<String, Long> cache = open(CacheType.HASH_MAP, 16, 1, TimeUnit.HOURS))
+        {
+            assertNull(cache.get("k", k ->
+            {
+                calls.incrementAndGet();
+                return null;
+            }));
+            assertEquals(1, calls.get());
+        }
+        try (PersistentCache<String, Long> cache = open(CacheType.HASH_MAP, 16, 1, TimeUnit.HOURS))
+        {
+            assertTrue(cache.containsKey("k"));
+            assertNull(cache.get("k", k ->
+            {
+                calls.incrementAndGet();
+                return 42L;
+            }));
+            assertEquals(1, calls.get());
+        }
+    }
+
+    @Test
     public void testNoExpiration()
     {
-        try (PersistentCache<String, Long> cache = PersistentCache.open(file(), CacheType.HASH_MAP, 16,
+        try (PersistentCache<String, Long> cache = FileCacheStore.open(file(), CacheType.HASH_MAP, 16,
                 Long.MAX_VALUE, BasicSerializers.STRING, BasicSerializers.LONG))
         {
             cache.put("k", 1L);
         }
-        try (PersistentCache<String, Long> cache = PersistentCache.open(file(), CacheType.HASH_MAP, 16,
+        try (PersistentCache<String, Long> cache = FileCacheStore.open(file(), CacheType.HASH_MAP, 16,
                 Long.MAX_VALUE, BasicSerializers.STRING, BasicSerializers.LONG))
         {
             assertEquals(1L, cache.get("k"));
@@ -168,13 +210,13 @@ public class PersistentCacheTest
         for (CacheType type : CacheType.values())
         {
             Path file = dir.resolve("cache-" + type + ".bin");
-            try (PersistentCache<String, Long> cache = PersistentCache.open(file, type, 64, 1, TimeUnit.HOURS,
+            try (PersistentCache<String, Long> cache = FileCacheStore.open(file, type, 64, 1, TimeUnit.HOURS,
                     BasicSerializers.STRING, BasicSerializers.LONG))
             {
                 cache.put(type.name(), 1L);
                 assertEquals(1L, cache.get(type.name()));
             }
-            try (PersistentCache<String, Long> cache = PersistentCache.open(file, type, 64, 1, TimeUnit.HOURS,
+            try (PersistentCache<String, Long> cache = FileCacheStore.open(file, type, 64, 1, TimeUnit.HOURS,
                     BasicSerializers.STRING, BasicSerializers.LONG))
             {
                 assertEquals(1L, cache.get(type.name()));
@@ -244,13 +286,13 @@ public class PersistentCacheTest
     public void testIntegerKeysAndStringValues()
     {
         Path file = dir.resolve("int-string.bin");
-        try (PersistentCache<Integer, String> cache = PersistentCache.open(file, CacheType.LRU_LFU, 64, 1, TimeUnit.HOURS,
+        try (PersistentCache<Integer, String> cache = FileCacheStore.open(file, CacheType.LRU_LFU, 64, 1, TimeUnit.HOURS,
                 BasicSerializers.INTEGER, BasicSerializers.STRING))
         {
             cache.put(1, "one");
             cache.put(2, "two");
         }
-        try (PersistentCache<Integer, String> cache = PersistentCache.open(file, CacheType.LRU_LFU, 64, 1, TimeUnit.HOURS,
+        try (PersistentCache<Integer, String> cache = FileCacheStore.open(file, CacheType.LRU_LFU, 64, 1, TimeUnit.HOURS,
                 BasicSerializers.INTEGER, BasicSerializers.STRING))
         {
             assertEquals("one", cache.get(1));

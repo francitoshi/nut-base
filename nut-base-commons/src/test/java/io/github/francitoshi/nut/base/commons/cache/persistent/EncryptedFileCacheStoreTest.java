@@ -15,6 +15,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermission;
+import java.util.Set;
 import java.util.zip.CRC32;
 import javax.crypto.SecretKey;
 import org.junit.jupiter.api.Test;
@@ -394,15 +396,13 @@ public class EncryptedFileCacheStoreTest
     {
         SecretKey key = key();
         Path path = dir.resolve("persistent.bin");
-        try (PersistentCache<String, String> cache = PersistentCache.open(path, CacheType.LRU_LFU, 16,
-                Long.MAX_VALUE, BasicSerializers.STRING, BasicSerializers.STRING, key))
+        try (PersistentCache<String, String> cache = FileCacheStore.open(path, CacheType.LRU_LFU, 16, Long.MAX_VALUE, BasicSerializers.STRING, BasicSerializers.STRING, key))
         {
             cache.put("a", "1");
             assertEquals("1", cache.get("a"));
             assertEquals("1", cache.get("a", k -> "2"));
         }
-        try (PersistentCache<String, String> cache = PersistentCache.open(path, CacheType.LRU_LFU, 16,
-                Long.MAX_VALUE, BasicSerializers.STRING, BasicSerializers.STRING, key))
+        try (PersistentCache<String, String> cache = FileCacheStore.open(path, CacheType.LRU_LFU, 16, Long.MAX_VALUE, BasicSerializers.STRING, BasicSerializers.STRING, key))
         {
             assertEquals("1", cache.get("a"));
         }
@@ -417,11 +417,8 @@ public class EncryptedFileCacheStoreTest
         }
         try
         {
-            java.util.Set<java.nio.file.attribute.PosixFilePermission> permissions =
-                    Files.getPosixFilePermissions(file());
-            assertEquals(java.util.EnumSet.of(
-                    java.nio.file.attribute.PosixFilePermission.OWNER_READ,
-                    java.nio.file.attribute.PosixFilePermission.OWNER_WRITE), permissions);
+            Set<java.nio.file.attribute.PosixFilePermission> permissions = Files.getPosixFilePermissions(file());
+            assertEquals(java.util.EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE), permissions);
         }
         catch (UnsupportedOperationException e)
         {

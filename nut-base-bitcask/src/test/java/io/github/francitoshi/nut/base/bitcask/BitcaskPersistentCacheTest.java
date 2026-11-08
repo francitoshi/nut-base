@@ -1,12 +1,10 @@
 /*
- * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * Copyright (C) 2026 francitoshi@gmail.com
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
 package io.github.francitoshi.nut.base.bitcask;
 
-import io.github.francitoshi.nut.base.commons.cache.Cache;
-import io.github.francitoshi.nut.base.commons.cache.CacheFactory;
 import io.github.francitoshi.nut.base.commons.cache.CacheType;
 import io.github.francitoshi.nut.base.commons.cache.persistent.PersistentCache;
 import io.github.francitoshi.nut.base.commons.serializer.BasicSerializers;
@@ -42,10 +40,7 @@ public class BitcaskPersistentCacheTest
 
     private PersistentCache<String, String> cacheOf(Path directory, long ttl, TimeUnit unit)
     {
-        BitcaskCacheStore<String, String> store = new BitcaskCacheStore<>(directory,
-            BasicSerializers.STRING, BasicSerializers.STRING);
-        Cache<String, String> memory = CacheFactory.getInstance(CacheType.ARC, 128, ttl, unit);
-        return new PersistentCache<>(memory, store, unit.toNanos(ttl));
+        return BitcaskCacheStore.open(directory, CacheType.ARC, 128, ttl, unit, BasicSerializers.STRING, BasicSerializers.STRING);
     }
 
     @Test

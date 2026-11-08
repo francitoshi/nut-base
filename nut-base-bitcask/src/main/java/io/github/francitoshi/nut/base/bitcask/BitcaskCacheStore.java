@@ -1,17 +1,22 @@
 /*
- * Copyright (C) 2024-2026 francitoshi@gmail.com
+ * Copyright (C) 2026 francitoshi@gmail.com
  * SPDX-License-Identifier: GPL-3.0-or-later
  * See LICENSE file in the project root for full license text.
  */
 package io.github.francitoshi.nut.base.bitcask;
 
+import io.github.francitoshi.nut.base.commons.cache.Cache;
+import io.github.francitoshi.nut.base.commons.cache.CacheFactory;
+import io.github.francitoshi.nut.base.commons.cache.CacheType;
 import io.github.francitoshi.nut.base.commons.cache.persistent.CacheStore;
+import io.github.francitoshi.nut.base.commons.cache.persistent.PersistentCache;
 import io.github.francitoshi.nut.base.commons.serializer.Serializer;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A {@link CacheStore} backed by a Bitcask directory, designed as a durable
@@ -94,6 +99,48 @@ public class BitcaskCacheStore<K,V> extends AbstractBitcaskCacheStore<K,V>
         }
 
         rebuildAccounting();
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class,
+     * with an in-memory cache of the given {@link CacheType}.
+     *
+     * @param directory the cache directory, created if missing
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttlNanos time-to-live of entries in nanoseconds
+     * ({@link Long#MAX_VALUE} for no expiration)
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path directory, CacheType type, int capacity, long ttlNanos, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        Cache<K, V> memory = CacheFactory.getInstance(type, capacity, ttlNanos);
+        CacheStore<K, V> store = new BitcaskCacheStore<>(directory, keySerializer, valueSerializer);
+        return new PersistentCache<>(memory, store, ttlNanos);
+    }
+
+    /**
+     * Opens (or creates) a persistent cache backed by a store of this class,
+     * with an in-memory cache of the given {@link CacheType}.
+     *
+     * @param directory the cache directory, created if missing
+     * @param type the in-memory cache implementation
+     * @param capacity the in-memory cache capacity
+     * @param ttl time-to-live of entries
+     * @param timeUnit the unit of {@code ttl}
+     * @param keySerializer serializer for keys of type {@code K}
+     * @param valueSerializer serializer for values of type {@code V}
+     * @param <K> the type of keys
+     * @param <V> the type of values
+     * @return a new persistent cache
+     */
+    public static <K, V> PersistentCache<K, V> open(Path directory, CacheType type, int capacity, long ttl, TimeUnit timeUnit, Serializer<K> keySerializer, Serializer<V> valueSerializer)
+    {
+        return open(directory, type, capacity, timeUnit.toNanos(ttl), keySerializer, valueSerializer);
     }
 
     /**
