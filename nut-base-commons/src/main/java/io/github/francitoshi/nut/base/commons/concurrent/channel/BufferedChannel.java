@@ -34,6 +34,30 @@ public class BufferedChannel<E> extends Channel<E>
         this.queue = new ArrayBlockingQueue<>(capacity);
     }
 
+    /**
+     * Constructor for subclasses that supply (or deliberately leave
+     * unconstructed) the backing queue themselves.
+     * <p>
+     * Passing {@code null} skips the array allocation of the default engine
+     * for subclasses that override every engine method
+     * ({@link #put(Object)}, {@link #put(Object, long, TimeUnit)},
+     * {@link #get()}, {@link #get(long, TimeUnit)}, {@link #tryGet()} and
+     * {@link #tryPut()}): the inherited {@code queue}-based implementations
+     * are never reachable and {@code queue} stays unused for the whole
+     * lifetime of the object.
+     * <p>
+     * A subclass that does not override every engine method must pass a
+     * functional queue here, or every reachable non-overridden method will
+     * fail with a {@link NullPointerException}.
+     *
+     * @param queue the backing queue, or {@code null} when the subclass
+     *              overrides the whole engine
+     */
+    protected BufferedChannel(ArrayBlockingQueue<E> queue)
+    {
+        this.queue = queue;
+    }
+
     @Override
     public void put(E value)
     {

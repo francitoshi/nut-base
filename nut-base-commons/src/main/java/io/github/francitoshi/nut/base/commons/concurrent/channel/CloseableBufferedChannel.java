@@ -59,7 +59,16 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
      */
     public CloseableBufferedChannel(int capacity)
     {
-        super(capacity);
+        // the parent's ArrayBlockingQueue is deliberately left unconstructed:
+        // this subclass owns the whole engine and the parent's queue-backed
+        // implementations are never reachable
+        super(null);
+        if (capacity <= 0)
+        {
+            // same validation the parent used to run via super(capacity);
+            // capacity 0 is the rendezvous channel, which is its own class
+            throw new IllegalArgumentException("capacity must be > 0");
+        }
         this.capacity = capacity;
         this.items = new ArrayDeque<>(capacity);
     }
