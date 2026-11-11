@@ -68,7 +68,7 @@ import java.util.Set;
  * {@link #remove(Object)}; their iterators walk a snapshot of the keys taken
  * when the iterator is created, and support {@link Iterator#remove()}.
  * <p>
- * Like {@link HashMap}, this class is not synchronized and permits
+ * Like {@link java.util.HashMap}, this class is not synchronized and permits
  * {@code null} keys and values if the backing maps do.
  *
  * @param <E> the type of both the keys and the values of this chain

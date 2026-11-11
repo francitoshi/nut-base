@@ -33,7 +33,7 @@ import java.util.Queue;
  * <p>
  * For the view to behave as one priority queue, every underlying queue must
  * be ordered by the same criterion, so that its head is its best element (as
- * the elements of a {@link PriorityQueue} are). A queue that is not
+ * the elements of a {@link java.util.PriorityQueue} are). A queue that is not
  * ordered that way still participates, but only its head competes in
  * {@link #peek()} and {@link #poll()}.
  * <p>
