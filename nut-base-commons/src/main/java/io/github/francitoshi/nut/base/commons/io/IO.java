@@ -66,7 +66,7 @@ public class IO
         }
         return out.toByteArray();
     }
-    
+
     public static byte[] readLineBytes(InputStream in, int limitSize, boolean allowLF) throws IOException
     {
         if (in == null)
@@ -100,10 +100,125 @@ public class IO
         return out.toByteArray();
     }
     
-    public static String readLine(InputStream in) throws IOException
+    public static String readLineString(InputStream in) throws IOException
     {
         byte[] line = readLineBytes(in, Integer.MAX_VALUE, false);
         return line!=null ? new String(line) : null;
+    }
+    
+    public static byte[] readAllBytesGZ(InputStream in, int readlimit, boolean detect) throws IOException
+    {
+        boolean gzip = detect;
+        if(!detect)
+        {
+            in = in.markSupported()? in : new BufferedInputStream(in, 1024);
+            in.mark(1024);
+            try
+            {
+                byte[] data = new byte[1024];
+                int r = in.read(data);
+                GZIPInputStream gzis = new GZIPInputStream(new ByteArrayInputStream(data, 0, r), 32);
+                byte buf[] = new byte[16];
+                gzis.read(buf);
+                gzip = true;
+            }
+            catch(IOException ex)
+            {
+                gzip = false;
+            }
+            finally
+            {
+                in.reset();
+            }
+        }
+        return readAllBytes(gzip? new GZIPInputStream(in):in, readlimit);
+    }
+    public static byte[] readAllBytesGZ(InputStream in, boolean detect) throws IOException
+    {
+        return IO.readAllBytesGZ(in, Integer.MAX_VALUE, detect);
+    }
+    public static byte[] readAllBytesGZ(File file, int readlimit, boolean detect) throws IOException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return IO.readAllBytesGZ(fis, readlimit, detect);
+        }
+    }
+    public static byte[] readAllBytesGZ(File file, boolean detect) throws IOException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return IO.readAllBytesGZ(fis, Integer.MAX_VALUE, detect);
+        }
+    }
+            
+    public static String readString(InputStream inputStream, String charsetName) throws IOException
+    {
+        try(BufferedInputStream bis = new BufferedInputStream(inputStream))
+        {
+            try(ByteArrayOutputStream bos = new ByteArrayOutputStream())
+            {
+                IO.copy(bis, bos);
+                byte[] contents = bos.toByteArray();
+                return new String(contents, charsetName);
+            }
+        }
+    }
+    
+    public static String readString(InputStream inputStream) throws IOException
+    {
+        return inputStream!=null ? IO.readString(inputStream, UTF8) : null;
+    }
+    
+    
+    public static String readString(File file, String charsetName) throws IOException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return IO.readString(fis, charsetName);
+        }
+    }
+    public static String readString(File file) throws IOException
+    {
+        try(FileInputStream fis = new FileInputStream(file))
+        {
+            return IO.readString(fis, UTF8);
+        }
+    }
+
+    public static String readResourceString(Class<?> type, String name, String defaultValue)
+    {
+        try(InputStream stream = type!=null ? type.getResourceAsStream(name) : null)
+        {
+            return stream!=null ? IO.readString(stream, UTF8) : defaultValue;
+        }
+        catch (IOException ex)
+        {
+            return defaultValue;
+        }
+    }
+    public static String readResourceString(Class<?> type, String name)
+    {
+        return IO.readResourceString(type, name, null);
+    }
+    
+    
+    public static void writeToFile(File file, byte[] bytes) throws IOException
+    {
+        try(FileOutputStream fos = new FileOutputStream(file))
+        {
+            fos.write(bytes);
+        }
+    }
+
+    public static void writeString(File file, String s) throws IOException
+    {
+        writeToFile(file, s.getBytes());
+    }
+    
+    public static void writeString(File file, String s, Charset charset) throws IOException
+    {
+        writeToFile(file, s.getBytes(charset));
     }
     
     public static File copy(File source, File target, CopyOption... options) throws IOException
@@ -149,136 +264,6 @@ public class IO
             out.write(buf, 0, r);
         }
     }
-        
-    public static String readInputStreamAsString(InputStream inputStream, String charsetName) throws IOException
-    {
-        try(BufferedInputStream bis = new BufferedInputStream(inputStream))
-        {
-            try(ByteArrayOutputStream bos = new ByteArrayOutputStream())
-            {
-                IO.copy(bis, bos);
-                byte[] contents = bos.toByteArray();
-                return new String(contents, charsetName);
-            }
-        }
-    }
-    
-    public static String readInputStreamAsString(InputStream inputStream) throws IOException
-    {
-        return inputStream!=null ? readInputStreamAsString(inputStream, UTF8) : null;
-    }
-    
-    public static byte[] bytesFromFile(InputStream in, int readlimit) throws IOException
-    {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        byte buf[] = new byte[64 * 1024];
-        int r;
-        int count=0;
-        while ((r = in.read(buf)) > 0 && count<readlimit)
-        {
-            baos.write(buf, 0, r);
-            count+=r;
-        }
-        return baos.toByteArray();
-    }
-    
-    public static String readFileAsString(File file, String charsetName) throws IOException
-    {
-        try(FileInputStream fis = new FileInputStream(file))
-        {
-            return readInputStreamAsString(fis, charsetName);
-        }
-    }
-    public static String readFileAsString(File file) throws IOException
-    {
-        try(FileInputStream fis = new FileInputStream(file))
-        {
-            return readInputStreamAsString(fis, UTF8);
-        }
-    }
-    
-    public static byte[] bytesFromFile(InputStream in) throws IOException
-    {
-        return bytesFromFile(in, Integer.MAX_VALUE);
-    }
-    public static byte[] bytesFromFile(File file, int readlimit) throws IOException
-    {
-        try(FileInputStream fis = new FileInputStream(file))
-        {
-            return bytesFromFile(fis, readlimit);
-        }
-    }
-    public static byte[] bytesFromFile(File file) throws IOException
-    {
-        try(FileInputStream fis = new FileInputStream(file))
-        {
-            return bytesFromFile(fis, Integer.MAX_VALUE);
-        }
-    }
-    public static byte[] bytesFromFileGZ(InputStream in, int readlimit, boolean forceGZ) throws IOException
-    {
-        boolean gzip = forceGZ;
-        if(!forceGZ)
-        {
-            in = in.markSupported()? in : new BufferedInputStream(in, 1024);
-            in.mark(1024);
-            try
-            {
-                byte[] data = new byte[1024];
-                int r = in.read(data);
-                GZIPInputStream gzis = new GZIPInputStream(new ByteArrayInputStream(data, 0, r), 32);
-                byte buf[] = new byte[16];
-                gzis.read(buf);
-                gzip = true;
-            }
-            catch(IOException ex)
-            {
-                gzip = false;
-            }
-            finally
-            {
-                in.reset();
-            }
-        }
-        return bytesFromFile( gzip? new GZIPInputStream(in):in, readlimit);
-    }
-    public static byte[] bytesFromFileGZ(InputStream in, boolean detect) throws IOException
-    {
-        return bytesFromFileGZ(in, Integer.MAX_VALUE, detect);
-    }
-    public static byte[] bytesFromFileGZ(File file, int readlimit, boolean detect) throws IOException
-    {
-        try(FileInputStream fis = new FileInputStream(file))
-        {
-            return bytesFromFileGZ(fis, readlimit, detect);
-        }
-    }
-    public static byte[] bytesFromFileGZ(File file, boolean detect) throws IOException
-    {
-        try(FileInputStream fis = new FileInputStream(file))
-        {
-            return bytesFromFileGZ(fis, Integer.MAX_VALUE, detect);
-        }
-    }
-    
-    public static void writeToFile(File file, byte[] bytes) throws IOException
-    {
-        try(FileOutputStream fos = new FileOutputStream(file))
-        {
-            fos.write(bytes);
-        }
-    }
-
-    public static void writeToFile(File file, String s) throws IOException
-    {
-        writeToFile(file, s.getBytes());
-    }
-    
-    public static void writeToFile(File file, String s, Charset charset) throws IOException
-    {
-        writeToFile(file, s.getBytes(charset));
-    }
-    
 
     public static boolean mkdirs(File dir)
     {

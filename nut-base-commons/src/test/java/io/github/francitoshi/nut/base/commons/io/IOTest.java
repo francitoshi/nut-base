@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.io;
 
+import io.github.francitoshi.nut.base.commons.i18n.ResourceBundlesTest;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
@@ -68,9 +69,9 @@ public class IOTest
     {
         ByteArrayInputStream bais = new ByteArrayInputStream("hello\nworld".getBytes());
         
-        assertEquals("hello", IO.readLine(bais));
+        assertEquals("hello", IO.readLineString(bais));
         
-        assertEquals("world", IO.readLine(bais));
+        assertEquals("world", IO.readLineString(bais));
     }
 
     @Test
@@ -109,8 +110,7 @@ public class IOTest
         try
         {
             Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file);
-            assertEquals(EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
-                    permissions);
+            assertEquals(EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE), permissions);
         }
         catch (UnsupportedOperationException e)
         {
@@ -127,8 +127,7 @@ public class IOTest
         try
         {
             Set<PosixFilePermission> permissions = Files.getPosixFilePermissions(file);
-            assertEquals(EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE),
-                    permissions);
+            assertEquals(EnumSet.of(PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE), permissions);
         }
         catch (UnsupportedOperationException e)
         {
@@ -148,6 +147,25 @@ public class IOTest
 
         assertArrayEquals(new byte[]{1, 2, 3}, Files.readAllBytes(target));
         assertFalse(Files.exists(source));
+    }
+
+    @Test
+    public void testReadResourceAsString_Class_String_String()
+    {
+        String result1 = IO.readResourceString(ResourceBundlesTest.class, "text.txt", "");
+        assertEquals("hello world", result1);
+
+        String result2 = IO.readResourceString(ResourceBundlesTest.class, "notext.txt", "blablabla");
+        assertEquals("blablabla", result2);
+    }
+
+    @Test    
+    public void testReadResourceAsString_Class_String()
+    {
+        String result1 = IO.readResourceString(ResourceBundlesTest.class, "text.txt");
+        assertEquals("hello world", result1);
+
+        assertNull(IO.readResourceString(ResourceBundlesTest.class, "notext.txt"));
     }
 
 }

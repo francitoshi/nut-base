@@ -148,7 +148,7 @@ public final class I18n
         try
         {
             InputStream stream = clss.getResourceAsStream(name);
-            return stream != null ? IO.readInputStreamAsString(stream) : defaultValue;
+            return stream != null ? IO.readString(stream) : defaultValue;
         }
         catch (IOException ex)
         {

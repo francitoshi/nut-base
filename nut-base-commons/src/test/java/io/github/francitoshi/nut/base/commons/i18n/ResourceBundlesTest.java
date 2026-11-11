@@ -41,27 +41,5 @@ public class ResourceBundlesTest
         ResourceBundle rb3 = ResourceBundles.getBundleStrict(ResourceBundlesTest.class, Locale.FRANCE, Locale.UK);
         assertEquals("ROOT", rb3.getString("name"));        
     }
-
-    @Test
-    public void testGetResourceAsString_3args()
-    {
-        String result1 = ResourceBundles.getResourceAsString(ResourceBundlesTest.class, "text.txt", "");
-        assertEquals("hello world", result1);
-
-        String result2 = ResourceBundles.getResourceAsString(ResourceBundlesTest.class, "notext.txt", "blablabla");
-        assertEquals("blablabla", result2);
-
-    }
-
-    @Test    
-    public void testGetResourceAsString_Class_String()
-    {
-        String result1 = ResourceBundles.getResourceAsString(ResourceBundlesTest.class, "text.txt");
-        assertEquals("hello world", result1);
-
-        assertNull(ResourceBundles.getResourceAsString(ResourceBundlesTest.class, "notext.txt"));
-        
-    }
-
     
 }

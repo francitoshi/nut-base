@@ -6,17 +6,17 @@
 package io.github.francitoshi.nut.base.commons.i18n;
 
 import io.github.francitoshi.nut.base.commons.io.IO;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Locale;
+import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 
 /**
- * Utility class for managing {@link ResourceBundle} instances and retrieving 
- * classpath resources as strings.
+ * Utility class for managing {@link ResourceBundle} instances and reading classpath
+ * resources whose paths are stored in resource bundle entries.
  * <p>
- * This class provides methods to resolve bundles based on a priority list of locales 
- * and handles resource loading with fallback defaults.
+ * This class provides methods to resolve bundles based on a priority list of locales
+ * and handles resource loading with fallback defaults. For direct reading of classpath
+ * resources as strings, use {@link IO#readResourceString(Class, String, String)}.
  */
 public class ResourceBundles
 {
@@ -101,46 +101,23 @@ public class ResourceBundles
     }
     
     /**
-     * Reads a resource from the classpath relative to the given class and returns it as a String.
+     * Reads the classpath resource named by the given key of the provided bundle
+     * and returns it as a String, using {@link IO#readResourceString(Class, String, String)}.
      *
      * @param clss         the class used to locate the resource
-     * @param name         the name/path of the resource
+     * @param key         the key of the bundle entry holding the resource name/path
+     * @param bundle       the bundle providing the resource name for the given key
      * @param defaultValue the value to return if the resource is not found or an error occurs
      * @return the resource content as a string, or {@code defaultValue} on failure
+     * @throws MissingResourceException if no mapping for the given key is found in the bundle
      */
-    public static <T> String getResourceAsString(Class<T> clss, String name, String defaultValue)
+    public static <T> String getResourceStringIndirect(Class<T> clss, ResourceBundle bundle, String key, String defaultValue)
     {
-        try
-        {
-            InputStream stream = clss.getResourceAsStream(name);
-            return stream != null ? IO.readInputStreamAsString(stream) : defaultValue;
-        }
-        catch (IOException ex)
-        {
-            return defaultValue;
-        }
+        String name = bundle.getString(key);
+        return IO.readResourceString(clss, name, defaultValue);
     }
-
-    /**
-     * Reads a resource from the classpath relative to the given class and returns it as a String.
-     * Returns {@code null} if the resource cannot be found or read.
-     *
-     * @param clss the class used to locate the resource
-     * @param name the name/path of the resource
-     * @return the resource content as a string, or {@code null} if it doesn't exist
-     */
-    public static <T> String getResourceAsString(Class<T> clss, String name)
+    public static <T> String getResourceStringIndirect(Class<T> clss, ResourceBundle bundle, String key)
     {
-        return getResourceAsString(clss, name, null);
-    }
-    
-    public static <T> String getResourceAsString(Class<T> clss, String name, ResourceBundle bundle, String defaultValue)
-    {
-        String name2 = bundle.getString(name);
-        return getResourceAsString(clss, name2, defaultValue);
-    }
-    public static <T> String getResourceAsStringIndirect(Class<T> clss, String name, ResourceBundle bundle)
-    {
-        return getResourceAsString(clss, name, bundle, null);
+        return getResourceStringIndirect(clss, bundle, key, null);
     }
 }

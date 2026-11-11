@@ -97,7 +97,7 @@ public class SteganographyTest
         {
             Steganography instance = new Steganography(72, true, true, false, 10_000);
             byte[] msg21 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit".getBytes();
-            String otrashiervas = IO.readFileAsString(new File("../doc", STEGOWINSTEGOYOTRASHIERBASTXT));
+            String otrashiervas = IO.readString(new File("../doc", STEGOWINSTEGOYOTRASHIERBASTXT));
             char[] passphrase = "eureka".toCharArray();
 
             String otrashiervas2 = instance.encode(otrashiervas, msg21);
@@ -113,7 +113,7 @@ public class SteganographyTest
             
             byte[] msg1 = "Lorem ipsum dolor sit amet, consectetur adipiscing elit.".getBytes();
             char[] pass = "eureka".toCharArray();
-            String otrashiervas = IO.readFileAsString(new File("../doc", STEGOWINSTEGOYOTRASHIERBASTXT));
+            String otrashiervas = IO.readString(new File("../doc", STEGOWINSTEGOYOTRASHIERBASTXT));
 
             String otrashiervas2 = instance.encode(otrashiervas, msg1);
 
@@ -126,7 +126,7 @@ public class SteganographyTest
         }
         {
             Steganography instance = new Steganography(72, true, true, true, 10_000);
-            String cypherpunk = IO.readFileAsString(new File("../doc", "cypherpunk-manifesto.txt"));
+            String cypherpunk = IO.readString(new File("../doc", "cypherpunk-manifesto.txt"));
 
             byte[] msg1 = "".getBytes();
             String cypherpunk1 = instance.encode(cypherpunk, msg1);
@@ -146,7 +146,7 @@ public class SteganographyTest
     @Test
     public void testJustify() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException
     {
-        String otrashiervas = IO.readFileAsString(new File("../doc",STEGOWINSTEGOYOTRASHIERBASTXT));
+        String otrashiervas = IO.readString(new File("../doc",STEGOWINSTEGOYOTRASHIERBASTXT));
         Steganography instance = kripto.getSteganography(72, true, true, true);
         String result = instance.justify(otrashiervas);
         assertNotNull(result);
