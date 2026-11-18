@@ -77,7 +77,15 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
     public void put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        putBounded(value, -1L);
+        if (!putBounded(value, -1L))
+        {
+            // The blocking put must either deliver the value or fail loudly.
+            // putBounded can return false on a close that races the notFull
+            // await (the closed check runs after every wake-up), and a
+            // silently dropped value would leave the producer's pending
+            // count incremented forever.
+            throw new IllegalStateException("closed");
+        }
     }
 
     @Override
@@ -167,9 +175,17 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
                 }
                 if (closed)
                 {
-                    // woken by close(): fresh out of the wait, same outcome
-                    // as an interruption per the interruption contract
+                    // woken by close(): fresh out of the wait. The blocking
+                    // put must not silently drop its value (that would leave
+                    // the producer's pending count incremented forever), so
+                    // it fails with the same IllegalStateException a put on
+                    // a closed channel raises; the channel is still marked
+                    // interrupted to honour the interruption contract.
                     aborted = true;
+                    if (deadline < 0L)
+                    {
+                        throw new IllegalStateException("closed");
+                    }
                     return false;
                 }
             }

@@ -168,11 +168,12 @@ public class CloseableBufferedChannelTest
         assertTrue(channel.close(100, TimeUnit.MILLISECONDS));
         assertTrue(channel.isClosed());
 
-        // The blocked put cannot complete: it is aborted per the interruption
-        // contract and returns without delivering its value.
+        // The blocked put cannot complete: it is aborted and fails loudly
+        // (a blocking put must either deliver or throw), while the channel
+        // is still marked interrupted per the interruption contract.
         producer.join(5000);
-        assertTrue(putReturned.get());
-        assertNull(putError.get());
+        assertFalse(putReturned.get());
+        assertTrue(putError.get() instanceof IllegalStateException, "got " + putError.get());
         assertTrue(channel.isInterrupted());
     }
 

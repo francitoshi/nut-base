@@ -17,6 +17,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -80,11 +81,13 @@ class CloseableBufferedChannelCloseTest
         assertTrue(channel.close(), "close() must abort the pending put() and succeed");
         assertTrue(channel.isClosed());
 
-        // the pending put() aborts per the interruption contract: it returns
-        // without throwing and without delivering its value.
+        // the pending put() aborts and fails loudly: a blocking put() must
+        // either deliver its value or throw, never return as if it had
+        // delivered it (the producer's bookkeeping depends on it). The
+        // channel is still marked interrupted per the interruption contract.
         blockedPut.get(2, TimeUnit.SECONDS);
-        assertNull(putError.get(), "blocked put() must abort without throwing");
-        assertTrue(putReturned.get(), "blocked put() must return after abort");
+        assertTrue(putError.get() instanceof IllegalStateException, "blocked put() must abort with IllegalStateException, got " + putError.get());
+        assertFalse(putReturned.get(), "blocked put() must not report a delivered value");
         assertTrue(channel.isInterrupted());
 
         // "first" was buffered before close, so it must still be delivered.
