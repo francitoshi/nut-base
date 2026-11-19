@@ -389,6 +389,67 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
         purgeList(t2, now);
     }
 
+    /**
+     * Reduces the number of live entries (T1+T2) down to {@code target},
+     * purging expired entries first. Evicted entries follow the same
+     * replacement preference as the ordinary eviction path — the least
+     * recently used of T1 while it is above the adaptive target {@code p},
+     * otherwise the one of T2 — and become ghost entries in B1/B2 with their
+     * value dropped (freeing the payload memory while keeping ARC's adaptive
+     * feedback intact; a later ghost hit re-admits and adjusts {@code p} as
+     * usual). The ghost history is then trimmed to the same
+     * {@code 2 * capacity} bound the ordinary put path maintains. The
+     * configured {@code capacity} is not changed. See
+     * {@link Cache#shrink(int)} for the general contract.
+     */
+    @Override
+    public int shrink(int target)
+    {
+        purgeExpired();
+        int evicted = 0;
+        while (t1.size() + t2.size() > target)
+        {
+            if (!t1.isEmpty() && ((double) t1.size() > p || t2.isEmpty()))
+            {
+                Node<K, V> lru = t1.removeLast();
+                if (lru == null)
+                {
+                    break;
+                }
+                lru.value = null;
+                lru.type = ListType.B1;
+                b1.addToFront(lru);
+            }
+            else if (!t2.isEmpty())
+            {
+                Node<K, V> lru = t2.removeLast();
+                if (lru == null)
+                {
+                    break;
+                }
+                lru.value = null;
+                lru.type = ListType.B2;
+                b2.addToFront(lru);
+            }
+            else
+            {
+                break;
+            }
+            evicted++;
+        }
+
+        while (t1.size() + b1.size() + t2.size() + b2.size() > 2 * capacity)
+        {
+            Node<K, V> ghost = b1.size() >= b2.size() ? b1.removeLast() : b2.removeLast();
+            if (ghost == null)
+            {
+                break;
+            }
+            map.remove(ghost.key);
+        }
+        return evicted;
+    }
+
     private void purgeList(DoublyLinkedList<K, V> list, long now)
     {
         Node<K, V> curr = list.head;

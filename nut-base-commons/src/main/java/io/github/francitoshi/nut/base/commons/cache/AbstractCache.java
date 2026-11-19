@@ -180,6 +180,15 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
         }
 
         @Override
+        public int shrink(int target)
+        {
+            synchronized(lock)
+            {
+                return cache.shrink(target);
+            }
+        }
+
+        @Override
         public Cache<K, V> synchronizedCache()
         {
             return this;

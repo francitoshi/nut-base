@@ -287,6 +287,56 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         }
     }
 
+    /**
+     * Reduces the number of entries down to {@code target}, purging expired
+     * entries first and then evicting least-frequently-used entries (LRU as
+     * tiebreaker), exactly as the ordinary eviction policy would. The
+     * configured {@code capacity} is not changed. See
+     * {@link Cache#shrink(int)} for the general contract.
+     */
+    @Override
+    public int shrink(int target)
+    {
+        purgeExpired();
+        int evicted = 0;
+        while (cache.size() > target)
+        {
+            FrequencyBucket<K, V> bucket = frequencyMap.get(minFrequency);
+            if (bucket == null || bucket.isEmpty())
+            {
+                // Defensive: minFrequency must point at a live bucket while
+                // the cache is non-empty (purgeExpired maintains it); stop
+                // rather than evict the wrong entries.
+                break;
+            }
+            Node<K, V> victim = bucket.removeLast();
+            if (victim == null)
+            {
+                break;
+            }
+            cache.remove(victim.key);
+            if (bucket.isEmpty())
+            {
+                frequencyMap.remove(minFrequency);
+                if (cache.isEmpty())
+                {
+                    minFrequency = 0;
+                }
+                else
+                {
+                    int nextMin = minFrequency + 1;
+                    while (!frequencyMap.containsKey(nextMin))
+                    {
+                        nextMin++;
+                    }
+                    minFrequency = nextMin;
+                }
+            }
+            evicted++;
+        }
+        return evicted;
+    }
+
     @Override
     public boolean isEmpty()
     {

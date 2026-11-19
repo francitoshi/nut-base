@@ -226,6 +226,20 @@ public class PersistentCache<K, V> extends AbstractCache<K, V> implements AutoCl
     }
 
     /**
+     * Reduces the <strong>memory tier</strong> down to {@code target} entries,
+     * delegating to the in-memory cache's own {@code shrink} (which purges its
+     * expired entries first). The durable store is the source of truth and is
+     * never shrunk: entries dropped from memory remain in the store and are
+     * restored on the next miss. The configured capacity of the memory tier is
+     * not changed. See {@link Cache#shrink(int)} for the general contract.
+     */
+    @Override
+    public int shrink(int target)
+    {
+        return memory.shrink(target);
+    }
+
+    /**
      * Forces the durable tier to write any pending changes to disk.
      */
     public void flush()

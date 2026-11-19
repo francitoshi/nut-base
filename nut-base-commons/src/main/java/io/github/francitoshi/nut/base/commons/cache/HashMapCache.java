@@ -6,6 +6,7 @@
 package io.github.francitoshi.nut.base.commons.cache;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
@@ -162,5 +163,27 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
     {
         long now = System.nanoTime();
         map.values().removeIf(item -> item.isExpired(now));
+    }
+
+    /**
+     * Reduces the number of entries down to {@code target}, purging expired
+     * entries first. This cache has no eviction policy, so the entries evicted
+     * to reach the target are those in {@link HashMap} iteration order — an
+     * <strong>arbitrary</strong> choice. See {@link Cache#shrink(int)} for the
+     * general contract.
+     */
+    @Override
+    public int shrink(int target)
+    {
+        purgeExpired();
+        int evicted = 0;
+        Iterator<Map.Entry<K, AbstractCache.Item<V>>> iterator = map.entrySet().iterator();
+        while (map.size() > target && iterator.hasNext())
+        {
+            iterator.next();
+            iterator.remove();
+            evicted++;
+        }
+        return evicted;
     }
 }

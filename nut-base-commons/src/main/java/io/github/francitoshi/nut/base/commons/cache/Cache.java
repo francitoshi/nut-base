@@ -113,6 +113,37 @@ public interface Cache<K, V>
      * Removes all expired entries from this cache.
      */
     void purgeExpired();
+
+    /**
+     * Reduces the number of entries in this cache down to {@code target},
+     * as if {@code target} were the (temporary) capacity, without changing
+     * the cache's configured capacity. The cache keeps accepting new entries
+     * and re-grows towards its configured limit as usual afterwards.
+     * <p>
+     * Expired entries are purged first (see {@link #purgeExpired()}), so
+     * they are never counted among the evictions. The remaining entries are
+     * evicted following the implementation's own eviction policy (for
+     * example least-frequently-used for {@code LRULFUCache}).
+     * <p>
+     * This is the hook a memory-pressure monitor calls to make the cache
+     * yield memory: the decision of <em>when</em> and <em>to what size</em>
+     * belongs to the caller (which should apply its own floors to avoid
+     * thrashing); the cache only decides <em>which</em> entries to drop.
+     * <p>
+     * Thread-safety: this method must be invoked in the same thread-safety
+     * regime as the rest of the cache — via {@link #synchronizedCache()}
+     * when the cache is accessed concurrently.
+     *
+     * @param target the maximum number of entries to keep; values below
+     *               zero are treated as {@code 0}, values at or above the
+     *               current size evict nothing
+     * @return the number of entries evicted (expired purges are not counted)
+     */
+    default int shrink(int target)
+    {
+        return 0;
+    }
+
     
     Cache<K,V> synchronizedCache();
 }

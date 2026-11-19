@@ -558,6 +558,36 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
             mainCache.purgeExpired(now);
         }
     }
+
+    /**
+     * Reduces the number of entries down to {@code target}, purging expired
+     * entries first and then evicting from the window segment (the least
+     * frequent, newest entries) followed by the main cache's own victims
+     * (probation first, then protected). Evicted entries are discarded:
+     * shrinking must not re-admit them into the main cache. The configured
+     * {@code capacity} and the window/main adaptation state are not changed.
+     * See {@link Cache#shrink(int)} for the general contract.
+     */
+    @Override
+    public int shrink(int target)
+    {
+        purgeExpired();
+        synchronized (lock)
+        {
+            int evicted = 0;
+            while (windowCache.size() + mainCache.size() > target && !windowCache.isEmpty())
+            {
+                windowCache.evict();
+                evicted++;
+            }
+            while (windowCache.size() + mainCache.size() > target && !mainCache.isEmpty())
+            {
+                mainCache.evictVictim();
+                evicted++;
+            }
+            return evicted;
+        }
+    }
     
     
     // Simple LRU for window cache
