@@ -118,8 +118,7 @@ public final class Threads
         }
         catch (ReflectiveOperationException ex)
         {
-            throw new IllegalStateException(
-                    "virtual thread creation failed although availability was detected", ex);
+            throw new IllegalStateException("virtual thread creation failed although availability was detected", ex);
         }
     }
 
@@ -168,8 +167,7 @@ public final class Threads
             UNSTARTED = unstarted;
         }
 
-        private static Thread newVirtual(Method ofVirtual, Method name, Method unstarted,
-                String threadName, Runnable task) throws ReflectiveOperationException
+        private static Thread newVirtual(Method ofVirtual, Method name, Method unstarted, String threadName, Runnable task) throws ReflectiveOperationException
         {
             Object builder = ofVirtual.invoke(null);
             Object named = name.invoke(builder, threadName);

@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import io.github.francitoshi.nut.base.commons.concurrent.Threads;
 import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import java.util.Objects;
 import java.util.concurrent.CancellationException;
@@ -12,7 +13,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
@@ -104,6 +104,12 @@ public class ActorPool implements ActorLifecycle, Executor
      * threads, which keep the JVM alive while tasks are running.
      */
     public static final boolean DEFAULT_DAEMON = false;
+
+    /**
+     * Default virtual-thread preference: {@code false} keeps the classic
+     * platform-thread pool. Pass {@code allowVirtual == true} to opt in.
+     */
+    public static final boolean DEFAULT_ALLOW_VIRTUAL = false;
 
     /**
      * Saturation policy: run the overflowing task in the calling thread.
@@ -207,7 +213,10 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Full constructor.
+     * Full constructor with platform threads only: equivalent to
+     * {@code ActorPool(coreThreads, maxThreads, keepAliveMillis,
+     * callerWaitsPolicy, avoidTracker, daemon, false)}. See the seven-parameter
+     * constructor for the full documentation.
      * <p>
      * The backing pool has no task queue: a {@link SynchronousQueue} hands every
      * submitted task directly to a worker thread, so the pool grows threads on
@@ -246,6 +255,63 @@ public class ActorPool implements ActorLifecycle, Executor
      */
     public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
     {
+        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, DEFAULT_ALLOW_VIRTUAL);
+    }
+
+    /**
+     * Full constructor with virtual-thread support.
+     * <p>
+     * The backing pool has no task queue: a {@link SynchronousQueue} hands every
+     * submitted task directly to a worker thread, so the pool grows threads on
+     * demand from the {@code coreThreads} floor up to {@code maxThreads} without
+     * a task ever waiting in a queue. {@link ThreadPoolExecutor#allowCoreThreadTimeOut}
+     * is never enabled, so the core threads stay alive permanently; only the
+     * threads above the floor are reclaimed once idle for
+     * {@code keepAliveMillis}. Subclasses such as {@link ActorHub} may resize
+     * the pool later via {@link #resizePool(int, int)}.
+     *
+     * @param coreThreads      the minimum number of threads kept permanently
+     *                         alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads       the absolute maximum number of live threads; must
+     *                         be &ge; 0; {@code coreThreads == 0 && maxThreads == 0}
+     *                         selects the synchronous mode (no pool)
+     * @param keepAliveMillis  keep-alive time for the threads above the core
+     *                         floor, in milliseconds; must be &ge; 0
+     * @param callerWaitsPolicy {@code true} to block the caller on saturation;
+     *                          {@code false} to run the task in the caller
+     * @param avoidTracker       {@code true} to disable active-task tracking
+     * @param daemon             {@code true} to create the pool's worker threads
+     *                           as daemon threads, so that the pool never keeps
+     *                           the JVM alive on its own when only background
+     *                           tasks are running; {@code false} (the default)
+     *                           to use the framework's ordinary non-daemon
+     *                           worker threads. Only the thread creation is
+     *                           intercepted: each thread still comes from the
+     *                           {@link ThreadPoolExecutor}'s default
+     *                           {@link ThreadFactory}, merely with
+     *                           {@link Thread#setDaemon(boolean) setDaemon(true)}
+     *                           applied
+     * @param allowVirtual       {@code true} to create the pool's worker threads
+     *                           as virtual threads when the running JVM supports
+     *                           them (see
+     *                           {@link Threads#isVirtualAvailable()}), which
+     *                           makes the per-thread cost negligible and the
+     *                           {@code daemon} flag inapplicable (virtual
+     *                           threads are always daemon threads); if virtual
+     *                           threads are unavailable, it degrades to the
+     *                           platform behaviour described by {@code daemon}.
+     *                           {@code false} (the default) always uses the
+     *                           platform threads of {@code daemon}. The pool
+     *                           sizing (core floor, ceiling and keep-alive)
+     *                           keeps its meaning: a parked virtual worker
+     *                           costs almost nothing
+     * @throws IllegalArgumentException if {@code coreThreads &lt; 0},
+     *         {@code maxThreads &lt; 0}, {@code coreThreads &gt; maxThreads}, or
+     *         {@code keepAliveMillis &lt; 0}; the synchronous case is exempt from
+     *         these checks
+     */
+    public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon, boolean allowVirtual)
+    {
         this.synchronous = coreThreads == 0 && maxThreads == 0;
         if (!this.synchronous)
         {
@@ -274,9 +340,31 @@ public class ActorPool implements ActorLifecycle, Executor
                 coreThreads, maxThreads,
                 keepAliveMillis, TimeUnit.MILLISECONDS,
                 new SynchronousQueue<>(),
-                daemon ? daemonFactory(Executors.defaultThreadFactory()) : Executors.defaultThreadFactory(),
+                workerThreadFactory(daemon, allowVirtual),
                 callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY);
         this.phaser = avoidTracker ? null : new Phaser(1);
+    }
+
+    /**
+     * Builds the thread factory of the backing pool. When {@code allowVirtual}
+     * is {@code true} and the JVM has virtual threads, the factory comes from
+     * {@link Threads#getThreadFactory(boolean)} and creates virtual threads
+     * (always daemon, so {@code daemon} is not applied). Otherwise it creates
+     * platform threads: the default factory, wrapped so every thread is a
+     * daemon thread when {@code daemon} is {@code true}.
+     *
+     * @param daemon the requested daemon flag for platform threads
+     * @param allowVirtual whether virtual threads are preferred when available
+     * @return the thread factory; never {@code null}
+     */
+    private static ThreadFactory workerThreadFactory(boolean daemon, boolean allowVirtual)
+    {
+        if (allowVirtual && Threads.isVirtualAvailable())
+        {
+            return Threads.getThreadFactory(true);
+        }
+        ThreadFactory platform = Threads.getThreadFactory(false);
+        return daemon ? daemonFactory(platform) : platform;
     }
 
     /**

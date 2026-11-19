@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import io.github.francitoshi.nut.base.commons.concurrent.Threads;
 import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import io.github.francitoshi.nut.base.commons.lang.Exceptions;
 import java.util.HashSet;
@@ -129,8 +130,13 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         super(threadPoolExecutor);
     }
 
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
+    {
+        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, DEFAULT_ALLOW_VIRTUAL);
+    }
+
     /**
-     * Full constructor with explicit active-task tracking control.
+     * Full constructor with virtual-thread support.
      *
      * @param coreThreads       the minimum number of threads kept permanently
      *                          alive; must be &ge; 0 and &le; {@code maxThreads}
@@ -162,10 +168,21 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *                          prolong application exit. If {@code false} (the
      *                          default), the ordinary non-daemon worker threads
      *                          are used
+     * @param allowVirtual      if {@code true}, the pool's worker threads are
+     *                          created as virtual threads when the running JVM
+     *                          supports them (see
+     *                          {@link Threads#isVirtualAvailable()}), so every
+     *                          registered async Actor parks a cheap virtual
+     *                          thread instead of a platform thread; virtual
+     *                          threads are always daemon, so {@code daemon} is
+     *                          not applied there, and when virtual threads are
+     *                          unavailable the {@code daemon} behaviour applies
+     *                          to the platform fallback. {@code false} (the
+     *                          default) always uses platform threads
      */
-    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon, boolean allowVirtual)
     {
-        super(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon);
+        super(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, allowVirtual);
         applyActorSizing(0, 0);
     }
 
@@ -325,7 +342,44 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
     {
-        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon);
+        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, DEFAULT_ALLOW_VIRTUAL);
+    }
+
+    /**
+     * Static factory with full pool configuration, daemon-thread control and
+     * virtual-thread support.
+     *
+     * @param coreThreads       the minimum number of threads kept permanently
+     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
+     * @param maxThreads        the absolute maximum number of live threads
+     * @param keepAliveMillis   keep-alive time for the threads above the
+     *                          effective core, in milliseconds
+     * @param callerWaitsPolicy {@code true} to block the caller when saturated;
+     *                          {@code false} to run the task in the caller
+     * @param avoidTracker      {@code true} to disable the internal active-task
+     *                          tracker
+     * @param daemon            {@code true} to create the hub's worker threads
+     *                          as daemon threads via the
+     *                          {@link ThreadPoolExecutor}'s default
+     *                          {@link java.util.concurrent.ThreadFactory}, so
+     *                          the hub never keeps the JVM alive on its own
+     *                          when only background Actors are running;
+     *                          {@code false} (the default) to use ordinary
+     *                          non-daemon worker threads
+     * @param allowVirtual      {@code true} to create the hub's worker threads
+     *                          as virtual threads when the running JVM supports
+     *                          them (see {@link Threads#isVirtualAvailable()});
+     *                          virtual threads are always daemon, so
+     *                          {@code daemon} is not applied there, and when
+     *                          virtual threads are unavailable the
+     *                          {@code daemon} behaviour applies to the platform
+     *                          fallback; {@code false} (the default) always
+     *                          uses platform threads
+     * @return a new ActorHub
+     */
+    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon, boolean allowVirtual)
+    {
+        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, allowVirtual);
     }
 
     @Override
