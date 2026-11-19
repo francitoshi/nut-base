@@ -64,7 +64,6 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
             try
             {
                 rendez.put(value);
-                notifyOperation(Operation.PUT, value);
                 return;
             }
             catch (InterruptedException ex)
@@ -107,12 +106,7 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
             boolean interrupted = false;
             try
             {
-                boolean result = rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                if (result)
-                {
-                    notifyOperation(Operation.PUT, value);
-                }
-                return result;
+                return rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             }
             catch (InterruptedException ex)
             {
@@ -157,10 +151,6 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
 
                 Object item = rendez.take();
                 E result = item == POISON ? null : (E) item;
-                if (result != null)
-                {
-                    notifyOperation(Operation.GET, result);
-                }
                 return result;
             }
             catch (InterruptedException ex)
@@ -206,9 +196,7 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
                 {
                     return null;
                 }
-                E result = (E) item;
-                notifyOperation(Operation.GET, result);
-                return result;
+                return (E) item;
             }
             catch (InterruptedException ex)
             {
@@ -237,7 +225,6 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
             return Optional.empty();
         }
         E value = (E) item;
-        notifyOperation(Operation.GET, value);
         return Optional.of(value);
     }
 
@@ -252,12 +239,7 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
                 return false;
             }
         }
-        if (rendez.offer(value))
-        {
-            notifyOperation(Operation.PUT, value);
-            return true;
-        }
-        return false;
+        return rendez.offer(value);
     }
 
     @SuppressWarnings("unchecked")
@@ -268,9 +250,7 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
         {
             return null;
         }
-        E result = (E) item;
-        notifyOperation(Operation.GET, result);
-        return result;
+        return (E) item;
     }
 
     @SuppressWarnings("unchecked")
@@ -285,7 +265,6 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
                 {
                     return null;
                 }
-                notifyOperation(Operation.GET, (E) item);
                 return (E) item;
             }
 
@@ -333,7 +312,6 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
             waitLock.notifyAll();
             blockedWriters = writers.toArray(new Thread[writers.size()]);
         }
-        notifyOperation(Operation.CLOSE, null);
         for (Thread writer : blockedWriters)
         {
             writer.interrupt();

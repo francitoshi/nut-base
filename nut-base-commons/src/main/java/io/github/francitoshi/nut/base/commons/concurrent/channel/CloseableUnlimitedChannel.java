@@ -60,7 +60,6 @@ public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> impl
         {
             lock.unlock();
         }
-        notifyOperation(Operation.PUT, value);
     }
 
     @Override
@@ -83,7 +82,6 @@ public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> impl
         {
             lock.unlock();
         }
-        notifyOperation(Operation.PUT, value);
         return true;
     }
 
@@ -111,7 +109,6 @@ public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> impl
         long deadline = block ? -1L : JavaTime.untilNanoTime(timeout, unit);
 
         E result = null;
-        boolean received = false;
         InterruptedException interrupted = null;
 
         lock.lock();
@@ -138,7 +135,6 @@ public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> impl
                 }
             }
             result = items.removeFirst();
-            received = true;
             return result;
         }
         catch (InterruptedException ex)
@@ -154,45 +150,32 @@ public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> impl
                 handleInterruptedException(interrupted);
                 closeIfCloseable();
             }
-            if (received)
-            {
-                notifyOperation(Operation.GET, result);
-            }
         }
     }
 
     @Override
     public Optional<E> tryGet()
     {
-        E result = null;
-        boolean received = false;
-
         lock.lock();
         try
         {
             if (!items.isEmpty())
             {
-                result = items.removeFirst();
-                received = true;
+                E result = items.removeFirst();
+                return Optional.of(result);
             }
+            return Optional.empty();
         }
         finally
         {
             lock.unlock();
         }
-        if (received)
-        {
-            notifyOperation(Operation.GET, result);
-            return Optional.of(result);
-        }
-        return Optional.empty();
     }
 
     @Override
     public boolean tryPut(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean inserted = false;
 
         lock.lock();
         try
@@ -201,18 +184,14 @@ public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> impl
             {
                 items.addLast(value);
                 notEmpty.signalAll();
-                inserted = true;
+                return true;
             }
+            return false;
         }
         finally
         {
             lock.unlock();
         }
-        if (inserted)
-        {
-            notifyOperation(Operation.PUT, value);
-        }
-        return inserted;
     }
 
     /**
@@ -240,7 +219,6 @@ public final class CloseableUnlimitedChannel<E> extends UnlimitedChannel<E> impl
         {
             lock.unlock();
         }
-        notifyOperation(Operation.CLOSE, null);
 
         if (interrupted)
         {

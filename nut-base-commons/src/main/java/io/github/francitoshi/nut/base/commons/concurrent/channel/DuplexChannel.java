@@ -21,16 +21,6 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
     private final ChannelReader<E> in;
     private final ChannelWriter<E> out;
 
-    /**
-     * Forwards the observable state of the delegates to this channel, so a
-     * {@code select} registered on this duplex wakes up when {@code in} or
-     * {@code out} report activity.
-     */
-    private final ChannelObservable.OperationListener<E> inListener =
-            (channel, operation, value) -> notifyOperation(operation, value);
-    private final ChannelObservable.OperationListener<E> outListener =
-            (channel, operation, value) -> notifyOperation(operation, value);
-
     public DuplexChannel(ChannelReader<E> in, ChannelWriter<E> out)
     {
         this.in = Objects.requireNonNull(in, "in must not be null");
@@ -39,8 +29,6 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
         {
             throw new IllegalArgumentException("in and out must be different objects");
         }
-        in.addOperationListener(inListener);
-        out.addOperationListener(outListener);
     }
 
     @Override
@@ -142,21 +130,6 @@ public final class DuplexChannel<E> extends Channel<E> implements ChannelReader<
         {
             ((Channel<E>) out).setInterruptedExceptionListener(listener);
         }
-    }
-
-    /**
-     * Select support: a duplex channel can only announce activity through its
-     * delegates, so select must re-scan in short slices when a delegate itself
-     * can only be caught reliably by polling (rendezvous or non-{@link Channel}
-     * delegates).
-     */
-    @Override
-    boolean needsPolling()
-    {
-        return !(in instanceof Channel)
-                || !(out instanceof Channel)
-                || ((Channel<?>) in).needsPolling()
-                || ((Channel<?>) out).needsPolling();
     }
 
     @Override

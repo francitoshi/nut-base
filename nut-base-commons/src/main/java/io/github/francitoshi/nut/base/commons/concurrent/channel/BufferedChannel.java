@@ -65,7 +65,6 @@ public class BufferedChannel<E> extends Channel<E>
         try
         {
             queue.put(value);
-            notifyOperation(Operation.PUT, value);
         }
         catch (InterruptedException ex)
         {
@@ -86,7 +85,7 @@ public class BufferedChannel<E> extends Channel<E>
         long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
-            return putWithTimeout(value, deadline);
+            return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
         {
@@ -98,12 +97,7 @@ public class BufferedChannel<E> extends Channel<E>
 
     private boolean putWithTimeout(E value, long deadline) throws InterruptedException
     {
-        if (queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS))
-        {
-            notifyOperation(Operation.PUT, value);
-            return true;
-        }
-        return false;
+        return queue.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
     }
 
     @Override
@@ -111,9 +105,7 @@ public class BufferedChannel<E> extends Channel<E>
     {
         try
         {
-            E value = queue.take();
-            notifyOperation(Operation.GET, value);
-            return value;
+            return queue.take();
         }
         catch (InterruptedException ex)
         {
@@ -134,12 +126,7 @@ public class BufferedChannel<E> extends Channel<E>
         long deadline = JavaTime.untilNanoTime(timeout, unit);
         try
         {
-            E value = queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-            if (value != null)
-            {
-                notifyOperation(Operation.GET, value);
-            }
-            return value;
+            return queue.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
         {
@@ -152,24 +139,13 @@ public class BufferedChannel<E> extends Channel<E>
     @Override
     public Optional<E> tryGet()
     {
-        E value = queue.poll();
-        if (value != null)
-        {
-            notifyOperation(Operation.GET, value);
-            return Optional.of(value);
-        }
-        return Optional.empty();
+        return Optional.ofNullable(queue.poll());
     }
 
     @Override
     public boolean tryPut(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        if (queue.offer(value))
-        {
-            notifyOperation(Operation.PUT, value);
-            return true;
-        }
-        return false;
+        return queue.offer(value);
     }
 }

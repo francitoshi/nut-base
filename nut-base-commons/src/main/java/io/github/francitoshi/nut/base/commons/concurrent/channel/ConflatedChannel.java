@@ -61,9 +61,6 @@ public class ConflatedChannel<E> extends Channel<E>
         {
             lock.unlock();
         }
-        // the notification runs outside the lock: listeners must never be
-        // dispatched while the parked counterpart is trying to take it
-        notifyOperation(Operation.PUT, value);
     }
 
     @Override
@@ -88,15 +85,12 @@ public class ConflatedChannel<E> extends Channel<E>
         {
             lock.unlock();
         }
-        notifyOperation(Operation.PUT, value);
         return true;
     }
 
     @Override
     public E get()
     {
-        E result = null;
-        boolean received = false;
         lock.lock();
         try
         {
@@ -122,20 +116,14 @@ public class ConflatedChannel<E> extends Channel<E>
                     return null;
                 }
             }
-            result = value;
+            E result = value;
             value = null;
             hasValue = false;
-            received = true;
             return result;
         }
         finally
         {
             lock.unlock();
-            // the notification runs outside the lock, same as put()
-            if (received)
-            {
-                notifyOperation(Operation.GET, result);
-            }
         }
     }
 
@@ -149,8 +137,6 @@ public class ConflatedChannel<E> extends Channel<E>
 
         long deadline = JavaTime.untilNanoTime(timeout, unit);
         lock.lock();
-        E result = null;
-        boolean received = false;
         try
         {
             if (Thread.interrupted())
@@ -178,48 +164,35 @@ public class ConflatedChannel<E> extends Channel<E>
                     return null;
                 }
             }
-            result = value;
+            E result = value;
             value = null;
             hasValue = false;
-            received = true;
             return result;
         }
         finally
         {
             lock.unlock();
-            // the notification runs outside the lock, same as get()
-            if (received)
-            {
-                notifyOperation(Operation.GET, result);
-            }
         }
     }
 
     @Override
     public Optional<E> tryGet()
     {
-        E result = null;
-        boolean received = false;
         lock.lock();
         try
         {
             if (hasValue)
             {
-                result = value;
+                E result = value;
                 value = null;
                 hasValue = false;
-                received = true;
+                return Optional.of(result);
             }
+            return Optional.empty();
         }
         finally
         {
             lock.unlock();
         }
-        if (received)
-        {
-            notifyOperation(Operation.GET, result);
-            return Optional.of(result);
-        }
-        return Optional.empty();
     }
 }

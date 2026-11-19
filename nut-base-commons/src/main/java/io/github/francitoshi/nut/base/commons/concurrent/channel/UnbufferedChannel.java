@@ -27,10 +27,6 @@ public class UnbufferedChannel<E> extends Channel<E>
         Objects.requireNonNull(value, "value must not be null");
         try
         {
-            // A value is only visible while the writer is parked: announce the
-            // pending put FIRST (it may wake a selectGet that retries tryGet),
-            // then block until the rendezvous happens.
-            notifyOperation(Operation.PUT, value);
             queue.put(value);
         }
         catch (InterruptedException ex)
@@ -52,7 +48,6 @@ public class UnbufferedChannel<E> extends Channel<E>
         }
         try
         {
-            notifyOperation(Operation.PUT, value);
             return queue.offer(value, remaining, TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
@@ -68,12 +63,7 @@ public class UnbufferedChannel<E> extends Channel<E>
     {
         try
         {
-            // Announce the pending get FIRST: it may wake a selectPut whose
-            // value becomes deliverable as soon as the reader is parked.
-            notifyOperation(Operation.GET, null);
-            E value = queue.take();
-            notifyOperation(Operation.GET, value);
-            return value;
+            return queue.take();
         }
         catch (InterruptedException ex)
         {
@@ -94,13 +84,7 @@ public class UnbufferedChannel<E> extends Channel<E>
         }
         try
         {
-            notifyOperation(Operation.GET, null);
-            E value = queue.poll(remaining, TimeUnit.NANOSECONDS);
-            if (value != null)
-            {
-                notifyOperation(Operation.GET, value);
-            }
-            return value;
+            return queue.poll(remaining, TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
         {
@@ -115,31 +99,13 @@ public class UnbufferedChannel<E> extends Channel<E>
     {
         // Non-blocking: a value is only reachable if a writer is already
         // parked, which is observable by poll(0).
-        E value = queue.poll();
-        if (value != null)
-        {
-            notifyOperation(Operation.GET, value);
-            return Optional.of(value);
-        }
-        return Optional.empty();
+        return Optional.ofNullable(queue.poll());
     }
 
     @Override
     public boolean tryPut(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        if (queue.offer(value))
-        {
-            // A waiting plain get() is not notified through notifyOperation
-            // by the offering side; the taker notifies on success.
-            return true;
-        }
-        return false;
-    }
-
-    @Override
-    boolean needsPolling()
-    {
-        return true;
+        return queue.offer(value);
     }
 }

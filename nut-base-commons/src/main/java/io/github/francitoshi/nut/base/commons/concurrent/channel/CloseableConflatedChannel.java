@@ -58,7 +58,6 @@ public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> impl
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
-            notifyOperation(Operation.PUT, value);
         }
         finally
         {
@@ -89,7 +88,6 @@ public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> impl
             this.value = value;
             this.hasValue = true;
             notEmpty.signal();
-            notifyOperation(Operation.PUT, value);
             return true;
         }
         finally
@@ -102,29 +100,22 @@ public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> impl
     @Override
     public Optional<E> tryGet()
     {
-        E result = null;
-        boolean received = false;
         lock.lock();
         try
         {
             if (hasValue)
             {
-                result = (E) this.value;
+                E result = (E) this.value;
                 this.value = null;
                 hasValue = false;
-                received = true;
+                return Optional.of(result);
             }
+            return Optional.empty();
         }
         finally
         {
             lock.unlock();
         }
-        if (received)
-        {
-            notifyOperation(Operation.GET, result);
-            return Optional.of(result);
-        }
-        return Optional.empty();
     }
 
     @Override
@@ -178,7 +169,6 @@ public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> impl
                 result = (E) this.value;
                 this.value = null;
                 hasValue = false;
-                notifyOperation(Operation.GET, result);
             }
         }
         finally
@@ -245,7 +235,6 @@ public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> impl
                 result = (E) this.value;
                 this.value = null;
                 hasValue = false;
-                notifyOperation(Operation.GET, result);
             }
         }
         finally
@@ -274,7 +263,6 @@ public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> impl
             // the notifying of the join() waiters goes through markClosed()
             markClosed();
             notEmpty.signalAll();
-            notifyOperation(Operation.CLOSE, null);
             return true;
         }
         finally

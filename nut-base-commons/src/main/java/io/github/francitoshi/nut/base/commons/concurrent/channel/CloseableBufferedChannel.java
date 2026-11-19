@@ -134,7 +134,6 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
      */
     private boolean putBounded(E value, long deadline)
     {
-        boolean inserted = false;
         boolean aborted = false;
         InterruptedException interrupted = null;
 
@@ -191,7 +190,6 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
             }
             items.addLast(value);
             notEmpty.signalAll();
-            inserted = true;
             return true;
         }
         finally
@@ -203,7 +201,7 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
             }
             lock.unlock();
             // decision points run outside the lock: they may close the
-            // channel or dispatch listeners
+            // channel
             if (interrupted != null)
             {
                 handleInterruptedException(interrupted);
@@ -215,10 +213,6 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
                 // the observable contract is the one of an aborted operation
                 handleInterruptedException(new InterruptedException("aborted by close()"));
             }
-            if (inserted)
-            {
-                notifyOperation(Operation.PUT, value);
-            }
         }
     }
 
@@ -229,7 +223,6 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
         long deadline = block ? -1L : JavaTime.untilNanoTime(timeout, unit);
 
         E result = null;
-        boolean received = false;
         InterruptedException interrupted = null;
 
         lock.lock();
@@ -259,7 +252,6 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
             }
             result = items.removeFirst();
             notFull.signalAll();
-            received = true;
             return result;
         }
         catch (InterruptedException ex)
@@ -275,46 +267,33 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
                 handleInterruptedException(interrupted);
                 closeIfCloseable();
             }
-            if (received)
-            {
-                notifyOperation(Operation.GET, result);
-            }
         }
     }
 
     @Override
     public Optional<E> tryGet()
     {
-        E result = null;
-        boolean received = false;
-
         lock.lock();
         try
         {
             if (!items.isEmpty())
             {
-                result = items.removeFirst();
+                E result = items.removeFirst();
                 notFull.signalAll();
-                received = true;
+                return Optional.of(result);
             }
+            return Optional.empty();
         }
         finally
         {
             lock.unlock();
         }
-        if (received)
-        {
-            notifyOperation(Operation.GET, result);
-            return Optional.of(result);
-        }
-        return Optional.empty();
     }
 
     @Override
     public boolean tryPut(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        boolean inserted = false;
 
         lock.lock();
         try
@@ -323,18 +302,14 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
             {
                 items.addLast(value);
                 notEmpty.signalAll();
-                inserted = true;
+                return true;
             }
+            return false;
         }
         finally
         {
             lock.unlock();
         }
-        if (inserted)
-        {
-            notifyOperation(Operation.PUT, value);
-        }
-        return inserted;
     }
 
     /**
@@ -368,7 +343,6 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
         {
             lock.unlock();
         }
-        notifyOperation(Operation.CLOSE, null);
 
         lock.lock();
         try
