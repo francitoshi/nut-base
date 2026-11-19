@@ -42,7 +42,7 @@ public class BufferedChannel<E> extends Channel<E>
      * for subclasses that override every engine method
      * ({@link #put(Object)}, {@link #put(Object, long, TimeUnit)},
      * {@link #get()}, {@link #get(long, TimeUnit)}, {@link #tryGet()} and
-     * {@link #tryPut()}): the inherited {@code queue}-based implementations
+     * {@link #tryPut(Object)}): the inherited {@code queue}-based implementations
      * are never reachable and {@code queue} stays unused for the whole
      * lifetime of the object.
      * <p>

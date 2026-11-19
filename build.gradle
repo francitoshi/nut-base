@@ -40,6 +40,13 @@ subprojects
         withJavadocJar()
     }
 
+    // javadoc runs on the toolchain JDK, where the standard @implSpec tag is
+    // not registered by default for a -source 8 build
+    javadoc
+    {
+        options.tags << 'implSpec:a:Implementation Specification:'
+    }
+
     test 
     {
         useJUnitPlatform()
