@@ -102,7 +102,8 @@ abstract class AsyncActor<M> extends Actor<M>
 
             if (queued && threads > 1)
             {
-                synchronized (lock)
+                lock.lock();
+                try
                 {
                     if (workerSlots.tryAcquire())
                     {
@@ -116,6 +117,10 @@ abstract class AsyncActor<M> extends Actor<M>
                             throw ex;
                         }
                     }
+                }
+                finally
+                {
+                    lock.unlock();
                 }
             }
         }
@@ -155,7 +160,8 @@ abstract class AsyncActor<M> extends Actor<M>
 
     protected void initPermanentWorker()
     {
-        synchronized (lock)
+        lock.lock();
+        try
         {
             if (permanentWorkerStarted || closed || terminated)
             {
@@ -169,6 +175,10 @@ abstract class AsyncActor<M> extends Actor<M>
             }
             activeWorkers.incrementAndGet();
         }
+        finally
+        {
+            lock.unlock();
+        }
         try
         {
             // The permanent worker lives as long as this actor: run it outside
@@ -178,11 +188,16 @@ abstract class AsyncActor<M> extends Actor<M>
         }
         catch (Exception ex)
         {
-            synchronized (lock)
+            lock.lock();
+            try
             {
                 permanentWorkerStarted = false;
                 activeWorkers.decrementAndGet();
                 workerSlots.release();
+            }
+            finally
+            {
+                lock.unlock();
             }
             throw ex;
         }
@@ -271,14 +286,19 @@ abstract class AsyncActor<M> extends Actor<M>
             {
                 if (counters.decrementSecondAndAllZero())
                 {
-                    synchronized (lock)
+                    lock.lock();
+                    try
                     {
-                        lock.notifyAll();
+                        condition.signalAll();
                         if (shutdownWhenEmpty)
                         {
                             closeNow();
                             return;
                         }
+                    }
+                    finally
+                    {
+                        lock.unlock();
                     }
                 }
             }
@@ -291,9 +311,14 @@ abstract class AsyncActor<M> extends Actor<M>
      */
     private void notifyIdle()
     {
-        synchronized (lock)
+        lock.lock();
+        try
         {
-            lock.notifyAll();
+            condition.signalAll();
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
@@ -324,7 +349,8 @@ abstract class AsyncActor<M> extends Actor<M>
             }
 
             boolean close = false;
-            synchronized (lock)
+            lock.lock();
+            try
             {
                 if (counters.getFirst() > 0)
                 {
@@ -338,7 +364,7 @@ abstract class AsyncActor<M> extends Actor<M>
                         doTerminate();
                     }
                     workerSlots.release();
-                    lock.notifyAll();
+                    condition.signalAll();
                     return;
                 }
                 if (shutdownWhenEmpty)
@@ -352,9 +378,13 @@ abstract class AsyncActor<M> extends Actor<M>
                         permanentWorkerStarted = false;
                     }
                     workerSlots.release();
-                    lock.notifyAll();
+                    condition.signalAll();
                     return;
                 }
+            }
+            finally
+            {
+                lock.unlock();
             }
 
             if (close)
@@ -364,10 +394,15 @@ abstract class AsyncActor<M> extends Actor<M>
                 {
                     permanentWorkerStarted = false;
                 }
-                synchronized (lock)
+                lock.lock();
+                try
                 {
                     workerSlots.release();
-                    lock.notifyAll();
+                    condition.signalAll();
+                }
+                finally
+                {
+                    lock.unlock();
                 }
                 return;
             }
@@ -391,7 +426,8 @@ abstract class AsyncActor<M> extends Actor<M>
 
     protected void doTerminate()
     {
-        synchronized (lock)
+        lock.lock();
+        try
         {
             if (terminated)
             {
@@ -407,7 +443,11 @@ abstract class AsyncActor<M> extends Actor<M>
             {
                 handleException(ex);
             }
-            lock.notifyAll();
+            condition.signalAll();
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 
@@ -435,13 +475,14 @@ abstract class AsyncActor<M> extends Actor<M>
     @Override
     public Actor<M> waitForIdle()
     {
-        synchronized (lock)
+        lock.lock();
+        try
         {
             while (!isIdle())
             {
                 try
                 {
-                    lock.wait();
+                    condition.await();
                 }
                 catch (InterruptedException ex)
                 {
@@ -449,13 +490,18 @@ abstract class AsyncActor<M> extends Actor<M>
                 }
             }
         }
+        finally
+        {
+            lock.unlock();
+        }
         return this;
     }
 
     @Override
     public Actor<M> shutdown(boolean onlyWhenEmpty)
     {
-        synchronized (lock)
+        lock.lock();
+        try
         {
             if (!closed && !terminated)
             {
@@ -475,7 +521,11 @@ abstract class AsyncActor<M> extends Actor<M>
                     closeNow();
                 }
             }
-            lock.notifyAll();
+            condition.signalAll();
+        }
+        finally
+        {
+            lock.unlock();
         }
         return this;
     }

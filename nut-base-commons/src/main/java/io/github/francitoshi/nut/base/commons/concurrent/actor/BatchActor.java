@@ -475,13 +475,18 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
             }
             if (counters.isZero())
             {
-                synchronized (lock)
+                lock.lock();
+                try
                 {
-                    lock.notifyAll();
+                    condition.signalAll();
                     if (shutdownWhenEmpty)
                     {
                         closeNow();
                     }
+                }
+                finally
+                {
+                    lock.unlock();
                 }
             }
         }

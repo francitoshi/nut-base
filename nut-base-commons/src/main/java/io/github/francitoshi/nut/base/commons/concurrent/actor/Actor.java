@@ -10,6 +10,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,8 +29,17 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
 {
     private static final Logger LOG = Logger.getLogger(Actor.class.getName());
 
-    // All lifecycle / scheduling decisions are made under this monitor.
-    protected final Object lock = new Object();
+    // All lifecycle / scheduling decisions are made under this lock. It is a
+    // ReentrantLock rather than a monitor so that a virtual thread can park in
+    // the waits below without pinning its carrier thread (JDK 21+).
+    protected final ReentrantLock lock = new ReentrantLock();
+
+    /**
+     * Signalled on every lifecycle state change this lock guards: an actor
+     * becoming idle, shutting down or terminating. Every waiter below awaits
+     * on it and every state change signals all.
+     */
+    protected final Condition condition = lock.newCondition();
 
     /** {@code true} once the internal channel has been closed. */
     protected volatile boolean closed;
@@ -316,7 +327,8 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
     @Override
     public boolean awaitTerminationUntilNanos(long untilNanos)
     {
-        synchronized (lock)
+        lock.lock();
+        try
         {
             while (!terminated)
             {
@@ -327,7 +339,7 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
                 }
                 try
                 {
-                    lock.wait(remaining / 1_000_000L, (int) (remaining % 1_000_000L));
+                    condition.await(remaining, TimeUnit.NANOSECONDS);
                 }
                 catch (InterruptedException ex)
                 {
@@ -335,6 +347,10 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
                 }
             }
             return true;
+        }
+        finally
+        {
+            lock.unlock();
         }
     }
 

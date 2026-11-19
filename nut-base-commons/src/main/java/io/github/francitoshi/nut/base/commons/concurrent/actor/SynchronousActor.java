@@ -62,7 +62,8 @@ public abstract class SynchronousActor<M> extends Actor<M>
     @Override
     public Actor<M> shutdown(boolean onlyWhenEmpty)
     {
-        synchronized (lock)
+        lock.lock();
+        try
         {
             if (!closed && !terminated)
             {
@@ -77,8 +78,12 @@ public abstract class SynchronousActor<M> extends Actor<M>
                 {
                     handleException(ex);
                 }
-                lock.notifyAll();
+                condition.signalAll();
             }
+        }
+        finally
+        {
+            lock.unlock();
         }
         return this;
     }
