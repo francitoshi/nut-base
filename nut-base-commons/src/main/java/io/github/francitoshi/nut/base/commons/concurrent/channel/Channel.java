@@ -55,6 +55,18 @@ import io.github.francitoshi.nut.base.commons.tuple.Tuple2;
  * {@code false} only when {@code get()} yielded {@code null} while the
  * channel is closed, and the value obtained is remembered to be returned by
  * {@link Iterator#next()} regardless of whether it is null or not.
+ *
+ * <p><b>No select.</b> There is deliberately no Go-style {@code select} here,
+ * and it should not be implemented. The benchmarks (see
+ * {@code BenchmarkVTChannelTest}) show that waiting with one virtual thread
+ * parked in {@link #get()} per channel is orders of magnitude faster than a
+ * shared waiter re-scanning the channels after every wake-up: each channel's
+ * own lock and condition wake its reader directly, with no listener dispatch,
+ * no re-scan of the other channels and no polling fallback. On a Java 21+ JVM,
+ * merge or multiplex channels with the thread-per-channel pattern (one
+ * {@code get()} loop per source feeding a common downstream channel); on older
+ * JVMs, fall back to polling the channels with {@link ChannelReader#tryGet}
+ * and {@link ChannelWriter#tryPut}.
  */
 public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, Iterable<E>
 {
