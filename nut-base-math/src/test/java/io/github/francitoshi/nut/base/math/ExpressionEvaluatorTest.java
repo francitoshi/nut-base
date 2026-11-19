@@ -24,14 +24,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class ExpEvalTest
+public class ExpressionEvaluatorTest
 {
-    private ExpEval eval;
+    private ExpressionEvaluator eval;
 
     @BeforeEach
     public void setUp()
     {
-        eval = new ExpEval();
+        eval = new ExpressionEvaluator();
     }
 
     // ------------------------------------------------------------------
@@ -111,6 +111,33 @@ public class ExpEvalTest
         }
     }
 
+    /**
+     * Evaluates the expression asserting that there is no error, and returns
+     * its value.
+     */
+    private static Object value(Evaluator eval, String expression)
+    {
+        Evaluator.Result result = eval.eval(expression);
+        assertEquals(Evaluator.ErrorType.NONE, result.error,
+                () -> expression + " -> " + result.error + ": " + result.message);
+        return result.value;
+    }
+
+    /**
+     * Evaluates the expression asserting that it fails with the given error
+     * type, and returns the result.
+     */
+    private static Evaluator.Result error(Evaluator eval, String expression, Evaluator.ErrorType type)
+    {
+        Evaluator.Result result = eval.eval(expression);
+        assertEquals(type, result.error,
+                () -> expression + " -> " + result.error + ": " + result.message);
+        assertNotNull(result.message, expression);
+        assertTrue(result.isError(), expression);
+        assertNull(result.value, expression);
+        return result;
+    }
+
     private static void assertNumeric(String expected, Object actual)
     {
         BigDecimal e = new BigDecimal(expected);
@@ -130,9 +157,8 @@ public class ExpEvalTest
     @Test
     public void testDefaultConstructor()
     {
-        ExpEval instance = new ExpEval();
-        Object result = instance.eval("1 / 3");
-        assertEquals(new BigDecimal("0.3333333333333333"), result);
+        ExpressionEvaluator instance = new ExpressionEvaluator();
+        assertNumeric("0.3333333333333333", value(instance, "1 / 3"));
     }
 
     /**
@@ -141,9 +167,9 @@ public class ExpEvalTest
     @Test
     public void testConstructorDecimals()
     {
-        ExpEval instance = new ExpEval(4);
-        assertEquals(new BigDecimal("0.3333"), instance.eval("1 / 3"));
-        assertEquals(new BigDecimal("0.3333"), instance.eval("1.0 / 3"));
+        ExpressionEvaluator instance = new ExpressionEvaluator(4);
+        assertNumeric("0.3333", value(instance, "1 / 3"));
+        assertNumeric("0.3333", value(instance, "1.0 / 3"));
     }
 
     /**
@@ -152,7 +178,17 @@ public class ExpEvalTest
     @Test
     public void testConstructorNegativeDecimals()
     {
-        assertThrows(IllegalArgumentException.class, () -> new ExpEval(-1));
+        assertThrows(IllegalArgumentException.class, () -> new ExpressionEvaluator(-1));
+    }
+
+    /**
+     * Test that ExpressionEvaluator is usable through the Evaluator interface.
+     */
+    @Test
+    public void testEvaluatorInterface()
+    {
+        Evaluator evaluator = new ExpressionEvaluator(4);
+        assertNumeric("6", value(evaluator, "2 * 3"));
     }
 
     // ------------------------------------------------------------------
@@ -167,8 +203,8 @@ public class ExpEvalTest
     {
         eval.addVariable("x", 3);
         eval.addVariable("y", 1);
-        assertEquals(BigInteger.valueOf(4), eval.eval("$x + $y"));
-        assertNumeric("3.5", eval.eval("$x + 0.5"));
+        assertEquals(BigInteger.valueOf(4), value(eval, "$x + $y"));
+        assertNumeric("3.5", value(eval, "$x + 0.5"));
     }
 
     /**
@@ -177,7 +213,7 @@ public class ExpEvalTest
     @Test
     public void testAddVariableChaining()
     {
-        ExpEval instance = eval.addVariable("x", 3);
+        ExpressionEvaluator instance = eval.addVariable("x", 3);
         assertSame(eval, instance);
     }
 
@@ -210,8 +246,8 @@ public class ExpEvalTest
         map.put("a", 2);
         map.put("b", "text");
         eval.addVariables(map);
-        assertEquals(BigInteger.valueOf(5), eval.eval("$a + 3"));
-        assertEquals("text", eval.eval("$b"));
+        assertEquals(BigInteger.valueOf(5), value(eval, "$a + 3"));
+        assertEquals("text", value(eval, "$b"));
     }
 
     /**
@@ -229,9 +265,8 @@ public class ExpEvalTest
     @Test
     public void testUnknownVariable()
     {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> eval.eval("$missing + 1"));
-        assertTrue(ex.getMessage().contains("missing"));
+        Evaluator.Result result = error(eval, "$missing + 1", Evaluator.ErrorType.UNDEFINED_VARIABLE);
+        assertTrue(result.message.contains("missing"), result.message);
     }
 
     /**
@@ -243,9 +278,9 @@ public class ExpEvalTest
         eval.addVariable("i", 7);
         eval.addVariable("l", 7L);
         eval.addVariable("f", 7.0);
-        assertEquals(BigInteger.valueOf(7), eval.eval("$i"));
-        assertEquals(BigInteger.valueOf(7), eval.eval("$l"));
-        assertEquals(BigDecimal.valueOf(7.0), eval.eval("$f"));
+        assertEquals(BigInteger.valueOf(7), value(eval, "$i"));
+        assertEquals(BigInteger.valueOf(7), value(eval, "$l"));
+        assertEquals(BigDecimal.valueOf(7.0), value(eval, "$f"));
     }
 
     /**
@@ -255,8 +290,8 @@ public class ExpEvalTest
     public void testStringVariable()
     {
         eval.addVariable("name", "nut");
-        assertEquals("nut", eval.eval("$name"));
-        assertEquals("nut#1", eval.eval("$name + \"#\" + 1"));
+        assertEquals("nut", value(eval, "$name"));
+        assertEquals("nut#1", value(eval, "$name + \"#\" + 1"));
     }
 
     // ------------------------------------------------------------------
@@ -269,9 +304,9 @@ public class ExpEvalTest
     @Test
     public void testAddition()
     {
-        assertEquals(BigInteger.valueOf(30), eval.eval("10 + 20"));
-        assertNumeric("30.5", eval.eval("10.5 + 20"));
-        assertNumeric("31", eval.eval("10.5 + 20.5"));
+        assertEquals(BigInteger.valueOf(30), value(eval, "10 + 20"));
+        assertNumeric("30.5", value(eval, "10.5 + 20"));
+        assertNumeric("31", value(eval, "10.5 + 20.5"));
     }
 
     /**
@@ -280,9 +315,9 @@ public class ExpEvalTest
     @Test
     public void testSubtraction()
     {
-        assertEquals(BigInteger.valueOf(17), eval.eval("20 - 3"));
-        assertEquals(BigInteger.valueOf(-7), eval.eval("3 - 10"));
-        assertEquals(BigInteger.valueOf(0), eval.eval("3 - 3"));
+        assertEquals(BigInteger.valueOf(17), value(eval, "20 - 3"));
+        assertEquals(BigInteger.valueOf(-7), value(eval, "3 - 10"));
+        assertEquals(BigInteger.valueOf(0), value(eval, "3 - 3"));
     }
 
     /**
@@ -291,9 +326,9 @@ public class ExpEvalTest
     @Test
     public void testMultiplication()
     {
-        assertEquals(BigInteger.valueOf(21), eval.eval("7 * 3"));
-        assertEquals(new BigDecimal("22.5"), eval.eval("7.5 * 3"));
-        assertEquals(BigInteger.valueOf(0), eval.eval("0 * 5"));
+        assertEquals(BigInteger.valueOf(21), value(eval, "7 * 3"));
+        assertEquals(new BigDecimal("22.5"), value(eval, "7.5 * 3"));
+        assertEquals(BigInteger.valueOf(0), value(eval, "0 * 5"));
     }
 
     /**
@@ -302,9 +337,9 @@ public class ExpEvalTest
     @Test
     public void testDivisionExact()
     {
-        assertEquals(BigInteger.valueOf(5), eval.eval("10 / 2"));
-        assertEquals(BigInteger.valueOf(-5), eval.eval("10 / -2"));
-        assertEquals(BigInteger.valueOf(0), eval.eval("0 / 2"));
+        assertEquals(BigInteger.valueOf(5), value(eval, "10 / 2"));
+        assertEquals(BigInteger.valueOf(-5), value(eval, "10 / -2"));
+        assertEquals(BigInteger.valueOf(0), value(eval, "0 / 2"));
     }
 
     /**
@@ -313,8 +348,8 @@ public class ExpEvalTest
     @Test
     public void testDivisionDecimal()
     {
-        assertEquals(new BigDecimal("3.5"), eval.eval("7 / 2"));
-        assertEquals(new BigDecimal("0.3333333333333333"), eval.eval("1 / 3"));
+        assertEquals(new BigDecimal("3.5"), value(eval, "7 / 2"));
+        assertEquals(new BigDecimal("0.3333333333333333"), value(eval, "1 / 3"));
     }
 
     /**
@@ -323,20 +358,20 @@ public class ExpEvalTest
     @Test
     public void testRemainder()
     {
-        assertEquals(BigInteger.valueOf(1), eval.eval("7 % 3"));
-        assertEquals(BigInteger.valueOf(0), eval.eval("6 % 3"));
-        assertEquals(new BigDecimal("1.5"), eval.eval("7.5 % 2"));
+        assertEquals(BigInteger.valueOf(1), value(eval, "7 % 3"));
+        assertEquals(BigInteger.valueOf(0), value(eval, "6 % 3"));
+        assertEquals(new BigDecimal("1.5"), value(eval, "7.5 % 2"));
     }
 
     /**
-     * Test of division by zero throwing an ArithmeticException.
+     * Test of division by zero reported as an error.
      */
     @Test
     public void testDivisionByZero()
     {
-        assertThrows(ArithmeticException.class, () -> eval.eval("1 / 0"));
-        assertThrows(ArithmeticException.class, () -> eval.eval("1.0 / 0"));
-        assertThrows(ArithmeticException.class, () -> eval.eval("1 % 0"));
+        error(eval, "1 / 0", Evaluator.ErrorType.DIVISION_BY_ZERO);
+        error(eval, "1.0 / 0", Evaluator.ErrorType.DIVISION_BY_ZERO);
+        error(eval, "1 % 0", Evaluator.ErrorType.DIVISION_BY_ZERO);
     }
 
     /**
@@ -345,10 +380,10 @@ public class ExpEvalTest
     @Test
     public void testPower()
     {
-        assertEquals(BigInteger.valueOf(1024), eval.eval("2 ^ 10"));
-        assertEquals(BigInteger.valueOf(1), eval.eval("5 ^ 0"));
-        assertNumeric("0.125", eval.eval("2 ^ -3"));
-        assertEquals(BigInteger.valueOf(512), eval.eval("2 ^ 3 ^ 2"));
+        assertEquals(BigInteger.valueOf(1024), value(eval, "2 ^ 10"));
+        assertEquals(BigInteger.valueOf(1), value(eval, "5 ^ 0"));
+        assertNumeric("0.125", value(eval, "2 ^ -3"));
+        assertEquals(BigInteger.valueOf(512), value(eval, "2 ^ 3 ^ 2"));
     }
 
     /**
@@ -357,17 +392,17 @@ public class ExpEvalTest
     @Test
     public void testPowerFractional()
     {
-        assertNumeric("5.656854249492381", eval.eval("2 ^ 2.5"));
+        assertNumeric("5.656854249492381", value(eval, "2 ^ 2.5"));
     }
 
     /**
-     * Test of an out-of-range exponent throwing an ArithmeticException.
+     * Test of an out-of-range exponent reported as an overflow error.
      */
     @Test
     public void testPowerExponentTooLarge()
     {
-        assertThrows(ArithmeticException.class, () -> eval.eval("2 ^ 8589934592"));
-        assertThrows(ArithmeticException.class, () -> eval.eval("2 ^ 10000000000000000000"));
+        error(eval, "2 ^ 8589934592", Evaluator.ErrorType.OVERFLOW);
+        error(eval, "2 ^ 10000000000000000000", Evaluator.ErrorType.OVERFLOW);
     }
 
     /**
@@ -376,11 +411,11 @@ public class ExpEvalTest
     @Test
     public void testUnaryMinus()
     {
-        assertEquals(BigInteger.valueOf(-5), eval.eval("-5"));
-        assertEquals(BigInteger.valueOf(5), eval.eval("--5"));
-        assertEquals(BigInteger.valueOf(7), eval.eval("-(3 - 10)"));
-        assertEquals(BigInteger.valueOf(-25), eval.eval("-5 ^ 2"));
-        assertEquals(BigInteger.valueOf(25), eval.eval("(-5) ^ 2"));
+        assertEquals(BigInteger.valueOf(-5), value(eval, "-5"));
+        assertEquals(BigInteger.valueOf(5), value(eval, "--5"));
+        assertEquals(BigInteger.valueOf(7), value(eval, "-(3 - 10)"));
+        assertEquals(BigInteger.valueOf(-25), value(eval, "-5 ^ 2"));
+        assertEquals(BigInteger.valueOf(25), value(eval, "(-5) ^ 2"));
     }
 
     /**
@@ -389,8 +424,8 @@ public class ExpEvalTest
     @Test
     public void testUnaryPlus()
     {
-        assertEquals(BigInteger.valueOf(5), eval.eval("+5"));
-        assertEquals(BigInteger.valueOf(15), eval.eval("+5 + +10"));
+        assertEquals(BigInteger.valueOf(5), value(eval, "+5"));
+        assertEquals(BigInteger.valueOf(15), value(eval, "+5 + +10"));
     }
 
     // ------------------------------------------------------------------
@@ -403,7 +438,7 @@ public class ExpEvalTest
     @Test
     public void testPrecedenceMultiplicationOverAddition()
     {
-        assertEquals(BigInteger.valueOf(7), eval.eval("1 + 2 * 3"));
+        assertEquals(BigInteger.valueOf(7), value(eval, "1 + 2 * 3"));
     }
 
     /**
@@ -412,8 +447,8 @@ public class ExpEvalTest
     @Test
     public void testPrecedencePowerOverAddition()
     {
-        assertEquals(BigInteger.valueOf(5), eval.eval("1 + 2 ^ 2"));
-        assertEquals(BigInteger.valueOf(13), eval.eval("2 ^ 2 + 3 ^ 2"));
+        assertEquals(BigInteger.valueOf(5), value(eval, "1 + 2 ^ 2"));
+        assertEquals(BigInteger.valueOf(13), value(eval, "2 ^ 2 + 3 ^ 2"));
     }
 
     /**
@@ -422,8 +457,8 @@ public class ExpEvalTest
     @Test
     public void testParentheses()
     {
-        assertEquals(BigInteger.valueOf(9), eval.eval("(1 + 2) * 3"));
-        assertEquals(BigInteger.valueOf(36), eval.eval("(2 + 2 + 2) ^ 2"));
+        assertEquals(BigInteger.valueOf(9), value(eval, "(1 + 2) * 3"));
+        assertEquals(BigInteger.valueOf(36), value(eval, "(2 + 2 + 2) ^ 2"));
     }
 
     /**
@@ -432,7 +467,7 @@ public class ExpEvalTest
     @Test
     public void testNestedParentheses()
     {
-        assertEquals(BigInteger.valueOf(25), eval.eval("((1 + 2) * (3 + 2)) + 10"));
+        assertEquals(BigInteger.valueOf(25), value(eval, "((1 + 2) * (3 + 2)) + 10"));
     }
 
     // ------------------------------------------------------------------
@@ -445,8 +480,8 @@ public class ExpEvalTest
     @Test
     public void testIntegerLiterals()
     {
-        assertEquals(BigInteger.valueOf(1234567890123456789L), eval.eval("1234567890123456789"));
-        assertTrue(eval.eval("42") instanceof BigInteger);
+        assertEquals(BigInteger.valueOf(1234567890123456789L), value(eval, "1234567890123456789"));
+        assertTrue(value(eval, "42") instanceof BigInteger);
     }
 
     /**
@@ -455,9 +490,9 @@ public class ExpEvalTest
     @Test
     public void testDecimalLiterals()
     {
-        assertEquals(new BigDecimal("1.5"), eval.eval("1.5"));
-        assertEquals(new BigDecimal("0.5"), eval.eval(".5"));
-        assertTrue(eval.eval("1.5") instanceof BigDecimal);
+        assertEquals(new BigDecimal("1.5"), value(eval, "1.5"));
+        assertEquals(new BigDecimal("0.5"), value(eval, ".5"));
+        assertTrue(value(eval, "1.5") instanceof BigDecimal);
     }
 
     /**
@@ -466,10 +501,10 @@ public class ExpEvalTest
     @Test
     public void testDecimalRounding()
     {
-        ExpEval instance = new ExpEval(2);
-        assertNumeric("1.13", instance.eval("0.125 + 1"));
-        assertNumeric("3.33", instance.eval("10 / 3"));
-        assertNumeric("0.33", new ExpEval(2).eval("1 / 3"));
+        ExpressionEvaluator instance = new ExpressionEvaluator(2);
+        assertNumeric("1.13", value(instance, "0.125 + 1"));
+        assertNumeric("3.33", value(instance, "10 / 3"));
+        assertNumeric("0.33", value(new ExpressionEvaluator(2), "1 / 3"));
     }
 
     /**
@@ -480,8 +515,8 @@ public class ExpEvalTest
     {
         String big = "123456789012345678901234567890";
         assertEquals(new BigInteger(big).multiply(BigInteger.valueOf(2)),
-                eval.eval(big + " + " + big));
-        assertEquals(new BigInteger(big).pow(2), eval.eval(big + " ^ 2"));
+                value(eval, big + " + " + big));
+        assertEquals(new BigInteger(big).pow(2), value(eval, big + " ^ 2"));
     }
 
     // ------------------------------------------------------------------
@@ -494,8 +529,8 @@ public class ExpEvalTest
     @Test
     public void testStringLiteral()
     {
-        assertEquals("hello", eval.eval("\"hello\""));
-        assertEquals("", eval.eval("\"\""));
+        assertEquals("hello", value(eval, "\"hello\""));
+        assertEquals("", value(eval, "\"\""));
     }
 
     /**
@@ -504,10 +539,10 @@ public class ExpEvalTest
     @Test
     public void testStringEscapes()
     {
-        assertEquals("a\"b", eval.eval("\"a\\\"b\""));
-        assertEquals("a\\b", eval.eval("\"a\\\\b\""));
-        assertEquals("a\nb", eval.eval("\"a\\nb\""));
-        assertEquals("a\tb", eval.eval("\"a\\tb\""));
+        assertEquals("a\"b", value(eval, "\"a\\\"b\""));
+        assertEquals("a\\b", value(eval, "\"a\\\\b\""));
+        assertEquals("a\nb", value(eval, "\"a\\nb\""));
+        assertEquals("a\tb", value(eval, "\"a\\tb\""));
     }
 
     /**
@@ -516,11 +551,11 @@ public class ExpEvalTest
     @Test
     public void testConcatenation()
     {
-        assertEquals("ab", eval.eval("\"a\" + \"b\""));
-        assertEquals("a1", eval.eval("\"a\" + 1"));
-        assertEquals("1a", eval.eval("1 + \"a\""));
-        assertEquals("a1b", eval.eval("\"a\" + 1 + \"b\""));
-        assertEquals("33", eval.eval("1 + 2 + \"3\""));
+        assertEquals("ab", value(eval, "\"a\" + \"b\""));
+        assertEquals("a1", value(eval, "\"a\" + 1"));
+        assertEquals("1a", value(eval, "1 + \"a\""));
+        assertEquals("a1b", value(eval, "\"a\" + 1 + \"b\""));
+        assertEquals("33", value(eval, "1 + 2 + \"3\""));
     }
 
     /**
@@ -529,12 +564,12 @@ public class ExpEvalTest
     @Test
     public void testArithmeticOnStrings()
     {
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("\"a\" - \"b\""));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("\"a\" * 2"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("\"a\" / 2"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("\"a\" % 2"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("\"a\" ^ 2"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("-\"a\""));
+        error(eval, "\"a\" - \"b\"", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "\"a\" * 2", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "\"a\" / 2", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "\"a\" % 2", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "\"a\" ^ 2", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "-\"a\"", Evaluator.ErrorType.UNEXPECTED_TOKEN);
     }
 
     // ------------------------------------------------------------------
@@ -547,9 +582,9 @@ public class ExpEvalTest
     @Test
     public void testFunctionSingleArg() throws Exception
     {
-        eval.addFunction("poyito", ExpEvalTest.class.getMethod("poyito", double.class));
-        assertEquals("poyito=2.5", eval.eval("poyito(2.5)"));
-        assertEquals("poyito=5.0", eval.eval("poyito(5)"));
+        eval.addFunction("poyito", ExpressionEvaluatorTest.class.getMethod("poyito", double.class));
+        assertEquals("poyito=2.5", value(eval, "poyito(2.5)"));
+        assertEquals("poyito=5.0", value(eval, "poyito(5)"));
     }
 
     /**
@@ -559,9 +594,9 @@ public class ExpEvalTest
     public void testFunctionSqrt()
     {
         addMath();
-        assertNumeric("3", eval.eval("sqrt(9)"));
-        assertNumeric("2.23606797749979", eval.eval("sqrt(5)"));
-        assertNumeric("2", eval.eval("sqrt(4)"));
+        assertNumeric("3", value(eval, "sqrt(9)"));
+        assertNumeric("2.23606797749979", value(eval, "sqrt(5)"));
+        assertNumeric("2", value(eval, "sqrt(4)"));
     }
 
     /**
@@ -571,8 +606,8 @@ public class ExpEvalTest
     public void testFunctionTwoArgs()
     {
         addMath();
-        assertNumeric("5", eval.eval("max(2, 5)"));
-        assertNumeric("-1", eval.eval("max(-1, -5)"));
+        assertNumeric("5", value(eval, "max(2, 5)"));
+        assertNumeric("-1", value(eval, "max(-1, -5)"));
     }
 
     /**
@@ -581,9 +616,8 @@ public class ExpEvalTest
     @Test
     public void testUnknownFunction()
     {
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
-                () -> eval.eval("nobody(1)"));
-        assertTrue(ex.getMessage().contains("nobody"));
+        Evaluator.Result result = error(eval, "nobody(1)", Evaluator.ErrorType.UNDEFINED_VARIABLE);
+        assertTrue(result.message.contains("nobody"), result.message);
     }
 
     /**
@@ -593,10 +627,10 @@ public class ExpEvalTest
     public void testFunctionArgumentCount()
     {
         addMath();
-        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> eval.eval("max(1)"));
-        assertTrue(ex.getMessage().contains("2"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("max(1, 2, 3)"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("sqrt()"));
+        Evaluator.Result result = error(eval, "max(1)", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        assertTrue(result.message.contains("2"), result.message);
+        error(eval, "max(1, 2, 3)", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "sqrt()", Evaluator.ErrorType.UNEXPECTED_TOKEN);
     }
 
     /**
@@ -606,8 +640,8 @@ public class ExpEvalTest
     public void testNestedFunctions() throws Exception
     {
         addMath();
-        eval.addFunction("poyito", ExpEvalTest.class.getMethod("poyito", double.class));
-        assertEquals("poyito=2.449489742783178", eval.eval("poyito(sqrt(max(6, 6)))"));
+        eval.addFunction("poyito", ExpressionEvaluatorTest.class.getMethod("poyito", double.class));
+        assertEquals("poyito=2.449489742783178", value(eval, "poyito(sqrt(max(6, 6)))"));
     }
 
     /**
@@ -616,9 +650,9 @@ public class ExpEvalTest
     @Test
     public void testFunctionIntParameter() throws Exception
     {
-        eval.addFunction("sum", ExpEvalTest.class.getMethod("sum", int.class, int.class));
-        assertEquals(BigInteger.valueOf(7), eval.eval("sum(3, 4)"));
-        assertEquals(BigInteger.valueOf(7), eval.eval("sum(3.5, 4.5)"));
+        eval.addFunction("sum", ExpressionEvaluatorTest.class.getMethod("sum", int.class, int.class));
+        assertEquals(BigInteger.valueOf(7), value(eval, "sum(3, 4)"));
+        assertEquals(BigInteger.valueOf(7), value(eval, "sum(3.5, 4.5)"));
     }
 
     /**
@@ -627,9 +661,9 @@ public class ExpEvalTest
     @Test
     public void testFunctionBigIntegerParameter() throws Exception
     {
-        eval.addFunction("sumBig", ExpEvalTest.class.getMethod("sumBig", BigInteger.class, BigInteger.class));
-        assertEquals(BigInteger.valueOf(7), eval.eval("sumBig(3, 4)"));
-        assertEquals(BigInteger.valueOf(4), eval.eval("sumBig(2.5, 2.5)"));
+        eval.addFunction("sumBig", ExpressionEvaluatorTest.class.getMethod("sumBig", BigInteger.class, BigInteger.class));
+        assertEquals(BigInteger.valueOf(7), value(eval, "sumBig(3, 4)"));
+        assertEquals(BigInteger.valueOf(4), value(eval, "sumBig(2.5, 2.5)"));
     }
 
     /**
@@ -638,9 +672,9 @@ public class ExpEvalTest
     @Test
     public void testFunctionBigDecimalParameter() throws Exception
     {
-        eval.addFunction("sumDec", ExpEvalTest.class.getMethod("sumDec", BigDecimal.class, BigDecimal.class));
-        assertNumeric("8", eval.eval("sumDec(3.5, 4.5)"));
-        assertNumeric("9", eval.eval("sumDec(4, 5)"));
+        eval.addFunction("sumDec", ExpressionEvaluatorTest.class.getMethod("sumDec", BigDecimal.class, BigDecimal.class));
+        assertNumeric("8", value(eval, "sumDec(3.5, 4.5)"));
+        assertNumeric("9", value(eval, "sumDec(4, 5)"));
     }
 
     /**
@@ -649,8 +683,8 @@ public class ExpEvalTest
     @Test
     public void testFunctionLongParameter() throws Exception
     {
-        eval.addFunction("halfLong", ExpEvalTest.class.getMethod("halfLong", double.class));
-        assertEquals(BigInteger.valueOf(2), eval.eval("halfLong(5)"));
+        eval.addFunction("halfLong", ExpressionEvaluatorTest.class.getMethod("halfLong", double.class));
+        assertEquals(BigInteger.valueOf(2), value(eval, "halfLong(5)"));
     }
 
     /**
@@ -659,10 +693,10 @@ public class ExpEvalTest
     @Test
     public void testFunctionStringParameter() throws Exception
     {
-        eval.addFunction("repeat", ExpEvalTest.class.getMethod("repeat", String.class, int.class));
-        assertEquals("ababab", eval.eval("repeat(\"ab\", 3)"));
-        assertEquals("", eval.eval("repeat(\"\", 5)"));
-        assertEquals("ab1", eval.eval("repeat(\"ab\", 1) + 1"));
+        eval.addFunction("repeat", ExpressionEvaluatorTest.class.getMethod("repeat", String.class, int.class));
+        assertEquals("ababab", value(eval, "repeat(\"ab\", 3)"));
+        assertEquals("", value(eval, "repeat(\"\", 5)"));
+        assertEquals("ab1", value(eval, "repeat(\"ab\", 1) + 1"));
     }
 
     /**
@@ -671,9 +705,9 @@ public class ExpEvalTest
     @Test
     public void testFunctionBooleanReturn() throws Exception
     {
-        eval.addFunction("positive", ExpEvalTest.class.getMethod("positive", int.class));
-        assertEquals("true", eval.eval("positive(5)"));
-        assertEquals("false", eval.eval("positive(-5)"));
+        eval.addFunction("positive", ExpressionEvaluatorTest.class.getMethod("positive", int.class));
+        assertEquals("true", value(eval, "positive(5)"));
+        assertEquals("false", value(eval, "positive(-5)"));
     }
 
     /**
@@ -682,8 +716,8 @@ public class ExpEvalTest
     @Test
     public void testFunctionBooleanParameter() throws Exception
     {
-        eval.addFunction("positive", ExpEvalTest.class.getMethod("positive", int.class));
-        assertEquals("false", eval.eval("positive(0)"));
+        eval.addFunction("positive", ExpressionEvaluatorTest.class.getMethod("positive", int.class));
+        assertEquals("false", value(eval, "positive(0)"));
     }
 
     /**
@@ -692,8 +726,8 @@ public class ExpEvalTest
     @Test
     public void testFunctionCharacterReturn() throws Exception
     {
-        eval.addFunction("firstChar", ExpEvalTest.class.getMethod("firstChar", String.class));
-        assertEquals("h", eval.eval("firstChar(\"hello\")"));
+        eval.addFunction("firstChar", ExpressionEvaluatorTest.class.getMethod("firstChar", String.class));
+        assertEquals("h", value(eval, "firstChar(\"hello\")"));
     }
 
     /**
@@ -702,8 +736,8 @@ public class ExpEvalTest
     @Test
     public void testFunctionNoArgs() throws Exception
     {
-        eval.addFunction("noArgs", ExpEvalTest.class.getMethod("noArgs"));
-        assertEquals(new BigDecimal("3.5"), eval.eval("noArgs()"));
+        eval.addFunction("noArgs", ExpressionEvaluatorTest.class.getMethod("noArgs"));
+        assertEquals(new BigDecimal("3.5"), value(eval, "noArgs()"));
     }
 
     /**
@@ -713,8 +747,8 @@ public class ExpEvalTest
     public void testFunctionMathBuiltins()
     {
         addMath();
-        assertNumeric("6", eval.eval("max(1, 2) + max(3, 4)"));
-        assertEquals("3", eval.eval("sqrt(9) + \"\""));
+        assertNumeric("6", value(eval, "max(1, 2) + max(3, 4)"));
+        assertEquals("3", value(eval, "sqrt(9) + \"\""));
     }
 
     /**
@@ -723,7 +757,7 @@ public class ExpEvalTest
     @Test
     public void testRegisterNonStaticMethod() throws Exception
     {
-        Method m = ExpEvalTest.class.getMethod("nonStatic");
+        Method m = ExpressionEvaluatorTest.class.getMethod("nonStatic");
         assertThrows(IllegalArgumentException.class, () -> eval.addFunction("nonStatic", m));
     }
 
@@ -745,9 +779,9 @@ public class ExpEvalTest
     {
         eval.addFunction("sqrt", Math::sqrt);
         eval.addFunction("abs", (DoubleUnaryOperator) Math::abs);
-        assertNumeric("3", eval.eval("sqrt(9)"));
-        assertNumeric("2.23606797749979", eval.eval("sqrt(5)"));
-        assertNumeric("3.5", eval.eval("abs(-3.5)"));
+        assertNumeric("3", value(eval, "sqrt(9)"));
+        assertNumeric("2.23606797749979", value(eval, "sqrt(5)"));
+        assertNumeric("3.5", value(eval, "abs(-3.5)"));
     }
 
     /**
@@ -758,9 +792,9 @@ public class ExpEvalTest
     {
         eval.addFunction("max", (DoubleBinaryOperator) Math::max);
         eval.addFunction("pow", (DoubleBinaryOperator) Math::pow);
-        assertNumeric("5", eval.eval("max(2, 5)"));
-        assertNumeric("1024", eval.eval("pow(2, 10)"));
-        assertNumeric("1.4142135623730951", eval.eval("pow(2, 0.5)"));
+        assertNumeric("5", value(eval, "max(2, 5)"));
+        assertNumeric("1024", value(eval, "pow(2, 10)"));
+        assertNumeric("1.4142135623730951", value(eval, "pow(2, 0.5)"));
     }
 
     /**
@@ -770,7 +804,7 @@ public class ExpEvalTest
     public void testFunctionLongUnaryOperator()
     {
         eval.addFunction("twice", (LongUnaryOperator) v -> v * 2);
-        assertNumeric("18", eval.eval("twice(9)"));
+        assertNumeric("18", value(eval, "twice(9)"));
     }
 
     /**
@@ -780,7 +814,7 @@ public class ExpEvalTest
     public void testFunctionLongBinaryOperator()
     {
         eval.addFunction("product", (LongBinaryOperator) (a, b) -> a * b);
-        assertNumeric("21", eval.eval("product(3, 7)"));
+        assertNumeric("21", value(eval, "product(3, 7)"));
     }
 
     /**
@@ -790,9 +824,9 @@ public class ExpEvalTest
     public void testFunctionIntUnaryOperator()
     {
         eval.addFunction("sign", (IntUnaryOperator) Integer::signum);
-        assertNumeric("-1", eval.eval("sign(-7)"));
-        assertNumeric("0", eval.eval("sign(0)"));
-        assertNumeric("1", eval.eval("sign(5)"));
+        assertNumeric("-1", value(eval, "sign(-7)"));
+        assertNumeric("0", value(eval, "sign(0)"));
+        assertNumeric("1", value(eval, "sign(5)"));
     }
 
     /**
@@ -802,7 +836,7 @@ public class ExpEvalTest
     public void testFunctionIntBinaryOperator()
     {
         eval.addFunction("xor", (IntBinaryOperator) (a, b) -> a ^ b);
-        assertNumeric("6", eval.eval("xor(5, 3)"));
+        assertNumeric("6", value(eval, "xor(5, 3)"));
     }
 
     /**
@@ -812,8 +846,8 @@ public class ExpEvalTest
     public void testFunctionDoubleSupplier()
     {
         eval.addFunction("pi", (DoubleSupplier) () -> Math.PI);
-        assertNumeric("3.141592653589793", eval.eval("pi()"));
-        assertNumeric("4.141592653589793", eval.eval("pi() + 1"));
+        assertNumeric("3.141592653589793", value(eval, "pi()"));
+        assertNumeric("4.141592653589793", value(eval, "pi() + 1"));
     }
 
     /**
@@ -823,7 +857,7 @@ public class ExpEvalTest
     public void testFunctionLongSupplier()
     {
         eval.addFunction("millis", (LongSupplier) () -> 123L);
-        assertNumeric("123", eval.eval("millis()"));
+        assertNumeric("123", value(eval, "millis()"));
     }
 
     /**
@@ -833,7 +867,7 @@ public class ExpEvalTest
     public void testFunctionIntSupplier()
     {
         eval.addFunction("count", (IntSupplier) () -> 3);
-        assertNumeric("9", eval.eval("count() ^ 2"));
+        assertNumeric("9", value(eval, "count() ^ 2"));
     }
 
     /**
@@ -843,9 +877,9 @@ public class ExpEvalTest
     public void testFunctionSupplier()
     {
         eval.addFunction("answer", (Supplier<?>) () -> 42);
-        assertNumeric("42", eval.eval("answer()"));
+        assertNumeric("42", value(eval, "answer()"));
         eval.addFunction("greet", (Supplier<?>) () -> "hello");
-        assertEquals("hello", eval.eval("greet()"));
+        assertEquals("hello", value(eval, "greet()"));
     }
 
     /**
@@ -857,8 +891,8 @@ public class ExpEvalTest
         eval.addFunction("sqrt", Math::sqrt);
         eval.addFunction("max", (DoubleBinaryOperator) Math::max);
         eval.addFunction("pow", (DoubleBinaryOperator) Math::pow);
-        assertNumeric("6", eval.eval("sqrt(max(4, 9)) + pow(2, 1) + 1"));
-        assertEquals("3", eval.eval("sqrt(9) + \"\""));
+        assertNumeric("6", value(eval, "sqrt(max(4, 9)) + pow(2, 1) + 1"));
+        assertEquals("3", value(eval, "sqrt(9) + \"\""));
     }
 
     // ------------------------------------------------------------------
@@ -866,43 +900,47 @@ public class ExpEvalTest
     // ------------------------------------------------------------------
 
     /**
-     * Test of an empty expression being rejected.
+     * Test of a blank expression doing nothing without error.
      */
     @Test
     public void testEmptyExpression()
     {
-        assertThrows(IllegalArgumentException.class, () -> eval.eval(""));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("   "));
+        Evaluator.Result empty = eval.eval("");
+        assertEquals(Evaluator.ErrorType.NONE, empty.error);
+        assertNull(empty.value);
+        assertEquals(-1, empty.position);
+        assertFalse(empty.isError());
+        assertNull(eval.eval("   ").value);
         assertThrows(NullPointerException.class, () -> eval.eval(null));
     }
 
     /**
-     * Test of a malformed number being rejected.
+     * Test of a malformed number being reported.
      */
     @Test
     public void testMalformedNumber()
     {
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("1.5.2"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("123."));
+        error(eval, "1.5.2", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "123.", Evaluator.ErrorType.UNEXPECTED_TOKEN);
     }
 
     /**
-     * Test of an unexpected character being rejected.
+     * Test of an unexpected character being reported.
      */
     @Test
     public void testUnexpectedCharacter()
     {
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("1 ~ 2"));
+        error(eval, "1 ~ 2", Evaluator.ErrorType.INVALID_CHARACTER);
     }
 
     /**
-     * Test of an unterminated string being rejected.
+     * Test of an unterminated string being reported.
      */
     @Test
     public void testUnterminatedString()
     {
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("\"abc"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("\"abc\\\""));
+        error(eval, "\"abc", Evaluator.ErrorType.UNEXPECTED_TOKEN);
+        error(eval, "\"abc\\\"", Evaluator.ErrorType.UNEXPECTED_TOKEN);
     }
 
     /**
@@ -911,17 +949,17 @@ public class ExpEvalTest
     @Test
     public void testMalformedVariable()
     {
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("$"));
+        error(eval, "$", Evaluator.ErrorType.UNEXPECTED_TOKEN);
     }
 
     /**
-     * Test of an incomplete expression being rejected.
+     * Test of an incomplete expression being reported.
      */
     @Test
     public void testIncompleteExpression()
     {
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("1 +"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("(1 + 2"));
-        assertThrows(IllegalArgumentException.class, () -> eval.eval("1 + 2)"));
+        error(eval, "1 +", Evaluator.ErrorType.INCOMPLETE_EXPRESSION);
+        error(eval, "(1 + 2", Evaluator.ErrorType.UNCLOSED_PARENTHESIS);
+        error(eval, "1 + 2)", Evaluator.ErrorType.UNEXPECTED_CLOSING_PARENTHESIS);
     }
 }

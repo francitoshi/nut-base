@@ -58,15 +58,23 @@ import java.util.concurrent.atomic.AtomicLong;
  * <p>The supported operators are {@code + - * / %} and {@code ^}, with
  * parentheses and unary minus; precedence matches standard arithmetic.</p>
  *
+ * <p><b>Results</b>: {@link #eval(String)} implements {@link Evaluator}; it
+ * never throws a domain exception and returns a {@link Result} whose
+ * {@code error} field is {@link ErrorType#NONE} on success and describes the
+ * problem otherwise, including the position of the offending character when
+ * available. The {@code interpretation} and {@code modifiedVariable} fields
+ * are always {@code null}, this evaluator does not support them. A blank
+ * expression does nothing: the result has a {@code null} value and no error.</p>
+ *
  * @author franci
  */
-public class ExpEval
+public class ExpressionEvaluator implements Evaluator
 {
     /** The default number of decimals used to round results. */
     public static final int DEFAULT_DECIMALS = 16;
 
-    private static final BigDecimal INT_MAX = BigDecimal.valueOf(Integer.MAX_VALUE);
-    private static final BigDecimal INT_MIN = BigDecimal.valueOf(Integer.MIN_VALUE);
+    /** Sentinel position for an error caused by the end of the expression. */
+    private static final int EOF = Integer.MIN_VALUE;
 
     private final int decimals;
     private final Map<String, Object> variables = new ConcurrentHashMap<>();
@@ -85,21 +93,21 @@ public class ExpEval
     }
 
     /**
-     * Constructs an {@code ExpEval} using {@link #DEFAULT_DECIMALS} decimals.
+     * Constructs an {@code ExpressionEvaluator} using {@link #DEFAULT_DECIMALS} decimals.
      */
-    public ExpEval()
+    public ExpressionEvaluator()
     {
         this(DEFAULT_DECIMALS);
     }
 
     /**
-     * Constructs an {@code ExpEval} rounding the decimal results of the
+     * Constructs an {@code ExpressionEvaluator} rounding the decimal results of the
      * arithmetic operations to the given number of decimals.
      *
      * @param decimals the number of decimals for the results; must not be negative
      * @throws IllegalArgumentException if {@code decimals} is negative
      */
-    public ExpEval(int decimals)
+    public ExpressionEvaluator(int decimals)
     {
         if (decimals < 0)
         {
@@ -118,7 +126,7 @@ public class ExpEval
      * @throws NullPointerException     if {@code name} or {@code value} is {@code null}
      * @throws IllegalArgumentException if {@code value} is neither a {@link Number} nor a {@link String}
      */
-    public ExpEval addVariable(String name, Object value)
+    public ExpressionEvaluator addVariable(String name, Object value)
     {
         variables.put(Objects.requireNonNull(name, "name"), normalizeValue(value));
         return this;
@@ -132,7 +140,7 @@ public class ExpEval
      * @throws NullPointerException     if {@code variables} is {@code null}
      * @throws IllegalArgumentException if any value is neither a {@link Number} nor a {@link String}
      */
-    public ExpEval addVariables(Map<String, ?> variables)
+    public ExpressionEvaluator addVariables(Map<String, ?> variables)
     {
         Objects.requireNonNull(variables, "variables");
         for (Map.Entry<String, ?> entry : variables.entrySet())
@@ -153,7 +161,7 @@ public class ExpEval
      * @throws NullPointerException     if {@code name} or {@code method} is {@code null}
      * @throws IllegalArgumentException if the method is not static or has more than 8 parameters
      */
-    public ExpEval addFunction(String name, Method method)
+    public ExpressionEvaluator addFunction(String name, Method method)
     {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(method, "method");
@@ -184,7 +192,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, DoubleUnaryOperator fn)
+    public ExpressionEvaluator addFunction(String name, DoubleUnaryOperator fn)
     {
         return addFunction(name, fn, doubleUnaryOperator);
     }
@@ -196,7 +204,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, DoubleBinaryOperator fn)
+    public ExpressionEvaluator addFunction(String name, DoubleBinaryOperator fn)
     {
         return addFunction(name, fn, doubleBinaryOperator);
     }
@@ -208,7 +216,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, LongUnaryOperator fn)
+    public ExpressionEvaluator addFunction(String name, LongUnaryOperator fn)
     {
         return addFunction(name, fn, longUnaryOperator);
     }
@@ -220,7 +228,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, LongBinaryOperator fn)
+    public ExpressionEvaluator addFunction(String name, LongBinaryOperator fn)
     {
         return addFunction(name, fn, longBinaryOperator);
     }
@@ -232,7 +240,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, IntUnaryOperator fn)
+    public ExpressionEvaluator addFunction(String name, IntUnaryOperator fn)
     {
         return addFunction(name, fn, intUnaryOperator);
     }
@@ -244,7 +252,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, IntBinaryOperator fn)
+    public ExpressionEvaluator addFunction(String name, IntBinaryOperator fn)
     {
         return addFunction(name, fn, intBinaryOperator);
     }
@@ -256,7 +264,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, DoubleSupplier fn)
+    public ExpressionEvaluator addFunction(String name, DoubleSupplier fn)
     {
         return addFunction(name, fn, doubleSupplier);
     }
@@ -268,7 +276,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, LongSupplier fn)
+    public ExpressionEvaluator addFunction(String name, LongSupplier fn)
     {
         return addFunction(name, fn, longSupplier);
     }
@@ -280,7 +288,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, IntSupplier fn)
+    public ExpressionEvaluator addFunction(String name, IntSupplier fn)
     {
         return addFunction(name, fn, intSupplier);
     }
@@ -292,7 +300,7 @@ public class ExpEval
      * @param fn   the functional interface implementing the function
      * @return this evaluator, for chaining
      */
-    public ExpEval addFunction(String name, Supplier<?> fn)
+    public ExpressionEvaluator addFunction(String name, Supplier<?> fn)
     {
         return addFunction(name, fn, supplier);
     }
@@ -322,7 +330,7 @@ public class ExpEval
         }
     }
 
-    private ExpEval addFunction(String name, Object fn, Method method)
+    private ExpressionEvaluator addFunction(String name, Object fn, Method method)
     {
         Objects.requireNonNull(name, "name");
         Objects.requireNonNull(fn, "fn");
@@ -335,30 +343,61 @@ public class ExpEval
     }
 
     /**
-     * Evaluates the given expression and returns its value: a {@link BigInteger},
-     * a {@link BigDecimal} or a {@link String}.
+     * Evaluates the given expression and returns a {@link Result} with its
+     * value: a {@link BigInteger}, a {@link BigDecimal} or a {@link String}.
+     * A blank expression does nothing: the result has a {@code null} value
+     * and no error. Errors are reported in the result with the error type,
+     * the message and the position of the offending character when
+     * available, they are never thrown.
      *
      * @param expression the expression to evaluate
      * @return the result of the expression
-     * @throws NullPointerException             if {@code expression} is {@code null}
-     * @throws IllegalArgumentException         if the expression is malformed, references an
-     *                                          unknown variable or function, or a function argument
-     *                                          cannot be converted
-     * @throws ArithmeticException              on division by zero or an out-of-range exponent
+     * @throws NullPointerException if {@code expression} is {@code null}
      */
-    public Object eval(String expression)
+    @Override
+    public Result eval(String expression)
     {
         Objects.requireNonNull(expression, "expression");
+        try
+        {
+            Object value = evaluate(expression);
+            return new Result(value, null, null, ErrorType.NONE, null, -1);
+        }
+        catch (EvalException ex)
+        {
+            int position = ex.position == EOF ? expression.length() : ex.position;
+            return new Result(null, null, null, ex.type, ex.getMessage(), position);
+        }
+        catch (ArithmeticException ex)
+        {
+            EvalException mapped = arithmetic(ex, -1);
+            return new Result(null, null, null, mapped.type, mapped.getMessage(), mapped.position);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            return new Result(null, null, null, typeFromMessage(String.valueOf(ex.getMessage())),
+                    ex.getMessage(), -1);
+        }
+    }
+
+    private Object evaluate(String expression)
+    {
         List<Token> tokens = tokenize(expression);
         if (tokens.isEmpty())
         {
-            throw new IllegalArgumentException("empty expression");
+            return null;
         }
         int[] idx = { 0 };
         Object value = parseAdditive(tokens, idx);
         if (idx[0] != tokens.size())
         {
-            throw new IllegalArgumentException("unexpected token: " + tokens.get(idx[0]));
+            Token token = tokens.get(idx[0]);
+            if (token.type == TokenType.RPAREN)
+            {
+                throw new EvalException(ErrorType.UNEXPECTED_CLOSING_PARENTHESIS,
+                        "unexpected \")\"", token.start);
+            }
+            throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "unexpected token: " + token, token.start);
         }
         return value;
     }
@@ -373,11 +412,13 @@ public class ExpEval
     {
         final TokenType type;
         final String text;
+        final int start;
 
-        Token(TokenType type, String text)
+        Token(TokenType type, String text, int start)
         {
             this.type = type;
             this.text = text;
+            this.start = start;
         }
 
         @Override
@@ -404,7 +445,7 @@ public class ExpEval
             {
                 int[] next = { i + 1 };
                 String value = readStringLiteral(expression, next);
-                tokens.add(new Token(TokenType.STRING, value));
+                tokens.add(new Token(TokenType.STRING, value, i));
                 i = next[0];
                 continue;
             }
@@ -424,9 +465,9 @@ public class ExpEval
                 String text = expression.substring(start, i);
                 if (text.endsWith("."))
                 {
-                    throw new IllegalArgumentException("malformed number: " + text);
+                    throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "malformed number: " + text, start);
                 }
-                tokens.add(new Token(TokenType.NUMBER, text));
+                tokens.add(new Token(TokenType.NUMBER, text, start));
                 continue;
             }
             if (c == '$')
@@ -439,9 +480,9 @@ public class ExpEval
                 }
                 if (start == i)
                 {
-                    throw new IllegalArgumentException("malformed variable name");
+                    throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "malformed variable name", start);
                 }
-                tokens.add(new Token(TokenType.VARIABLE, expression.substring(start, i)));
+                tokens.add(new Token(TokenType.VARIABLE, expression.substring(start, i), start - 1));
                 continue;
             }
             if (isIdentStart(c))
@@ -451,21 +492,23 @@ public class ExpEval
                 {
                     i++;
                 }
-                tokens.add(new Token(TokenType.IDENT, expression.substring(start, i)));
+                tokens.add(new Token(TokenType.IDENT, expression.substring(start, i), start));
                 continue;
             }
             if ("+-*/%^".indexOf(c) >= 0)
             {
-                tokens.add(new Token(TokenType.OP, String.valueOf(c)));
+                tokens.add(new Token(TokenType.OP, String.valueOf(c), i));
                 i++;
                 continue;
             }
             switch (c)
             {
-                case '(': tokens.add(new Token(TokenType.LPAREN, null)); i++; break;
-                case ')': tokens.add(new Token(TokenType.RPAREN, null)); i++; break;
-                case ',': tokens.add(new Token(TokenType.COMMA, null)); i++; break;
-                default: throw new IllegalArgumentException("unexpected character: " + c);
+                case '(': tokens.add(new Token(TokenType.LPAREN, null, i)); i++; break;
+                case ')': tokens.add(new Token(TokenType.RPAREN, null, i)); i++; break;
+                case ',': tokens.add(new Token(TokenType.COMMA, null, i)); i++; break;
+                default:
+                    throw new EvalException(ErrorType.INVALID_CHARACTER,
+                            "unexpected character: " + c, i);
             }
         }
         return tokens;
@@ -541,7 +584,14 @@ public class ExpEval
             else if ("-".equals(token.text))
             {
                 idx[0]++;
-                result = sub(result, parseMultiplicative(tokens, idx));
+                try
+                {
+                    result = sub(result, parseMultiplicative(tokens, idx));
+                }
+                catch (IllegalArgumentException ex)
+                {
+                    throw new EvalException(ErrorType.UNEXPECTED_TOKEN, ex.getMessage(), token.start);
+                }
             }
             else
             {
@@ -564,17 +614,46 @@ public class ExpEval
             if ("*".equals(token.text))
             {
                 idx[0]++;
-                result = mul(result, parseUnary(tokens, idx));
+                try
+                {
+                    result = mul(result, parseUnary(tokens, idx));
+                }
+                catch (IllegalArgumentException ex)
+                {
+                    throw new EvalException(ErrorType.UNEXPECTED_TOKEN, ex.getMessage(), token.start);
+                }
             }
             else if ("/".equals(token.text))
             {
                 idx[0]++;
-                result = div(result, parseUnary(tokens, idx));
+                try
+                {
+                    result = div(result, parseUnary(tokens, idx));
+                }
+                catch (IllegalArgumentException ex)
+                {
+                    throw new EvalException(ErrorType.UNEXPECTED_TOKEN, ex.getMessage(), token.start);
+                }
+                catch (ArithmeticException ex)
+                {
+                    throw arithmetic(ex, token.start);
+                }
             }
             else if ("%".equals(token.text))
             {
                 idx[0]++;
-                result = mod(result, parseUnary(tokens, idx));
+                try
+                {
+                    result = mod(result, parseUnary(tokens, idx));
+                }
+                catch (IllegalArgumentException ex)
+                {
+                    throw new EvalException(ErrorType.UNEXPECTED_TOKEN, ex.getMessage(), token.start);
+                }
+                catch (ArithmeticException ex)
+                {
+                    throw arithmetic(ex, token.start);
+                }
             }
             else
             {
@@ -588,11 +667,19 @@ public class ExpEval
     {
         if (idx[0] < tokens.size() && tokens.get(idx[0]).type == TokenType.OP)
         {
-            String op = tokens.get(idx[0]).text;
+            Token token = tokens.get(idx[0]);
+            String op = token.text;
             if ("-".equals(op))
             {
                 idx[0]++;
-                return negate(parseUnary(tokens, idx));
+                try
+                {
+                    return negate(parseUnary(tokens, idx));
+                }
+                catch (IllegalArgumentException ex)
+                {
+                    throw new EvalException(ErrorType.UNEXPECTED_TOKEN, ex.getMessage(), token.start);
+                }
             }
             if ("+".equals(op))
             {
@@ -609,8 +696,20 @@ public class ExpEval
         if (idx[0] < tokens.size() && tokens.get(idx[0]).type == TokenType.OP
                 && "^".equals(tokens.get(idx[0]).text))
         {
+            Token token = tokens.get(idx[0]);
             idx[0]++;
-            return pow(base, parseUnary(tokens, idx));
+            try
+            {
+                return pow(base, parseUnary(tokens, idx));
+            }
+            catch (IllegalArgumentException ex)
+            {
+                throw new EvalException(ErrorType.UNEXPECTED_TOKEN, ex.getMessage(), token.start);
+            }
+            catch (ArithmeticException ex)
+            {
+                throw arithmetic(ex, token.start);
+            }
         }
         return base;
     }
@@ -619,7 +718,7 @@ public class ExpEval
     {
         if (idx[0] >= tokens.size())
         {
-            throw new IllegalArgumentException("unexpected end of expression");
+            throw new EvalException(ErrorType.INCOMPLETE_EXPRESSION, "unexpected end of expression", EOF);
         }
         Token token = tokens.get(idx[0]);
         switch (token.type)
@@ -635,7 +734,8 @@ public class ExpEval
                 Object value = variables.get(token.text);
                 if (value == null)
                 {
-                    throw new IllegalArgumentException("unknown variable: $" + token.text);
+                    throw new EvalException(ErrorType.UNDEFINED_VARIABLE,
+                            "unknown variable: $" + token.text, token.start);
                 }
                 return value;
             case IDENT:
@@ -654,23 +754,33 @@ public class ExpEval
                     }
                 }
                 expect(TokenType.RPAREN, tokens, idx);
-                return callFunction(name, args);
+                return callFunction(name, args, token.start);
             }
             case LPAREN:
                 idx[0]++;
                 Object result = parseAdditive(tokens, idx);
                 expect(TokenType.RPAREN, tokens, idx);
                 return result;
+            case RPAREN:
+                throw new EvalException(ErrorType.UNEXPECTED_CLOSING_PARENTHESIS,
+                        "unexpected \")\"", token.start);
             default:
-                throw new IllegalArgumentException("unexpected token: " + token);
+                throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "unexpected token: " + token, token.start);
         }
     }
 
     private static void expect(TokenType type, List<Token> tokens, int[] idx)
     {
-        if (idx[0] >= tokens.size() || tokens.get(idx[0]).type != type)
+        if (idx[0] >= tokens.size())
         {
-            throw new IllegalArgumentException("expected " + type);
+            throw new EvalException(ErrorType.UNCLOSED_PARENTHESIS, "missing " + type, EOF);
+        }
+        Token token = tokens.get(idx[0]);
+        if (token.type != type)
+        {
+            ErrorType error = type == TokenType.RPAREN
+                    ? ErrorType.UNCLOSED_PARENTHESIS : ErrorType.UNEXPECTED_TOKEN;
+            throw new EvalException(error, "expected " + type + " but found " + token, token.start);
         }
         idx[0]++;
     }
@@ -684,25 +794,33 @@ public class ExpEval
         return new BigDecimal(text);
     }
 
-    private Object callFunction(String name, List<Object> args)
+    private Object callFunction(String name, List<Object> args, int position)
     {
         FunctionEntry entry = functions.get(name);
         if (entry == null)
         {
-            throw new IllegalArgumentException("unknown function: " + name);
+            throw new EvalException(ErrorType.UNDEFINED_VARIABLE, "unknown function: " + name, position);
         }
         Method method = entry.method;
         int declared = method.getParameterCount();
         if (declared != args.size())
         {
-            throw new IllegalArgumentException("function " + name + " expects "
-                    + declared + " argument(s), but got " + args.size());
+            throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "function " + name + " expects "
+                    + declared + " argument(s), but got " + args.size(), position);
         }
         Object[] converted = new Object[args.size()];
         Class<?>[] types = method.getParameterTypes();
         for (int i = 0; i < args.size(); i++)
         {
-            converted[i] = convertArg(args.get(i), types[i]);
+            try
+            {
+                converted[i] = convertArg(args.get(i), types[i]);
+            }
+            catch (RuntimeException ex)
+            {
+                throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "cannot convert argument "
+                        + (i + 1) + " of " + name + ": " + ex.getMessage(), position);
+            }
         }
         Object result;
         try
@@ -711,22 +829,19 @@ public class ExpEval
         }
         catch (IllegalAccessException ex)
         {
-            throw new IllegalArgumentException("cannot access function " + name, ex);
+            throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "cannot access function " + name, position);
         }
         catch (InvocationTargetException ex)
         {
             Throwable cause = ex.getCause();
-            if (cause instanceof RuntimeException)
+            if (cause instanceof ArithmeticException)
             {
-                throw (RuntimeException) cause;
+                throw arithmetic((ArithmeticException) cause, position);
             }
-            if (cause instanceof Error)
-            {
-                throw (Error) cause;
-            }
-            throw new IllegalArgumentException("function " + name + " threw an exception", cause);
+            throw new EvalException(ErrorType.UNEXPECTED_TOKEN,
+                    "function " + name + " failed: " + cause, position);
         }
-        return normalizeResult(result);
+        return normalizeResult(result, name, position);
     }
 
     // ------------------------------------------------------------------
@@ -753,11 +868,11 @@ public class ExpEval
                 + value.getClass().getName());
     }
 
-    private Object normalizeResult(Object result)
+    private Object normalizeResult(Object result, String name, int position)
     {
         if (result == null)
         {
-            throw new IllegalArgumentException("function returned null");
+            throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "function " + name + " returned null", position);
         }
         if (result instanceof String)
         {
@@ -784,8 +899,8 @@ public class ExpEval
         {
             return result.toString();
         }
-        throw new IllegalArgumentException("unsupported function return type: "
-                + result.getClass().getName());
+        throw new EvalException(ErrorType.UNEXPECTED_TOKEN, "unsupported function return type of "
+                + name + ": " + result.getClass().getName(), position);
     }
 
     private static boolean isIntegral(Object value)
@@ -1090,6 +1205,9 @@ public class ExpEval
         return round(BigDecimal.valueOf(result));
     }
 
+    private static final BigDecimal INT_MAX = BigDecimal.valueOf(Integer.MAX_VALUE);
+    private static final BigDecimal INT_MIN = BigDecimal.valueOf(Integer.MIN_VALUE);
+
     private BigDecimal div(BigDecimal a, BigDecimal b)
     {
         if (b.signum() == 0)
@@ -1097,5 +1215,55 @@ public class ExpEval
             throw new ArithmeticException("division by zero");
         }
         return round(a.divide(b, decimals, RoundingMode.HALF_UP));
+    }
+
+    // ------------------------------------------------------------------
+    // helpers
+    // ------------------------------------------------------------------
+
+    private static EvalException arithmetic(ArithmeticException ex, int position)
+    {
+        String message = String.valueOf(ex.getMessage());
+        ErrorType type = message.contains("division by zero")
+                ? ErrorType.DIVISION_BY_ZERO : ErrorType.OVERFLOW;
+        return new EvalException(type, message, position);
+    }
+
+    private static ErrorType typeFromMessage(String message)
+    {
+        if (message.startsWith("unknown variable") || message.startsWith("unknown function"))
+        {
+            return ErrorType.UNDEFINED_VARIABLE;
+        }
+        if (message.startsWith("unexpected character"))
+        {
+            return ErrorType.INVALID_CHARACTER;
+        }
+        if (message.startsWith("expected "))
+        {
+            return ErrorType.UNCLOSED_PARENTHESIS;
+        }
+        if (message.startsWith("unexpected end") || message.startsWith("empty expression"))
+        {
+            return ErrorType.INCOMPLETE_EXPRESSION;
+        }
+        if (message.contains("division by zero"))
+        {
+            return ErrorType.DIVISION_BY_ZERO;
+        }
+        return ErrorType.UNEXPECTED_TOKEN;
+    }
+
+    private static final class EvalException extends RuntimeException
+    {
+        final ErrorType type;
+        final int position;
+
+        EvalException(ErrorType type, String message, int position)
+        {
+            super(message);
+            this.type = type;
+            this.position = position;
+        }
     }
 }
