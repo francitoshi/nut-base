@@ -47,7 +47,12 @@ public final class CloseableConflatedChannel<E> extends ConflatedChannel<E> impl
         {
             handleInterruptedException(ex);
             closeIfCloseable();
-            return;
+            // The value was not stored: like the closeable unbuffered and
+            // buffered engines, the put must fail loudly instead of returning
+            // as if it had delivered it (the return type is void, so a silent
+            // return is indistinguishable from a delivered put for the
+            // caller).
+            throw new IllegalStateException("closed");
         }
         try
         {

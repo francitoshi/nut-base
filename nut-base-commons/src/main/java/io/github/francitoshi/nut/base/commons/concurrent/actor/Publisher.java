@@ -43,6 +43,12 @@ public class Publisher<T> implements Consumer<T>, AutoCloseable
 
     /**
      * Delivers an event to all current subscribers of the publisher's tag.
+     * <p>
+     * The closed check is not atomic with the delivery: a publish concurrent
+     * with {@link #close()} may still deliver once. This is benign — the
+     * delivery is the effect the close is about to forbid, never a partial
+     * one — but callers must not rely on {@code close()} rejecting an
+     * in-flight {@code accept(Object)}.
      *
      * @param event the event to deliver.
      * @throws IllegalStateException if this publisher is closed.

@@ -42,10 +42,14 @@ public abstract class SynchronousActor<M> extends Actor<M>
         {
             throw new IllegalStateException("closed");
         }
-        countProcessed();
         try
         {
             receive(message);
+            // counted only after the message really was processed: a failed
+            // receive must not advance the hub-wide processed counter, or the
+            // quiescence detection of shutdown(true) would mistake failed
+            // messages for in-flight work
+            countProcessed();
         }
         catch (Exception ex)
         {

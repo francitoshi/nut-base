@@ -8,8 +8,13 @@ package io.github.francitoshi.nut.base.commons.concurrent.actor;
 import io.github.francitoshi.nut.base.commons.concurrent.Threads;
 import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import io.github.francitoshi.nut.base.commons.lang.Exceptions;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.Set;
@@ -110,6 +115,126 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     /** Guards the deferred-shutdown handshake between {@link #shutdown(boolean)}
      *  and {@link #unregisterActor(Actor)}. */
     private final Object shutdownLock = new Object();
+
+    /**
+     * Link graph between the hub's stages, populated by
+     * {@link LinkableActor#linkTo} and {@link FanOutActor#addTarget}: source
+     * Actor → linked downstream consumers (wrapper facades or terminal
+     * actors). It lets the cascading close of {@link #shutdown(boolean)
+     * shutdown(true)} order the stages upstream-first regardless of the
+     * construction order of the chain (e.g. the documented tail-first pattern
+     * of creating the sink before the pipe).
+     */
+    private final Map<Consumer<?>, CopyOnWriteArrayList<Consumer<?>>> linkGraph = new ConcurrentHashMap<>();
+
+    /**
+     * Registers a chain edge (source stage → downstream consumer). Only
+     * framework stages are tracked ({@link Actor} and wrapper
+     * {@link Linkable}s); links to plain consumers do not participate in the
+     * cascade ordering.
+     */
+    void registerLink(Consumer<?> source, Consumer<?> target)
+    {
+        if (target instanceof Linkable)
+        {
+            linkGraph.computeIfAbsent(source, k -> new CopyOnWriteArrayList<>()).addIfAbsent(target);
+        }
+    }
+
+    /**
+     * Resolves a linked consumer to the registered {@link Actor} behind it, or
+     * {@code null} when it is not a stage of this hub's current cascade.
+     */
+    private Actor<?> resolveToRegisteredActor(Consumer<?> target, Set<Consumer<?>> nodes)
+    {
+        if (target instanceof Actor)
+        {
+            return nodes.contains(target) ? (Actor<?>) target : null;
+        }
+        if (target instanceof LinkableActor)
+        {
+            return resolveRegistered(((LinkableActor<?, ?>) target).inner, nodes);
+        }
+        if (target instanceof FanOutActor)
+        {
+            return resolveRegistered(((FanOutActor<?>) target).inner, nodes);
+        }
+        return null;
+    }
+
+    private Actor<?> resolveRegistered(Actor<?> candidate, Set<Consumer<?>> nodes)
+    {
+        return candidate != null && nodes.contains(candidate) ? candidate : null;
+    }
+
+    /**
+     * Orders the stages upstream-first for the cascading close: a stage is
+     * only closed after every stage that forwards to it has terminated, so an
+     * in-flight message always lands on a still-open downstream stage. Edges
+     * come from {@link #linkGraph}; stages without edges (and members of a
+     * cycle, which the framework does not build) keep registration order.
+     */
+    private List<Actor<?>> cascadeOrder(Collection<Actor<?>> nodes)
+    {
+        Set<Consumer<?>> nodeSet = new HashSet<>(nodes);
+        Map<Consumer<?>, List<Consumer<?>>> edges = new HashMap<>();
+        Map<Consumer<?>, Integer> incoming = new HashMap<>();
+        for (Actor<?> node : nodes)
+        {
+            List<Consumer<?>> targets = new ArrayList<>();
+            for (Consumer<?> linked : linkGraph.getOrDefault(node, new CopyOnWriteArrayList<>()))
+            {
+                Actor<?> resolved = resolveToRegisteredActor(linked, nodeSet);
+                if (resolved != null)
+                {
+                    targets.add(resolved);
+                }
+            }
+            edges.put(node, targets);
+            incoming.putIfAbsent(node, 0);
+        }
+        for (List<Consumer<?>> targets : edges.values())
+        {
+            for (Consumer<?> target : targets)
+            {
+                incoming.merge(target, 1, Integer::sum);
+            }
+        }
+        ArrayDeque<Consumer<?>> ready = new ArrayDeque<>();
+        for (Map.Entry<Consumer<?>, Integer> entry : incoming.entrySet())
+        {
+            if (entry.getValue() == 0)
+            {
+                ready.add(entry.getKey());
+            }
+        }
+        List<Actor<?>> order = new ArrayList<>();
+        Set<Consumer<?>> ordered = new HashSet<>();
+        while (!ready.isEmpty())
+        {
+            Consumer<?> node = ready.poll();
+            if (!ordered.add(node))
+            {
+                continue;
+            }
+            order.add((Actor<?>) node);
+            for (Consumer<?> target : edges.get(node))
+            {
+                if (incoming.merge(target, -1, Integer::sum) == 0)
+                {
+                    ready.add(target);
+                }
+            }
+        }
+        for (Actor<?> node : nodes)
+        {
+            if (!ordered.contains(node))
+            {
+                order.add(node);
+            }
+        }
+        return order;
+    }
 
     /**
      * {@code true} once {@link #shutdown(boolean)} has been called with
@@ -446,6 +571,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
                 asyncActorCount.decrementAndGet();
             }
             threadDemand.addAndGet(-actor.threadDemand());
+            linkGraph.remove(actor);
             adjustPoolToActors();
             maybeShutdownPool();
         }
@@ -1145,31 +1271,41 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     // Static utility methods for chain-level lifecycle management
     // -------------------------------------------------------------------------
 
+    /**
+     * Iterative depth-first wait over the chain, so an arbitrarily deep chain
+     * cannot overflow the stack (the recursive version threw a
+     * {@code StackOverflowError} on chains of a few thousand stages). The
+     * visited set keeps cycles safe; the wait-per-stage semantics are the same
+     * as the recursive version.
+     */
     private static void waitForIdle(Set<Consumer<?>> set, Consumer<?> stage)
     {
-        if(set.contains(stage))
+        ArrayDeque<Consumer<?>> stack = new ArrayDeque<>();
+        stack.push(stage);
+        while (!stack.isEmpty())
         {
-            return;
-        }
-        
-        set.add(stage);
-        
-        if (stage instanceof Actor)
-        {
-            Actor<?> actor = (Actor<?>) stage;
-            actor.waitForIdle();
-            for (Consumer<?> target : actor.getLinkedTargets())
+            Consumer<?> current = stack.pop();
+            if (!set.add(current))
             {
-                waitForIdle(set, target);
+                continue;
             }
-        }
-        else if (stage instanceof Linkable)
-        {
-            Linkable link = (Linkable) stage;
-            link.waitForIdle();
-            for (Consumer<?> target : link.getLinkedTargets())
+            if (current instanceof Actor)
             {
-                waitForIdle(set, target);
+                Actor<?> actor = (Actor<?>) current;
+                actor.waitForIdle();
+                for (Consumer<?> target : actor.getLinkedTargets())
+                {
+                    stack.push(target);
+                }
+            }
+            else if (current instanceof Linkable)
+            {
+                Linkable link = (Linkable) current;
+                link.waitForIdle();
+                for (Consumer<?> target : link.getLinkedTargets())
+                {
+                    stack.push(target);
+                }
             }
         }
     }
@@ -1289,15 +1425,16 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
             // and forwards it downstream while the downstream stages are
             // still open, and only then terminates. Work submitted after a
             // stage has terminated is rejected loudly by its accept(). The
-            // registration order is the creation order, so chains built
-            // head-first (the common construction pattern) are closed
-            // upstream-first; the outer loop picks up stages registered
-            // while the cascade was running.
+            // order is derived from the registered link graph (upstream
+            // first), so it is correct for every construction order of the
+            // chain, including the documented tail-first pattern of creating
+            // the sink before the pipe. The outer loop picks up stages
+            // registered while the cascade was running.
             boolean again = true;
             while (again)
             {
                 again = false;
-                for (Actor<?> actor : actors)
+                for (Actor<?> actor : cascadeOrder(new ArrayList<>(actors)))
                 {
                     if (actor.isTerminated())
                     {
@@ -1362,31 +1499,35 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         }
     }
     
+    /** Iterative depth-first wait, same shape as {@link #waitForIdle(Set, Consumer)}. */
     private static void awaitTerminationUntilNanos(Set<Consumer<?>> set, Consumer<?> stage, long nanos)
     {
-        if(set.contains(stage))
+        ArrayDeque<Consumer<?>> stack = new ArrayDeque<>();
+        stack.push(stage);
+        while (!stack.isEmpty())
         {
-            return;
-        }
-        
-        set.add(stage);
-        
-        if (stage instanceof Actor)
-        {
-            Actor<?> actor = (Actor<?>) stage;
-            actor.awaitTerminationUntilNanos(nanos);
-            for (Consumer<?> target : actor.getLinkedTargets())
+            Consumer<?> current = stack.pop();
+            if (!set.add(current))
             {
-                awaitTerminationUntilNanos(set, target, nanos);
+                continue;
             }
-        }
-        else if (stage instanceof Linkable)
-        {
-            Linkable link = (Linkable) stage;
-            link.awaitTerminationUntilNanos(nanos);
-            for (Consumer<?> target : link.getLinkedTargets())
+            if (current instanceof Actor)
             {
-                awaitTerminationUntilNanos(set, target, nanos);
+                Actor<?> actor = (Actor<?>) current;
+                actor.awaitTerminationUntilNanos(nanos);
+                for (Consumer<?> target : actor.getLinkedTargets())
+                {
+                    stack.push(target);
+                }
+            }
+            else if (current instanceof Linkable)
+            {
+                Linkable link = (Linkable) current;
+                link.awaitTerminationUntilNanos(nanos);
+                for (Consumer<?> target : link.getLinkedTargets())
+                {
+                    stack.push(target);
+                }
             }
         }
     }

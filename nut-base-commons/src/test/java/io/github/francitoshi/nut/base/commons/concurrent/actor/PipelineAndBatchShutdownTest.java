@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import io.github.francitoshi.nut.base.commons.lang.As;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,7 +61,7 @@ class PipelineAndBatchShutdownTest
 
         batch.shutdown();
 
-        assertEquals(List.of(List.of("a", "b")), batches, "shutdown must flush the partial batch");
+        assertEquals(As.list(As.list("a", "b")), batches, "shutdown must flush the partial batch");
         assertTrue(batch.isTerminated());
     }
 
@@ -107,7 +108,7 @@ class PipelineAndBatchShutdownTest
         // open: the pipeline owns its stages, not the hub)
         assertFalse(shutdowner.isAlive(), "the cascading shutdown did not finish");
 
-        assertEquals(List.of(1, 2), received);
+        assertEquals(As.list(1, 2), received);
     }
 
     /**

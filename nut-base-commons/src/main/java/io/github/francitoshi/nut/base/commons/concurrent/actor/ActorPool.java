@@ -14,6 +14,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -569,6 +570,24 @@ public class ActorPool implements ActorLifecycle, Executor
     }
 
     /**
+     * Rejects execution when the backing pool is shut down. The saturation
+     * policies disagree on this case: {@code CallerRunsPolicy} silently
+     * discards the task, which would leak a {@link Phaser} registration
+     * ({@code waitForIdle()} would then hang forever), hang a
+     * never-completing future, or strand an accepted message without any
+     * worker to drain it.
+     *
+     * @throws RejectedExecutionException if the pool is shut down
+     */
+    private void checkPoolAlive()
+    {
+        if (threadPoolExecutor != null && threadPoolExecutor.isShutdown())
+        {
+            throw new RejectedExecutionException("executor is shut down");
+        }
+    }
+
+    /**
      * Runs {@code supplier} on the pool as a tracked task, pre-registering it
      * with the execution phaser <em>before</em> submission so that a task that
      * is still queued is visible to {@link #waitForIdle()} and
@@ -581,6 +600,10 @@ public class ActorPool implements ActorLifecycle, Executor
      */
     private <U> CompletableFuture<U> trackedAsync(Supplier<U> supplier)
     {
+        if (!synchronous)
+        {
+            checkPoolAlive();
+        }
         if (phaser == null)
         {
             return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
@@ -739,6 +762,8 @@ public class ActorPool implements ActorLifecycle, Executor
             task.run();
             return;
         }
+        // before any registration: a rejected task must not leak a Phaser party
+        checkPoolAlive();
         if(phaser==null)
         {
             this.threadPoolExecutor.execute(task);
@@ -825,6 +850,10 @@ public class ActorPool implements ActorLifecycle, Executor
             task.run();
             return this;
         }
+
+        // before any registration: a rejected spawn must not leak a Phaser
+        // party, and the readiness wait below must not hang forever
+        checkPoolAlive();
 
         final CountDownLatch ready = new CountDownLatch(1);
 

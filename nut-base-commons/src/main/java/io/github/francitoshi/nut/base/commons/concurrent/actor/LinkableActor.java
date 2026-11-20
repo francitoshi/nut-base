@@ -9,6 +9,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Wrapper stage that holds an inner flavor actor and forwards every
@@ -25,11 +27,16 @@ import java.util.function.Consumer;
  */
 public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
 {
+    private static final Logger LOG = Logger.getLogger(LinkableActor.class.getName());
+
     protected Actor<I> inner;
 
     protected volatile Consumer<F> next;
 
     private volatile Exception ex;
+
+    /** {@code false} once {@link #dryLogger()} silences the drop logging. */
+    private volatile boolean allowLogger = true;
 
     protected LinkableActor(Actor<I> inner)
     {
@@ -45,15 +52,35 @@ public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
     public <S extends Consumer<F>> S linkTo(S next)
     {
         this.next = Objects.requireNonNull(next, "next must not be null");
+        registerLinkWithHub(next);
         return next;
     }
 
+    private void registerLinkWithHub(Consumer<F> target)
+    {
+        ActorHub hub = inner != null ? inner.getActorHub() : null;
+        if (hub != null)
+        {
+            hub.registerLink(inner, target);
+        }
+    }
+
+    /**
+     * Forwards {@code value} to the linked downstream stage. When no stage was
+     * linked with {@link #linkTo}, the message would silently vanish, so the
+     * drop is logged (and silenced by {@link #dryLogger()}): a forgotten link
+     * must not look like a working pipeline.
+     */
     protected void forward(F value)
     {
         Consumer<F> n = this.next;
         if (n != null)
         {
             n.accept(value);
+        }
+        else if (allowLogger)
+        {
+            LOG.log(Level.SEVERE, getClass().getSimpleName() + ": no downstream stage linked, dropping message: " + value);
         }
     }
 
@@ -137,6 +164,7 @@ public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
 
     public LinkableActor<I,F> dryLogger()
     {
+        this.allowLogger = false;
         inner.dryLogger();
         return this;
     }

@@ -5,6 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
+import io.github.francitoshi.nut.base.commons.lang.As;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -148,7 +149,7 @@ class ActorAcceptContractTest
 
             assertTrue(delivered.await(5, TimeUnit.SECONDS),
                     "the permanent worker must drain the queued message");
-            assertEquals(List.of(1), received);
+            assertEquals(As.list(1), received);
             assertTrue(actor.getException() instanceof RejectedExecutionException,
                     "the rush-start failure must be recorded, got " + actor.getException());
         }

@@ -73,7 +73,11 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
         this.maxWaitNanos = TimeUnit.MILLISECONDS.toNanos(maxWaitMillis);
 
         final boolean synchronous = threads == 0;
-        this.ownHub = synchronous ? null : (actorHub != null ? null : new ActorHub(1));
+        // The owned hub's worker threads are daemon: if the user forgets to
+        // close the stage, the parked permanent worker must never keep the
+        // JVM alive on its own (an unclosed stage would otherwise hang the
+        // process exit forever).
+        this.ownHub = synchronous ? null : (actorHub != null ? null : new ActorHub(1, 2, ActorPool.DEFAULT_KEEP_ALIVE_MILLIS, ActorPool.DEFAULT_CALLER_WAITS_POLICY, ActorPool.DEFAULT_AVOID_TRACKER, true));
         final ActorHub hubToUse = this.ownHub != null ? this.ownHub : actorHub;
         this.syncMode = synchronous || hubToUse == null || hubToUse.isSynchronous();
 

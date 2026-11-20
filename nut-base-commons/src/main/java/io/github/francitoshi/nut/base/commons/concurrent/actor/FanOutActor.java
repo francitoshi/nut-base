@@ -71,7 +71,17 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
     public FanOutActor<T> addTarget(Consumer<T> target)
     {
         this.targets.add(Objects.requireNonNull(target, "target must not be null"));
+        registerTargetWithHub(target);
         return this;
+    }
+
+    private void registerTargetWithHub(Consumer<T> target)
+    {
+        ActorHub hub = inner != null ? inner.getActorHub() : null;
+        if (hub != null)
+        {
+            hub.registerLink(inner, target);
+        }
     }
 
     public boolean removeTarget(Consumer<T> target)
