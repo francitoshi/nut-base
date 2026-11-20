@@ -348,6 +348,16 @@ abstract class AsyncActor<M> extends Actor<M>
                 }
             }
 
+            // A blocked get()/put() that is interrupted makes the closeable
+            // channels close themselves, without going through this actor's
+            // own close path, so the actor's closed flag is still false here.
+            // Without this hook the workers would simply exit and the actor
+            // would be left open forever: never terminated (awaitTermination
+            // hangs) with no workers, and every later accept() failing
+            // against the closed channel with the exception silently
+            // swallowed by handleException.
+            closeIfClosedExternally();
+
             boolean close = false;
             lock.lock();
             try
@@ -422,6 +432,44 @@ abstract class AsyncActor<M> extends Actor<M>
             drain(0);
             doTerminate();
         }
+    }
+
+    /**
+     * Drives this actor through its normal close path when the channel was
+     * closed from outside this actor's own close paths. The closeable
+     * channels abort a blocked {@code get()}/{@code put()} when their thread
+     * is interrupted, and that abort closes the channel itself; the actor's
+     * {@code closed} flag stays false, so the state is unambiguous:
+     * {@code channel closed while the actor is open} can only come from such
+     * an external close.
+     * <p>
+     * The flag is claimed under the lock so exactly one caller proceeds;
+     * {@link #closeNow()} then runs outside the lock (as in
+     * {@link #workerDone(boolean)}) and is idempotent against the actor's own
+     * shutdown paths. Messages already buffered in a closed channel are still
+     * drained by the readers (the closeable channels yield buffered elements
+     * after the close), so no queued work is lost.
+     */
+    private void closeIfClosedExternally()
+    {
+        if (closed || terminated || !channel.isClosed())
+        {
+            return;
+        }
+        lock.lock();
+        try
+        {
+            if (closed || terminated)
+            {
+                return;
+            }
+            closed = true;
+        }
+        finally
+        {
+            lock.unlock();
+        }
+        closeNow();
     }
 
     protected void doTerminate()

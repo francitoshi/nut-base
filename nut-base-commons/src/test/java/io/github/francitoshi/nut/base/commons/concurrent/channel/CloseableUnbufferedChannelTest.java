@@ -174,11 +174,13 @@ public class CloseableUnbufferedChannelTest
         assertTrue(channel.close(100, TimeUnit.MILLISECONDS));
         assertTrue(channel.isClosed());
 
-        // The blocked put cannot complete: it is aborted per the interruption
-        // contract and returns without delivering its value.
+        // The blocked put cannot complete: per the contract it either delivers
+        // its value or fails loudly — the abort closes the channel and the
+        // put throws instead of silently dropping the value.
         producer.join(5000);
-        assertTrue(putReturned.get());
-        assertNull(putError.get());
+        assertFalse(putReturned.get(), "the aborted put() must not report delivery");
+        assertTrue(putError.get() instanceof IllegalStateException,
+                "the aborted put() must fail loudly, got " + putError.get());
         assertTrue(channel.isInterrupted());
     }
 

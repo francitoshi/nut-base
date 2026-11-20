@@ -28,8 +28,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * <p>
  * {@link #close()} marks the channel as closed, unblocks all pending readers
  * (they return {@code null}) and aborts any {@link #put} in progress: a
- * blocked {@code put} returns without delivering its value and the timed
- * variant returns {@code false}.
+ * blocked {@code put} fails with {@link IllegalStateException} without
+ * delivering its value (never silently dropped, so a producer that accounted
+ * for it can balance its counters) and the timed variant returns
+ * {@code false}.
  *
  * @param <E> the element type
  */
@@ -82,7 +84,14 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
             if (interrupted)
             {
                 closeIfCloseable();
-                return;
+                // The value was not delivered: like the buffered engine, the
+                // blocking put must either deliver the value or fail loudly.
+                // A silent return is indistinguishable from a delivered put
+                // (the return type is void), and a producer that accounted
+                // for the message before the put — as AsyncActor.accept does
+                // with its pending counter — would leak the entry forever,
+                // leaving the actor never idle and its workers spinning.
+                throw new IllegalStateException("closed");
             }
         }
     }

@@ -8,6 +8,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -68,11 +69,19 @@ class CloseableFanoutChannelTest
 
         CountDownLatch putStarted = new CountDownLatch(1);
         AtomicBoolean putReturned = new AtomicBoolean(false);
+        AtomicReference<Throwable> putError = new AtomicReference<>();
         Thread sender = new Thread(() ->
         {
             putStarted.countDown();
-            fan.put("hello");
-            putReturned.set(true);
+            try
+            {
+                fan.put("hello");
+                putReturned.set(true);
+            }
+            catch (Throwable t)
+            {
+                putError.set(t);
+            }
         });
         sender.start();
 
@@ -82,10 +91,14 @@ class CloseableFanoutChannelTest
         assertTrue(fan.close(), "close() must abort the blocked put and complete in bounded time");
         assertTrue(fan.isClosed());
 
-        // the blocked put() aborts per the interruption contract: it returns.
+        // the blocked put() aborts per the interruption contract: the sender
+        // thread ends promptly, failing loudly (the target was closed) instead
+        // of silently dropping the value.
         sender.join(2000);
-        assertFalse(sender.isAlive(), "the blocked put() must be aborted and return");
-        assertTrue(putReturned.get(), "the blocked put() must return after the abort");
+        assertFalse(sender.isAlive(), "the blocked put() must be aborted and end");
+        assertTrue(putError.get() instanceof IllegalStateException,
+                "the aborted put() must fail loudly, got " + putError.get());
+        assertFalse(putReturned.get(), "the aborted put() must not report delivery");
 
         // the target was closed by the abort and by close(): drained end-of-data.
         assertNull(dest.get());
