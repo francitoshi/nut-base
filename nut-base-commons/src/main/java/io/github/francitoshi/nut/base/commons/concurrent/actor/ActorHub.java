@@ -1214,8 +1214,14 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * whole graph: it waits until every registered Actor is idle, repeating the
      * pass whenever the ActorHub-wide processed-message counter advances (so
      * in-flight forwards between linked stages are not lost), and only then
-     * closes every Actor and the underlying thread pool. When {@code false} the
-     * shutdown starts immediately (and never blocks). This is the wait that the
+     * closes every Actor with a cascading close: each Actor is closed with its
+     * own deferred close-when-idle and the cascade waits for its termination
+     * before closing the next one, so a message that slips in between the
+     * quiescence check and the close is processed and forwarded while the
+     * downstream stages are still open instead of being dropped. Work
+     * submitted after a stage has terminated is rejected loudly by its
+     * {@code accept()}. When {@code false} the shutdown starts immediately
+     * (and never blocks). This is the wait that the
      * {@link ActorLifecycle} contract explicitly allows: it is only as long as
      * necessary to guarantee that forwards already in flight are never lost.
      *
@@ -1272,9 +1278,35 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
                 }
                 last = now;
             }
-            for (Actor<?> actor : actors)
+            // Cascading close. The quiescence check above is a point-in-time
+            // observation: a message accepted right after it would sit in an
+            // actor's queue and be silently dropped by an immediate
+            // closeNow(). Closing the stages one by one, each with its own
+            // deferred close-when-idle (shutdown(true)) and waiting for its
+            // termination before touching the next one, turns that window
+            // into a handled case: a message that slipped in keeps its stage
+            // non-idle, so the stage defers the close, processes the message
+            // and forwards it downstream while the downstream stages are
+            // still open, and only then terminates. Work submitted after a
+            // stage has terminated is rejected loudly by its accept(). The
+            // registration order is the creation order, so chains built
+            // head-first (the common construction pattern) are closed
+            // upstream-first; the outer loop picks up stages registered
+            // while the cascade was running.
+            boolean again = true;
+            while (again)
             {
-                actor.shutdown(false);
+                again = false;
+                for (Actor<?> actor : actors)
+                {
+                    if (actor.isTerminated())
+                    {
+                        continue;
+                    }
+                    again = true;
+                    actor.shutdown(true);
+                    actor.awaitTermination();
+                }
             }
         }
         else

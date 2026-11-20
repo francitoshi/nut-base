@@ -82,51 +82,71 @@ abstract class AsyncActor<M> extends Actor<M>
         {
             throw new IllegalStateException("closed");
         }
+        // The permanent worker is started before the message is accounted
+        // for, so a failure here cannot strand it: nothing was delivered yet,
+        // and the failure propagates to the caller (the message would
+        // otherwise be silently dropped while the caller believes it was
+        // accepted).
         try
         {
             initPermanentWorker();
-            counters.incrementFirst();
-            boolean queued = false;
+        }
+        catch (RuntimeException ex)
+        {
+            handleException(ex);
+            throw ex;
+        }
+        counters.incrementFirst();
+        boolean queued = false;
+        try
+        {
+            channel.put(message);
+            queued = true;
+        }
+        catch (RuntimeException ex)
+        {
+            // Not delivered: the actor or its channel was closed concurrently,
+            // or the put was aborted by the close. The failure is recorded and
+            // surfaced to the caller instead of letting it believe the message
+            // was accepted.
+            handleException(ex);
+            throw ex;
+        }
+        finally
+        {
+            if (!queued)
+            {
+                counters.decrementFirst();
+            }
+        }
+
+        if (threads > 1)
+        {
+            lock.lock();
             try
             {
-                channel.put(message);
-                queued = true;
+                if (workerSlots.tryAcquire())
+                {
+                    try
+                    {
+                        startWorker();
+                    }
+                    catch (Exception ex)
+                    {
+                        workerSlots.release();
+                        // The message is safely queued: the permanent worker
+                        // drains it. A failing rush start is recorded and
+                        // logged, but must NOT surface as a failed accept —
+                        // the caller would believe the message was rejected
+                        // and a retry would deliver it twice.
+                        handleException(ex);
+                    }
+                }
             }
             finally
             {
-                if (!queued)
-                {
-                    counters.decrementFirst();
-                }
+                lock.unlock();
             }
-
-            if (queued && threads > 1)
-            {
-                lock.lock();
-                try
-                {
-                    if (workerSlots.tryAcquire())
-                    {
-                        try
-                        {
-                            startWorker();
-                        }
-                        catch (Exception ex)
-                        {
-                            workerSlots.release();
-                            throw ex;
-                        }
-                    }
-                }
-                finally
-                {
-                    lock.unlock();
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            handleException(ex);
         }
     }
 

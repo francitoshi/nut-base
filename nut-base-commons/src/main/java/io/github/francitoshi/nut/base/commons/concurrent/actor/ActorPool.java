@@ -555,6 +555,16 @@ public class ActorPool implements ActorLifecycle, Executor
             task.run();
             return;
         }
+        if (threadPoolExecutor.isShutdown())
+        {
+            // The saturation policies disagree here: CallerRunsPolicy would
+            // silently discard the task on a shut-down executor, leaving the
+            // caller (the permanent worker of an Actor) believing it started
+            // — queued messages would then strand forever with no worker to
+            // drain them. Fail loudly instead, with the same IllegalStateException
+            // a closed actor raises, so the caller can surface the rejection.
+            throw new IllegalStateException("executor is shut down");
+        }
         this.threadPoolExecutor.execute(task);
     }
 

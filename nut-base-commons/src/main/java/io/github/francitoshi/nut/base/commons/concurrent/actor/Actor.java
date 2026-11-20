@@ -215,8 +215,19 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
 
     /**
      * Sends a message to this actor for processing.
+     * <p>
+     * The contract is delivery-or-throw: a returned call means the message was
+     * queued and will be processed (even when a supplementary rush worker
+     * could not be started, the permanent worker drains the queue); a thrown
+     * exception means the message was <em>not</em> delivered — typically an
+     * {@link IllegalStateException} when the actor or its channel is closed or
+     * rejecting, or the underlying failure that prevented the actor from
+     * running the message at all (e.g. its executor refused to start the
+     * worker). The failure is always recorded first ({@link #getException()},
+     * {@link #exception(Exception)}).
      *
      * @param message the message to deliver
+     * @throws IllegalStateException if the actor or its channel is closed
      */
     @Override
     public abstract void accept(M message);
