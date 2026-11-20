@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -96,6 +97,57 @@ class PubSubTest
         assertEquals(Collections.singletonList("event"), sink1);
         assertEquals(Collections.singletonList("event"), sink2);
         assertEquals(Collections.singletonList("event"), sink3);
+    }
+
+    /**
+     * A subscriber that throws must not abort delivery to the remaining
+     * subscribers, nor propagate the failure to the publisher's caller; the
+     * topic must keep working for later publishes.
+     */
+    @Test
+    void pub_failingSubscriber_othersStillReceive()
+    {
+        List<String> healthy1 = new ArrayList<>();
+        List<String> healthy2 = new ArrayList<>();
+        IllegalStateException boom = new IllegalStateException("boom");
+
+        syncHub.<String>sub("t", e ->
+        {
+            throw boom;
+        });
+        syncHub.<String>sub("t", healthy1::add);
+        syncHub.<String>sub("t", healthy2::add);
+
+        assertDoesNotThrow(() -> syncHub.<String>pub("t").accept("event"));
+
+        assertEquals(Collections.singletonList("event"), healthy1);
+        assertEquals(Collections.singletonList("event"), healthy2);
+
+        assertDoesNotThrow(() -> syncHub.<String>pub("t").accept("event2"));
+        assertEquals(Arrays.asList("event", "event2"), healthy1);
+        assertEquals(Arrays.asList("event", "event2"), healthy2);
+    }
+
+    /**
+     * A shut-down Actor subscriber throws on every delivery (its accept
+     * rejects closed channels); that must not break the topic for the
+     * remaining subscribers nor surface as an exception in the publishing
+     * thread.
+     */
+    @Test
+    void pub_closedActorSubscriber_doesNotBreakDelivery()
+    {
+        List<String> healthy = new ArrayList<>();
+        Actor<String> actor = syncHub.actor(c ->
+        {
+        });
+        actor.sub("t");
+        syncHub.<String>sub("t", healthy::add);
+
+        actor.shutdown(); // subsequent accept() throws IllegalStateException
+
+        assertDoesNotThrow(() -> syncHub.<String>pub("t").accept("event"));
+        assertEquals(Collections.singletonList("event"), healthy);
     }
 
     /** Every publish delivers to all subscribers independently. */

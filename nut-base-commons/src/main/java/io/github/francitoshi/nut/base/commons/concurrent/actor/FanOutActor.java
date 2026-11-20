@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A pipeline stage that fans out every received message to a set of downstream
@@ -21,8 +23,16 @@ import java.util.function.Consumer;
  */
 public class FanOutActor<T> implements Consumer<T>, Linkable
 {
+    private static final Logger LOG = Logger.getLogger(FanOutActor.class.getName());
+
     protected Actor<T> inner;
     protected final List<Consumer<T>> targets = new CopyOnWriteArrayList<>();
+
+    /** The last failure raised by a downstream target, if any. */
+    private volatile Exception ex;
+
+    /** {@code false} once {@link #dryLogger()} silences the broadcast logging. */
+    private volatile boolean allowLogger = true;
 
     @SafeVarargs
     public FanOutActor(ActorHub actorHub, int threads, int queueSize, Consumer<T>... targets)
@@ -74,11 +84,31 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
         return Collections.unmodifiableList(targets);
     }
 
+    /**
+     * Delivers {@code m} to every registered target, in registration order.
+     * <p>
+     * Each target is isolated: a target that throws does not abort delivery
+     * to the remaining targets, and the failure never propagates out of the
+     * receive path (a failing target would otherwise silently skip all the
+     * downstream stages after it). The failure is logged and recorded, so
+     * {@link #getException()} reports it.
+     */
     private void broadcast(T m)
     {
         for (Consumer<T> target : targets)
         {
-            target.accept(m);
+            try
+            {
+                target.accept(m);
+            }
+            catch (Exception ex)
+            {
+                this.ex = ex;
+                if (allowLogger)
+                {
+                    LOG.log(Level.SEVERE, "FanOutActor: target delivery failed", ex);
+                }
+            }
         }
     }
 
@@ -164,11 +194,13 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
 
     public Exception getException()
     {
-        return inner.getException();
+        Exception own = this.ex;
+        return own != null ? own : inner.getException();
     }
 
     public FanOutActor<T> dryLogger()
     {
+        this.allowLogger = false;
         inner.dryLogger();
         return this;
     }

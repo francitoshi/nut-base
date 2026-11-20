@@ -290,6 +290,16 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
 
     private final class BatchDrainer extends AsyncActor<T>
     {
+        /**
+         * Park slice for a partial batch when the time-based flush is
+         * disabled ({@code maxWaitMillis == 0}). Parking in bounded slices
+         * keeps a reader ready for (possibly rendezvous) channels, bounds the
+         * latency of a pending {@code shutdown(true)} request to one slice,
+         * and costs one cheap locked flag check per slice (a park, not a
+         * spin).
+         */
+        private static final long SHUTDOWN_SLICE_MILLIS = 50;
+
         BatchDrainer(ActorHub hub, int queueSize)
         {
             super(hub, 1, queueSize);
@@ -387,6 +397,58 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
                 else if (batchSize >= maxSize)
                 {
                     flushPending();
+                }
+                else
+                {
+                    // Partial batch with the time-based flush disabled: the
+                    // batch can only grow, and the only shutdownWhenEmpty
+                    // readers (flushPending and workerDone) run when a batch
+                    // is emitted or the channel closes. An indefinite park on
+                    // the channel here would therefore never observe a
+                    // pending shutdown(true) request: the partial batch holds
+                    // its counter entries, isIdle() stays false, and
+                    // awaitTermination()/close() would hang forever. Park in
+                    // bounded slices and re-check the request after each
+                    // empty read.
+                    while (true)
+                    {
+                        m = channel.get(SHUTDOWN_SLICE_MILLIS, TimeUnit.MILLISECONDS);
+                        if (m != null)
+                        {
+                            batchSize = push(m);
+                            if (batchSize >= maxSize)
+                            {
+                                flushPending();
+                                break;
+                            }
+                            continue;
+                        }
+                        if (channel.isClosed())
+                        {
+                            flushPending();
+                            return;
+                        }
+                        boolean stop;
+                        lock.lock();
+                        try
+                        {
+                            stop = shutdownWhenEmpty;
+                        }
+                        finally
+                        {
+                            lock.unlock();
+                        }
+                        if (stop)
+                        {
+                            flushPending();
+                            // The channel is closed from here on: the next
+                            // outer get() drains any leftover buffered
+                            // messages and then returns null, and the
+                            // isClosed branch above emits and exits.
+                            closeNow();
+                            continue;
+                        }
+                    }
                 }
             }
         }

@@ -9,11 +9,17 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -55,6 +61,80 @@ class FanOutActorTest
         assertEquals(Arrays.asList("msg"), t1.received);
         assertEquals(Arrays.asList("msg"), t2.received);
         assertEquals(Arrays.asList("msg"), t3.received);
+    }
+
+    /**
+     * A target that throws must not abort delivery to the remaining targets,
+     * must be visible through {@link FanOutActor#getException()}, and must
+     * not stop later messages from reaching the healthy targets.
+     */
+    @Test
+    void failingTargetDoesNotSkipRemainingTargets()
+    {
+        IllegalStateException boom = new IllegalStateException("boom");
+        RecordingActor<String> healthy1 = new RecordingActor<>();
+        RecordingActor<String> healthy2 = new RecordingActor<>();
+        Consumer<String> failing = m ->
+        {
+            throw boom;
+        };
+        FanOutActor<String> bc = new FanOutActor<>(failing, healthy1, healthy2);
+
+        assertDoesNotThrow(() -> bc.accept("msg"));
+        assertDoesNotThrow(() -> bc.accept("msg2"));
+
+        assertEquals(Arrays.asList("msg", "msg2"), healthy1.received);
+        assertEquals(Arrays.asList("msg", "msg2"), healthy2.received);
+        assertSame(boom, bc.getException());
+    }
+
+    /**
+     * {@link FanOutActor#dryLogger()} must silence the logging of failing
+     * targets (the failure is still recorded in {@link FanOutActor#getException()}).
+     */
+    @Test
+    void dryLoggerSilencesBroadcastFailureLogging()
+    {
+        IllegalStateException boom = new IllegalStateException("boom");
+        RecordingActor<String> healthy = new RecordingActor<>();
+        FanOutActor<String> bc = new FanOutActor<>(m ->
+        {
+            throw boom;
+        }, healthy).dryLogger();
+
+        List<LogRecord> records = new ArrayList<>();
+        Handler handler = new Handler()
+        {
+            @Override
+            public void publish(LogRecord record)
+            {
+                records.add(record);
+            }
+
+            @Override
+            public void flush()
+            {
+            }
+
+            @Override
+            public void close()
+            {
+            }
+        };
+        Logger log = Logger.getLogger(FanOutActor.class.getName());
+        log.addHandler(handler);
+        try
+        {
+            bc.accept("msg");
+        }
+        finally
+        {
+            log.removeHandler(handler);
+        }
+
+        assertEquals(Arrays.asList("msg"), healthy.received);
+        assertSame(boom, bc.getException());
+        assertEquals(Collections.emptyList(), records);
     }
 
     @Test

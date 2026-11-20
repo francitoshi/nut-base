@@ -8,6 +8,8 @@ package io.github.francitoshi.nut.base.commons.concurrent.actor;
 import java.util.Arrays;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * A topic entry of the {@link ActorHub} Pub/Sub registry, keyed by tag.
@@ -32,6 +34,8 @@ import java.util.function.Consumer;
  */
 final class PubSub<T>
 {
+    private static final Logger LOG = Logger.getLogger(PubSub.class.getName());
+
     private static final Consumer<?>[] EMPTY = new Consumer<?>[0];
 
     private final ConcurrentHashMap<String, PubSub<?>> registry;
@@ -166,6 +170,11 @@ final class PubSub<T>
      * registration order. Lock-free: reads the volatile subscriber array once
      * and iterates over that immutable snapshot, so concurrent subscription
      * changes never affect a delivery in progress.
+     * <p>
+     * Each subscriber is isolated: a subscriber that throws (e.g. an Actor
+     * whose channel was closed, or a plain consumer that failed) does not
+     * abort delivery to the remaining subscribers, and the failure never
+     * propagates to the publisher's caller. The failure is logged instead.
      *
      * @param event the event to deliver
      */
@@ -174,7 +183,14 @@ final class PubSub<T>
     {
         for (Consumer<?> subscriber : subscribers)
         {
-            ((Consumer<T>) subscriber).accept(event);
+            try
+            {
+                ((Consumer<T>) subscriber).accept(event);
+            }
+            catch (Exception ex)
+            {
+                LOG.log(Level.SEVERE, "PubSub[" + tag + "]: subscriber delivery failed", ex);
+            }
         }
     }
 }
