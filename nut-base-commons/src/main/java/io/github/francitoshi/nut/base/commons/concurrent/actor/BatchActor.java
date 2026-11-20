@@ -79,11 +79,20 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
 
         Runnable onTerminate = () ->
         {
-            if (BatchActor.this.ownHub != null)
+            // The synchronous flavor has no read loop to flush on close, so
+            // the terminate hook must emit the partial batch: no message can
+            // be accepted any more, so this flush is complete and a shutdown
+            // never abandons submitted work (the async BatchDrainer flushes
+            // from its own read loop instead). In sync mode there is no owned
+            // hub to shut down: ownHub is null whenever syncMode is true.
+            List<T> batch;
+            synchronized (pending)
             {
-                // Never wait for the owner hub from a worker of that same hub:
-                // terminate() runs on the very thread the hub would wait for.
-                BatchActor.this.ownHub.shutdown();
+                batch = pending.isEmpty() ? null : drainLocked();
+            }
+            if (batch != null)
+            {
+                forward(batch);
             }
         };
 
