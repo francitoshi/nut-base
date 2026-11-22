@@ -35,7 +35,13 @@ abstract class AsyncActor<M> extends Actor<M>
     protected final AtomicCounterPair counters = new AtomicCounterPair();
 
     protected final AtomicInteger activeWorkers = new AtomicInteger();
-    protected boolean permanentWorkerStarted;
+    /**
+     * Volatile so the {@code accept()} hot path can check it without acquiring
+     * {@code lock}: it is only ever written while holding {@code lock}, and a
+     * stale read (either direction) is harmless — the slow path under the lock
+     * re-checks it and a worker that just exited re-arms it there.
+     */
+    protected volatile boolean permanentWorkerStarted;
     protected boolean shutdownWhenEmpty;
 
     /**
@@ -122,30 +128,28 @@ abstract class AsyncActor<M> extends Actor<M>
 
         if (threads > 1)
         {
-            lock.lock();
-            try
+            // The rush-worker start no longer takes the actor lock: the
+            // semaphore already bounds the total worker count at `threads`,
+            // and every other field touched here is either atomic
+            // (activeWorkers, workerSlots) or written under the lock
+            // elsewhere. Producers therefore never serialise against
+            // workerDone()/notifyIdle() on the message path.
+            if (workerSlots.tryAcquire())
             {
-                if (workerSlots.tryAcquire())
+                try
                 {
-                    try
-                    {
-                        startWorker();
-                    }
-                    catch (Exception ex)
-                    {
-                        workerSlots.release();
-                        // The message is safely queued: the permanent worker
-                        // drains it. A failing rush start is recorded and
-                        // logged, but must NOT surface as a failed accept —
-                        // the caller would believe the message was rejected
-                        // and a retry would deliver it twice.
-                        handleException(ex);
-                    }
+                    startWorker();
                 }
-            }
-            finally
-            {
-                lock.unlock();
+                catch (Exception ex)
+                {
+                    workerSlots.release();
+                    // The message is safely queued: the permanent worker
+                    // drains it. A failing rush start is recorded and
+                    // logged, but must NOT surface as a failed accept —
+                    // the caller would believe the message was rejected
+                    // and a retry would deliver it twice.
+                    handleException(ex);
+                }
             }
         }
     }
@@ -180,6 +184,14 @@ abstract class AsyncActor<M> extends Actor<M>
 
     protected void initPermanentWorker()
     {
+        // Fast path: the permanent worker is already running. The volatile
+        // read replaces what used to be a lock acquisition per message; the
+        // slow path below re-checks the same condition under the lock, so a
+        // racy stale read can only cost one redundant slow-path entry.
+        if (permanentWorkerStarted)
+        {
+            return;
+        }
         lock.lock();
         try
         {
