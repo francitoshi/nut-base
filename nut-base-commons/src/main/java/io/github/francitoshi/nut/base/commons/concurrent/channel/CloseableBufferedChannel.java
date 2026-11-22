@@ -189,6 +189,14 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
                 }
             }
             items.addLast(value);
+            // signalAll on purpose: one put adds one item, so a signal()
+            // would be sufficient (the ArrayBlockingQueue pattern), but it
+            // relies on the abort⇒close⇒signalAll invariant living in
+            // Channel.handleInterruptedException/closeIfCloseable. The
+            // conservative wake-everyone keeps the channel correct under any
+            // future evolution of that machinery, at the cost of parked
+            // readers re-parking when several workers wait on an empty
+            // buffer.
             notEmpty.signalAll();
             return true;
         }
