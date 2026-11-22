@@ -42,7 +42,26 @@ abstract class AsyncActor<M> extends Actor<M>
      * re-checks it and a worker that just exited re-arms it there.
      */
     protected volatile boolean permanentWorkerStarted;
-    protected boolean shutdownWhenEmpty;
+    /**
+     * Volatile for the same reason: the zero-crossing epilogue of the drain
+     * loops checks it without acquiring {@code lock}, so the common case (no
+     * deferred shutdown pending) costs one read instead of a lock round trip.
+     * A stale {@code false} can only delay the self-close until the next
+     * zero-crossing; the hub's cascading close is the backstop either way.
+     */
+    protected volatile boolean shutdownWhenEmpty;
+
+    /**
+     * Registered {@link #waitForIdle()} parkers. The zero-crossing epilogue
+     * reads it without the lock: if it is zero, nobody is waiting for idle
+     * and the whole lock-plus-{@code signalAll()} round trip is skipped. The
+     * count is only ever changed while holding {@code lock}, and the
+     * waiter's idleness re-check and park also happen under that lock, so a
+     * zero-crossing that follows a park always observes a count above zero
+     * and a wake-up cannot be lost; a stale read can only cause one
+     * redundant signal.
+     */
+    private final AtomicInteger idleWaiters = new AtomicInteger();
 
     /**
      * Slice between drain passes in {@link #workerDone(boolean)} while a
@@ -332,19 +351,9 @@ abstract class AsyncActor<M> extends Actor<M>
             {
                 if (counters.decrementSecondAndAllZero())
                 {
-                    lock.lock();
-                    try
+                    if (idleEpilogue())
                     {
-                        condition.signalAll();
-                        if (shutdownWhenEmpty)
-                        {
-                            closeNow();
-                            return;
-                        }
-                    }
-                    finally
-                    {
-                        lock.unlock();
+                        return;
                     }
                 }
             }
@@ -354,18 +363,59 @@ abstract class AsyncActor<M> extends Actor<M>
     /**
      * Wakes {@link #waitForIdle()} waiters as soon as this actor becomes
      * idle, without waiting for the permanent worker to exit its idle window.
+     * Idle notification is on demand: when nobody is waiting the whole
+     * lock-plus-signal round trip is skipped (see {@link #idleWaiters}).
      */
     private void notifyIdle()
     {
-        lock.lock();
-        try
+        if (idleWaiters.get() != 0)
         {
-            condition.signalAll();
+            lock.lock();
+            try
+            {
+                condition.signalAll();
+            }
+            finally
+            {
+                lock.unlock();
+            }
         }
-        finally
+    }
+
+    /**
+     * Shared zero-crossing epilogue of the drain loops: wakes registered
+     * idle waiters and honours a pending deferred ({@code onlyWhenEmpty})
+     * shutdown by closing the actor now. The whole lock-plus-signal work is
+     * skipped when nobody is waiting and no shutdown is pending — the common
+     * case on a busy message path. Everything happens under {@code lock}
+     * exactly as before, so the observable behaviour is unchanged.
+     *
+     * @return {@code true} when the actor closed and the caller must leave
+     *         its drain loop
+     */
+    protected boolean idleEpilogue()
+    {
+        if (shutdownWhenEmpty || idleWaiters.get() != 0)
         {
-            lock.unlock();
+            lock.lock();
+            try
+            {
+                if (idleWaiters.get() != 0)
+                {
+                    condition.signalAll();
+                }
+                if (shutdownWhenEmpty)
+                {
+                    closeNow();
+                    return true;
+                }
+            }
+            finally
+            {
+                lock.unlock();
+            }
         }
+        return false;
     }
 
     // -----------------------------------------------------------------
@@ -572,16 +622,26 @@ abstract class AsyncActor<M> extends Actor<M>
         lock.lock();
         try
         {
-            while (!isIdle())
+            // Register as an idle waiter before checking: the zero-crossing
+            // epilogue skips its wake-up entirely when this count is zero.
+            idleWaiters.incrementAndGet();
+            try
             {
-                try
+                while (!isIdle())
                 {
-                    condition.await();
+                    try
+                    {
+                        condition.await();
+                    }
+                    catch (InterruptedException ex)
+                    {
+                        // Ignored by contract.
+                    }
                 }
-                catch (InterruptedException ex)
-                {
-                    // Ignored by contract.
-                }
+            }
+            finally
+            {
+                idleWaiters.decrementAndGet();
             }
         }
         finally

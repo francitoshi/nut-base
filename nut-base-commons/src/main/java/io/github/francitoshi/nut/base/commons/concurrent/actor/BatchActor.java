@@ -550,19 +550,10 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
             }
             if (counters.isZero())
             {
-                lock.lock();
-                try
-                {
-                    condition.signalAll();
-                    if (shutdownWhenEmpty)
-                    {
-                        closeNow();
-                    }
-                }
-                finally
-                {
-                    lock.unlock();
-                }
+                // Same zero-crossing epilogue as the plain drain loops:
+                // skipped entirely when nobody waits for idle and no
+                // deferred shutdown is pending.
+                idleEpilogue();
             }
         }
     }

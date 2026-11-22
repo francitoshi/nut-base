@@ -148,22 +148,28 @@ public final class AtomicCounterPair
 
     /**
      * Atomically increments the first counter.
+     * <p>
+     * Hand-rolled as a single {@code getAndAdd} on the packed word: adding
+     * {@code 1 << 32} touches only the high bits, so no carry can cross into
+     * the second counter and the update is one atomic add instead of a
+     * compare-and-set loop.
      *
      * @return the new value of the first counter
      */
     public int incrementFirst()
     {
-        return update((f, s) -> f + 1, (f, s) -> s, (nf, ns) -> nf);
+        return (int) (value.addAndGet(1L << 32) >>> 32);
     }
 
     /**
-     * Atomically decrements the first counter.
+     * Atomically decrements the first counter. As {@link #incrementFirst()},
+     * a single atomic add of {@code -(1 << 32)}.
      *
      * @return the new value of the first counter
      */
     public int decrementFirst()
     {
-        return update((f, s) -> f - 1, (f, s) -> s, (nf, ns) -> nf);
+        return (int) (value.addAndGet(-(1L << 32)) >>> 32);
     }
 
     /**
@@ -173,7 +179,16 @@ public final class AtomicCounterPair
      */
     public int incrementSecond()
     {
-        return update((f, s) -> f, (f, s) -> s + 1, (nf, ns) -> ns);
+        long word = value.get();
+        for (;;)
+        {
+            int second = secondOf(word);
+            if (value.compareAndSet(word, pack(firstOf(word), second + 1)))
+            {
+                return second + 1;
+            }
+            word = value.get();
+        }
     }
 
     /**
@@ -183,7 +198,16 @@ public final class AtomicCounterPair
      */
     public int decrementSecond()
     {
-        return update((f, s) -> f, (f, s) -> s - 1, (nf, ns) -> ns);
+        long word = value.get();
+        for (;;)
+        {
+            int second = secondOf(word);
+            if (value.compareAndSet(word, pack(firstOf(word), second - 1)))
+            {
+                return second - 1;
+            }
+            word = value.get();
+        }
     }
 
     // -----------------------------------------------------------------
@@ -194,12 +218,25 @@ public final class AtomicCounterPair
      * Atomically moves {@code delta} units from the first counter to the
      * second: {@code first -= delta} and {@code second += delta} happen in a
      * single atomic step. Use a negative {@code delta} to move the other way.
+     * <p>
+     * Hand-rolled as a compare-and-set loop without the generic
+     * {@link #update} machinery: this runs twice per message on the actor
+     * hot path, where the lambda indirection and the observer's result
+     * boxing are measurable.
      *
      * @param delta the number of units to move from first to second
      */
     public void addFirstToSecond(int delta)
     {
-        update((f, s) -> f - delta, (f, s) -> s + delta, (nf, ns) -> null);
+        long word = value.get();
+        for (;;)
+        {
+            if (value.compareAndSet(word, pack(firstOf(word) - delta, secondOf(word) + delta)))
+            {
+                return;
+            }
+            word = value.get();
+        }
     }
 
     /**
@@ -214,7 +251,17 @@ public final class AtomicCounterPair
      */
     public boolean decrementSecondAndAllZero()
     {
-        return update((f, s) -> f, (f, s) -> s - 1, (nf, ns) -> nf == 0 && ns == 0);
+        long word = value.get();
+        for (;;)
+        {
+            long next = pack(firstOf(word), secondOf(word) - 1);
+            if (value.compareAndSet(word, next))
+            {
+                // the packed word is zero exactly when both counters are
+                return next == 0L;
+            }
+            word = value.get();
+        }
     }
 
     /**
@@ -225,7 +272,16 @@ public final class AtomicCounterPair
      */
     public boolean decrementFirstAndAllZero()
     {
-        return update((f, s) -> f - 1, (f, s) -> s, (nf, ns) -> nf == 0 && ns == 0);
+        long word = value.get();
+        for (;;)
+        {
+            long next = pack(firstOf(word) - 1, secondOf(word));
+            if (value.compareAndSet(word, next))
+            {
+                return next == 0L;
+            }
+            word = value.get();
+        }
     }
 
     // -----------------------------------------------------------------
