@@ -115,10 +115,16 @@ class ActorAcceptContractTest
     }
 
     /**
-     * A failing rush-worker start with the message already queued must NOT
-     * surface as a rejected accept: the message is safe (the permanent worker
-     * drains it) and a rethrow would invite a duplicate resend. The failure
-     * must still be recorded.
+     * A failing rush-worker start with messages already queued must NOT
+     * surface as a rejected accept: the messages are safe (the permanent
+     * worker drains them) and a rethrow would invite a duplicate resend. The
+     * failure must still be recorded.
+     * <p>
+     * The rush-worker start is lazy: it is only attempted when messages are
+     * actually backing up ({@code counters.first > 1}). The test therefore
+     * parks the permanent worker inside receive() and queues two further
+     * messages, so the second queued message deterministically triggers the
+     * (failing) rush start while the first is still being processed.
      */
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
@@ -128,12 +134,31 @@ class ActorAcceptContractTest
         try
         {
             List<Integer> received = new CopyOnWriteArrayList<>();
-            CountDownLatch delivered = new CountDownLatch(1);
-            MultiActor<Integer> actor = new MultiActor<Integer>(hub, 2, 0)
+            CountDownLatch gate = new CountDownLatch(1);
+            CountDownLatch delivered = new CountDownLatch(3);
+            MultiActor<Integer> actor = new MultiActor<Integer>(hub, 2, 8)
             {
                 @Override
                 protected void receive(Integer m)
                 {
+                    if (m == 1)
+                    {
+                        // park the permanent worker so messages 2 and 3
+                        // accumulate in the channel and trigger the lazy
+                        // rush start on the second queued message
+                        boolean parked = false;
+                        while (!parked)
+                        {
+                            try
+                            {
+                                gate.await();
+                                parked = true;
+                            }
+                            catch (InterruptedException ignored)
+                            {
+                            }
+                        }
+                    }
                     received.add(m);
                     delivered.countDown();
                 }
@@ -145,13 +170,17 @@ class ActorAcceptContractTest
                 }
             };
 
-            actor.accept(1); // must return normally: the message is queued
+            actor.accept(1); // taken by the permanent worker, parked in receive
+            actor.accept(2); // queued alone: first == 1, no rush attempt
+            actor.accept(3); // queued behind 2: first > 1, rush attempt fails
 
-            assertTrue(delivered.await(5, TimeUnit.SECONDS),
-                    "the permanent worker must drain the queued message");
-            assertEquals(As.list(1), received);
             assertTrue(actor.getException() instanceof RejectedExecutionException,
                     "the rush-start failure must be recorded, got " + actor.getException());
+
+            gate.countDown();
+            assertTrue(delivered.await(5, TimeUnit.SECONDS),
+                    "the permanent worker must drain the queued messages");
+            assertEquals(As.list(1, 2, 3), received);
         }
         finally
         {

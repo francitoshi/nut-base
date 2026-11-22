@@ -128,13 +128,27 @@ abstract class AsyncActor<M> extends Actor<M>
 
         if (threads > 1)
         {
-            // The rush-worker start no longer takes the actor lock: the
+            // The rush-worker start does not take the actor lock: the
             // semaphore already bounds the total worker count at `threads`,
             // and every other field touched here is either atomic
             // (activeWorkers, workerSlots) or written under the lock
             // elsewhere. Producers therefore never serialise against
             // workerDone()/notifyIdle() on the message path.
-            if (workerSlots.tryAcquire())
+            //
+            // The start is also lazy: `threads` is a ceiling, not a
+            // guarantee. The permanent worker is the safety net that always
+            // processes messages, so an extra worker is only worth its pool
+            // hand-off when work is actually backing up: `first > 1` means
+            // at least one queued message besides ours. When the permanent
+            // worker keeps up with the arrival rate, no rush worker is ever
+            // started — which also avoids the double wake-up of the eager
+            // design (channel put wakes the permanent worker, execute()
+            // wakes a rush worker, one of the two wake-ups is wasted on a
+            // worker that finds the channel already drained). A spurious
+            // or missed start is harmless: a spurious one drains and exits,
+            // a missed one only delays a message until the permanent worker
+            // or a later rush takes it.
+            if (counters.getFirst() > 1 && workerSlots.tryAcquire())
             {
                 try
                 {
