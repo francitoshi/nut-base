@@ -121,7 +121,9 @@ class PipeActorTest
         {
             throw boom;
         });
-        pipe.dryLogger();
+        pipe.inner.setOnException(ex ->
+        {
+        });
 
         pipe.accept(1);
         assertSame(boom, pipe.getException());

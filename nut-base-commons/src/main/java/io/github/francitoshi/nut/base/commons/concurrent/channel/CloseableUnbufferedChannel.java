@@ -47,6 +47,30 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
 
     private final Set<Thread> writers = new HashSet<>();
 
+    /**
+     * Mailbox mode: a producer's own interruption does not abort its put and
+     * does not close the channel — the hand-off wait survives the interrupt
+     * (the listener is still notified and the interrupt flag consumed). This
+     * is the flavour an {@code Actor} uses for its mailbox, where
+     * {@code accept()} waits for a taker permanently and is not abortable by
+     * interrupt. Reader interruptions keep the regular abort-and-close
+     * semantics.
+     */
+    private final boolean mailbox;
+
+    /** Package-private constructor used by {@code Channel.closeableMailboxOf}. */
+    CloseableUnbufferedChannel(boolean mailbox)
+    {
+        super();
+        this.mailbox = mailbox;
+    }
+
+    public CloseableUnbufferedChannel()
+    {
+        super();
+        this.mailbox = false;
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public void put(E value)
@@ -83,6 +107,14 @@ public final class CloseableUnbufferedChannel<E> extends UnbufferedChannel<E> im
             }
             if (interrupted)
             {
+                if (mailbox)
+                {
+                    // The producer's own interruption does not abort the
+                    // hand-off (mailbox contract): consume the flag and
+                    // retry the rendezvous.
+                    Thread.interrupted();
+                    continue;
+                }
                 closeIfCloseable();
                 // The value was not delivered: like the buffered engine, the
                 // blocking put must either deliver the value or fail loudly.

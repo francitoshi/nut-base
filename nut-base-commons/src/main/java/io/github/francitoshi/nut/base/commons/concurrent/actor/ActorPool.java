@@ -15,6 +15,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -26,6 +28,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,7 +64,8 @@ import java.util.List;
  * {@code maxThreads} is the Actor-driven sizing of {@link ActorHub}: when more
  * non-synchronous Actors are registered than {@code maxThreads}, the pool must
  * still be able to host one thread per Actor, so the effective maximum is
- * lifted to exactly the number of registered Actors (never higher).
+ * lifted to the number of registered Actors plus a rush budget of
+ * {@code maxThreads} extra threads (see the ActorHub documentation).
  * <p>
  * {@code ActorPool} also implements {@link Executor} (via {@link #execute}) so
  * it can be passed anywhere a plain {@code Executor} is expected.
@@ -73,6 +78,7 @@ import java.util.List;
  */
 public class ActorPool implements ActorLifecycle, Executor
 {    
+    private static final Logger LOG = Logger.getLogger(ActorPool.class.getName());
 
     /**
      * Number of available processor cores. Used as the default {@code coreThreads}
@@ -147,6 +153,14 @@ public class ActorPool implements ActorLifecycle, Executor
      * The underlying thread pool. {@code null} in synchronous mode.
      */
     private final ThreadPoolExecutor threadPoolExecutor;
+
+    /**
+     * The thread factory of the backing pool, kept so
+     * {@link #executeUntracked(Runnable)} can give a starved permanent worker
+     * a dedicated thread with the same characteristics (daemon flag, virtual
+     * support) as pool threads. {@code null} in synchronous mode.
+     */
+    private final ThreadFactory threadFactory;
 
     /**
      * Active-task tracker used by {@link #getActiveCount()},
@@ -245,6 +259,17 @@ public class ActorPool implements ActorLifecycle, Executor
     private final boolean synchronous;
 
     /**
+     * {@code true} when the backing pool was built with an abort-style
+     * saturation policy (the {@link ActorHub} does this): rejections throw,
+     * and every submission path resolves them explicitly — worker starts
+     * degrade (skip / dedicated thread) and user submissions re-admit by
+     * blocking until a worker accepts them. The plain {@code ActorPool}
+     * policies (caller-runs / caller-waits) resolve rejections inside the
+     * policy itself and never reach the hooks.
+     */
+    private final boolean abortSaturation;
+
+    /**
      * The configured minimum number of threads that stay permanently alive.
      * {@code 0} in synchronous mode. May be changed with
      * {@link #setThreads}; an {@link ActorHub} also recomputes the effective
@@ -289,6 +314,10 @@ public class ActorPool implements ActorLifecycle, Executor
         this.threadPoolExecutor = threadPoolExecutor;
         this.synchronous = threadPoolExecutor==null;
         this.tracker = this.synchronous ? null : new TaskTracker();
+        this.threadFactory = this.synchronous
+                ? null
+                : workerThreadFactory(DEFAULT_DAEMON, DEFAULT_ALLOW_VIRTUAL);
+        this.abortSaturation = false;
         this.coreThreads = 0;
         this.maxThreads = 0;
     }
@@ -393,6 +422,35 @@ public class ActorPool implements ActorLifecycle, Executor
      */
     public ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon, boolean allowVirtual)
     {
+        this(coreThreads, maxThreads, keepAliveMillis,
+                callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY,
+                avoidTracker, daemon, allowVirtual);
+    }
+
+    /**
+     * The saturation policy of {@link ActorHub} pools: rejections throw, and
+     * every submission path resolves them explicitly at the call site —
+     * worker starts degrade (skip / dedicated thread, see
+     * {@code doc/actor-framework.md} R1–R3) and user submissions block until
+     * a worker accepts them. No rejection may ever be resolved by running
+     * the task in the caller, and no framework submission may ever block
+     * inside a policy where it could not tell rejection from admission.
+     */
+    static final RejectedExecutionHandler ABORT_SATURATION_POLICY = new ThreadPoolExecutor.AbortPolicy();
+
+    /**
+     * Package-private constructor used by {@link ActorHub}: same pool shape
+     * as the public constructor, but with the abort-style saturation policy
+     * ({@link #ABORT_SATURATION_POLICY}).
+     */
+    /**
+     * Package-private constructor used by {@link ActorHub}: same pool shape
+     * as the public constructor, but with the abort-style saturation policy
+     * ({@link #ABORT_SATURATION_POLICY}).
+     */
+    ActorPool(int coreThreads, int maxThreads, int keepAliveMillis, RejectedExecutionHandler saturationPolicy, boolean avoidTracker, boolean daemon, boolean allowVirtual)
+    {
+        this.abortSaturation = saturationPolicy == ABORT_SATURATION_POLICY;
         this.synchronous = coreThreads == 0 && maxThreads == 0;
         if (!this.synchronous)
         {
@@ -415,15 +473,19 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             this.threadPoolExecutor = null;
             this.tracker = null;
-            return;
+            this.threadFactory = null;
         }
-        this.threadPoolExecutor = new ThreadPoolExecutor(
-                coreThreads, maxThreads,
-                keepAliveMillis, TimeUnit.MILLISECONDS,
-                new SynchronousQueue<>(),
-                workerThreadFactory(daemon, allowVirtual),
-                callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY);
-        this.tracker = avoidTracker ? null : new TaskTracker();
+        else
+        {
+            this.threadFactory = workerThreadFactory(daemon, allowVirtual);
+            this.threadPoolExecutor = new ThreadPoolExecutor(
+                    coreThreads, maxThreads,
+                    keepAliveMillis, TimeUnit.MILLISECONDS,
+                    new SynchronousQueue<>(),
+                    this.threadFactory,
+                    saturationPolicy);
+            this.tracker = avoidTracker ? null : new TaskTracker();
+        }
     }
 
     /**
@@ -632,18 +694,28 @@ public class ActorPool implements ActorLifecycle, Executor
      * inline when no thread can take it — for a permanent worker that parks
      * the producer inside the actor's drain loop until close, and a blocking
      * policy would wait for a slot that may never appear, since permanent
-     * workers never poll the pool's queue. When the pool is at its maximum
-     * size and every thread is busy inside a task, a submission can neither
-     * hand off nor spawn, so this method fails loudly instead of trusting the
-     * saturation policy. For a hub-managed executor this cannot happen: the
-     * pool sizing always lifts the maximum above the registered actors'
-     * summed demand before their permanent worker is submitted; the guard
-     * only fires on externally provided executors
-     * ({@link ProxyActorHub} and subclasses).
+     * workers never poll the pool's queue. Admission is therefore three-tier:
+     * <ol>
+     * <li>when the pool is at its maximum and every thread is busy inside a
+     *     task, the worker goes straight to a dedicated thread;</li>
+     * <li>otherwise a non-blocking {@code offer} on the pool's hand-off queue
+     *     delivers the task to a polling worker without ever reaching the
+     *     rejection handler;</li>
+     * <li>as a last resort the task is submitted through the pool wrapped in
+     *     a guard: if the rejection policy runs it in the submitting thread
+     *     (what {@link ThreadPoolExecutor.CallerRunsPolicy} does), the guard
+     *     detects it and hands the real task to a dedicated thread, so the
+     *     caller can never end up parked inside the worker's drain loop.
+     *     With a blocking policy ({@link CallerWaitsPolicy}) the guarded
+     *     wrapper cannot help — the policy blocks inside its own
+     *     {@code rejectedExecution} before any task code runs; the window
+     *     where that can happen is the narrow race between the checks above
+     *     and the executor's admission, and it ends as soon as any rush
+     *     worker finishes its drain and polls the queue.</li>
+     * </ol>
      *
      * @param task the background task; must not be {@code null}
-     * @throws IllegalStateException if the pool is shut down, or saturated in
-     *         a way that would run or await the task in the caller thread
+     * @throws IllegalStateException if the pool is shut down
      */
     void executeUntracked(Runnable task)
     {
@@ -667,15 +739,140 @@ public class ActorPool implements ActorLifecycle, Executor
         if (poolSize >= threadPoolExecutor.getMaximumPoolSize()
                 && threadPoolExecutor.getActiveCount() >= poolSize)
         {
-            // Every thread is busy inside a task and the pool cannot grow:
-            // no thread is polling the pool's hand-off queue, so the
-            // submission would end up running in this thread (CallerRuns)
-            // or blocking it (a waiting policy). A permanent worker must
-            // do neither — reject loudly before the caller has accounted
-            // for any message.
-            throw new IllegalStateException("executor is saturated");
+            // Every pool thread is busy inside a task and the pool cannot
+            // grow: no thread is polling the pool's hand-off queue, so the
+            // submission would end up running in this thread (CallerRuns) or
+            // blocking it (a waiting policy). A permanent worker must do
+            // neither — and must not fail either: it is the actor's safety
+            // net. Run it on a dedicated thread instead; the pool's threads
+            // may all be transient rush workers that exit on their own, but
+            // the producer cannot wait for them.
+            startDedicatedWorker(task);
+            return;
         }
-        this.threadPoolExecutor.execute(task);
+        // Non-blocking hand-off first: if a worker is polling the queue the
+        // task is taken here, and the rejection handler — hence the
+        // saturation policy — is never reached.
+        if (threadPoolExecutor.getQueue().offer(task))
+        {
+            return;
+        }
+        // The offer found nobody polling and the pool could not take the task
+        // yet; execute() still can (it spawns when below its maximum), but
+        // the state may shift again between the checks above and the
+        // executor's own admission logic. If the rejection policy then runs
+        // the wrapper in THIS thread — exactly what CallerRunsPolicy does —
+        // a permanent worker would park the caller inside its drain loop
+        // until close. The wrapper detects that case (it can only run in the
+        // submitting thread through the rejection path: a pool worker taking
+        // the task is never the submitting thread, which is busy inside this
+        // very call) and hands the task to a dedicated thread instead.
+        Thread caller = Thread.currentThread();
+        this.threadPoolExecutor.execute(() ->
+        {
+            if (Thread.currentThread() == caller)
+            {
+                startDedicatedWorker(task);
+                return;
+            }
+            task.run();
+        });
+    }
+
+    /**
+     * Runs a permanent worker on a dedicated thread outside the pool. Used
+     * only when the pool cannot admit the worker (see
+     * {@link #executeUntracked(Runnable)}): the task is untracked anyway, and
+     * the thread lives exactly as long as the task — a permanent worker exits
+     * when its actor closes, so no thread is leaked by an actor that never
+     * starts.
+     */
+    private void startDedicatedWorker(Runnable task)
+    {
+        Thread worker = threadFactory.newThread(task);
+        worker.start();
+    }
+
+    /**
+     * Submits {@code task} to the backing pool guaranteeing that it never
+     * runs in the calling thread and never blocks it. Admission never
+     * consults the saturation policy: a non-blocking {@code offer} on the
+     * pool's hand-off queue first (a polling worker takes it), then a
+     * guarded submission — if the rejection policy ends up running the
+     * wrapper in the submitting thread (what
+     * {@link ThreadPoolExecutor.CallerRunsPolicy} does), that is a refusal in
+     * disguise: {@code onReject} runs in the caller, the task is
+     * <em>not</em> executed, and the caller owns any bookkeeping rollback.
+     * <p>
+     * The task is tracked exactly like {@link #execute(Runnable)} tracks it:
+     * registered before submission, released exactly once whether it runs or
+     * is refused.
+     *
+     * @param task     the task to submit; must not be {@code null}
+     * @param onReject runs in the calling thread when the pool refused the
+     *                 task; must not throw; must not be {@code null}
+     * @return {@code true} when the task was admitted to the pool,
+     *         {@code false} when it was refused and {@code onReject} ran
+     */
+    boolean tryExecuteOffCaller(Runnable task, Runnable onReject)
+    {
+        Objects.requireNonNull(task, "task must not be null");
+        Objects.requireNonNull(onReject, "onReject must not be null");
+        if (synchronous || threadPoolExecutor.isShutdown())
+        {
+            onReject.run();
+            return false;
+        }
+        if (tracker != null)
+        {
+            tracker.beforeSubmit();
+        }
+        Runnable trackedTask = tracked(task);
+        Thread caller = Thread.currentThread();
+        AtomicBoolean settled = new AtomicBoolean();
+        Runnable guarded = () ->
+        {
+            if (Thread.currentThread() == caller)
+            {
+                // The rejection policy ran the wrapper in the submitting
+                // thread: a refusal in disguise (a pool worker taking the
+                // task is never the submitting thread, which is busy inside
+                // this very call). Undo the tracking and refuse properly.
+                if (settled.compareAndSet(false, true))
+                {
+                    if (tracker != null)
+                    {
+                        tracker.afterComplete();
+                        maybeShutdownWhenIdle();
+                    }
+                    onReject.run();
+                }
+                return;
+            }
+            trackedTask.run();
+        };
+        if (threadPoolExecutor.getQueue().offer(guarded))
+        {
+            return true;
+        }
+        try
+        {
+            threadPoolExecutor.execute(guarded);
+        }
+        catch (RuntimeException rex)
+        {
+            // An abort-style policy, or a shutdown race: refuse the same way.
+            if (settled.compareAndSet(false, true))
+            {
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                    maybeShutdownWhenIdle();
+                }
+                onReject.run();
+            }
+        }
+        return !settled.get();
     }
 
     /**
@@ -743,6 +940,12 @@ public class ActorPool implements ActorLifecycle, Executor
                 tracker.afterComplete();
                 maybeShutdownWhenIdle();
             }
+            if (abortSaturation)
+            {
+                // user-facing blocking admission: wait until a worker accepts
+                // the task instead of surfacing the rejection
+                return supplyBlocking(supplier);
+            }
             throw ex;
         }
         return future.whenComplete((value, ex) ->
@@ -754,7 +957,76 @@ public class ActorPool implements ActorLifecycle, Executor
             }
         });
     }
-    
+
+    /**
+     * Blocking-admission variant of {@link CompletableFuture#supplyAsync}:
+     * waits until a worker accepts the supplier, like
+     * {@link #blockUntilAccepted(Runnable)} — never dropped, never run in the
+     * caller, not abortable by interruption; the only rejection is a pool
+     * that is shut down, which completes the future exceptionally. Used by
+     * {@link #submit(Supplier)} and {@link #forEach} on abort-saturated
+     * pools.
+     */
+    private <U> CompletableFuture<U> supplyBlocking(Supplier<U> supplier)
+    {
+        if (tracker != null)
+        {
+            tracker.beforeSubmit();
+        }
+        CompletableFuture<U> future = new CompletableFuture<>();
+        Runnable task = () ->
+        {
+            try
+            {
+                future.complete(supplier.get());
+            }
+            catch (Throwable t)
+            {
+                future.completeExceptionally(t);
+            }
+            finally
+            {
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                }
+                maybeShutdownWhenIdle();
+            }
+        };
+        while (true)
+        {
+            if (threadPoolExecutor.isShutdown())
+            {
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                }
+                future.completeExceptionally(new RejectedExecutionException("executor is shut down"));
+                return future;
+            }
+            try
+            {
+                if (threadPoolExecutor.getQueue().offer(task, 50, TimeUnit.MILLISECONDS))
+                {
+                    return future;
+                }
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                }
+            }
+            catch (InterruptedException ex)
+            {
+                Thread.interrupted();
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                }
+                handleException(ex);
+            }
+        }
+    }
+
     /**
      * Wraps {@code task} so that exactly one {@code arriveAndDeregister} is
      * issued on the execution phaser when the task completes, without
@@ -784,6 +1056,96 @@ public class ActorPool implements ActorLifecycle, Executor
                 maybeShutdownWhenIdle();
             }
         };
+    }
+
+    /**
+     * Called when the backing pool rejected a submission. Only an abort-style
+     * saturation policy rejects by throwing — the caller-runs and
+     * caller-waits policies resolve rejections inside the policy itself and
+     * never reach this hook. The default re-throws the rejection;
+     * {@link ActorHub} re-admits the task by blocking until a worker accepts
+     * it (see {@link #blockUntilAccepted(Runnable)}).
+     *
+     * @param task the rejected task, not yet tracked (the submission's own
+     *             bookkeeping has been undone before this hook runs)
+     * @return {@code true} when the task was re-admitted and the rejection
+     *         must not surface to the caller
+     */
+    protected boolean onSubmissionRejected(Runnable task)
+    {
+        return false;
+    }
+
+    /**
+     * Re-admits {@code task} by waiting until a pool worker accepts it. This
+     * is the user-facing saturation semantics of the hub (R6 of
+     * {@code doc/actor-framework.md}): a submitted task is never dropped,
+     * never runs in the caller, and the caller waits for admission.
+     * <p>
+     * The wait alternates a spawn attempt (below the maximum the pool can
+     * still create a worker for this task) with a bounded taker-wait on the
+     * pool's hand-off queue, so both admission routes are exercised while
+     * the shutdown state is re-checked regularly. It is <strong>not
+     * abortable by interruption</strong> — an interrupt is consumed and the
+     * wait continues (the framework convention of
+     * {@code waitForIdle()}/{@code awaitTermination()}) — and the only
+     * rejection is a pool that is shut down.
+     *
+     * @return {@code true} when the task was accepted by a worker,
+     *         {@code false} only when the pool is shut down
+     */
+    protected boolean blockUntilAccepted(Runnable task)
+    {
+        while (true)
+        {
+            if (threadPoolExecutor.isShutdown())
+            {
+                return false;
+            }
+            if (tracker != null)
+            {
+                tracker.beforeSubmit();
+            }
+            try
+            {
+                threadPoolExecutor.execute(tracked(task));
+                return true;
+            }
+            catch (RejectedExecutionException rex)
+            {
+                // at the maximum with no taker available: fall through to
+                // the bounded taker wait, re-examining the shutdown state
+                // and the spawn opportunity on every turn
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                }
+            }
+            if (tracker != null)
+            {
+                tracker.beforeSubmit();
+            }
+            try
+            {
+                if (threadPoolExecutor.getQueue().offer(tracked(task), 50, TimeUnit.MILLISECONDS))
+                {
+                    return true;
+                }
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                }
+            }
+            catch (InterruptedException ex)
+            {
+                Thread.interrupted();
+                if (tracker != null)
+                {
+                    tracker.afterComplete();
+                }
+                handleException(ex);
+            }
+        }
     }
 
     /**
@@ -875,6 +1237,10 @@ public class ActorPool implements ActorLifecycle, Executor
         catch (RuntimeException ex)
         {
             tracker.afterComplete();
+            if (abortSaturation && onSubmissionRejected(task))
+            {
+                return;
+            }
             throw ex;
         }
     }
@@ -971,7 +1337,15 @@ public class ActorPool implements ActorLifecycle, Executor
             catch (RuntimeException ex)
             {
                 tracker.afterComplete();
-                throw ex;
+                if (abortSaturation && onSubmissionRejected(startingTask))
+                {
+                    // re-admitted by blocking: fall through to the readiness
+                    // wait, the worker counts the starting task down itself
+                }
+                else
+                {
+                    throw ex;
+                }
             }
         }
 
@@ -1254,8 +1628,10 @@ public class ActorPool implements ActorLifecycle, Executor
      * Returns the maximum allowed number of threads in the pool. This is the
      * configured {@link #getMaxThreads()} ceiling in ordinary operation; the
      * Actor-driven sizing of an {@link ActorHub} may lift the effective
-     * maximum to the number of registered non-synchronous Actors when that
-     * count exceeds the ceiling (see the class-level documentation).
+     * maximum above the ceiling when more non-synchronous Actors are
+     * registered than the ceiling allows, to host one thread per Actor plus a
+     * rush budget of {@code maxThreads} extra threads (see the class-level
+     * documentation).
      *
      * @return maximum pool size
      */
@@ -1273,6 +1649,43 @@ public class ActorPool implements ActorLifecycle, Executor
     public int getPoolSize()
     {
         return synchronous ? 0 : threadPoolExecutor.getPoolSize();
+    }
+
+    /**
+     * The hub's interruption consumer, or the default (log the event).
+     * Settable at any time; it receives the caught interruptions the
+     * framework stops — the ones raised by the mailbox machinery of an
+     * actor and the ones from plain pool machinery alike.
+     */
+    private volatile Consumer<Exception> onException = EXCEPTION;
+
+    static private Consumer<Exception> EXCEPTION = (ex) ->
+    {
+        LOG.log(Level.WARNING, "interruption consumed", ex);
+    };
+
+    /**
+     * Sets the hub's interruption consumer, replacing the default (which
+     * logs the event). It can be replaced at any time.
+     *
+     * @param onException the consumer, or {@code null} to restore the
+     *                    default logging behaviour
+     */
+    public ActorPool setOnException(Consumer<Exception> onException)
+    {
+        this.onException = onException != null ? onException : EXCEPTION;
+        return this;
+    }
+
+    /**
+     * Handles an interruption the framework stopped: hands the caught
+     * exception to the hub's interruption consumer. Package-private: the
+     * call sites are the mailbox wiring of the actors and the pool's own
+     * consuming waits.
+     */
+    void handleException(Exception ex)
+    {
+        onException.accept(ex);
     }
 
     /**
@@ -1365,14 +1778,23 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Applies the Actor-driven sizing of an {@link ActorHub} to the backing pool:
      * the effective core covers, at least, one permanently alive thread per
-     * registered non-synchronous Actor and the effective maximum covers both the
-     * configured {@code maxThreads} ceiling and all of the Actors' declared
-     * thread demand (the maximum never dropping below the effective core). The
-     * sole exception to the {@code maxThreads} ceiling: when more non-synchronous
-     * Actors are registered than {@code maxThreads}, the pool must be able to
-     * host one thread per Actor, so the effective maximum is lifted to exactly
-     * {@code asyncActorCount} (never higher). This helper is {@code final} and
-     * uses only base-class state, so it is safe to call from constructors of
+     * registered non-synchronous Actor and the effective maximum covers both
+     * the configured {@code maxThreads} ceiling and all of the Actors'
+     * declared thread demand (the maximum never dropping below the effective
+     * core). The sole exception to the {@code maxThreads} ceiling: when more
+     * non-synchronous Actors are registered than {@code maxThreads}, the pool
+     * must still be able to host one thread per Actor, so the effective
+     * maximum is lifted to {@code asyncActorCount} plus a rush budget of
+     * {@code maxThreads} extra threads: the permanent worker of every Actor
+     * is guaranteed a thread (the safety net that always processes
+     * messages), while the remaining declared demand is a target honoured on
+     * a best-effort basis — when the budget is exhausted, rush starts degrade
+     * gracefully to inline drains in the producer thread (the saturation
+     * policy), exactly as the N-threads-as-a-ceiling-not-a-guarantee rule
+     * allows. The rush threads created above the effective core are
+     * non-core, so they are reclaimed after the keep-alive time instead of
+     * lingering forever. This helper is {@code final} and uses only
+     * base-class state, so it is safe to call from constructors of
      * subclasses that override the config getters with a delegation layer.
      *
      * @param asyncActorCount number of registered Actors with a positive thread
@@ -1385,7 +1807,9 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             return;
         }
-        int ceiling = asyncActorCount > this.maxThreads ? asyncActorCount : this.maxThreads;
+        int ceiling = asyncActorCount > this.maxThreads
+                ? asyncActorCount + this.maxThreads
+                : this.maxThreads;
         int core = Math.min(ceiling, Math.max(this.coreThreads, asyncActorCount));
         int max = Math.min(ceiling, Math.max(this.maxThreads, Math.max(threadDemand, core)));
         resizePool(core, max);

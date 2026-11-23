@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Consumer;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -30,9 +29,6 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
 
     /** The last failure raised by a downstream target, if any. */
     private volatile Exception ex;
-
-    /** {@code false} once {@link #dryLogger()} silences the broadcast logging. */
-    private volatile boolean allowLogger = true;
 
     @SafeVarargs
     public FanOutActor(ActorHub actorHub, int threads, int queueSize, Consumer<T>... targets)
@@ -113,13 +109,14 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
             }
             catch (Exception ex)
             {
-                this.ex = ex;
-                if (allowLogger)
-                {
-                    LOG.log(Level.SEVERE, "FanOutActor: target delivery failed", ex);
-                }
+                handleException(ex);
             }
         }
+    }
+    
+    protected void handleException(Exception ex)
+    {
+        this.ex = ex;
     }
 
     @Override
@@ -206,13 +203,6 @@ public class FanOutActor<T> implements Consumer<T>, Linkable
     {
         Exception own = this.ex;
         return own != null ? own : inner.getException();
-    }
-
-    public FanOutActor<T> dryLogger()
-    {
-        this.allowLogger = false;
-        inner.dryLogger();
-        return this;
     }
 
     public int getPendingCount()

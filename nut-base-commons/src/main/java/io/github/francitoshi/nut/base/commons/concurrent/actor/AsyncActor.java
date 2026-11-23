@@ -84,12 +84,18 @@ abstract class AsyncActor<M> extends Actor<M>
         this.threads = threads;
         if (queueSize == 0)
         {
-            this.channel = Channel.closeableOf(0);
+            this.channel = Channel.closeableMailboxOf(0);
         }
         else
         {
-            this.channel = Channel.closeableBuffered(queueSize);
+            this.channel = Channel.closeableMailboxBuffered(queueSize);
         }
+        // R8: an interruption raised anywhere in the mailbox machinery —
+        // a producer's put or a worker's get — is routed to the hub's
+        // interruption listener with the caught interruption and this actor.
+        @SuppressWarnings("unchecked")
+        Channel<M> asChannel = (Channel<M>) this.channel;
+        asChannel.setInterruptedExceptionListener(ex -> actorHub.handleException(ex));
         this.workerSlots = new Semaphore(threads);
         this.actorHub.registerActor(this);
     }
@@ -204,10 +210,22 @@ abstract class AsyncActor<M> extends Actor<M>
         activeWorkers.incrementAndGet();
         try
         {
-            Executor h = actorHub;
+            ActorHub h = actorHub;
             if (h != null)
             {
-                h.execute(this::workerLoop);
+                // R1: the producer never processes. The rush worker is
+                // admitted off the caller — offered to a polling pool worker
+                // first, then submitted guarded — and if the pool cannot
+                // admit it at all, the refusal hook undoes the bookkeeping
+                // and the queued message simply waits for the permanent
+                // worker (R2: the rush is opportunistic, the permanent
+                // worker is the guarantee).
+                h.tryExecuteOffCaller(this::workerLoop, () ->
+                {
+                    activeWorkers.decrementAndGet();
+                    workerSlots.release();
+                    LOG.log(Level.FINE, "rush worker not admitted; the permanent worker drains the channel");
+                });
             }
             else
             {
@@ -320,7 +338,8 @@ abstract class AsyncActor<M> extends Actor<M>
             }
             finally
             {
-                if (counters.decrementSecondAndAllZero())
+                boolean allZero = counters.decrementSecondAndAllZero();
+                if (allZero)
                 {
                     notifyIdle();
                 }
@@ -357,7 +376,8 @@ abstract class AsyncActor<M> extends Actor<M>
             }
             finally
             {
-                if (counters.decrementSecondAndAllZero())
+                boolean allZero = counters.decrementSecondAndAllZero();
+                if (allZero)
                 {
                     if (idleEpilogue())
                     {

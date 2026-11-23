@@ -39,13 +39,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PackageMinorFixesTest
 {
     /**
-     * A forward without a linked downstream must be logged (a forgotten link
-     * must not look like a working pipeline), and {@code dryLogger()} must
-     * silence it.
+     * A forward without a linked downstream is silently ignored: no
+     * exception, no logging — a forgotten link loses the message without
+     * noise (the drop logging was removed with the logging rework).
      */
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
-    void unlinkedForwardIsLoggedAndDryLoggerSilencesIt()
+    void unlinkedForwardIsSilentlyIgnored()
     {
         PipeActor<String, String> pipe = new PipeActor<>(s -> s); // no hub, no link
 
@@ -69,20 +69,18 @@ class PackageMinorFixesTest
             }
         };
         Logger log = Logger.getLogger(LinkableActor.class.getName());
+        boolean useParentHandlers = log.getUseParentHandlers();
+        log.setUseParentHandlers(false);
         log.addHandler(handler);
         try
         {
-            pipe.accept("dropped");
-            assertEquals(1, records.size(), "the dropped message must be logged");
-            assertTrue(records.get(0).getMessage().contains("dropped"));
-
-            pipe.dryLogger();
-            pipe.accept("silenced");
-            assertEquals(1, records.size(), "dryLogger must silence the drop logging");
+            pipe.accept("dropped"); // must not throw and must not log
+            assertEquals(Collections.emptyList(), records, "an unlinked forward is silently ignored");
         }
         finally
         {
             log.removeHandler(handler);
+            log.setUseParentHandlers(useParentHandlers);
         }
     }
 

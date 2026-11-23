@@ -35,9 +35,6 @@ public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
 
     private volatile Exception ex;
 
-    /** {@code false} once {@link #dryLogger()} silences the drop logging. */
-    private volatile boolean allowLogger = true;
-
     protected LinkableActor(Actor<I> inner)
     {
         this.inner = inner;
@@ -77,10 +74,6 @@ public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
         if (n != null)
         {
             n.accept(value);
-        }
-        else if (allowLogger)
-        {
-            LOG.log(Level.SEVERE, getClass().getSimpleName() + ": no downstream stage linked, dropping message: " + value);
         }
     }
 
@@ -160,13 +153,6 @@ public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
     protected void handleException(Exception ex)
     {
         this.ex = ex;
-    }
-
-    public LinkableActor<I,F> dryLogger()
-    {
-        this.allowLogger = false;
-        inner.dryLogger();
-        return this;
     }
 
     public int getPendingCount()

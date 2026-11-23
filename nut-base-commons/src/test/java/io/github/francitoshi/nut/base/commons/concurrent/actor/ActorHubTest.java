@@ -63,7 +63,7 @@ class ActorHubTest
         runsATaskOn(ActorHub.hub());
         runsATaskOn(ActorHub.hub(2));
         runsATaskOn(ActorHub.hub(2, 2, 1000));
-        runsATaskOn(ActorHub.hub(2, 2, 1000, true));
+        runsATaskOn(ActorHub.hub(2, 2, 1000));
     }
 
     private void runsATaskOn(ActorHub h) throws Exception

@@ -47,8 +47,8 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
     /** {@code true} after {@link #terminate()} has run. */
     protected boolean terminated;
 
-    protected volatile boolean allowLogger = true;
     protected volatile Exception ex;
+    private volatile Consumer<Exception> onException = EXCEPTION;
 
     protected final ActorHub actorHub;
 
@@ -103,9 +103,10 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
         {
             throw new IllegalArgumentException("queueSize must not be negative");
         }
+        Actor<M> actor;
         if (threads == 0 || hub == null || hub.isSynchronous())
         {
-            return new SynchronousActor<M>(hub)
+            actor = new SynchronousActor<M>(hub)
             {
                 @Override
                 protected void receive(M m)
@@ -121,20 +122,11 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
                         onTerminate.run();
                     }
                 }
-
-                @Override
-                protected void exception(Exception ex)
-                {
-                    if (onException != null)
-                    {
-                        onException.accept(ex);
-                    }
-                }
             };
         }
-        if (threads == 1)
+        else if (threads == 1)
         {
-            return new SingleActor<M>(hub, queueSize)
+            actor = new SingleActor<M>(hub, queueSize)
             {
                 @Override
                 protected void receive(M m)
@@ -150,58 +142,48 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
                         onTerminate.run();
                     }
                 }
+            };
+        }
+        else
+        {
+            actor = new MultiActor<M>(hub, threads, queueSize)
+            {
+                @Override
+                protected void receive(M m)
+                {
+                    onMessage.accept(m);
+                }
 
                 @Override
-                protected void exception(Exception ex)
+                protected void terminate()
                 {
-                    if (onException != null)
+                    if (onTerminate != null)
                     {
-                        onException.accept(ex);
+                        onTerminate.run();
                     }
                 }
             };
         }
-        return new MultiActor<M>(hub, threads, queueSize)
+        if (onException != null)
         {
-            @Override
-            protected void receive(M m)
-            {
-                onMessage.accept(m);
-            }
-
-            @Override
-            protected void terminate()
-            {
-                if (onTerminate != null)
-                {
-                    onTerminate.run();
-                }
-            }
-
-            @Override
-            protected void exception(Exception ex)
-            {
-                if (onException != null)
-                {
-                    onException.accept(ex);
-                }
-            }
-        };
+            actor.setOnException(onException);
+        }
+        return actor;
     }
 
     // -----------------------------------------------------------------
     // Configuration
     // -----------------------------------------------------------------
 
-    public Actor<M> dryLogger()
-    {
-        this.allowLogger = false;
-        return this;
-    }
-
     public Exception getException()
     {
         return ex;
+    }
+
+    public Actor<M> setOnException(Consumer<Exception> onException)
+    {
+        this.onException = onException;
+        return this;
     }
 
     public ActorHub getActorHub()
@@ -216,15 +198,19 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
     /**
      * Sends a message to this actor for processing.
      * <p>
-     * The contract is delivery-or-throw: a returned call means the message was
-     * queued and will be processed (even when a supplementary rush worker
-     * could not be started, the permanent worker drains the queue); a thrown
-     * exception means the message was <em>not</em> delivered — typically an
-     * {@link IllegalStateException} when the actor or its channel is closed or
-     * rejecting, or the underlying failure that prevented the actor from
-     * running the message at all (e.g. its executor refused to start the
-     * worker). The failure is always recorded first ({@link #getException()},
-     * {@link #exception(Exception)}).
+     * The contract is wait-for-room, delivery-or-throw: the call blocks until
+     * the actor's mailbox has room and then the message is queued and will
+     * be processed — the wait always terminates, because the actor's
+     * permanent worker keeps draining (see
+     * {@code doc/actor-framework.md} R2). The wait is <strong>not abortable
+     * by interruption</strong>: the thread's interrupt is consumed and the
+     * call keeps waiting. A thrown exception means the message was
+     * <em>not</em> delivered and the caller may retry without risking a
+     * duplicate — typically an {@link IllegalStateException} when the actor
+     * or its channel is closed, or the underlying failure that prevented the
+     * actor from running the message at all (e.g. its executor refused to
+     * start the worker). The failure is always recorded first
+     * ({@link #getException()}, {@link #exception(Exception)}).
      *
      * @param message the message to deliver
      * @throws IllegalStateException if the actor or its channel is closed
@@ -247,9 +233,10 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
     /**
      * Called when an unhandled exception escapes from receive.
      */
-    protected void exception(Exception ex)
+    static private Consumer<Exception> EXCEPTION = (ex) ->
     {
-    }
+        LOG.log(Level.WARNING, "captured exception", ex);
+    };
 
     // -----------------------------------------------------------------
     // Internal helpers
@@ -257,12 +244,8 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
 
     protected void handleException(Exception ex)
     {
+        onException.accept(ex);
         this.ex = ex;
-        if (allowLogger)
-        {
-            LOG.log(Level.SEVERE, "Actor", ex);
-        }
-        exception(ex);
     }
 
     protected void countProcessed()

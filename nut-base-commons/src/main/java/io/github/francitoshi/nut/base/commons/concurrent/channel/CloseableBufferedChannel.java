@@ -55,6 +55,17 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
     private int activeWriters;
 
     /**
+     * Mailbox mode: a producer's own interruption does not abort its put and
+     * does not close the channel — the wait survives the interrupt (the
+     * listener is still notified and the interrupt flag consumed). This is
+     * the flavour an {@code Actor} uses for its mailbox, where
+     * {@code accept()} waits for room permanently and is not abortable by
+     * interrupt. Reader interruptions keep the regular abort-and-close
+     * semantics.
+     */
+    private final boolean mailbox;
+
+    /**
      * @param capacity the buffer capacity; must be positive
      */
     public CloseableBufferedChannel(int capacity)
@@ -71,6 +82,25 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
         }
         this.capacity = capacity;
         this.items = new ArrayDeque<>(capacity);
+        this.mailbox = false;
+    }
+
+    /**
+     * Package-private constructor used by the mailbox factories
+     * ({@code Channel.closeableMailboxBuffered}): same engine, but a
+     * producer's own interruption never aborts its put nor closes the
+     * channel.
+     */
+    CloseableBufferedChannel(int capacity, boolean mailbox)
+    {
+        super(null);
+        if (capacity <= 0)
+        {
+            throw new IllegalArgumentException("capacity must be > 0");
+        }
+        this.capacity = capacity;
+        this.items = new ArrayDeque<>(capacity);
+        this.mailbox = mailbox;
     }
 
     @Override
@@ -169,6 +199,18 @@ public class CloseableBufferedChannel<E> extends BufferedChannel<E> implements C
                 }
                 catch (InterruptedException ex)
                 {
+                    if (mailbox)
+                    {
+                        // The producer's own interruption does not abort its
+                        // wait (mailbox contract: accept() waits for room
+                        // permanently). Surface the request, consume the
+                        // flag so the next wait does not rethrow
+                        // immediately, and keep waiting — the deadline
+                        // recomputes at the top of the loop.
+                        handleInterruptedException(ex);
+                        Thread.interrupted();
+                        continue;
+                    }
                     interrupted = ex;
                     return false;
                 }

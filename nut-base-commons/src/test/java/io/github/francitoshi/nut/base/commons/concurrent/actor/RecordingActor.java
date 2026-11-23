@@ -171,12 +171,6 @@ class RecordingActor<M> implements Consumer<M>, Linkable
         return ex;
     }
 
-    public RecordingActor<M> dryLogger()
-    {
-        inner.dryLogger();
-        return this;
-    }
-
     public int getPendingCount()
     {
         return inner.getPendingCount();

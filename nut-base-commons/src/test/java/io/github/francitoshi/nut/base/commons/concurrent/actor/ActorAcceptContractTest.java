@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -31,22 +32,25 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class ActorAcceptContractTest
 {
     /**
-     * An interrupted blocking put aborts and closes the channel; accept() must
-     * surface the rejection to the caller instead of returning normally (the
-     * message was not delivered).
+     * An interrupted wait for mailbox room does not abort the put and does
+     * not close the channel (mailbox contract): the producer keeps waiting,
+     * the message is delivered once there is room, and the actor survives
+     * with both messages processed in order.
      */
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
-    void acceptThrowsWhenItsPutIsAbortedByAnInterrupt() throws Exception
+    void acceptSurvivesAnInterruptedWaitForRoom() throws Exception
     {
         ActorHub hub = new ActorHub(1, 2, 1_000, true, true);
         CountDownLatch processing = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
+        List<Integer> received = new CopyOnWriteArrayList<>();
         try
         {
             Actor<Integer> actor = Actor.create(hub, 1, 0, m ->
             {
                 processing.countDown();
+                received.add(m);
                 try
                 {
                     release.await();
@@ -76,10 +80,22 @@ class ActorAcceptContractTest
             // give the producer time to actually park inside the blocked put
             Thread.sleep(200);
             producer.interrupt();
-            producer.join(5_000);
 
-            assertTrue(thrown.get() instanceof IllegalStateException,
-                    "the aborted put must surface as a rejected accept, got " + thrown.get());
+            // the interrupted producer keeps waiting: nothing thrown, the
+            // actor is alive and not shut down
+            Thread.sleep(200);
+            assertNull(thrown.get(), "an interrupted wait for room must not reject the accept");
+            assertFalse(actor.isShutdown(), "a producer interrupt must not close the actor");
+
+            release.countDown(); // the worker finishes message 1 and takes message 2
+            producer.join(5_000);
+            assertFalse(producer.isAlive(), "the interrupted producer must complete once there is room");
+            assertNull(thrown.get());
+            assertNull(actor.getException(), "an interrupted wait is not an actor error");
+            assertEquals(As.list(1, 2), received, "both messages must be processed in order");
+
+            actor.shutdown();
+            assertTrue(actor.awaitTermination(5_000));
         }
         finally
         {
@@ -191,15 +207,16 @@ class ActorAcceptContractTest
     }
 
     /**
-     * A saturated pool must not silently run the permanent worker in the
-     * caller: with CallerRunsPolicy the submission would park the producer
-     * thread inside the actor's drain loop until close. The saturation guard
-     * in {@code executeUntracked} rejects instead, and the accept fails
-     * loudly <em>before</em> the message is accounted for.
+     * A saturated pool must not run the permanent worker in the caller, and
+     * it must not fail either: the permanent worker is the actor's safety
+     * net. With CallerRunsPolicy the submission would park the producer
+     * thread inside the actor's drain loop until close, so the saturation
+     * guard in {@code executeUntracked} serves the worker on a dedicated
+     * thread instead, and the accept succeeds normally.
      */
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
-    void saturatedPoolRejectsThePermanentWorkerLoudly() throws Exception
+    void saturatedPoolServesThePermanentWorkerOnADedicatedThread() throws Exception
     {
         final CountDownLatch gate = new CountDownLatch(1);
         ActorHub hub = new ActorHub(2, 2, 1_000);
@@ -225,11 +242,12 @@ class ActorAcceptContractTest
             hub.execute(blocker);
             assertTrue(busy.await(5, TimeUnit.SECONDS), "both pool threads must be busy");
 
-            Actor<Integer> actor = Actor.create(hub, 1, 4, m ->
-            {
-            }, null, null);
-            assertThrows(IllegalStateException.class, () -> actor.accept(1));
-            assertTrue(actor.isIdle(), "a rejected accept must not account the message");
+            CountDownLatch delivered = new CountDownLatch(1);
+            Actor<Integer> actor = Actor.create(hub, 1, 4, m -> delivered.countDown(), null, null);
+            actor.accept(1); // must return normally: served on a dedicated thread
+            assertTrue(delivered.await(5, TimeUnit.SECONDS),
+                    "the dedicated permanent worker must drain the message");
+            assertNull(actor.getException());
         }
         finally
         {

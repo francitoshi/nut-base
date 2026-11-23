@@ -100,7 +100,7 @@ class FanOutActorTest
         FanOutActor<String> bc = new FanOutActor<>(m ->
         {
             throw boom;
-        }, healthy).dryLogger();
+        }, healthy);
 
         List<LogRecord> records = new ArrayList<>();
         Handler handler = new Handler()

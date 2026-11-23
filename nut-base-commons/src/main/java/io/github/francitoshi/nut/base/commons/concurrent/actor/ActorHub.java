@@ -64,8 +64,12 @@ import java.util.logging.Logger;
  * {@code maxThreads} hard ceiling. The pool has no task queue (a
  * {@link SynchronousQueue} hands work straight to a thread), so when more or
  * heavier (non-synchronous) Actors are registered the effective core grows to
- * cover one thread per Actor and the maximum grows to cover the Actors' summed
- * thread demand, both bounded by {@code maxThreads}.
+ * cover one thread per Actor and the maximum grows towards the Actors' summed
+ * thread demand, bounded by {@code maxThreads} — except that when more
+ * Actors are registered than {@code maxThreads}, the ceiling is lifted to the
+ * Actor count plus a rush budget of {@code maxThreads}: one thread per Actor
+ * (its permanent worker) is guaranteed, the rest is best-effort and degrades
+ * gracefully to inline drains when the budget is exhausted.
  * <p>
  * {@link #shutdown(boolean)} and {@link #close(boolean)}
  * shut down every Actor registered with this ActorHub; the static
@@ -255,13 +259,20 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
         super(threadPoolExecutor);
     }
 
-    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean avoidTracker, boolean daemon)
     {
-        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, DEFAULT_ALLOW_VIRTUAL);
+        this(coreThreads, maxThreads, keepAliveMillis, avoidTracker, daemon, DEFAULT_ALLOW_VIRTUAL);
     }
 
     /**
      * Full constructor with virtual-thread support.
+     * <p>
+     * The hub's backing pool always uses an <em>abort-style</em> saturation
+     * policy: framework worker starts degrade explicitly (rush starts skip,
+     * permanent workers get a dedicated thread — see
+     * {@code doc/actor-framework.md} R1–R3) and user submissions submitted
+     * through {@link #execute(Runnable)} wait until a worker accepts them,
+     * never running in the caller and never being dropped.
      *
      * @param coreThreads       the minimum number of threads kept permanently
      *                          alive; must be &ge; 0 and &le; {@code maxThreads}
@@ -275,12 +286,9 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *                          {@code coreThreads}, whichever is larger) up to
      *                          the Actors' summed thread demand, bounded by
      *                          {@code maxThreads}
-     * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
-     *                          caller; if {@code false}, the caller runs the
-     *                          task itself
      * @param avoidTracker      if {@code true}, active-task tracking via the
-     *                          internal {@link java.util.concurrent.Phaser} is
-     *                          disabled, which reduces overhead but makes
+     *                          internal active-task tracker is disabled, which
+     *                          reduces overhead but makes
      *                          {@link ActorPool#waitForIdle()} a no-op
      * @param daemon            if {@code true}, the pool's worker threads are
      *                          created as daemon threads: each one still comes
@@ -305,9 +313,9 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *                          to the platform fallback. {@code false} (the
      *                          default) always uses platform threads
      */
-    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon, boolean allowVirtual)
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean avoidTracker, boolean daemon, boolean allowVirtual)
     {
-        super(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, allowVirtual);
+        super(coreThreads, maxThreads, keepAliveMillis, ABORT_SATURATION_POLICY, avoidTracker, daemon, allowVirtual);
         applyActorSizing(0, 0);
     }
 
@@ -320,40 +328,19 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *                          {@code 0} selects the synchronous mode (no pool)
      * @param keepAliveMillis   the keep-alive time for the threads above the
      *                          effective core, in milliseconds
-     * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
-     *                          caller; if {@code false}, the caller runs the
-     *                          task itself
      * @param avoidTracker      if {@code true}, active-task tracking via the
-     *                          internal {@link java.util.concurrent.Phaser} is
-     *                          disabled, which reduces overhead but makes
+     *                          internal active-task tracker is disabled, which
+     *                          reduces overhead but makes
      *                          {@link ActorPool#waitForIdle()} a no-op
      */
-    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker)
+    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean avoidTracker)
     {
-        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, DEFAULT_DAEMON);
+        this(coreThreads, maxThreads, keepAliveMillis, avoidTracker, DEFAULT_DAEMON);
     }
 
     /**
-     * Full constructor.
-     *
-     * @param coreThreads       the minimum number of threads kept permanently
-     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
-     * @param maxThreads        the absolute maximum number of live threads; both
-     *                          {@code 0} selects the synchronous mode (no pool)
-     * @param keepAliveMillis   the keep-alive time for the threads above the
-     *                          effective core, in milliseconds
-     * @param callerWaitsPolicy if {@code true}, a saturated pool blocks the
-     *                          caller; if {@code false}, the caller runs the
-     *                          task itself
-     */
-    public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy)
-    {
-        this(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, DEFAULT_AVOID_TRACKER);
-    }
-
-    /**
-     * Constructs an ActorHub with the {@link ThreadPoolExecutor.CallerRunsPolicy}
-     * saturation policy.
+     * Constructs an ActorHub with the default settings (tracker enabled,
+     * non-daemon threads).
      *
      * @param coreThreads      the minimum number of threads kept permanently
      *                         alive; must be &ge; 0 and &le; {@code maxThreads}
@@ -364,7 +351,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     public ActorHub(int coreThreads, int maxThreads, int keepAliveMillis)
     {
-        this(coreThreads, maxThreads, keepAliveMillis, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, maxThreads, keepAliveMillis, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -376,7 +363,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     public ActorHub(int coreThreads)
     {
-        this(coreThreads, coreThreads + coreThreads, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(coreThreads, coreThreads + coreThreads, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -385,7 +372,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      */
     public ActorHub()
     {
-        this(CORES, CORES + CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_CALLER_WAITS_POLICY, DEFAULT_AVOID_TRACKER);
+        this(CORES, CORES + CORES, DEFAULT_KEEP_ALIVE_MILLIS, DEFAULT_AVOID_TRACKER);
     }
 
     /**
@@ -427,23 +414,6 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     }
 
     /**
-     * Static factory with full pool configuration and saturation policy choice.
-     *
-     * @param coreThreads       the minimum number of threads kept permanently
-     *                          alive; must be &ge; 0 and &le; {@code maxThreads}
-     * @param maxThreads        the absolute maximum number of live threads
-     * @param keepAliveMillis   keep-alive time for the threads above the
-     *                          effective core, in milliseconds
-     * @param callerWaitsPolicy {@code true} to block the caller when saturated;
-     *                          {@code false} to run the task in the caller
-     * @return a new ActorHub
-     */
-    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy)
-    {
-        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy);
-    }
-
-    /**
      * Static factory with full pool configuration and daemon-thread control.
      *
      * @param coreThreads       the minimum number of threads kept permanently
@@ -451,23 +421,18 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * @param maxThreads        the absolute maximum number of live threads
      * @param keepAliveMillis   keep-alive time for the threads above the
      *                          effective core, in milliseconds
-     * @param callerWaitsPolicy {@code true} to block the caller when saturated;
-     *                          {@code false} to run the task in the caller
      * @param avoidTracker      {@code true} to disable the internal active-task
      *                          tracker
      * @param daemon            {@code true} to create the hub's worker threads
-     *                          as daemon threads via the
-     *                          {@link ThreadPoolExecutor}'s default
-     *                          {@link java.util.concurrent.ThreadFactory}, so
-     *                          the hub never keeps the JVM alive on its own
-     *                          when only background Actors are running;
-     *                          {@code false} (the default) to use ordinary
-     *                          non-daemon worker threads
+     *                          as daemon threads, so the hub never keeps the
+     *                          JVM alive on its own when only background Actors
+     *                          are running; {@code false} (the default) uses
+     *                          ordinary non-daemon worker threads
      * @return a new ActorHub
      */
-    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon)
+    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean avoidTracker, boolean daemon)
     {
-        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, DEFAULT_ALLOW_VIRTUAL);
+        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, avoidTracker, daemon);
     }
 
     /**
@@ -479,8 +444,6 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * @param maxThreads        the absolute maximum number of live threads
      * @param keepAliveMillis   keep-alive time for the threads above the
      *                          effective core, in milliseconds
-     * @param callerWaitsPolicy {@code true} to block the caller when saturated;
-     *                          {@code false} to run the task in the caller
      * @param avoidTracker      {@code true} to disable the internal active-task
      *                          tracker
      * @param daemon            {@code true} to create the hub's worker threads
@@ -502,9 +465,22 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      *                          uses platform threads
      * @return a new ActorHub
      */
-    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean callerWaitsPolicy, boolean avoidTracker, boolean daemon, boolean allowVirtual)
+    public static ActorHub hub(int coreThreads, int maxThreads, int keepAliveMillis, boolean avoidTracker, boolean daemon, boolean allowVirtual)
     {
-        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, callerWaitsPolicy, avoidTracker, daemon, allowVirtual);
+        return new ActorHub(coreThreads, maxThreads, keepAliveMillis, avoidTracker, daemon, allowVirtual);
+    }
+
+    /**
+     * The hub never resolves a pool rejection by running the task in the
+     * caller: a submitted task waits until a worker accepts it, exactly the
+     * semantics {@code doc/actor-framework.md} R6 prescribes. The wait ends
+     * as soon as any worker finishes its current task and polls the pool's
+     * hand-off queue; an interrupted wait surfaces the original rejection.
+     */
+    @Override
+    protected boolean onSubmissionRejected(Runnable task)
+    {
+        return blockUntilAccepted(task);
     }
 
     @Override
@@ -592,9 +568,15 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * </ul>
      * where {@code ceiling} is {@code maxThreads}, except when more
      * non-synchronous Actors are registered than {@code maxThreads}: then the
-     * pool must still host one thread per Actor and {@code ceiling} is exactly
-     * {@code asyncActorCount}. The pool scales up as Actors register and back
-     * down as they terminate.
+     * pool must still host one thread per Actor and {@code ceiling} is
+     * {@code asyncActorCount + maxThreads} — the permanent worker of every
+     * Actor is guaranteed a thread, and the remaining declared demand is a
+     * target honoured on a best-effort basis within a rush budget of
+     * {@code maxThreads} extra threads; when the budget is exhausted, rush
+     * starts degrade gracefully to inline drains in the producer thread (the
+     * saturation policy). The rush threads above the effective core are
+     * non-core and are reclaimed after the keep-alive time. The pool scales
+     * up as Actors register and back down as they terminate.
      */
     private void adjustPoolToActors()
     {
@@ -611,8 +593,9 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * thread per registered non-synchronous Actor and the effective maximum
      * never drops below the Actors' summed thread demand. The sole exception to
      * the {@code maxThreads} ceiling: when more non-synchronous Actors are
-     * registered than {@code maxThreads}, the effective maximum is exactly that
-     * number of Actors.
+     * registered than {@code maxThreads}, the effective maximum is lifted to
+     * that number of Actors plus a rush budget of {@code maxThreads} extra
+     * threads — one thread per Actor is guaranteed, the rest is best-effort.
      *
      * @param coreThreads the new permanently-alive thread floor; must be &ge; 0
      * @param maxThreads  the new ceiling on live threads; must be &ge;

@@ -35,7 +35,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
      * unassigned case. {@link #actorHub} starts here; {@code actorHub == fallback}
      * therefore means "no real hub assigned yet".
      */
-    private final ActorHub fallback = new ActorHub(0, 0, 0, false, false);
+    private final ActorHub fallback = new ActorHub(0, 0, 0);
 
     /** The hub every operation is delegated to; never {@code null}. */
     private volatile ActorHub actorHub = fallback;
@@ -44,7 +44,7 @@ public class ProxyActorHub extends ActorHub implements AutoCloseable
 
     public ProxyActorHub()
     {
-        super(0, 0, 0, false, false);
+        super(0, 0, 0);
     }
 
     /**

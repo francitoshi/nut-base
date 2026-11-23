@@ -361,7 +361,9 @@ class PipelineActorTest
     {
         PipelineActor<Integer,String> pipeline = actorHub.pipeline((Integer i) -> "v=" + i);
         PipeActor<Integer,?> head = pipeline.sink(s -> {});
-        head.dryLogger();
+        head.inner.setOnException(ex ->
+        {
+        });
         head.shutdown();
         // fully closed and drained before sending: the rejected send cannot
         // race the close and no partial delivery reaches the loop

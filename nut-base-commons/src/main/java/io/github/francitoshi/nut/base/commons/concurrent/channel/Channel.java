@@ -476,6 +476,53 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
     }
 
     /**
+     * Actor-mailbox flavour of {@link #closeableOf(int)}: the producer's own
+     * interruption does not abort its {@code put} and does not close the
+     * channel — the wait for room (or for the rendezvous hand-off) survives
+     * the interrupt, so {@code accept()} can promise to wait permanently.
+     * Reader interruptions keep the regular abort-and-close semantics.
+     *
+     * @param capacity the channel capacity, see {@link #of(int)}; only 0 and
+     *                 positive values are supported by the mailbox flavour
+     * @param <T>      the element type
+     * @return a closeable mailbox channel matching the requested capacity
+     * @throws IllegalArgumentException if {@code capacity} is negative (the
+     *                                  mailbox flavour has no unbounded variant
+     *                                  — a mailbox that cannot fill cannot
+     *                                  exercise backpressure)
+     */
+    public static <T> CloseableChannel<T> closeableMailboxOf(int capacity)
+    {
+        if (capacity == 0)
+        {
+            return new CloseableUnbufferedChannel<>(true);
+        }
+        if (capacity > 0)
+        {
+            return new CloseableBufferedChannel<>(capacity, true);
+        }
+        throw new IllegalArgumentException("capacity must be >= 0 for a mailbox channel");
+    }
+
+    /**
+     * Actor-mailbox flavour of {@link #closeableBuffered(int)} — see
+     * {@link #closeableMailboxOf(int)}.
+     *
+     * @param capacity the buffer capacity; must be positive
+     * @param <T>      the element type
+     * @return a closeable mailbox channel with the given capacity
+     * @throws IllegalArgumentException if {@code capacity <= 0}
+     */
+    public static <T> CloseableChannel<T> closeableMailboxBuffered(int capacity)
+    {
+        if (capacity <= 0)
+        {
+            throw new IllegalArgumentException("capacity must be > 0");
+        }
+        return new CloseableBufferedChannel<>(capacity, true);
+    }
+
+    /**
      * Unbuffered channel: {@link ChannelWriter#put} and {@link ChannelReader#get}
      * are synchronized hand in hand, with no buffer, a rendezvous.
      * Use it to synchronize two threads by exchanging a value directly.

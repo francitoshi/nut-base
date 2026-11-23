@@ -83,7 +83,7 @@ class ActorPoolVirtualTest
     void virtualActorsProcessMessagesEndToEnd() throws Exception
     {
         assumeTrue(Threads.isVirtualAvailable());
-        try (ActorHub hub = ActorHub.hub(1, 2, 1000, false, false, false, true))
+        try (ActorHub hub = ActorHub.hub(1, 2, 1000, false, false, true))
         {
             int messages = 1000;
             CountDownLatch done = new CountDownLatch(messages);

@@ -74,7 +74,6 @@ class ActorTest
     {
         RecordingActor<String> actor = new RecordingActor<>();
         actor.shutdown();
-        actor.dryLogger();
         assertTrue(actor.isShutdown());
         assertThrows(IllegalStateException.class, () -> actor.accept("too late"));
         assertTrue(actor.received.isEmpty());
@@ -112,16 +111,45 @@ class ActorTest
     void exceptionHookAndGetExceptionCaptureFailureInDirectMode()
     {
         RuntimeException boom = new RuntimeException("boom");
-        RecordingActor<String> actor = new RecordingActor<>();
-        actor.withAction(m ->
+
+        // a synchronous actor with a capture consumer: handleException hands
+        // every captured failure to the settable onException consumer and
+        // records it
+        List<Exception> captured = new CopyOnWriteArrayList<>();
+        Actor<String> actor = Actor.create(null, 0, 0, m ->
+        {
+            throw boom;
+        }, null, captured::add);
+        actor.accept("x");
+
+        assertSame(boom, actor.getException());
+        assertEquals(Collections.singletonList(boom), captured);
+
+        // a RecordingActor wired through the factory: its own onException
+        // consumer records the failure the same way
+        RecordingActor<String> recording = new RecordingActor<>();
+        recording.withAction(m ->
         {
             throw boom;
         });
+        recording.accept("x");
+        assertSame(boom, recording.getException());
+        assertSame(boom, recording.lastException.get());
+    }
 
-        // the SEVERE log entry is part of the hook contract (Actor.handleException
-        // logs before calling the hook): capture it via a handler instead of
-        // switching the logger off with dryLogger(), so the log itself stays
-        // under test and nothing spills to the console
+    @Test
+    void defaultOnExceptionLogsTheCapturedException()
+    {
+        RuntimeException boom = new RuntimeException("boom");
+
+        // without an onException consumer the default logs the captured
+        // exception at WARNING: capture it via a handler so nothing spills
+        // to the console and the logging stays under test
+        Actor<String> actor = Actor.create(null, 0, 0, m ->
+        {
+            throw boom;
+        }, null, null);
+
         Logger logger = Logger.getLogger(Actor.class.getName());
         List<LogRecord> records = new CopyOnWriteArrayList<>();
         Handler capture = new Handler()
@@ -129,7 +157,7 @@ class ActorTest
             @Override
             public void publish(LogRecord record)
             {
-                if (record.getLevel().intValue() >= Level.SEVERE.intValue())
+                if (record.getLevel().intValue() >= Level.WARNING.intValue())
                 {
                     records.add(record);
                 }
@@ -158,10 +186,9 @@ class ActorTest
         }
 
         assertSame(boom, actor.getException());
-        assertSame(boom, actor.lastException.get());
         assertTrue(records.stream()
                         .anyMatch(r -> r.getThrown() == boom),
-                "the failure must be logged before the hook runs");
+                "the default onException must log the captured exception");
     }
 
     @Test
@@ -347,17 +374,9 @@ class ActorTest
     }
 
     @Test
-    void dryLoggerReturnsSameInstance()
-    {
-        RecordingActor<String> actor = new RecordingActor<>();
-        assertSame(actor, actor.dryLogger());
-    }
-
-    @Test
     void testExceptionInWorkerDoesNotStopDraining() throws InterruptedException
     {
         RecordingActor<String> actor = new RecordingActor<>(actorHub);
-        actor.dryLogger();
         actor.withAction(m -> 
         {
             if ("fail".equals(m)) 
@@ -429,7 +448,7 @@ class ActorTest
         // deadlocking the cascade once every pool thread is held by a blocked
         // forwarder. This is the universal ActorPool configuration (see
         // ActorPool#ActorPool(int, int, int)).
-        ActorHub bigActorHub = ActorHub.hub(100, 300, 10000, false);
+        ActorHub bigActorHub = ActorHub.hub(100, 300, 10000);
         try
         {
             Actor<Long>[] actors = new Actor[actorsCount];
@@ -450,7 +469,7 @@ class ActorTest
                                 actors[index + 2].accept(m);
                             }
                         }, null, null);
-                actors[index] = actor.dryLogger();
+                actors[index] = actor;
             }
 
             long start = System.nanoTime();
