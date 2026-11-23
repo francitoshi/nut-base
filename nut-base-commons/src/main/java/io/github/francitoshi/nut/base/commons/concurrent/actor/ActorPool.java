@@ -20,12 +20,14 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Phaser;
 
 /**
  * A managed thread-pool with a rich task-execution API.
@@ -94,7 +96,7 @@ public class ActorPool implements ActorLifecycle, Executor
     public static final boolean DEFAULT_CALLER_WAITS_POLICY = false;
 
     /**
-     * Default active-task tracking: {@code false} keeps the {@link Phaser}
+     * Default active-task tracking: {@code false} keeps the active-task
      * tracker enabled, which backs {@link #isIdle()},
      * {@link #getActiveCount()} and {@link #waitForIdle()}.
      */
@@ -148,13 +150,91 @@ public class ActorPool implements ActorLifecycle, Executor
 
     /**
      * Active-task tracker used by {@link #getActiveCount()},
-     * {@link #isIdle()} and {@link #waitForIdle()}. It is initialised with one
-     * permanent "owner" party (the one {@link #waitForIdle()} synchronises on)
-     * and tasks pre-register on submission and deregister around their
-     * execution. {@code null} when active-task tracking was disabled at
-     * construction ({@code avoidTracker == true}) or in synchronous mode.
+     * {@link #isIdle()} and {@link #waitForIdle()}. Tasks pre-register on
+     * submission and deregister around their execution; the tracker parks
+     * {@link #waitForIdle()} callers until the count reaches zero.
+     * {@code null} when active-task tracking was disabled at construction
+     * ({@code avoidTracker == true}) or in synchronous mode.
      */
-    private final Phaser phaser;
+    private final TaskTracker tracker;
+
+    /**
+     * The active-task tracker itself. It replaced a {@code Phaser} (one
+     * permanent owner party, tasks registering on submission and
+     * deregistering on completion): the atomic counter is a single RMW per
+     * task on both sides instead of the Phaser's multi-field phase
+     * bookkeeping, and the {@code waitForIdle()} machinery only takes the
+     * lock on the transition to zero.
+     */
+    private static final class TaskTracker
+    {
+        private final AtomicInteger active = new AtomicInteger();
+        private final ReentrantLock lock = new ReentrantLock();
+        private final Condition allDone = lock.newCondition();
+
+        /**
+         * Registers a task <em>before</em> it is handed to the pool, so a
+         * task that is merely queued is already visible to
+         * {@code waitForIdle()}/{@code isIdle()}.
+         */
+        void beforeSubmit()
+        {
+            active.incrementAndGet();
+        }
+
+        /**
+         * Deregisters a completed task (or a submission whose pool rejected
+         * it). Only the transition to zero takes the lock and signals.
+         */
+        void afterComplete()
+        {
+            if (active.decrementAndGet() == 0)
+            {
+                lock.lock();
+                try
+                {
+                    allDone.signalAll();
+                }
+                finally
+                {
+                    lock.unlock();
+                }
+            }
+        }
+
+        int getActive()
+        {
+            return active.get();
+        }
+
+        boolean isIdle()
+        {
+            return active.get() == 0;
+        }
+
+        /**
+         * Blocks until every registered task has completed. New tasks may
+         * register while waiting; the waiter re-checks the count under the
+         * lock and every transition to zero signals under that same lock,
+         * so a wake-up cannot be lost. Not responsive to interruption,
+         * matching the Phaser-based implementation it replaced.
+         */
+        void awaitIdle()
+        {
+            lock.lock();
+            try
+            {
+                while (active.get() != 0)
+                {
+                    allDone.awaitUninterruptibly();
+                }
+            }
+            finally
+            {
+                lock.unlock();
+            }
+        }
+    }
 
     /**
      * When {@code true}, all {@code execute}/{@code submit}/{@code spawn}/
@@ -208,7 +288,7 @@ public class ActorPool implements ActorLifecycle, Executor
     {
         this.threadPoolExecutor = threadPoolExecutor;
         this.synchronous = threadPoolExecutor==null;
-        this.phaser = this.synchronous ? null : new Phaser(1);
+        this.tracker = this.synchronous ? null : new TaskTracker();
         this.coreThreads = 0;
         this.maxThreads = 0;
     }
@@ -334,7 +414,7 @@ public class ActorPool implements ActorLifecycle, Executor
         if (this.synchronous)
         {
             this.threadPoolExecutor = null;
-            this.phaser = null;
+            this.tracker = null;
             return;
         }
         this.threadPoolExecutor = new ThreadPoolExecutor(
@@ -343,7 +423,7 @@ public class ActorPool implements ActorLifecycle, Executor
                 new SynchronousQueue<>(),
                 workerThreadFactory(daemon, allowVirtual),
                 callerWaitsPolicy ? CALLER_WAITS_POLICY : CALLER_RUNS_POLICY);
-        this.phaser = avoidTracker ? null : new Phaser(1);
+        this.tracker = avoidTracker ? null : new TaskTracker();
     }
 
     /**
@@ -604,11 +684,11 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             checkPoolAlive();
         }
-        if (phaser == null)
+        if (tracker == null)
         {
             return CompletableFuture.supplyAsync(supplier, this.threadPoolExecutor);
         }
-        phaser.register();
+        tracker.beforeSubmit();
         AtomicBoolean arrived = new AtomicBoolean();
         CompletableFuture<U> future;
         try
@@ -622,7 +702,7 @@ public class ActorPool implements ActorLifecycle, Executor
                 finally
                 {
                     arrived.set(true);
-                    phaser.arriveAndDeregister();
+                    tracker.afterComplete();
                     maybeShutdownWhenIdle();
                 }
             }, this.threadPoolExecutor);
@@ -631,7 +711,7 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             if (arrived.compareAndSet(false, true))
             {
-                phaser.arriveAndDeregister();
+                tracker.afterComplete();
                 maybeShutdownWhenIdle();
             }
             throw ex;
@@ -640,7 +720,7 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             if (arrived.compareAndSet(false, true))
             {
-                phaser.arriveAndDeregister();
+                tracker.afterComplete();
                 maybeShutdownWhenIdle();
             }
         });
@@ -659,7 +739,7 @@ public class ActorPool implements ActorLifecycle, Executor
      */
     private Runnable tracked(Runnable task)
     {
-        if(phaser==null)
+        if(tracker==null)
         {
             return task;
         }
@@ -671,7 +751,7 @@ public class ActorPool implements ActorLifecycle, Executor
             }
             finally
             {
-                phaser.arriveAndDeregister();
+                tracker.afterComplete();
                 maybeShutdownWhenIdle();
             }
         };
@@ -679,24 +759,17 @@ public class ActorPool implements ActorLifecycle, Executor
 
     /**
      * Returns the number of tasks currently registered with the internal
-     * {@link Phaser} (i.e. executing or about to execute on the pool), or
-     * {@code -1} if active-task tracking was not enabled at construction time.
-     * Long-lived background workers started with
+     * active-task tracker (i.e. executing or about to execute on the pool),
+     * or {@code -1} if active-task tracking was not enabled at construction
+     * time. Long-lived background workers started with
      * {@link #executeUntracked(Runnable)} (such as the permanent workers of
      * async Actors) are not counted.
-     * <p>
-     * <strong>Implementation note:</strong> the {@code Phaser} is initialised
-     * with one permanent "owner" party (the party used by
-     * {@link #waitForIdle()} to synchronise). That party is subtracted here
-     * so the return value reflects only actual in-flight tasks. Do not remove
-     * the {@code - 1} without also changing the {@code Phaser} initialisation.
      *
      * @return active task count (&ge; 0), or {@code -1} if tracking is disabled
      */
     public int getActiveCount()
     {
-        // Subtract 1 to exclude the permanent owner party registered at construction.
-        return phaser != null ? phaser.getRegisteredParties() - 1 : -1;
+        return tracker != null ? tracker.getActive() : -1;
     }
 
     /**
@@ -711,13 +784,11 @@ public class ActorPool implements ActorLifecycle, Executor
      */
     public boolean isIdle()
     {
-        // getActiveCount() already subtracts the permanent owner party,
-        // so == 0 means no tasks are registered.
         if (synchronous)
         {
             return true;
         }
-        return phaser != null ? getActiveCount() == 0 : threadPoolExecutor.getActiveCount() == 0;
+        return tracker != null ? tracker.isIdle() : threadPoolExecutor.getActiveCount() == 0;
     }
 
     /**
@@ -729,24 +800,16 @@ public class ActorPool implements ActorLifecycle, Executor
     @Override
     public ActorPool waitForIdle()
     {
-        if(phaser!=null)
+        if(tracker!=null)
         {
-            // We loop because new tasks may register between iterations.
-            // arriveAndAwaitAdvance() atomically marks our arrival and
-            // blocks until every other currently-registered party also
-            // arrives, eliminating the read-then-wait race condition of
-            // the previous getPhase() / awaitAdvance(phase) pattern.
-            //
-            // The owner party (registered at construction) is the one
-            // calling arriveAndAwaitAdvance here; tasks pre-register on
-            // submission and deregister around their execution.
-            while (phaser.getRegisteredParties() > 1)
-            {
-                phaser.arriveAndAwaitAdvance();
-            }
+            // The tracker parks until the active count is observed zero under
+            // its lock; every transition to zero signals under that same
+            // lock, so a wake-up cannot be lost. New tasks may register while
+            // waiting; the loop keeps waiting until the count is zero.
+            tracker.awaitIdle();
         }
         return this;
-    }    
+    }
     /**
      * Submits {@code task} to the thread pool for fire-and-forget execution.
      * Implements {@link Executor}.
@@ -762,9 +825,9 @@ public class ActorPool implements ActorLifecycle, Executor
             task.run();
             return;
         }
-        // before any registration: a rejected task must not leak a Phaser party
+        // before any registration: a rejected task must not leak a tracker count
         checkPoolAlive();
-        if(phaser==null)
+        if(tracker==null)
         {
             this.threadPoolExecutor.execute(task);
             return;
@@ -775,14 +838,14 @@ public class ActorPool implements ActorLifecycle, Executor
         // (as this class once did) let waitForIdle() return while worker tasks
         // sat in the pool queue, so a subsequent shutdown raced in-flight
         // forwards and silently dropped messages.
-        phaser.register();
+        tracker.beforeSubmit();
         try
         {
             this.threadPoolExecutor.execute(tracked(task));
         }
         catch (RuntimeException ex)
         {
-            phaser.arriveAndDeregister();
+            tracker.afterComplete();
             throw ex;
         }
     }
@@ -863,7 +926,7 @@ public class ActorPool implements ActorLifecycle, Executor
             task.run();
         };
 
-        if (phaser == null)
+        if (tracker == null)
         {
             this.threadPoolExecutor.execute(startingTask);
         }
@@ -871,14 +934,14 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             // Pre-register before handing the task to the pool: a spawned task
             // still waiting for a free thread must be visible to waitForIdle().
-            phaser.register();
+            tracker.beforeSubmit();
             try
             {
                 this.threadPoolExecutor.execute(tracked(startingTask));
             }
             catch (RuntimeException ex)
             {
-                phaser.arriveAndDeregister();
+                tracker.afterComplete();
                 throw ex;
             }
         }
@@ -1026,7 +1089,7 @@ public class ActorPool implements ActorLifecycle, Executor
     {
         if (whenIdle)
         {
-            if (phaser == null)
+            if (tracker == null)
             {
                 shutdown();
                 return this;
@@ -1060,9 +1123,9 @@ public class ActorPool implements ActorLifecycle, Executor
         {
             return;
         }
-        boolean idle = phaser == null
+        boolean idle = tracker == null
                 ? threadPoolExecutor.getActiveCount() == 0
-                : phaser.getRegisteredParties() == 1;
+                : tracker.isIdle();
         if (idle)
         {
             shutdownWhenIdle = false;
