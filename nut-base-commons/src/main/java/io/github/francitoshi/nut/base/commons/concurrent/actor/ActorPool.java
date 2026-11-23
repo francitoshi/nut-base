@@ -620,13 +620,30 @@ public class ActorPool implements ActorLifecycle, Executor
 
     /**
      * Runs {@code task} on the backing pool without registering it with the
-     * execution phaser. This is reserved for long-lived background workers,
+     * active-task tracker. This is reserved for long-lived background workers,
      * such as the permanent worker of an async {@link Actor}: they live for as
      * long as the actor exists and would otherwise keep {@link #waitForIdle()}
      * and {@link #isIdle()} forever busy. Their activity is tracked by the
      * owning actor instead.
+     * <p>
+     * <strong>Saturation guard:</strong> the task must never end up running in
+     * the caller and never block the caller waiting for a pool slot. A
+     * {@link ThreadPoolExecutor.CallerRunsPolicy} would execute the task
+     * inline when no thread can take it — for a permanent worker that parks
+     * the producer inside the actor's drain loop until close, and a blocking
+     * policy would wait for a slot that may never appear, since permanent
+     * workers never poll the pool's queue. When the pool is at its maximum
+     * size and every thread is busy inside a task, a submission can neither
+     * hand off nor spawn, so this method fails loudly instead of trusting the
+     * saturation policy. For a hub-managed executor this cannot happen: the
+     * pool sizing always lifts the maximum above the registered actors'
+     * summed demand before their permanent worker is submitted; the guard
+     * only fires on externally provided executors
+     * ({@link ProxyActorHub} and subclasses).
      *
      * @param task the background task; must not be {@code null}
+     * @throws IllegalStateException if the pool is shut down, or saturated in
+     *         a way that would run or await the task in the caller thread
      */
     void executeUntracked(Runnable task)
     {
@@ -645,6 +662,18 @@ public class ActorPool implements ActorLifecycle, Executor
             // drain them. Fail loudly instead, with the same IllegalStateException
             // a closed actor raises, so the caller can surface the rejection.
             throw new IllegalStateException("executor is shut down");
+        }
+        int poolSize = threadPoolExecutor.getPoolSize();
+        if (poolSize >= threadPoolExecutor.getMaximumPoolSize()
+                && threadPoolExecutor.getActiveCount() >= poolSize)
+        {
+            // Every thread is busy inside a task and the pool cannot grow:
+            // no thread is polling the pool's hand-off queue, so the
+            // submission would end up running in this thread (CallerRuns)
+            // or blocking it (a waiting policy). A permanent worker must
+            // do neither — reject loudly before the caller has accounted
+            // for any message.
+            throw new IllegalStateException("executor is saturated");
         }
         this.threadPoolExecutor.execute(task);
     }

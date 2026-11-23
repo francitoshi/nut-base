@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -117,8 +118,10 @@ class ActorAcceptContractTest
     /**
      * A failing rush-worker start with messages already queued must NOT
      * surface as a rejected accept: the messages are safe (the permanent
-     * worker drains them) and a rethrow would invite a duplicate resend. The
-     * failure must still be recorded.
+     * worker drains them) and a rethrow would invite a duplicate resend.
+     * It is not an actor error either: the lazy rush start is opportunistic,
+     * so nothing may be recorded in {@code getException()} — a real receive
+     * failure must not be overwritten by it.
      * <p>
      * The rush-worker start is lazy: it is only attempted when messages are
      * actually backing up ({@code counters.first > 1}). The test therefore
@@ -174,16 +177,63 @@ class ActorAcceptContractTest
             actor.accept(2); // queued alone: first == 1, no rush attempt
             actor.accept(3); // queued behind 2: first > 1, rush attempt fails
 
-            assertTrue(actor.getException() instanceof RejectedExecutionException,
-                    "the rush-start failure must be recorded, got " + actor.getException());
-
             gate.countDown();
             assertTrue(delivered.await(5, TimeUnit.SECONDS),
                     "the permanent worker must drain the queued messages");
             assertEquals(As.list(1, 2, 3), received);
+            assertNull(actor.getException(),
+                    "a failed opportunistic rush start is not an actor error, got " + actor.getException());
         }
         finally
         {
+            hub.shutdown();
+        }
+    }
+
+    /**
+     * A saturated pool must not silently run the permanent worker in the
+     * caller: with CallerRunsPolicy the submission would park the producer
+     * thread inside the actor's drain loop until close. The saturation guard
+     * in {@code executeUntracked} rejects instead, and the accept fails
+     * loudly <em>before</em> the message is accounted for.
+     */
+    @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    void saturatedPoolRejectsThePermanentWorkerLoudly() throws Exception
+    {
+        final CountDownLatch gate = new CountDownLatch(1);
+        ActorHub hub = new ActorHub(2, 2, 1_000);
+        try
+        {
+            CountDownLatch busy = new CountDownLatch(2);
+            Runnable blocker = () ->
+            {
+                busy.countDown();
+                while (true)
+                {
+                    try
+                    {
+                        gate.await();
+                        return;
+                    }
+                    catch (InterruptedException ignored)
+                    {
+                    }
+                }
+            };
+            hub.execute(blocker);
+            hub.execute(blocker);
+            assertTrue(busy.await(5, TimeUnit.SECONDS), "both pool threads must be busy");
+
+            Actor<Integer> actor = Actor.create(hub, 1, 4, m ->
+            {
+            }, null, null);
+            assertThrows(IllegalStateException.class, () -> actor.accept(1));
+            assertTrue(actor.isIdle(), "a rejected accept must not account the message");
+        }
+        finally
+        {
+            gate.countDown();
             hub.shutdown();
         }
     }

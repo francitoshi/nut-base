@@ -12,6 +12,8 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Abstract async actor flavor: provides the shared channel, worker
@@ -22,6 +24,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 abstract class AsyncActor<M> extends Actor<M>
 {
+    private static final Logger LOG = Logger.getLogger(AsyncActor.class.getName());
+
     protected final CloseableChannel<M> channel;
     protected final int threads;
     protected final Semaphore workerSlots;
@@ -177,11 +181,15 @@ abstract class AsyncActor<M> extends Actor<M>
                 {
                     workerSlots.release();
                     // The message is safely queued: the permanent worker
-                    // drains it. A failing rush start is recorded and
-                    // logged, but must NOT surface as a failed accept —
-                    // the caller would believe the message was rejected
-                    // and a retry would deliver it twice.
-                    handleException(ex);
+                    // drains it. A failing rush start must NOT surface as a
+                    // failed accept — the caller would believe the message
+                    // was rejected and a retry would deliver it twice — and
+                    // it is not an actor error either: the lazy rush start is
+                    // opportunistic by design (see above), so recording it in
+                    // getException() would overwrite a real receive failure
+                    // and a SEVERE log would spam under saturation. A FINE
+                    // trace keeps it diagnosable without any default cost.
+                    LOG.log(Level.FINE, "rush worker start failed; the permanent worker drains the channel", ex);
                 }
             }
         }
