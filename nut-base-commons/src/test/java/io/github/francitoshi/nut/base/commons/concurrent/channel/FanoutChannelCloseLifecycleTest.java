@@ -91,13 +91,13 @@ class FanoutChannelCloseLifecycleTest
         assertTrue(fan.close(), "close() must abort the blocked put and complete in bounded time");
         assertTrue(fan.isClosed());
 
-        // the blocked put() ends promptly: the target's own close aborted it
-        // and the broadcast returned without delivering to it (a writer's
-        // interruption is routed to the listener, never thrown).
+        // the blocked put() ends promptly and fails loudly: close() aborted
+        // it, and a put aborted by a close throws IllegalStateException, the
+        // same contract as the basic channels (R13 of channel-rules.txt).
         sender.join(2000);
-        assertFalse(sender.isAlive(), "the blocked put() must end once the targets are closed");
-        assertNull(putError.get(), "the writer's own interruption must not throw");
-        assertTrue(putReturned.get(), "the broadcast must return once the targets are closed");
+        assertFalse(sender.isAlive(), "the blocked put() must end once the fanout is closed");
+        assertTrue(putError.get() instanceof IllegalStateException, "got " + putError.get());
+        assertFalse(putReturned.get(), "the aborted put() must not report a delivery");
 
         // the target was closed by close(): drained end-of-data.
         assertNull(dest.get());

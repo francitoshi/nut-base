@@ -21,17 +21,20 @@ import java.util.concurrent.atomic.AtomicInteger;
  * (a {@link SynchronousQueue} under the hood).
  * <p>
  * A value is only visible while its writer stays parked inside the
- * {@link SynchronousQueue} counterpart slot, so a close has to reach the
- * parked threads directly: readers are poked with a {@code POISON} value and
- * blocked writers are tracked and interrupted. The closing state, join() and
- * the terminating iteration are shared machinery of the {@link Channel} base
- * class.
+ * {@link SynchronousQueue}, so a close has to reach the parked threads
+ * directly: blocked writers are tracked and interrupted, and parked readers
+ * are poked with a {@code POISON} value — kept off the writer's monitor
+ * (the reader side counts itself in an {@link AtomicInteger}, never under
+ * {@code waitLock}) so that the writer/reader hand-off, the hot path of this
+ * engine, pays no extra monitor contention. The closing state, {@code join()}
+ * and the terminating iteration are shared machinery of the {@link Channel}
+ * base class.
  * <p>
  * {@link #close()} marks the channel as closed, unblocks all pending readers
  * (they return {@code null}) and aborts any {@code put} in progress: a
  * blocked {@code put} fails with {@link IllegalStateException} without
- * delivering its value (never silently dropped) and the timed variant fails
- * the same way.
+ * delivering its value (never silently dropped, so a producer that accounted
+ * for it can balance its counters) and the timed variant fails the same way.
  * <p>
  * A writer's or a reader's own interruption aborts its operation (put yields
  * {@code false}, get yields {@code null}) and leaves the channel open: the
@@ -45,6 +48,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
 
     private final SynchronousQueue<Object> rendez = new SynchronousQueue<>();
 
+    /** Readers parked in take()/poll(), counted lock-free off the writer's monitor. */
     private final AtomicInteger gets = new AtomicInteger();
 
     private final Object waitLock = new Object();
@@ -52,6 +56,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
     private final Set<Thread> writers = new HashSet<>();
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
@@ -98,6 +103,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
@@ -114,11 +120,7 @@ public final class UnbufferedChannel<E> extends Channel<E>
             }
             try
             {
-                if (rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS))
-                {
-                    return true;
-                }
-                return false;
+                return rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
             }
             catch (InterruptedException ex)
             {
@@ -326,7 +328,6 @@ public final class UnbufferedChannel<E> extends Channel<E>
         synchronized (waitLock)
         {
             markClosed();
-            waitLock.notifyAll();
             blockedWriters = writers.toArray(new Thread[writers.size()]);
         }
         for (Thread writer : blockedWriters)

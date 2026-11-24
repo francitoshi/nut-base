@@ -94,12 +94,6 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
         return closed;
     }
 
-    /** Whether the read side of this channel is closed; used by {@link #iterator()}. */
-    final boolean isReadClosed()
-    {
-        return closed;
-    }
-
     /**
      * Marks the channel as closed and wakes every {@link #join()} waiter.
      * <p>
@@ -111,7 +105,10 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
     protected final void markClosed()
     {
         closed = true;
-        wakeJoiners();
+        synchronized (joinLock)
+        {
+            joinLock.notifyAll();
+        }
     }
 
     /**
@@ -132,15 +129,6 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
         }
     }
 
-    /** Wakes the threads waiting in {@link #join()}; called by {@link #markClosed()}. */
-    private void wakeJoiners()
-    {
-        synchronized (joinLock)
-        {
-            joinLock.notifyAll();
-        }
-    }
-
     private final Object joinLock = new Object();
 
     // -----------------------------------------------------------------------
@@ -158,12 +146,6 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
     {
         return interrupted;
     }
-
-    final void markInterrupted()
-    {
-        interrupted = true;
-    }
-
     /**
      * Listener that processes the {@link InterruptedException}s raised while a
      * channel operation is waiting.
@@ -281,7 +263,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
      */
     protected final void handleInterruptedException(InterruptedException ex)
     {
-        markInterrupted();
+        interrupted = true;
         interruptedExceptionListener.processInterruptedException(ex);
     }
 
@@ -317,7 +299,7 @@ public abstract class Channel<E> implements ChannelReader<E>, ChannelWriter<E>, 
                     return true;
                 }
                 E value = get();
-                if (value == null && isReadClosed())
+                if (value == null && closed)
                 {
                     return false;
                 }

@@ -161,11 +161,16 @@ public class FanoutChannel<E> implements ChannelWriter<E>
             {
                 if (closed)
                 {
-                    // aborted by a concurrent close(): the broadcast did not
-                    // deliver to every target
-                    return false;
+                    // aborted by a concurrent close(): the fanout is closed
+                    // for the producer, so the put fails loudly instead of
+                    // passing itself off as a mere timeout or interruption
+                    throw new IllegalStateException("closed");
                 }
                 all &= target.put(value);
+            }
+            if (closed)
+            {
+                throw new IllegalStateException("closed");
             }
             return all;
         }
@@ -214,6 +219,10 @@ public class FanoutChannel<E> implements ChannelWriter<E>
                     throw new IllegalStateException("closed");
                 }
                 all &= target.put(value, timeout, unit);
+            }
+            if (closed)
+            {
+                throw new IllegalStateException("closed");
             }
             return all;
         }

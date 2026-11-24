@@ -153,13 +153,11 @@ public final class BufferedChannel<E> extends Channel<E>
                 }
             }
             items.addLast(value);
-            // signalAll on purpose: one put adds one item, so a signal()
-            // would be sufficient (the ArrayBlockingQueue pattern); the
-            // conservative wake-everyone keeps the channel correct under any
-            // future evolution of the closing machinery, at the cost of
-            // parked readers re-parking when several workers wait on an
-            // empty buffer.
-            notEmpty.signalAll();
+            // signal on purpose: one put adds exactly one item, so waking
+            // one parked reader is enough (close() wakes everyone with
+            // signalAll); with many waiting readers this avoids the
+            // thundering herd of re-parks on every put.
+            notEmpty.signal();
             return true;
         }
         finally
@@ -224,7 +222,9 @@ public final class BufferedChannel<E> extends Channel<E>
                 }
             }
             E result = items.removeFirst();
-            notFull.signalAll();
+            // signal on purpose: one get removes exactly one item, so
+            // waking one parked writer is enough (close() wakes everyone)
+            notFull.signal();
             return result;
         }
         catch (InterruptedException ex)
@@ -250,7 +250,7 @@ public final class BufferedChannel<E> extends Channel<E>
             if (!items.isEmpty())
             {
                 E result = items.removeFirst();
-                notFull.signalAll();
+                notFull.signal();
                 return Optional.of(result);
             }
             return Optional.empty();
@@ -272,7 +272,7 @@ public final class BufferedChannel<E> extends Channel<E>
             if (!closed && items.size() < capacity)
             {
                 items.addLast(value);
-                notEmpty.signalAll();
+                notEmpty.signal();
                 return true;
             }
             return false;

@@ -98,7 +98,9 @@ public final class ConflatedChannel<E> extends Channel<E>
                 items.removeFirst();
             }
             items.addLast(value);
-            notEmpty.signalAll();
+            // signal on purpose: one put adds exactly one item, so waking
+            // one parked reader is enough (close() wakes everyone)
+            notEmpty.signal();
         }
         finally
         {
@@ -239,7 +241,8 @@ public final class ConflatedChannel<E> extends Channel<E>
                 items.removeFirst();
             }
             items.addLast(value);
-            notEmpty.signalAll();
+            // signal on purpose: see the blocking variant
+            notEmpty.signal();
         }
         finally
         {

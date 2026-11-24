@@ -59,7 +59,9 @@ public final class UnlimitedChannel<E> extends Channel<E>
                 throw new IllegalStateException("closed");
             }
             items.addLast(value);
-            notEmpty.signalAll();
+            // signal on purpose: one put adds exactly one item, so waking
+            // one parked reader is enough (close() wakes everyone)
+            notEmpty.signal();
         }
         finally
         {
@@ -82,7 +84,8 @@ public final class UnlimitedChannel<E> extends Channel<E>
                 throw new IllegalStateException("closed");
             }
             items.addLast(value);
-            notEmpty.signalAll();
+            // signal on purpose: see the blocking variant
+            notEmpty.signal();
         }
         finally
         {
@@ -183,7 +186,7 @@ public final class UnlimitedChannel<E> extends Channel<E>
             if (!closed)
             {
                 items.addLast(value);
-                notEmpty.signalAll();
+                notEmpty.signal();
                 return true;
             }
             return false;
