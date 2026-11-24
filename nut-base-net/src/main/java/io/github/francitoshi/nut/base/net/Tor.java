@@ -144,7 +144,7 @@ public class Tor extends Socks5
     // ── Bootstrap / control-port constants ──────────────────────────────────
 
     /** Maximum time to wait for Tor to finish bootstrapping (milliseconds). */
-    static final int  BOOTSTRAP_TIMEOUT_MILLIS = 60_000;
+    public static final int BOOTSTRAP_TIMEOUT_MILLIS = 60_000;
     static final long BOOTSTRAP_TIMEOUT_NANOS  = TimeUnit.MILLISECONDS.toNanos(BOOTSTRAP_TIMEOUT_MILLIS);
 
     /**
