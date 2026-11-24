@@ -6,7 +6,6 @@
 package io.github.francitoshi.nut.base.crypto.otp;
 
 import io.github.francitoshi.nut.base.commons.encoding.Base32String;
-import io.github.francitoshi.nut.base.commons.encoding.Base64DecoderException;
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
@@ -91,7 +90,7 @@ public class OTPTest
     }
     
     @Test
-    public void howToUse() throws InvalidKeyException, Base32String.DecodingException, NoSuchAlgorithmException, GeneralSecurityException, Base64DecoderException, UnsupportedEncodingException
+    public void howToUse() throws InvalidKeyException, Base32String.DecodingException, NoSuchAlgorithmException, GeneralSecurityException, UnsupportedEncodingException
     {
         String sharedSecret = "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP";
         int counter = (int) (JavaTime.epochSecond()/OTP.TOTP_DEFAULT_PERIOD);

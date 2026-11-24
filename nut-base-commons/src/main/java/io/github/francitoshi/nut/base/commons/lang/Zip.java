@@ -5,7 +5,6 @@
  */
 package io.github.francitoshi.nut.base.commons.lang;
 
-import io.github.francitoshi.nut.base.commons.encoding.Base64DecoderException;
 import io.github.francitoshi.nut.base.commons.encoding.Encoding;
 import io.github.francitoshi.nut.base.commons.varint.CompactSize;
 import java.io.ByteArrayInputStream;
@@ -81,7 +80,7 @@ public class Zip
         return Encoding.encode(data, encodingType);
     }
 
-    public static String gunzip(String src, String charsetName, Encoding.Type encodingType) throws IOException, Base64DecoderException
+    public static String gunzip(String src, String charsetName, Encoding.Type encodingType) throws IOException
     {
         if (src == null)
         {

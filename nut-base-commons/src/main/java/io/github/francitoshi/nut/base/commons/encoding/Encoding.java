@@ -8,6 +8,7 @@ package io.github.francitoshi.nut.base.commons.encoding;
 import io.github.francitoshi.nut.base.commons.lang.Exceptions;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.logging.Logger;
 
 /**
@@ -76,7 +77,7 @@ public class Encoding
                     return Base91.encodeToString(src, UTF8);
                 case Base64:
                 default:
-                    return Base64.encode(src);
+                    return Base64.getEncoder().encodeToString(src);
             }
         }
         catch (UnsupportedEncodingException ex)
@@ -108,13 +109,36 @@ public class Encoding
                     return Base91.decodeFromString(src, UTF8);
                 case Base64:
                 default:
-                    return Base64.decode(src);
+                    return base64Decode(src);
             }
         }
-        catch (IllegalArgumentException | UnsupportedEncodingException | Base64DecoderException | Base32String.DecodingException | Base58.FormatException ex)
+        catch (IllegalArgumentException | UnsupportedEncodingException | Base32String.DecodingException | Base58.FormatException ex)
         {
             Exceptions.severe(LOG, ex);
             return null;
+        }
+    }
+
+    /**
+     * Decodes standard Base64 via {@link java.util.Base64#getDecoder()},
+     * keeping the whitespace tolerance the old nut {@code Base64} class had:
+     * the JDK decoder rejects whitespace, so on rejection it is stripped once
+     * and the decode retried.
+     */
+    private static byte[] base64Decode(String src)
+    {
+        try
+        {
+            return java.util.Base64.getDecoder().decode(src);
+        }
+        catch (IllegalArgumentException ex)
+        {
+            String flat = src.replaceAll("[ \t\n\r]", "");
+            if (flat.length() == src.length())
+            {
+                throw ex;
+            }
+            return java.util.Base64.getDecoder().decode(flat);
         }
     }
     
