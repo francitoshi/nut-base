@@ -68,10 +68,7 @@ public class BenchmarkChannelTest
         ChannelFactory[] impls = {
             factory("Unbuffered", Channel::unbuffered),
             factory("Buffered", () -> Channel.buffered(BUFFER_CAPACITY)),
-            factory("Unlimited", Channel::unlimited),
-            factory("CloseableUnbuffered", CloseableUnbufferedChannel::new),
-            factory("CloseableBuffered", () -> new CloseableBufferedChannel<>(BUFFER_CAPACITY)),
-            factory("CloseableUnlimited", CloseableUnlimitedChannel::new)
+            factory("Unlimited", Channel::unlimited)
         };
 
         // JIT warm-up for every implementation

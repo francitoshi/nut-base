@@ -25,11 +25,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * forever: the {@code POISON} that wakes them was sent with an interruptible
  * call that threw immediately.
  */
-class CloseableChannelInterruptedCloseTest
+class ChannelInterruptedCloseTest
 {
     private static final int READERS = 3;
 
-    private static void assertReadersAreWokenByInterruptedCloser(CloseableChannel<String> ch) throws Exception
+    private static void assertReadersAreWokenByInterruptedCloser(Channel<String> ch) throws Exception
     {
         AtomicReference<String>[] values = newReferences(READERS);
         Thread[] readers = new Thread[READERS];
@@ -76,25 +76,25 @@ class CloseableChannelInterruptedCloseTest
     @Test
     void bufferedChannelReadersAreWokenWhenClosedByInterruptedThread() throws Exception
     {
-        assertReadersAreWokenByInterruptedCloser(new CloseableBufferedChannel<>(4));
+        assertReadersAreWokenByInterruptedCloser(new BufferedChannel<>(4));
     }
 
     @Test
     void unbufferedChannelReadersAreWokenWhenClosedByInterruptedThread() throws Exception
     {
-        assertReadersAreWokenByInterruptedCloser(new CloseableUnbufferedChannel<>());
+        assertReadersAreWokenByInterruptedCloser(new UnbufferedChannel<>());
     }
 
     @Test
     void unlimitedChannelReadersAreWokenWhenClosedByInterruptedThread() throws Exception
     {
-        assertReadersAreWokenByInterruptedCloser(new CloseableUnlimitedChannel<>());
+        assertReadersAreWokenByInterruptedCloser(new UnlimitedChannel<>());
     }
 
     @Test
     void timedCloseFromInterruptedThreadAlsoWakesReaders() throws Exception
     {
-        for (CloseableChannel<String> ch : Arrays.<CloseableChannel<String>>asList(new CloseableBufferedChannel<String>(4), new CloseableUnlimitedChannel<String>()))
+        for (Channel<String> ch : Arrays.<Channel<String>>asList(new BufferedChannel<String>(4), new UnlimitedChannel<String>()))
         {
             AtomicReference<String> value = new AtomicReference<>("<not returned>");
             Thread reader = startDaemon("reader", () -> value.set(ch.get()));
@@ -105,13 +105,13 @@ class CloseableChannelInterruptedCloseTest
                 Thread.currentThread().interrupt();
                 try
                 {
-                    if (ch instanceof CloseableBufferedChannel)
+                    if (ch instanceof BufferedChannel)
                     {
-                        ((CloseableBufferedChannel<String>) ch).close(1, TimeUnit.SECONDS);
+                        ((BufferedChannel<String>) ch).close(1, TimeUnit.SECONDS);
                     }
                     else
                     {
-                        ((CloseableUnlimitedChannel<String>) ch).close(1, TimeUnit.SECONDS);
+                        ((UnlimitedChannel<String>) ch).close(1, TimeUnit.SECONDS);
                     }
                 }
                 catch (InterruptedException expectedOrNot)
@@ -129,7 +129,7 @@ class CloseableChannelInterruptedCloseTest
     @Test
     void closeStillDrainsBufferedValuesBeforeSignallingTheEnd() throws Exception
     {
-        CloseableBufferedChannel<String> ch = new CloseableBufferedChannel<>(4);
+        BufferedChannel<String> ch = new BufferedChannel<>(4);
         ch.put("a");
         ch.put("b");
         Thread closer = startDaemon("closer", () ->

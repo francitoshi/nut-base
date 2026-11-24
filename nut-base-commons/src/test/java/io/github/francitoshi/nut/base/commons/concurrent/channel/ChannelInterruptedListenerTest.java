@@ -186,29 +186,4 @@ class ChannelInterruptedListenerTest
         assertEquals(2, received.size(), "both kinds of interruption reach the listener");
         assertTrue(channel.isInterrupted());
     }
-
-    // ------------------------------------------------------------------
-    // duplex
-    // ------------------------------------------------------------------
-
-    @Test
-    void aDuplexChannelPropagatesTheListenerToItsDelegates() throws Exception
-    {
-        Channel<Integer> in = Channel.buffered(1);
-        Channel<Integer> out = Channel.buffered(1);
-        DuplexChannel<Integer> duplex = Channel.duplex(in, out);
-
-        List<InterruptedException> received = new CopyOnWriteArrayList<>();
-        duplex.setInterruptedExceptionListener(received::add);
-
-        Thread waiter = startDaemon("duplex-get", duplex::get);
-        awaitBlocked(waiter);
-        waiter.interrupt();
-        joinOrFail("duplex get", waiter);
-
-        assertEquals(1, received.size(), "the delegate in processed the interruption");
-        assertTrue(in.isInterrupted());
-        assertFalse(out.isInterrupted());
-        assertEquals(in.getInterruptedExceptionListener(), out.getInterruptedExceptionListener());
-    }
 }

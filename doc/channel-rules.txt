@@ -1,0 +1,147 @@
+======================================================================
+THE CHANNEL PACKAGE CONSTITUTION
+======================================================================
+Design rules of io.github.francitoshi.nut.base.commons.concurrent.channel.
+
+The package provides Go-style channels built on plain JDK BlockingQueue
+implementations (a POISON element helps where the queue alone cannot
+express closing). The package grew closeable/non-closeable pairs,
+capability interfaces and extra variants; these rules fix the
+vocabulary so the implementation can stay as simple as the rules
+allow. When code and rules disagree, one of the two must change: the
+rules win.
+
+----------------------------------------------------------------------
+
+R1. PURPOSE
+    The goal of the package is to offer Go-style channels: blocking
+    FIFO message pipes between a producer and one or more consumers.
+    There is deliberately no Go-style select, and none will be added:
+    multiplexing is done with one reader thread per channel (see the
+    Channel javadoc for the benchmark results that back this).
+
+R2. EVERY CHANNEL IS CLOSEABLE, AND ONLY THE PRODUCER CLOSES
+    Every channel is closeable, exactly once, by its producer side.
+    - close() lives on ChannelWriter<E>, the producer side. A consumer
+      never closes a channel it only reads from.
+    - Closing is irrevocable and idempotent.
+    Consequence: the ChannelCloser interface and the CloseableChannel
+    interface disappear, as do the closeable/non-closeable class pairs
+    (UnbufferedChannel/CloseableUnbufferedChannel, ...): there is one
+    class per capacity policy, and one set of factories.
+
+R3. FOUR BASIC TYPES
+    - UnbufferedChannel  rendezvous: put() blocks until a get() takes
+      the value, and vice versa. Direct hand-off between threads
+      (SynchronousQueue).
+    - BufferedChannel    fixed capacity N: at most N elements in
+      transit; put() blocks while the buffer is full
+      (ArrayBlockingQueue).
+    - UnlimitedChannel   no capacity limit: put() never blocks for
+      room, memory grows with unconsumed data (LinkedBlockingQueue).
+    - ConflatedChannel   keeps only the N last elements: when new
+      elements arrive, the oldest pending ones are dropped. N is
+      configurable (a sliding window); conflated() is N = 1, so only
+      the latest value is retained.
+    Factories: Channel.unbuffered(), Channel.buffered(n),
+    Channel.unlimited(), Channel.conflated(), and Channel.of(capacity)
+    dispatching 0 -> unbuffered, >0 -> buffered, UNLIMITED -> unlimited.
+
+R4. FANOUTCHANNEL
+    FanoutChannel is the additional, non-basic type: the classic
+    fan-out of queue systems. Everything it receives is delivered to
+    all the channels registered on it; targets can be added and
+    removed dynamically. It is a write endpoint (it forwards, it does
+    not buffer for its own readers), so it exposes only the writer
+    face. Closing a fan-out propagates end-of-data to its targets.
+
+R5. INTERRUPTION
+    If an InterruptedException is raised while an operation waits:
+    - get() returns null: the read did not happen.
+    - put() returns false: nothing was left in the channel.
+    The null/false mean only "the operation did not complete". An
+    interruption never changes the lifecycle of the channel: it does
+    not close it, so closeIfCloseable() and every close-on-interrupt
+    path must go. The channel records the interruption in its
+    interrupted flag (isInterrupted()) and delegates everything else to
+    the installed Channel.InterruptedExceptionListener, which is the
+    explicit decision point for what happens to the thread (by default
+    it is logged and the thread's interrupt flag is left cleared).
+
+R6. PUT() RESULTS
+    Both variants of put() return boolean: the blocking one is
+    boolean put(E) (it changes from the current void), the timed one
+    stays boolean put(E, timeout, unit). put() returns false if it
+    did not leave anything in the channel and true if it did. A false
+    therefore means: interrupted, or timed out (timed variant). A put
+    on a closed channel does not return false: it throws (R13).
+
+R7. CHANNEL<E> IS THE BACKBONE
+    Channel<E> is the abstract base class of the package and
+    implements ChannelReader<E>, ChannelWriter<E> and Iterable<E>.
+    Shared machinery (interruption tracking, the listener, iteration,
+    factories) lives there once, so each capacity policy implements
+    only its own engine.
+
+R8. CHANNELREADER<E> IS THE READ SIDE
+    ChannelReader<E> allows reads and nothing else: get() and its
+    timed variant, plus isClosed() so a consumer can interpret a null.
+
+R9. CHANNELWRITER<E> IS THE WRITE SIDE
+    ChannelWriter<E> allows writes and closing: put(), its timed
+    variant, and close().
+
+R10. ITERABLE<E> IS FOR LOOPS
+    Channel<E> implements Iterable<E> so channels can be used in
+    for-each loops. Each iterator() call returns an iterator specific
+    to that occasion. The loop exits only when the channel is closed
+    and drained; it never ends for any other reason.
+
+R11. BLOCKING BY DEFAULT, WITH TIMED VARIANTS
+    Every read and every write is blocking. Each one has a variant
+    with a time limit: get(timeout, unit) returns null if nothing
+    arrived in time, put(value, timeout, unit) returns false if the
+    value was not left in the channel in time.
+
+R12. ONLY THE INTERFACE METHODS ARE MANDATORY
+    The only mandatory methods are those of ChannelReader<E>,
+    ChannelWriter<E> and Iterable<E>. Everything else (tryGet,
+    tryPut, join, isInterrupted, factories, listener management, ...)
+    is optional and is implemented only when a class needs it.
+
+R13. PRODUCING ON A CLOSED CHANNEL THROWS
+    A producer that writes on a closed channel gets an exception
+    (IllegalStateException), in both the blocking and the timed
+    variant: closed means closed for the producer, there is no way
+    back and no silent loss. The false of the timed put() is reserved
+    for interruption and timeout, never for "the channel is closed".
+
+R14. CONSUMING ON A CLOSED CHANNEL DRAINS AND RETURNS NULL
+    A consumer that reads a closed channel obtains the elements still
+    pending in the channel, and null once the channel is empty. It
+    never gets an exception. null is therefore ambiguous between "I
+    was interrupted" and "end of channel": isClosed() resolves it.
+
+----------------------------------------------------------------------
+
+IMPLEMENTATION NOTES (derived, not independent rules)
+
+- null is never a channel element: it is reserved as the get() signal
+  (interruption or end of channel). put(null) is rejected.
+
+- Closing is implemented with JDK BlockingQueues plus a POISON element
+  where the queue alone cannot wake blocked readers. The POISON is a
+  private implementation detail of each engine, never visible through
+  the API.
+
+- Consequences of R2 for the current tree: ChannelCloser,
+  CloseableChannel and the Closeable* subclasses are deleted (clean
+  removal, no deprecation shim); the four capacity classes absorb the
+  closing behavior; FanoutChannel absorbs CloseableFanoutChannel; the
+  closeableOf/closeable* factories merge into their non-prefixed
+  counterparts. AsyncActor and the rest of the actor package keep
+  working through Channel/ChannelReader/ChannelWriter types.
+
+- DuplexChannel and duplexPair are deleted too: they are neither one
+  of the four basic types nor the fan-out, so they are outside this
+  constitution and out of the package.

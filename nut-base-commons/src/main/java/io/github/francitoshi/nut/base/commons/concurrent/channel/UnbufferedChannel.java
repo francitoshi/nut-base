@@ -5,34 +5,95 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
+import io.github.francitoshi.nut.base.commons.lang.Saturated;
 import io.github.francitoshi.nut.base.commons.time.JavaTime;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.SynchronousQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Unbuffered channel without closing: it lives as long as the JVM lives (or
- * as long as the object itself is referenced). There is no close() operation,
- * so put()/get() delegate directly to SynchronousQueue, adding only
- * interruption-tracking state.
+ * Unbuffered (rendezvous) channel: {@code put} and {@code get} are
+ * synchronized hand in hand, with no buffer. Direct hand-off between threads
+ * (a {@link SynchronousQueue} under the hood).
+ * <p>
+ * A value is only visible while its writer stays parked inside the
+ * {@link SynchronousQueue} counterpart slot, so a close has to reach the
+ * parked threads directly: readers are poked with a {@code POISON} value and
+ * blocked writers are tracked and interrupted. The closing state, join() and
+ * the terminating iteration are shared machinery of the {@link Channel} base
+ * class.
+ * <p>
+ * {@link #close()} marks the channel as closed, unblocks all pending readers
+ * (they return {@code null}) and aborts any {@code put} in progress: a
+ * blocked {@code put} fails with {@link IllegalStateException} without
+ * delivering its value (never silently dropped) and the timed variant fails
+ * the same way.
+ * <p>
+ * A writer's or a reader's own interruption aborts its operation (put yields
+ * {@code false}, get yields {@code null}) and leaves the channel open: the
+ * request is marked and routed to the interruption listener.
+ *
+ * @param <E> the element type
  */
-public class UnbufferedChannel<E> extends Channel<E>
+public final class UnbufferedChannel<E> extends Channel<E>
 {
-    private final SynchronousQueue<E> queue = new SynchronousQueue<>();
+    private static final Object POISON = new Object();
+
+    private final SynchronousQueue<Object> rendez = new SynchronousQueue<>();
+
+    private final AtomicInteger gets = new AtomicInteger();
+
+    private final Object waitLock = new Object();
+
+    private final Set<Thread> writers = new HashSet<>();
 
     @Override
-    public void put(E value)
+    public boolean put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        try
+        while (true)
         {
-            queue.put(value);
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
+            synchronized (waitLock)
+            {
+                if (closed)
+                {
+                    throw new IllegalStateException("closed");
+                }
+                writers.add(Thread.currentThread());
+            }
+            try
+            {
+                rendez.put(value);
+                return true;
+            }
+            catch (InterruptedException ex)
+            {
+                if (closed)
+                {
+                    // woken by close(): the channel is closed for the
+                    // producer, so the put fails loudly instead of passing
+                    // itself off as a mere interruption
+                    throw new IllegalStateException("closed");
+                }
+                // A writer's own interruption aborts the hand-off without
+                // delivering the value: mark the request, route it to the
+                // interruption listener and return false. The channel is
+                // left open.
+                handleInterruptedException(ex);
+                return false;
+            }
+            finally
+            {
+                synchronized (waitLock)
+                {
+                    writers.remove(Thread.currentThread());
+                    waitLock.notifyAll();
+                }
+            }
         }
     }
 
@@ -41,71 +102,290 @@ public class UnbufferedChannel<E> extends Channel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
         long deadline = JavaTime.untilNanoTime(timeout, unit);
-        long remaining = Math.max(0, deadline - System.nanoTime());
-        if (remaining == 0)
+        while (true)
         {
-            return tryPut(value);
-        }
-        try
-        {
-            return queue.offer(value, remaining, TimeUnit.NANOSECONDS);
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
-            return false;
+            synchronized (waitLock)
+            {
+                if (closed)
+                {
+                    throw new IllegalStateException("closed");
+                }
+                writers.add(Thread.currentThread());
+            }
+            try
+            {
+                if (rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS))
+                {
+                    return true;
+                }
+                return false;
+            }
+            catch (InterruptedException ex)
+            {
+                if (closed)
+                {
+                    // woken by close(): see the blocking variant
+                    throw new IllegalStateException("closed");
+                }
+                // A writer's own interruption aborts the put without
+                // delivering the value: mark the request, route it to the
+                // interruption listener and return false. The channel is
+                // left open.
+                handleInterruptedException(ex);
+                return false;
+            }
+            finally
+            {
+                synchronized (waitLock)
+                {
+                    writers.remove(Thread.currentThread());
+                    waitLock.notifyAll();
+                }
+            }
         }
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public E get()
     {
-        try
+        while (true)
         {
-            return queue.take();
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
-            return null;
+            if (closed)
+            {
+                return drainAfterClose();
+            }
+
+            gets.incrementAndGet();
+            try
+            {
+                if (closed)
+                {
+                    return drainAfterClose();
+                }
+
+                Object item = rendez.take();
+                return item == POISON ? null : (E) item;
+            }
+            catch (InterruptedException ex)
+            {
+                // A reader's own interruption aborts the read: mark the
+                // request, route it to the interruption listener and yield
+                // null. The channel is left open.
+                handleInterruptedException(ex);
+                return null;
+            }
+            finally
+            {
+                gets.decrementAndGet();
+            }
         }
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public E get(long timeout, TimeUnit unit)
     {
         long deadline = JavaTime.untilNanoTime(timeout, unit);
-        long remaining = Math.max(0, deadline - System.nanoTime());
-        if (remaining == 0)
+        while (true)
         {
-            return tryGet().orElse(null);
-        }
-        try
-        {
-            return queue.poll(remaining, TimeUnit.NANOSECONDS);
-        }
-        catch (InterruptedException ex)
-        {
-            handleInterruptedException(ex);
-            closeIfCloseable();
-            return null;
+            if (closed)
+            {
+                return drainAfterClosePoll();
+            }
+
+            gets.incrementAndGet();
+            try
+            {
+                if (closed)
+                {
+                    return drainAfterClosePoll();
+                }
+
+                Object item = rendez.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+                if (item == null || item == POISON)
+                {
+                    return null;
+                }
+                return (E) item;
+            }
+            catch (InterruptedException ex)
+            {
+                // A reader's own interruption aborts the read: mark the
+                // request, route it to the interruption listener and yield
+                // null. The channel is left open.
+                handleInterruptedException(ex);
+                return null;
+            }
+            finally
+            {
+                gets.decrementAndGet();
+            }
         }
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Optional<E> tryGet()
     {
-        // Non-blocking: a value is only reachable if a writer is already
-        // parked, which is observable by poll(0).
-        return Optional.ofNullable(queue.poll());
+        Object item = rendez.poll();
+        if (item == null || item == POISON)
+        {
+            return Optional.empty();
+        }
+        return Optional.of((E) item);
     }
 
     @Override
     public boolean tryPut(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        return queue.offer(value);
+        synchronized (waitLock)
+        {
+            if (closed)
+            {
+                return false;
+            }
+        }
+        return rendez.offer(value);
+    }
+
+    @SuppressWarnings("unchecked")
+    private E drainAfterClosePoll()
+    {
+        Object item = rendez.poll();
+        if (item == null || item == POISON)
+        {
+            return null;
+        }
+        return (E) item;
+    }
+
+    /**
+     * Drains the rendezvous after a close: values handed off by writers that
+     * were already parked when the close happened are still delivered, until
+     * the last writer leaves and the queue is empty.
+     */
+    @SuppressWarnings("unchecked")
+    private E drainAfterClose()
+    {
+        for (int i = 1; ; i++)
+        {
+            Object item = rendez.poll();
+            if (item != null)
+            {
+                if (item == POISON)
+                {
+                    return null;
+                }
+                return (E) item;
+            }
+
+            synchronized (waitLock)
+            {
+                if (writers.isEmpty())
+                {
+                    return null;
+                }
+                try
+                {
+                    waitLock.wait(Math.min(i, 100));
+                }
+                catch (InterruptedException ex)
+                {
+                    handleInterruptedException(ex);
+                    return null;
+                }
+            }
+        }
+    }
+
+    /**
+     * Closes the rendezvous channel: marks it closed, interrupts the tracked
+     * writers, wakes the parked readers with a POISON and waits for the
+     * writers to leave.
+     *
+     * @param timeout the maximum time to wait for the writers to leave
+     * @param unit    the time unit of {@code timeout}
+     * @return {@code false} if the writers did not finish within the timeout
+     * @throws InterruptedException if the current thread is interrupted while
+     *         waiting
+     */
+    public boolean close(long timeout, TimeUnit unit) throws InterruptedException
+    {
+        // The irrevocable part of the close (mark closed, abort writers, wake
+        // readers) must not be aborted by the caller's own interrupt status:
+        // it is deferred and restored before the (interruptible) wait for the
+        // writers, so it still makes this method throw as documented.
+        boolean interrupted = Thread.interrupted();
+
+        long timeoutNanos = unit.toNanos(timeout);
+        long deadline = Saturated.saturatedAdd(System.nanoTime(), timeoutNanos);
+
+        Thread[] blockedWriters;
+        synchronized (waitLock)
+        {
+            markClosed();
+            waitLock.notifyAll();
+            blockedWriters = writers.toArray(new Thread[writers.size()]);
+        }
+        for (Thread writer : blockedWriters)
+        {
+            writer.interrupt();
+        }
+
+        // Unblock pending readers even if the close times out waiting for the
+        // writers below: a reader blocked in take() is only woken by a POISON
+        // and, after closed = true, no real value will ever arrive.
+        for (int i = 1; gets.get() > 0; i++)
+        {
+            try
+            {
+                rendez.offer(POISON, Math.min(i, 100), TimeUnit.MILLISECONDS);
+            }
+            catch (InterruptedException ex)
+            {
+                interrupted = true;
+            }
+        }
+
+        if (interrupted)
+        {
+            Thread.currentThread().interrupt();
+        }
+
+        synchronized (waitLock)
+        {
+            while (!writers.isEmpty())
+            {
+                if (timeoutNanos <= 0)
+                {
+                    return false;
+                }
+                long timeoutMillis = TimeUnit.NANOSECONDS.toMillis(timeoutNanos);
+                if (timeoutMillis <= 0)
+                {
+                    timeoutMillis = 1;
+                }
+                waitLock.wait(timeoutMillis);
+                timeoutNanos = deadline - System.nanoTime();
+            }
+        }
+
+        return true;
+    }
+
+    @Override
+    public boolean close()
+    {
+        try
+        {
+            return close(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+        }
+        catch (InterruptedException ex)
+        {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
 }

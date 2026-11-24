@@ -26,10 +26,6 @@ final class ChannelTestSupport
      * Installs the silent interruption listener (see
      * {@link Channel#ignoreInterruptedException}) on the channel, so deliberate
      * interruptions in tests stay out of the log.
-     * <p>
-     * Accepts any of the concrete channel types of this family, including the
-     * ones statically typed as {@link CloseableChannel} (which does not extend
-     * {@link Channel} but its implementations always do).
      *
      * @param channel the channel to make quiet
      * @return the same channel, for call-site convenience

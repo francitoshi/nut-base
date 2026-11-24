@@ -17,20 +17,20 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@code CloseableFanoutChannel.close()} used to give up when its caller was
+ * {@code FanoutChannel.close()} used to give up when its caller was
  * interrupted while waiting for the writers: the fanout stayed flagged as
  * closed, the targets were never closed, later {@code close()} calls returned
  * the cached {@code false} immediately, and the consumers of the targets
  * blocked forever. It also swallowed the interrupt status.
  */
-class CloseableFanoutChannelInterruptedCloseTest
+class FanoutChannelInterruptedCloseTest
 {
     @Test
     void interruptedCloseStillClosesTheTargetsAndKeepsTheInterruptStatus() throws Exception
     {
-        CloseableBufferedChannel<String> t1 = quiet(new CloseableBufferedChannel<>(1));
-        CloseableBufferedChannel<String> t2 = quiet(new CloseableBufferedChannel<>(1));
-        CloseableFanoutChannel<String> fan = new CloseableFanoutChannel<>(t1, t2);
+        BufferedChannel<String> t1 = quiet(new BufferedChannel<>(1));
+        BufferedChannel<String> t2 = quiet(new BufferedChannel<>(1));
+        FanoutChannel<String> fan = new FanoutChannel<>(t1, t2);
 
         t1.put("fill");                                   // t1 full: the next put blocks on it
         Thread writer = startDaemon("writer", () ->
@@ -70,9 +70,9 @@ class CloseableFanoutChannelInterruptedCloseTest
     @Test
     void closeWithoutInterruptionClosesAllTargets()
     {
-        CloseableBufferedChannel<String> t1 = new CloseableBufferedChannel<>(1);
-        CloseableBufferedChannel<String> t2 = new CloseableBufferedChannel<>(1);
-        CloseableFanoutChannel<String> fan = new CloseableFanoutChannel<>(t1, t2);
+        BufferedChannel<String> t1 = new BufferedChannel<>(1);
+        BufferedChannel<String> t2 = new BufferedChannel<>(1);
+        FanoutChannel<String> fan = new FanoutChannel<>(t1, t2);
 
         assertTrue(fan.close());
         assertTrue(fan.isClosed());
@@ -84,7 +84,7 @@ class CloseableFanoutChannelInterruptedCloseTest
     @Test
     void closeOfAlreadyClosedFanoutDoesNotSwallowTheInterruptStatus() throws Exception
     {
-        CloseableFanoutChannel<String> fan = new CloseableFanoutChannel<>(new CloseableBufferedChannel<String>(1));
+        FanoutChannel<String> fan = new FanoutChannel<>(new BufferedChannel<String>(1));
         assertTrue(fan.close());
 
         AtomicBoolean flagKept = new AtomicBoolean();

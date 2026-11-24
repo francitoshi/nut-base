@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Same scenario as CloseableBufferedChannelCloseTest, adapted to the
+ * Same scenario as BufferedChannelCloseTest, adapted to the
  * unlimited channel.
  *
  * On the current engine a put() never blocks for lack of room, so there is no
@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * including that a caller with its interrupt status set can close a channel
  * whose readers are parked.
  */
-class CloseableUnlimitedChannelCloseTest
+class UnlimitedChannelCloseTest
 {
     private ExecutorService executor;
 
@@ -46,7 +46,7 @@ class CloseableUnlimitedChannelCloseTest
     {
         executor = Executors.newFixedThreadPool(3);
 
-        CloseableUnlimitedChannel<String> channel = new CloseableUnlimitedChannel<>();
+        UnlimitedChannel<String> channel = new UnlimitedChannel<>();
         AtomicBoolean running = new AtomicBoolean(true);
 
         for (int p = 0; p < 3; p++)
@@ -96,7 +96,7 @@ class CloseableUnlimitedChannelCloseTest
     @Test
     void close_isIdempotent_andReturnsTrueOnSubsequentCalls_whenNothingIsBlocked() throws Exception
     {
-        CloseableUnlimitedChannel<String> channel = new CloseableUnlimitedChannel<>();
+        UnlimitedChannel<String> channel = new UnlimitedChannel<>();
         channel.put("only");
 
         assertTrue(channel.close(), "first close() with nothing blocked must succeed");
@@ -106,7 +106,7 @@ class CloseableUnlimitedChannelCloseTest
         assertEqualsFirstThenNull(channel, "only");
     }
 
-    private static void assertEqualsFirstThenNull(CloseableUnlimitedChannel<String> channel, String expected)
+    private static void assertEqualsFirstThenNull(UnlimitedChannel<String> channel, String expected)
             throws InterruptedException
     {
         String value = channel.get();

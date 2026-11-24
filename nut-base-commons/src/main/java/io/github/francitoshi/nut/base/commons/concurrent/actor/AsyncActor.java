@@ -7,7 +7,6 @@ package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
 import io.github.francitoshi.nut.base.commons.concurrent.atomic.AtomicCounterPair;
 import io.github.francitoshi.nut.base.commons.concurrent.channel.Channel;
-import io.github.francitoshi.nut.base.commons.concurrent.channel.CloseableChannel;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -26,7 +25,7 @@ abstract class AsyncActor<M> extends Actor<M>
 {
     private static final Logger LOG = Logger.getLogger(AsyncActor.class.getName());
 
-    protected final CloseableChannel<M> channel;
+    protected final Channel<M> channel;
     protected final int threads;
     protected final Semaphore workerSlots;
 
@@ -84,18 +83,16 @@ abstract class AsyncActor<M> extends Actor<M>
         this.threads = threads;
         if (queueSize == 0)
         {
-            this.channel = Channel.closeableMailboxOf(0);
+            this.channel = Channel.of(0);
         }
         else
         {
-            this.channel = Channel.closeableMailboxBuffered(queueSize);
+            this.channel = Channel.buffered(queueSize);
         }
         // R8: an interruption raised anywhere in the mailbox machinery —
         // a producer's put or a worker's get — is routed to the hub's
         // interruption listener with the caught interruption and this actor.
-        @SuppressWarnings("unchecked")
-        Channel<M> asChannel = (Channel<M>) this.channel;
-        asChannel.setInterruptedExceptionListener(ex -> actorHub.handleException(ex));
+        this.channel.setInterruptedExceptionListener(ex -> actorHub.handleException(ex));
         this.workerSlots = new Semaphore(threads);
         this.actorHub.registerActor(this);
     }
@@ -135,17 +132,24 @@ abstract class AsyncActor<M> extends Actor<M>
         boolean queued = false;
         try
         {
-            channel.put(message);
-            queued = true;
-        }
-        catch (RuntimeException ex)
-        {
-            // Not delivered: the actor or its channel was closed concurrently,
-            // or the put was aborted by the close. The failure is recorded and
-            // surfaced to the caller instead of letting it believe the message
-            // was accepted.
-            handleException(ex);
-            throw ex;
+            // R1: accept() waits for mailbox room permanently. The channel
+            // aborts a put when the writer's thread is interrupted (marked
+            // and routed to the hub's onException, R8); the wait-for-room
+            // contract retries until the message is delivered.
+            while (!queued)
+            {
+                queued = channel.put(message, Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+                if (!queued && channel.isClosed())
+                {
+                    // Not delivered: the actor or its channel was closed
+                    // concurrently. The failure is recorded and surfaced to
+                    // the caller instead of letting it believe the message
+                    // was accepted.
+                    RuntimeException closed = new IllegalStateException("closed");
+                    handleException(closed);
+                    throw closed;
+                }
+            }
         }
         finally
         {
@@ -361,9 +365,21 @@ abstract class AsyncActor<M> extends Actor<M>
      */
     protected void drainWhileRegistered()
     {
-        M m;
-        while ((m = channel.get()) != null)
+        while (true)
         {
+            M m = channel.get();
+            if (m == null)
+            {
+                // null means closed-and-drained (end of the permanent loop)
+                // or a reader interruption (the channel is left open): the
+                // interruption is already routed to the hub's onException —
+                // the worker keeps draining, no message is stranded.
+                if (channel.isClosed())
+                {
+                    return;
+                }
+                continue;
+            }
             counters.addFirstToSecond(1);
             countProcessed();
             try

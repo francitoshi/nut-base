@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * fails with {@link IllegalStateException} instead of blocking forever, so
  * close() can complete in bounded time. Buffered elements are still delivered.
  */
-class CloseableBufferedChannelCloseTest
+class BufferedChannelCloseTest
 {
     private ExecutorService executor;
 
@@ -48,7 +48,7 @@ class CloseableBufferedChannelCloseTest
 
         // Capacity 1: after filling it, any further put() blocks until
         // someone drains an item.
-        CloseableBufferedChannel<String> channel = ChannelTestSupport.quiet(new CloseableBufferedChannel<>(1));
+        BufferedChannel<String> channel = ChannelTestSupport.quiet(new BufferedChannel<>(1));
 
         // Fill the only slot in the buffer.
         channel.put("first");
@@ -83,12 +83,12 @@ class CloseableBufferedChannelCloseTest
 
         // the pending put() aborts and fails loudly: a blocking put() must
         // either deliver its value or throw, never return as if it had
-        // delivered it (the producer's bookkeeping depends on it). The
-        // channel is still marked interrupted per the interruption contract.
+        // delivered it (the producer's bookkeeping depends on it). A close is
+        // not an interruption, so the channel is not marked interrupted.
         blockedPut.get(2, TimeUnit.SECONDS);
         assertTrue(putError.get() instanceof IllegalStateException, "blocked put() must abort with IllegalStateException, got " + putError.get());
         assertFalse(putReturned.get(), "blocked put() must not report a delivered value");
-        assertTrue(channel.isInterrupted());
+        assertFalse(channel.isInterrupted(), "a close() abort is not an interruption");
 
         // "first" was buffered before close, so it must still be delivered.
         assertEquals("first", channel.get());
@@ -103,7 +103,7 @@ class CloseableBufferedChannelCloseTest
     @Test
     void close_isIdempotent_andReturnsTrueOnSubsequentCalls_whenNothingIsBlocked() throws Exception
     {
-        CloseableBufferedChannel<String> channel = new CloseableBufferedChannel<>(2);
+        BufferedChannel<String> channel = new BufferedChannel<>(2);
         channel.put("only");
 
         assertTrue(channel.close(), "first close() with nothing blocked must succeed");

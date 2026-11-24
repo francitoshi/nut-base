@@ -35,60 +35,15 @@ public class ChannelIterableTest
             new BufferedChannel<Integer>(4),
             new UnlimitedChannel<Integer>(),
             new ConflatedChannel<Integer>(),
-            new CloseableUnbufferedChannel<Integer>(),
-            new CloseableBufferedChannel<Integer>(4),
-            new CloseableUnlimitedChannel<Integer>(),
-            new CloseableConflatedChannel<Integer>()
+            new UnbufferedChannel<Integer>(),
+            new BufferedChannel<Integer>(4),
+            new UnlimitedChannel<Integer>(),
+            new ConflatedChannel<Integer>()
         };
 
         for (Object channel : channels)
         {
             assertTrue(channel instanceof Iterable, channel.getClass().getName() + " must be Iterable");
-        }
-    }
-
-    @Test
-    public void testDuplexChannel_iterator_readsFromInputReader() throws Exception
-    {
-        Channel<Integer> x = Channel.unbuffered();
-        Channel<Integer> y = Channel.unbuffered();
-        DuplexChannel<Integer> duplex = Channel.duplex(y, x);
-        DuplexChannel<Integer> peer = Channel.duplex(x, y);
-        Thread producer = new Thread(() ->
-        {
-            for (int i = 0; i < 3; i++)
-            {
-                peer.put(i);
-            }
-        });
-        producer.start();
-
-        Iterator<Integer> it = duplex.iterator();
-        for (int i = 0; i < 3; i++)
-        {
-            assertTrue(it.hasNext());
-            assertEquals(i, it.next());
-        }
-        producer.join(5000);
-        assertFalse(producer.isAlive());
-    }
-
-    @Test
-    public void testNonCloseableIterator_hasNextAlwaysTrue()
-    {
-        Channel<Integer>[] channels = new Channel[]
-        {
-            Channel.unbuffered(),
-            Channel.buffered(4),
-            Channel.unlimited(),
-            Channel.conflated()
-        };
-
-        for (Channel<Integer> channel : channels)
-        {
-            Iterator<Integer> it = channel.iterator();
-            assertTrue(it.hasNext());
-            assertTrue(it.hasNext());
         }
     }
 
@@ -177,32 +132,41 @@ public class ChannelIterableTest
     }
 
     @Test
-    public void testNonCloseableIterator_interruptedNext_returnsNull() throws Exception
+    public void testIterator_interruptedHasNext_returnsTrueAndNextYieldsNull() throws Exception
     {
         Channel<Integer> channel = ChannelTestSupport.quiet(Channel.unbuffered());
         Iterator<Integer> it = channel.iterator();
-        assertTrue(it.hasNext());
 
         AtomicReference<Object> result = new AtomicReference<>(MISSING);
-        Thread consumer = new Thread(() -> result.set(it.next()));
+        Thread consumer = new Thread(() ->
+        {
+            // hasNext() blocks in get(): the interruption aborts the read,
+            // the iterator keeps going (the channel stays open), the null
+            // turn is cached and next() returns it
+            if (it.hasNext())
+            {
+                result.set(it.next());
+            }
+        });
         consumer.start();
         Thread.sleep(200);
         consumer.interrupt();
         consumer.join(5000);
 
         assertTrue(channel.isInterrupted());
-        assertNull(result.get(), "next() hooked to get() must return null after interrupt");
+        assertFalse(channel.isClosed(), "an interrupt must not close the channel");
+        assertNull(result.get(), "the interrupted turn must yield a null value");
         assertFalse(consumer.isAlive());
     }
 
     // -------------------------------------------------------------------
-    // Closeable channels
+    // Terminating iteration
     // -------------------------------------------------------------------
 
     @Test
     public void testCloseableBufferedIterator_terminatesWhenClosed()
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(2);
+        BufferedChannel<Integer> channel = new BufferedChannel<>(2);
         channel.put(10);
         channel.put(20);
         assertTrue(channel.close());
@@ -219,7 +183,7 @@ public class ChannelIterableTest
     @Test
     public void testCloseableIterator_nextReturnsTheValueSavedByHasNext() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(1);
+        BufferedChannel<Integer> channel = new BufferedChannel<>(1);
         channel.put(1);
 
         Iterator<Integer> it = channel.iterator();
@@ -247,7 +211,7 @@ public class ChannelIterableTest
     @Test
     public void testCloseableUnbufferedIterator_terminatesAfterLastValue() throws Exception
     {
-        CloseableChannel<Integer> channel = Channel.closeableUnbuffered();
+        Channel<Integer> channel = Channel.unbuffered();
         CountDownLatch consumed = new CountDownLatch(1);
         AtomicReference<Throwable> error = new AtomicReference<>();
         Thread producer = new Thread(() ->
@@ -277,36 +241,47 @@ public class ChannelIterableTest
     }
 
     @Test
-    public void testCloseableIterator_interruptedGet_terminatesAndCloses() throws Exception
+    public void testCloseableIterator_interruptedGet_yieldsOneTurnAndKeepsGoingUntilClosed() throws Exception
     {
-        CloseableChannel<Integer> channel = ChannelTestSupport.quiet(Channel.closeableUnbuffered());
+        Channel<Integer> channel = ChannelTestSupport.quiet(Channel.unbuffered());
         Iterator<Integer> it = channel.iterator();
-        AtomicInteger count = new AtomicInteger();
+        AtomicInteger turns = new AtomicInteger();
+        AtomicInteger values = new AtomicInteger();
 
         Thread consumer = new Thread(() ->
         {
             while (it.hasNext())
             {
-                count.incrementAndGet();
+                // the iterator contract: hasNext() followed by next() — a
+                // bare hasNext() loop would spin on the cached null turn
+                Integer value = it.next();
+                turns.incrementAndGet();
+                if (value != null)
+                {
+                    values.incrementAndGet();
+                }
             }
         });
         consumer.start();
         Thread.sleep(200);
         consumer.interrupt();
+
+        // the interrupted get yields a null turn and the channel stays open
+        Thread.sleep(200);
+        assertFalse(channel.isClosed(), "a reader interrupt must not close the channel");
+        assertTrue(channel.isInterrupted());
+        channel.close();
         consumer.join(5000);
 
-        assertFalse(consumer.isAlive());
-        assertEquals(0, count.get(), "iteration must abort on the first interrupted get()");
-        // The interrupted get() aborted returning null and, being closeable,
-        // requested close() on the channel.
-        assertTrue(channel.isInterrupted());
-        assertTrue(channel.isClosed());
+        assertFalse(consumer.isAlive(), "the iteration must end once the channel is closed");
+        assertEquals(1, turns.get(), "one null turn for the interrupted get");
+        assertEquals(0, values.get(), "no real value was read");
     }
 
 @Test
     public void testCloseableIterator_forEach_drainsAll()
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(2);
+        BufferedChannel<Integer> channel = new BufferedChannel<>(2);
         channel.put(1);
         channel.put(2);
         channel.close();
@@ -320,9 +295,9 @@ public class ChannelIterableTest
     }
 
     @Test
-    public void testStreamSupport_onCloseableChannel_terminatesWhenClosed()
+    public void testStreamSupport_onChannel_terminatesWhenClosed()
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(2);
+        BufferedChannel<Integer> channel = new BufferedChannel<>(2);
         channel.put(1);
         channel.put(2);
         channel.close();
@@ -332,7 +307,7 @@ public class ChannelIterableTest
     }
 
     @Test
-    public void testStreamSupport_onNonCloseableChannel_canBeLimited()
+    public void testStreamSupport_onNonChannel_canBeLimited()
     {
         Channel<Integer> channel = Channel.unlimited();
         for (int i = 0; i < 3; i++)

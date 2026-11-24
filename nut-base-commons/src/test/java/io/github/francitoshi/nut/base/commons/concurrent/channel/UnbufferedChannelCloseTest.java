@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * per the interruption contract, so close() can complete in bounded time
  * without requiring a consumer.
  */
-class CloseableUnbufferedChannelCloseTest
+class UnbufferedChannelCloseTest
 {
     private ExecutorService executor;
 
@@ -46,7 +46,7 @@ class CloseableUnbufferedChannelCloseTest
     {
         executor = Executors.newFixedThreadPool(2);
 
-        CloseableUnbufferedChannel<String> channel = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
+        UnbufferedChannel<String> channel = ChannelTestSupport.quiet(new UnbufferedChannel<>());
 
         // No get() is waiting yet, so this put() blocks inside the
         // SynchronousQueue until some get() rendezvous with it.
@@ -75,14 +75,14 @@ class CloseableUnbufferedChannelCloseTest
         assertTrue(channel.close(), "close() must abort the pending put() and succeed");
         assertTrue(channel.isClosed());
 
-        // the pending put() aborts per the interruption contract: it does not
-        // deliver its value and it fails loudly (the channel is closed), so a
-        // producer that accounted for the message can balance its counters.
+        // the pending put() aborts and fails loudly: a blocking put() must
+        // either deliver its value or throw, never return as if it had
+        // delivered it (the producer's bookkeeping depends on it). A close is
+        // not an interruption, so the channel is not marked interrupted.
         blockedPut.get(2, TimeUnit.SECONDS);
-        assertTrue(putError.get() instanceof IllegalStateException,
-                "blocked put() must fail loudly, got " + putError.get());
-        assertFalse(putReturned.get(), "blocked put() must not report delivery");
-        assertTrue(channel.isInterrupted());
+        assertTrue(putError.get() instanceof IllegalStateException, "blocked put() must abort with IllegalStateException, got " + putError.get());
+        assertFalse(putReturned.get(), "blocked put() must not report a delivered value");
+        assertFalse(channel.isInterrupted(), "a close() abort is not an interruption");
 
         // Channel is closed and empty: get() must return null, not block.
         assertNull(channel.get());
@@ -94,7 +94,7 @@ class CloseableUnbufferedChannelCloseTest
     @Test
     void close_isIdempotent_andReturnsTrueOnSubsequentCalls_whenNothingIsBlocked() throws Exception
     {
-        CloseableUnbufferedChannel<String> channel = new CloseableUnbufferedChannel<>();
+        UnbufferedChannel<String> channel = new UnbufferedChannel<>();
 
         assertTrue(channel.close(), "first close() with nothing blocked must succeed");
         assertTrue(channel.close(), "close() must be idempotent and keep returning true");

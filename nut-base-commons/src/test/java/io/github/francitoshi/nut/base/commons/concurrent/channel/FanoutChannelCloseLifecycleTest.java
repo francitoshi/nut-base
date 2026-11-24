@@ -12,15 +12,15 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class CloseableFanoutChannelTest
+class FanoutChannelCloseLifecycleTest
 {
     @Test
     void broadcastAndClose() throws InterruptedException
     {
-        CloseableChannel<String> dest1 = Channel.closeableOf(4);
-        CloseableChannel<String> dest2 = Channel.closeableOf(4);
+        Channel<String> dest1 = Channel.of(4);
+        Channel<String> dest2 = Channel.of(4);
 
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest1, dest2);
+        FanoutChannel<String> fan = Channel.fanout(dest1, dest2);
         fan.put("hello");
         fan.put("world");
 
@@ -39,8 +39,8 @@ class CloseableFanoutChannelTest
     @Test
     void putAfterCloseThrows() throws InterruptedException
     {
-        CloseableChannel<String> dest = Channel.closeableOf(4);
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
+        Channel<String> dest = Channel.of(4);
+        FanoutChannel<String> fan = Channel.fanout(dest);
 
         fan.close();
         assertThrows(IllegalStateException.class, () -> fan.put("nope"));
@@ -50,8 +50,8 @@ class CloseableFanoutChannelTest
     void closeIsIdempotent()
     {
         @SuppressWarnings("unchecked")
-        CloseableChannel<String> dest = Channel.closeableOf(4);
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
+        Channel<String> dest = Channel.of(4);
+        FanoutChannel<String> fan = Channel.fanout(dest);
 
         assertTrue(fan.close());
         assertTrue(fan.close());
@@ -64,8 +64,8 @@ class CloseableFanoutChannelTest
         // Unbuffered target: with no consumer waiting, the broadcast blocks in
         // target.put(). close() must abort it in bounded time. Regression test
         // for the old deadlock between an in-flight put() and close().
-        CloseableChannel<String> dest = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
+        Channel<String> dest = ChannelTestSupport.quiet(new UnbufferedChannel<>());
+        FanoutChannel<String> fan = Channel.fanout(dest);
 
         CountDownLatch putStarted = new CountDownLatch(1);
         AtomicBoolean putReturned = new AtomicBoolean(false);
@@ -91,26 +91,25 @@ class CloseableFanoutChannelTest
         assertTrue(fan.close(), "close() must abort the blocked put and complete in bounded time");
         assertTrue(fan.isClosed());
 
-        // the blocked put() aborts per the interruption contract: the sender
-        // thread ends promptly, failing loudly (the target was closed) instead
-        // of silently dropping the value.
+        // the blocked put() ends promptly: the target's own close aborted it
+        // and the broadcast returned without delivering to it (a writer's
+        // interruption is routed to the listener, never thrown).
         sender.join(2000);
-        assertFalse(sender.isAlive(), "the blocked put() must be aborted and end");
-        assertTrue(putError.get() instanceof IllegalStateException,
-                "the aborted put() must fail loudly, got " + putError.get());
-        assertFalse(putReturned.get(), "the aborted put() must not report delivery");
+        assertFalse(sender.isAlive(), "the blocked put() must end once the targets are closed");
+        assertNull(putError.get(), "the writer's own interruption must not throw");
+        assertTrue(putReturned.get(), "the broadcast must return once the targets are closed");
 
-        // the target was closed by the abort and by close(): drained end-of-data.
+        // the target was closed by close(): drained end-of-data.
         assertNull(dest.get());
     }
 
     @Test
     void closePropagatesToCloseableTargetsOnly() throws InterruptedException
     {
-        CloseableChannel<String> closeable = Channel.closeableOf(4);
+        Channel<String> closeable = Channel.of(4);
         BufferedChannel<String> plain = new BufferedChannel<>(4);
 
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(closeable, plain);
+        FanoutChannel<String> fan = Channel.fanout(closeable, plain);
         fan.put("msg");
         fan.close();
 
@@ -125,8 +124,8 @@ class CloseableFanoutChannelTest
     @Test
     void joinBlocksUntilClose() throws Exception
     {
-        CloseableChannel<String> dest = Channel.closeableOf(4);
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
+        Channel<String> dest = Channel.of(4);
+        FanoutChannel<String> fan = Channel.fanout(dest);
 
         CountDownLatch joined = new CountDownLatch(1);
         AtomicBoolean joinReturned = new AtomicBoolean(false);
@@ -157,8 +156,8 @@ class CloseableFanoutChannelTest
     @Test
     void joinReturnsImmediatelyWhenAlreadyClosed() throws InterruptedException
     {
-        CloseableChannel<String> dest = Channel.closeableOf(4);
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
+        Channel<String> dest = Channel.of(4);
+        FanoutChannel<String> fan = Channel.fanout(dest);
 
         fan.close();
         fan.join(); // must not block
@@ -167,10 +166,10 @@ class CloseableFanoutChannelTest
     @Test
     void factoryMethod() throws InterruptedException
     {
-        CloseableChannel<String> dest1 = Channel.closeableOf(4);
-        CloseableChannel<String> dest2 = Channel.closeableOf(4);
+        Channel<String> dest1 = Channel.of(4);
+        Channel<String> dest2 = Channel.of(4);
 
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest1, dest2);
+        FanoutChannel<String> fan = Channel.fanout(dest1, dest2);
         fan.put("test");
         fan.close();
 
@@ -181,20 +180,20 @@ class CloseableFanoutChannelTest
     }
 
     @Test
-    void putTimeoutReturnsFalseAfterClose() throws InterruptedException
+    void putTimeoutThrowsAfterClose() throws InterruptedException
     {
-        CloseableChannel<String> dest = Channel.closeableOf(4);
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout(dest);
+        Channel<String> dest = Channel.of(4);
+        FanoutChannel<String> fan = Channel.fanout(dest);
 
         fan.close();
-        assertFalse(fan.put("nope", 10, TimeUnit.MILLISECONDS));
+        assertThrows(IllegalStateException.class, () -> fan.put("nope", 10, TimeUnit.MILLISECONDS));
     }
 
     @Test
     void emptyCloseableFanout() throws InterruptedException
     {
         @SuppressWarnings("unchecked")
-        CloseableFanoutChannel<String> fan = Channel.closeableFanout();
+        FanoutChannel<String> fan = Channel.fanout();
         fan.put("nothing");
         assertTrue(fan.close());
         assertTrue(fan.isClosed());

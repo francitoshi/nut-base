@@ -317,94 +317,7 @@ public class ChannelPutGetTimeoutTest
         }
     }
 
-    // ── DuplexChannel ────────────────────────────────────────────────
-
-    @Nested
-    public class Duplex
-    {
-        @Test
-        public void testGetZeroReturnsNullWhenEmpty() throws Exception
-        {
-            Channel<Integer> inChan = Channel.unbuffered();
-            Channel<Integer> outChan = Channel.unbuffered();
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-            assertNull(duplex.get(0, TimeUnit.MILLISECONDS));
-        }
-
-        @Test
-        public void testGetZeroDelegatesToIn() throws Exception
-        {
-            Channel<Integer> inChan = Channel.buffered(4);
-            Channel<Integer> outChan = Channel.unbuffered();
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-
-            inChan.put(42);
-            assertEquals(42, duplex.get(0, TimeUnit.MILLISECONDS));
-        }
-
-        @Test
-        public void testGetTimeoutDelegatesToIn() throws Exception
-        {
-            Channel<Integer> inChan = Channel.buffered(4);
-            Channel<Integer> outChan = Channel.unbuffered();
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-
-            inChan.put(99);
-            assertEquals(99, duplex.get(1, TimeUnit.SECONDS));
-        }
-
-        @Test
-        public void testGetTimeoutReturnsNullWhenExpired() throws Exception
-        {
-            Channel<Integer> inChan = Channel.unbuffered();
-            Channel<Integer> outChan = Channel.unbuffered();
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-            assertNull(duplex.get(100, TimeUnit.MILLISECONDS));
-        }
-
-        @Test
-        public void testPutZeroDelegatesToOut() throws Exception
-        {
-            Channel<Integer> inChan = Channel.unbuffered();
-            Channel<Integer> outChan = Channel.buffered(4);
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-
-            assertTrue(duplex.put(1, 0, TimeUnit.MILLISECONDS));
-            assertEquals(1, outChan.get());
-        }
-
-        @Test
-        public void testPutZeroReturnsFalseWhenNotTaken() throws Exception
-        {
-            Channel<Integer> inChan = Channel.unbuffered();
-            Channel<Integer> outChan = Channel.unbuffered();
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-            assertFalse(duplex.put(1, 0, TimeUnit.MILLISECONDS));
-        }
-
-        @Test
-        public void testPutTimeoutDelegatesToOut() throws Exception
-        {
-            Channel<Integer> inChan = Channel.unbuffered();
-            Channel<Integer> outChan = Channel.buffered(1);
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-
-            assertTrue(duplex.put(1, 100, TimeUnit.MILLISECONDS));
-        }
-
-        @Test
-        public void testPutTimeoutReturnsFalseWhenExpired() throws Exception
-        {
-            Channel<Integer> inChan = Channel.unbuffered();
-            Channel<Integer> outChan = Channel.buffered(1);
-            DuplexChannel<Integer> duplex = Channel.duplex(inChan, outChan);
-
-            assertTrue(duplex.put(1, 0, TimeUnit.MILLISECONDS));
-            assertFalse(duplex.put(2, 100, TimeUnit.MILLISECONDS));
-        }
-    }
-
-    // ── CloseableUnbufferedChannel ───────────────────────────────────
+    // ── UnbufferedChannel ───────────────────────────────────
 
     @Nested
     public class CloseableUnbuffered
@@ -412,14 +325,14 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetZeroReturnsNullWhenEmpty() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             assertNull(ch.get(0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testGetZeroReturnsValueWhenProducerBlocked() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             CountDownLatch producerReady = new CountDownLatch(1);
             Thread producer = new Thread(() ->
             {
@@ -436,7 +349,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetZeroReturnsNullAfterClose() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             assertTrue(ch.close());
             assertNull(ch.get(0, TimeUnit.MILLISECONDS));
         }
@@ -444,38 +357,38 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetTimeoutReturnsNullAfterClose() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             assertTrue(ch.close());
             assertNull(ch.get(100, TimeUnit.MILLISECONDS));
         }
 
         @Test
-        public void testPutZeroReturnsFalseAfterClose() throws Exception
+        public void testPutZeroThrowsAfterClose() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 0, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
-        public void testPutTimeoutReturnsFalseAfterClose() throws Exception
+        public void testPutTimeoutThrowsAfterClose() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 100, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 100, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testPutZeroNullThrows() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             assertThrows(NullPointerException.class, () -> ch.put(null, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testGetTimeoutReturnsNullWhenExpired() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             long start = System.nanoTime();
             assertNull(ch.get(100, TimeUnit.MILLISECONDS));
             long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
@@ -485,7 +398,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testPutTimeoutReturnsFalseWhenExpired() throws Exception
         {
-            CloseableUnbufferedChannel<Integer> ch = new CloseableUnbufferedChannel<>();
+            UnbufferedChannel<Integer> ch = new UnbufferedChannel<>();
             long start = System.nanoTime();
             assertFalse(ch.put(1, 100, TimeUnit.MILLISECONDS));
             long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
@@ -493,7 +406,7 @@ public class ChannelPutGetTimeoutTest
         }
     }
 
-    // ── CloseableBufferedChannel ─────────────────────────────────────
+    // ── BufferedChannel ─────────────────────────────────────
 
     @Nested
     public class CloseableBuffered
@@ -501,14 +414,14 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetZeroReturnsNullWhenEmpty() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             assertNull(ch.get(0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testGetZeroReturnsValueWhenAvailable() throws InterruptedException
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             ch.put(10);
             assertEquals(10, ch.get(0, TimeUnit.MILLISECONDS));
         }
@@ -516,7 +429,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetZeroReturnsNullAfterClose() throws InterruptedException
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             ch.put(1);
             assertEquals(1, ch.get(0, TimeUnit.MILLISECONDS));
             assertTrue(ch.close());
@@ -526,7 +439,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetTimeoutReturnsNullAfterClose() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             assertTrue(ch.close());
             assertNull(ch.get(100, TimeUnit.MILLISECONDS));
         }
@@ -534,7 +447,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetFifoOrder() throws InterruptedException
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(8);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(8);
             ch.put(1);
             ch.put(2);
             ch.put(3);
@@ -546,52 +459,52 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testPutZeroReturnsTrueWhenRoom() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             assertTrue(ch.put(1, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testPutZeroReturnsFalseWhenFull() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(1);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(1);
             assertTrue(ch.put(1, 0, TimeUnit.MILLISECONDS));
             assertFalse(ch.put(2, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
-        public void testPutZeroReturnsFalseAfterClose() throws Exception
+        public void testPutZeroThrowsAfterClose() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 0, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
-        public void testPutTimeoutReturnsFalseAfterClose() throws Exception
+        public void testPutTimeoutThrowsAfterClose() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 100, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 100, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testPutZeroNullThrows() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             assertThrows(NullPointerException.class, () -> ch.put(null, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testPutTimeoutReturnsTrueWhenRoom() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(4);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(4);
             assertTrue(ch.put(1, 100, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testPutTimeoutReturnsFalseWhenExpired() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(1);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(1);
             assertTrue(ch.put(1, 0, TimeUnit.MILLISECONDS));
             long start = System.nanoTime();
             assertFalse(ch.put(2, 100, TimeUnit.MILLISECONDS));
@@ -602,7 +515,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testPutTimeoutReturnsTrueAfterDrain() throws Exception
         {
-            CloseableBufferedChannel<Integer> ch = new CloseableBufferedChannel<>(1);
+            BufferedChannel<Integer> ch = new BufferedChannel<>(1);
             assertTrue(ch.put(1, 0, TimeUnit.MILLISECONDS));
             Thread consumer = new Thread(() ->
             {
@@ -614,7 +527,7 @@ public class ChannelPutGetTimeoutTest
         }
     }
 
-    // ── CloseableUnlimitedChannel ────────────────────────────────────
+    // ── UnlimitedChannel ────────────────────────────────────
 
     @Nested
     public class CloseableUnlimited
@@ -622,14 +535,14 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetZeroReturnsNullWhenEmpty() throws Exception
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             assertNull(ch.get(0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testGetZeroReturnsValueWhenAvailable() throws InterruptedException
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             ch.put(55);
             assertEquals(55, ch.get(0, TimeUnit.MILLISECONDS));
         }
@@ -637,7 +550,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetZeroReturnsNullAfterClose() throws InterruptedException
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             ch.put(1);
             assertEquals(1, ch.get(0, TimeUnit.MILLISECONDS));
             assertTrue(ch.close());
@@ -647,7 +560,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetTimeoutReturnsNullAfterClose() throws Exception
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             assertTrue(ch.close());
             assertNull(ch.get(100, TimeUnit.MILLISECONDS));
         }
@@ -655,7 +568,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testPutZeroAlwaysReturnsTrue() throws InterruptedException
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             for (int i = 0; i < 10_000; i++)
             {
                 assertTrue(ch.put(i, 0, TimeUnit.MILLISECONDS));
@@ -667,32 +580,32 @@ public class ChannelPutGetTimeoutTest
         }
 
         @Test
-        public void testPutZeroReturnsFalseAfterClose() throws Exception
+        public void testPutZeroThrowsAfterClose() throws Exception
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 0, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
-        public void testPutTimeoutReturnsFalseAfterClose() throws Exception
+        public void testPutTimeoutThrowsAfterClose() throws Exception
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 100, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 100, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testPutZeroNullThrows() throws Exception
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             assertThrows(NullPointerException.class, () -> ch.put(null, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testPutTimeoutAlwaysReturnsTrue() throws InterruptedException
         {
-            CloseableUnlimitedChannel<Integer> ch = new CloseableUnlimitedChannel<>();
+            UnlimitedChannel<Integer> ch = new UnlimitedChannel<>();
             for (int i = 0; i < 10_000; i++)
             {
                 assertTrue(ch.put(i, 100, TimeUnit.MILLISECONDS));
@@ -742,7 +655,7 @@ public class ChannelPutGetTimeoutTest
         @Test
         public void testGetWithHugeTimeoutOnCloseableConflatedWaitsForValue() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             Thread producer = new Thread(() ->
             {
                 try { Thread.sleep(50); ch.put(9); } catch (Exception e) { Thread.currentThread().interrupt(); }

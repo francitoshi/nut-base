@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Invariants of closing a {@link CloseableUnbufferedChannel} under stress:
+ * Invariants of closing a {@link UnbufferedChannel} under stress:
  * <ol>
  *   <li>{@code close()} never hangs while plain {@code put()} writers are
  *       blocked, no matter how the registration interleaves with the close
@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Each iteration parks real threads and closes the channel while they are
  * blocked, so a registration/close race has thousands of chances to surface.
  */
-class CloseableUnbufferedChannelCloseInvariantTest
+class UnbufferedChannelCloseInvariantTest
 {
     private static final int ITERATIONS = 600;
 
@@ -35,7 +35,7 @@ class CloseableUnbufferedChannelCloseInvariantTest
     {
         for (int i = 0; i < ITERATIONS; i++)
         {
-            CloseableUnbufferedChannel<String> ch = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
+            UnbufferedChannel<String> ch = ChannelTestSupport.quiet(new UnbufferedChannel<>());
             List<String> postCloseDeliveries = new ArrayList<>();
 
             // two writers: a rendezvous can only complete between writer and
@@ -102,7 +102,7 @@ class CloseableUnbufferedChannelCloseInvariantTest
     {
         for (int i = 0; i < ITERATIONS; i++)
         {
-            CloseableUnbufferedChannel<String> ch = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
+            UnbufferedChannel<String> ch = ChannelTestSupport.quiet(new UnbufferedChannel<>());
             final int stripe = i;
 
             // two mutually unaware readers: neither can rendezvous with the
@@ -131,7 +131,7 @@ class CloseableUnbufferedChannelCloseInvariantTest
     {
         for (int i = 0; i < ITERATIONS; i++)
         {
-            CloseableUnbufferedChannel<String> ch = ChannelTestSupport.quiet(new CloseableUnbufferedChannel<>());
+            UnbufferedChannel<String> ch = ChannelTestSupport.quiet(new UnbufferedChannel<>());
             final int stripe = i;
 
             Thread putter = ChannelTestSupport.startDaemon("put-t-" + stripe, () ->

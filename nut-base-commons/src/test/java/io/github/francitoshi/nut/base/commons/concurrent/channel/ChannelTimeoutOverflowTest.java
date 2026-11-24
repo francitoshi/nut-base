@@ -56,10 +56,10 @@ class ChannelTimeoutOverflowTest
         channels.add(new UnbufferedChannel<>());
         channels.add(new UnlimitedChannel<>());
         channels.add(new ConflatedChannel<>());
-        channels.add(new CloseableBufferedChannel<>(4));
-        channels.add(new CloseableUnbufferedChannel<>());
-        channels.add(new CloseableUnlimitedChannel<>());
-        channels.add(new CloseableConflatedChannel<>());
+        channels.add(new BufferedChannel<>(4));
+        channels.add(new UnbufferedChannel<>());
+        channels.add(new UnlimitedChannel<>());
+        channels.add(new ConflatedChannel<>());
 
         for (Channel<String> ch : channels)
         {
@@ -77,14 +77,14 @@ class ChannelTimeoutOverflowTest
     {
         BufferedChannel<String> full = new BufferedChannel<>(1);
         full.put("x");
-        CloseableBufferedChannel<String> closeableFull = new CloseableBufferedChannel<>(1);
+        BufferedChannel<String> closeableFull = new BufferedChannel<>(1);
         closeableFull.put("x");
 
         List<Channel<String>> channels = new ArrayList<>();
         channels.add(full);
         channels.add(closeableFull);
         channels.add(new UnbufferedChannel<>());          // nobody is reading
-        channels.add(new CloseableUnbufferedChannel<>());  // nobody is reading
+        channels.add(new UnbufferedChannel<>());  // nobody is reading
 
         for (Channel<String> ch : channels)
         {

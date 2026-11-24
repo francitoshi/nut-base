@@ -194,7 +194,7 @@ public class ChannelConflatedTest
         }
     }
 
-    // ── CloseableConflatedChannel ────────────────────────────────────
+    // ── ConflatedChannel ────────────────────────────────────
 
     @Nested
     public class CloseableConflated
@@ -202,7 +202,7 @@ public class ChannelConflatedTest
         @Test
         public void testPutGet() throws Exception
         {
-            CloseableConflatedChannel<String> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<String> ch = new ConflatedChannel<>();
             ch.put("a");
             assertEquals("a", ch.get());
         }
@@ -210,7 +210,7 @@ public class ChannelConflatedTest
         @Test
         public void testPutOverwritesUnreadValue() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             ch.put(1);
             ch.put(2);
             ch.put(3);
@@ -220,7 +220,7 @@ public class ChannelConflatedTest
         @Test
         public void testGetBlocksUntilValue() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             AtomicReference<Integer> result = new AtomicReference<>();
             CountDownLatch started = new CountDownLatch(1);
 
@@ -242,14 +242,14 @@ public class ChannelConflatedTest
         @Test
         public void testGetZeroReturnsNullWhenEmpty() throws InterruptedException
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertNull(ch.get(0, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testGetZeroReturnsValueWhenAvailable() throws InterruptedException
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             ch.put(10);
             assertEquals(10, ch.get(0, TimeUnit.MILLISECONDS));
         }
@@ -257,7 +257,7 @@ public class ChannelConflatedTest
         @Test
         public void testGetTimeoutReturnsNullWhenExpired() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             long start = System.nanoTime();
             assertNull(ch.get(100, TimeUnit.MILLISECONDS));
             long elapsed = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
@@ -267,7 +267,7 @@ public class ChannelConflatedTest
         @Test
         public void testGetTimeoutReturnsValueBeforeTimeout() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             Thread producer = new Thread(() ->
             {
                 try { Thread.sleep(50); ch.put(7); } catch (Exception e) { Thread.currentThread().interrupt(); }
@@ -280,14 +280,14 @@ public class ChannelConflatedTest
         @Test
         public void testPutNullThrows()
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertThrows(NullPointerException.class, () -> ch.put(null));
         }
 
         @Test
         public void testPutZeroNeverBlocks() throws InterruptedException
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.put(1, 0, TimeUnit.MILLISECONDS));
             assertTrue(ch.put(2, 0, TimeUnit.MILLISECONDS));
             assertTrue(ch.put(3, 0, TimeUnit.MILLISECONDS));
@@ -299,14 +299,14 @@ public class ChannelConflatedTest
         @Test
         public void testInitialStateNotClosed()
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertFalse(ch.isClosed());
         }
 
         @Test
         public void testClose()
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
             assertTrue(ch.isClosed());
         }
@@ -314,7 +314,7 @@ public class ChannelConflatedTest
         @Test
         public void testDoubleCloseReturnsTrue()
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
             assertTrue(ch.close());
         }
@@ -322,31 +322,31 @@ public class ChannelConflatedTest
         @Test
         public void testPutAfterCloseThrows()
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
             assertThrows(IllegalStateException.class, () -> ch.put(1));
         }
 
         @Test
-        public void testPutZeroAfterCloseReturnsFalse() throws InterruptedException
+        public void testPutZeroThrowsAfterClose() throws InterruptedException
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 0, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 0, TimeUnit.MILLISECONDS));
         }
 
         @Test
-        public void testPutTimeoutAfterCloseReturnsFalse() throws Exception
+        public void testPutTimeoutThrowsAfterClose() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
-            assertFalse(ch.put(1, 100, TimeUnit.MILLISECONDS));
+            assertThrows(IllegalStateException.class, () -> ch.put(1, 100, TimeUnit.MILLISECONDS));
         }
 
         @Test
         public void testGetAfterCloseReturnsRemainingValue() throws InterruptedException
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             ch.put(42);
             assertTrue(ch.close());
             assertEquals(42, ch.get());
@@ -355,7 +355,7 @@ public class ChannelConflatedTest
         @Test
         public void testGetAfterCloseReturnsNullWhenEmpty() throws InterruptedException
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
             assertNull(ch.get());
         }
@@ -363,7 +363,7 @@ public class ChannelConflatedTest
         @Test
         public void testGetZeroAfterCloseReturnsNullWhenEmpty() throws InterruptedException
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
             assertNull(ch.get(0, TimeUnit.MILLISECONDS));
         }
@@ -371,7 +371,7 @@ public class ChannelConflatedTest
         @Test
         public void testGetTimeoutAfterCloseReturnsNull() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             assertTrue(ch.close());
             assertNull(ch.get(100, TimeUnit.MILLISECONDS));
         }
@@ -379,7 +379,7 @@ public class ChannelConflatedTest
         @Test
         public void testCloseUnblocksBlockedGet() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             CountDownLatch started = new CountDownLatch(1);
             AtomicReference<Integer> result = new AtomicReference<>();
 
@@ -401,7 +401,7 @@ public class ChannelConflatedTest
         @Test
         public void testInterruptedGetClosesChannel() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = ChannelTestSupport.quiet(new CloseableConflatedChannel<>());
+            ConflatedChannel<Integer> ch = ChannelTestSupport.quiet(new ConflatedChannel<>());
             CountDownLatch started = new CountDownLatch(1);
             AtomicReference<Integer> result = new AtomicReference<>();
             AtomicReference<Thread> consumerThread = new AtomicReference<>();
@@ -418,20 +418,20 @@ public class ChannelConflatedTest
             assertNull(result.get());
             assertFalse(ch.isClosed());
 
-            // interrupting a blocked get() aborts it and closes the channel
-            // (closeIfCloseable() is invoked after the lock is released).
+            // interrupting a blocked get() aborts it and leaves the channel
+            // open: an interruption never closes a channel (R5).
             consumerThread.get().interrupt();
             consumer.join(5000);
 
             assertNull(result.get());
             assertTrue(ch.isInterrupted());
-            assertTrue(ch.isClosed(), "an interrupted get() must close the channel");
+            assertFalse(ch.isClosed(), "an interrupted get() must not close the channel");
         }
 
         @Test
         public void testCloseUnblocksBlockedGetTimeout() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             CountDownLatch started = new CountDownLatch(1);
             AtomicReference<Integer> result = new AtomicReference<>();
 
@@ -453,7 +453,7 @@ public class ChannelConflatedTest
         @Test
         public void testJoinBlocksUntilClose() throws Exception
         {
-            CloseableConflatedChannel<Integer> ch = new CloseableConflatedChannel<>();
+            ConflatedChannel<Integer> ch = new ConflatedChannel<>();
             CountDownLatch started = new CountDownLatch(1);
             AtomicBoolean joined = new AtomicBoolean(false);
 
@@ -480,7 +480,7 @@ public class ChannelConflatedTest
         @Test
         public void testFactoryMethod() throws InterruptedException
         {
-            CloseableChannel<String> ch = Channel.closeableConflated();
+            Channel<String> ch = Channel.conflated();
             ch.put("hello");
             assertEquals("hello", ch.get());
             assertTrue(ch.close());

@@ -10,30 +10,30 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CloseableChannelJoinTest
+public class ChannelJoinTest
 {
     @Test
     public void testBufferedChannelJoin() throws Exception
     {
-        CloseableChannel<String> channel = Channel.closeableBuffered(4);
+        Channel<String> channel = Channel.buffered(4);
         testJoinLifecycle(channel);
     }
 
     @Test
     public void testUnbufferedChannelJoin() throws Exception
     {
-        CloseableChannel<String> channel = Channel.closeableUnbuffered();
+        Channel<String> channel = Channel.unbuffered();
         testJoinLifecycle(channel);
     }
 
     @Test
     public void testUnlimitedChannelJoin() throws Exception
     {
-        CloseableChannel<String> channel = Channel.closeableUnlimited();
+        Channel<String> channel = Channel.unlimited();
         testJoinLifecycle(channel);
     }
 
-    private void testJoinLifecycle(CloseableChannel<String> channel) throws Exception
+    private void testJoinLifecycle(Channel<String> channel) throws Exception
     {
         // 1. Calling join on an open channel should block
         assertFalse(channel.isClosed());

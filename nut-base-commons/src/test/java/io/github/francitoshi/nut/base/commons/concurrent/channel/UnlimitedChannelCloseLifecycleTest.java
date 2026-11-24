@@ -7,19 +7,18 @@ package io.github.francitoshi.nut.base.commons.concurrent.channel;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CloseableBufferedChannelTest
+public class UnlimitedChannelCloseLifecycleTest
 {
     private static final Object MISSING = new Object();
 
     @Test
     public void testPutGet() throws InterruptedException
     {
-        CloseableBufferedChannel<String> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<String> channel = new UnlimitedChannel<>();
         channel.put("a");
         assertEquals("a", channel.get());
     }
@@ -27,49 +26,36 @@ public class CloseableBufferedChannelTest
     @Test
     public void testFifoOrder() throws InterruptedException
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(8);
-        for (int i = 0; i < 8; i++)
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
+        final int n = 100_000;
+        for (int i = 0; i < n; i++)
         {
             channel.put(i);
         }
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < n; i++)
         {
             assertEquals(i, channel.get());
         }
     }
 
     @Test
-    public void testZeroCapacityIsRejected()
-    {
-        // capacity 0 is the rendezvous channel, which is its own class
-        assertThrows(IllegalArgumentException.class, () -> new CloseableBufferedChannel<>(0));
-        assertNotNull(new CloseableUnbufferedChannel<>());
-    }
-
-    @Test
-    public void testInvalidCapacity()
-    {
-        assertThrows(IllegalArgumentException.class, () -> new CloseableBufferedChannel<>(-5));
-    }
-
-    @Test
     public void testPutNullThrows()
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         assertThrows(NullPointerException.class, () -> channel.put(null));
     }
 
     @Test
     public void testInitialStateNotClosed()
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         assertFalse(channel.isClosed());
     }
 
     @Test
     public void testCloseEmptyChannel() throws InterruptedException
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         assertTrue(channel.close());
         assertTrue(channel.isClosed());
         assertNull(channel.get());
@@ -79,7 +65,7 @@ public class CloseableBufferedChannelTest
     @Test
     public void testDoubleCloseReturnsTrue()
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         assertTrue(channel.close());
         assertTrue(channel.close());
     }
@@ -87,7 +73,7 @@ public class CloseableBufferedChannelTest
     @Test
     public void testPutAfterCloseThrows() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         assertTrue(channel.close());
         assertThrows(IllegalStateException.class, () -> channel.put(1));
     }
@@ -95,7 +81,7 @@ public class CloseableBufferedChannelTest
     @Test
     public void testGetAfterCloseReturnsNull() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         channel.put(1);
         channel.put(2);
         assertEquals(1, channel.get());
@@ -107,7 +93,7 @@ public class CloseableBufferedChannelTest
     @Test
     public void testCloseWithTimeoutReturnsTrue() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         channel.put(1);
         assertEquals(1, channel.get());
         assertTrue(channel.close(500, TimeUnit.MILLISECONDS));
@@ -116,7 +102,7 @@ public class CloseableBufferedChannelTest
     @Test
     public void testCloseUnblocksBlockedGet() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(4);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         CountDownLatch entered = new CountDownLatch(1);
         AtomicReference<Object> result = new AtomicReference<>(MISSING);
 
@@ -137,50 +123,36 @@ public class CloseableBufferedChannelTest
     }
 
     @Test
-    public void testCloseTimeoutExpiresWithBlockedPut() throws Exception
+    public void testGetInterruptedWhenEmpty_returnsNullAndStaysOpen() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = ChannelTestSupport.quiet(new CloseableBufferedChannel<>(1));
-        channel.put(1);
-
+        UnlimitedChannel<Integer> channel = ChannelTestSupport.quiet(new UnlimitedChannel<>());
         CountDownLatch entered = new CountDownLatch(1);
-        AtomicBoolean putReturned = new AtomicBoolean(false);
-        AtomicReference<Throwable> putError = new AtomicReference<>();
+        AtomicReference<Object> result = new AtomicReference<>(MISSING);
 
-        Thread producer = new Thread(() ->
+        Thread consumer = new Thread(() ->
         {
-            try
-            {
-                entered.countDown();
-                channel.put(2);
-                putReturned.set(true);
-            }
-            catch (Throwable t2)
-            {
-                putError.set(t2);
-            }
+            entered.countDown();
+            result.set(channel.get());
         });
-        producer.start();
+        consumer.start();
 
         assertTrue(entered.await(5, TimeUnit.SECONDS));
         Thread.sleep(200);
+        consumer.interrupt();
+        consumer.join(5000);
 
-        // close() aborts the blocked put and completes in bounded time.
-        assertTrue(channel.close(100, TimeUnit.MILLISECONDS));
-        assertTrue(channel.isClosed());
-
-        // The blocked put cannot complete: it is aborted and fails loudly
-        // (a blocking put must either deliver or throw), while the channel
-        // is still marked interrupted per the interruption contract.
-        producer.join(5000);
-        assertFalse(putReturned.get());
-        assertTrue(putError.get() instanceof IllegalStateException, "got " + putError.get());
+        // get() aborts returning null and the channel stays open: an
+        // interruption never closes a channel (R5).
         assertTrue(channel.isInterrupted());
+        assertFalse(channel.isClosed());
+        assertNull(result.get(), "get must return null after interrupt");
+        assertFalse(consumer.isAlive());
     }
 
     @Test
     public void testConcurrentPutGetClose() throws Exception
     {
-        CloseableBufferedChannel<Integer> channel = new CloseableBufferedChannel<>(128);
+        UnlimitedChannel<Integer> channel = new UnlimitedChannel<>();
         final int producers = 2;
         final int consumers = 2;
         final int perThread = 5000;

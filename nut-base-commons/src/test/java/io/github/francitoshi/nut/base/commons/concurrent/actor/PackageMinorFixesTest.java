@@ -5,7 +5,7 @@
  */
 package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
-import io.github.francitoshi.nut.base.commons.concurrent.channel.CloseableConflatedChannel;
+import io.github.francitoshi.nut.base.commons.concurrent.channel.ConflatedChannel;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -26,6 +26,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -293,20 +294,22 @@ class PackageMinorFixesTest
     }
 
     /**
-     * The closeable conflated channel must fail loudly when its put is
-     * aborted by an interruption, never return as if the value was stored.
+     * A pre-interrupted conflated put aborts without delivering and leaves
+     * the channel open: an interruption never closes a channel (R5), and the
+     * abort is reported with a {@code false}, never as a silent delivery.
      */
     @Test
     @Timeout(value = 30, unit = TimeUnit.SECONDS)
-    void conflatedPutAbortsLoudlyOnInterrupt()
+    void conflatedPutAbortsQuietlyOnInterrupt()
     {
-        CloseableConflatedChannel<String> channel = new CloseableConflatedChannel<>();
+        ConflatedChannel<String> channel = new ConflatedChannel<>();
         Thread.currentThread().interrupt();
         try
         {
-            assertThrows(IllegalStateException.class, () -> channel.put("x"));
-            assertTrue(channel.isClosed(), "the aborted put must have closed the channel");
+            assertFalse(channel.put("x"), "the aborted put must not report a delivery");
+            assertFalse(channel.isClosed(), "an interruption must not close the channel");
             assertTrue(channel.isInterrupted());
+            assertEquals(java.util.Optional.empty(), channel.tryGet(), "nothing was delivered");
         }
         finally
         {

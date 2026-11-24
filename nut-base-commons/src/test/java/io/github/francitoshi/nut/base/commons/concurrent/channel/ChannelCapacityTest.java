@@ -25,7 +25,7 @@ class ChannelCapacityTest
         for (int capacity : new int[]{-2, -100, Integer.MIN_VALUE})
         {
             assertThrows(IllegalArgumentException.class, () -> Channel.of(capacity), "of(" + capacity + ")");
-            assertThrows(IllegalArgumentException.class, () -> Channel.closeableOf(capacity), "closeableOf(" + capacity + ")");
+            assertThrows(IllegalArgumentException.class, () -> Channel.of(capacity), "of(" + capacity + ")");
         }
     }
 
@@ -34,7 +34,7 @@ class ChannelCapacityTest
     {
         assertEquals(-1, Channel.UNLIMITED);
         assertTrue(Channel.of(Channel.UNLIMITED) instanceof UnlimitedChannel);
-        assertTrue(Channel.closeableOf(Channel.UNLIMITED) instanceof CloseableUnlimitedChannel);
+        assertTrue(Channel.of(Channel.UNLIMITED) instanceof UnlimitedChannel);
     }
 
     @Test
@@ -42,7 +42,7 @@ class ChannelCapacityTest
     {
         assertTrue(Channel.of(0) instanceof UnbufferedChannel);
         assertTrue(Channel.of(3) instanceof BufferedChannel);
-        assertTrue(Channel.closeableOf(0) instanceof CloseableUnbufferedChannel);
-        assertTrue(Channel.closeableOf(3) instanceof CloseableBufferedChannel);
+        assertTrue(Channel.of(0) instanceof UnbufferedChannel);
+        assertTrue(Channel.of(3) instanceof BufferedChannel);
     }
 }
