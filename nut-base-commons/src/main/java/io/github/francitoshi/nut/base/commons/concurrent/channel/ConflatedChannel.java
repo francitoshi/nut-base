@@ -165,7 +165,6 @@ public final class ConflatedChannel<E> extends Channel<E>
             return tryGet().orElse(null);
         }
 
-        long deadline = JavaTime.untilNanoTime(timeout, unit);
         lock.lock();
         try
         {
@@ -175,11 +174,20 @@ public final class ConflatedChannel<E> extends Channel<E>
                 handleInterruptedException(new InterruptedException("interrupted before receiving"));
                 return null;
             }
+            // the deadline (and its nanoTime) is computed lazily, on the
+            // first wait for items: a get that finds one pays no clock read
+            long deadline = 0L;
+            boolean deadlineSet = false;
             while (items.isEmpty())
             {
                 if (closed)
                 {
                     return null;
+                }
+                if (!deadlineSet)
+                {
+                    deadline = JavaTime.untilNanoTime(timeout, unit);
+                    deadlineSet = true;
                 }
                 long remaining = deadline - System.nanoTime();
                 if (remaining <= 0)

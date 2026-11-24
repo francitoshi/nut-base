@@ -82,7 +82,9 @@ public final class BufferedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        return putBounded(value, JavaTime.untilNanoTime(timeout, unit));
+        // negative means "never": a non-positive timeout is clamped to an
+        // immediate attempt, as untilNanoTime did
+        return putBounded(value, Math.max(0L, unit.toNanos(timeout)));
     }
 
     // -------------------------------------------------------------------
@@ -99,12 +101,13 @@ public final class BufferedChannel<E> extends Channel<E>
      * check until it finishes, so {@code close(timeout, unit)} can wait for
      * the puts in flight without tracking threads.
      *
-     * @param deadline absolute deadline in nanos; negative blocks forever
+     * @param timeoutNanos the wait budget in nanos; negative blocks forever,
+     *        zero is an immediate attempt
      * @return {@code true} if the value was delivered; {@code false} on
      *         interruption or timeout
      * @throws IllegalStateException if the channel is (or becomes) closed
      */
-    private boolean putBounded(E value, long deadline)
+    private boolean putBounded(E value, long timeoutNanos)
     {
         lock.lock();
         try
@@ -115,16 +118,29 @@ public final class BufferedChannel<E> extends Channel<E>
                 // closed means closed for the producer, in both variants
                 throw new IllegalStateException("closed");
             }
+            // the deadline (and its nanoTime) is computed lazily, on the
+            // first wait for room: a put that finds room pays no clock read
+            long deadline = 0L;
+            boolean deadlineSet = false;
             while (items.size() >= capacity)
             {
                 try
                 {
-                    if (deadline < 0L)
+                    if (timeoutNanos < 0L)
                     {
                         notFull.await();
                     }
                     else
                     {
+                        if (timeoutNanos == 0L)
+                        {
+                            return false;
+                        }
+                        if (!deadlineSet)
+                        {
+                            deadline = JavaTime.untilNanoTime(timeoutNanos, TimeUnit.NANOSECONDS);
+                            deadlineSet = true;
+                        }
                         long remaining = deadline - System.nanoTime();
                         if (remaining <= 0L)
                         {
@@ -193,17 +209,19 @@ public final class BufferedChannel<E> extends Channel<E>
     private E getBounded(long timeout, TimeUnit unit, boolean block)
     {
         // a negative (or zero, in the timed variants) timeout makes an
-        // immediate non-blocking attempt; the untimed get() blocks forever
-        long deadline = block ? -1L : JavaTime.untilNanoTime(timeout, unit);
-
+        // immediate non-blocking attempt; the untimed get() blocks forever.
+        // the deadline (and its nanoTime) is computed lazily, on the first
+        // wait for items: a get that finds one pays no clock read
         lock.lock();
         try
         {
+            long deadline = 0L;
+            boolean deadlineSet = false;
             // An open channel waits for items; a closed one drains the
             // remaining items one per call and then yields null.
             while (items.isEmpty())
             {
-                if (closed || (!block && timeout <= 0L))
+                if (closed)
                 {
                     return null;
                 }
@@ -213,6 +231,15 @@ public final class BufferedChannel<E> extends Channel<E>
                 }
                 else
                 {
+                    if (timeout <= 0L)
+                    {
+                        return null;
+                    }
+                    if (!deadlineSet)
+                    {
+                        deadline = JavaTime.untilNanoTime(timeout, unit);
+                        deadlineSet = true;
+                    }
                     long remaining = deadline - System.nanoTime();
                     if (remaining <= 0L)
                     {

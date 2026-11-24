@@ -111,18 +111,20 @@ public final class UnlimitedChannel<E> extends Channel<E>
      * the timed variants) timeout makes an immediate non-blocking attempt;
      * the untimed {@code get()} blocks forever. An open channel waits for
      * items; a closed one drains the remaining items one per call and then
-     * yields {@code null}.
+     * yields {@code null}. The deadline (and its nanoTime) is computed
+     * lazily, on the first wait for items: a get that finds one pays no
+     * clock read.
      */
     private E getWaiting(long timeout, TimeUnit unit, boolean block)
     {
-        long deadline = block ? -1L : JavaTime.untilNanoTime(timeout, unit);
-
         lock.lock();
         try
         {
+            long deadline = 0L;
+            boolean deadlineSet = false;
             while (items.isEmpty())
             {
-                if (closed || (!block && timeout <= 0L))
+                if (closed)
                 {
                     return null;
                 }
@@ -132,6 +134,15 @@ public final class UnlimitedChannel<E> extends Channel<E>
                 }
                 else
                 {
+                    if (timeout <= 0L)
+                    {
+                        return null;
+                    }
+                    if (!deadlineSet)
+                    {
+                        deadline = JavaTime.untilNanoTime(timeout, unit);
+                        deadlineSet = true;
+                    }
                     long remaining = deadline - System.nanoTime();
                     if (remaining <= 0L)
                     {

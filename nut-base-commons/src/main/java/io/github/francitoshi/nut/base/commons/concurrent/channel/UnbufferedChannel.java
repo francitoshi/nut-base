@@ -104,7 +104,9 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public boolean put(E value, long timeout, TimeUnit unit)
     {
         Objects.requireNonNull(value, "value must not be null");
-        long deadline = JavaTime.untilNanoTime(timeout, unit);
+        // a non-positive timeout is a pure non-blocking attempt: no deadline
+        // math (the JavaTime.untilNanoTime wrap is kept for t > 0: the
+        // SynchronousQueue overflows huge timeout values on its own)
         synchronized (waitLock)
         {
             if (closed)
@@ -115,6 +117,11 @@ public final class UnbufferedChannel<E> extends Channel<E>
         }
         try
         {
+            if (timeout <= 0L)
+            {
+                return rendez.offer(value);
+            }
+            long deadline = JavaTime.untilNanoTime(timeout, unit);
             return rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
         }
         catch (InterruptedException ex)
@@ -179,7 +186,9 @@ public final class UnbufferedChannel<E> extends Channel<E>
     @SuppressWarnings("unchecked")
     public E get(long timeout, TimeUnit unit)
     {
-        long deadline = JavaTime.untilNanoTime(timeout, unit);
+        // a non-positive timeout is a pure non-blocking attempt: no deadline
+        // math (the JavaTime.untilNanoTime wrap is kept for t > 0: the
+        // SynchronousQueue overflows huge timeout values on its own)
         if (closed)
         {
             return drainAfterClosePoll();
@@ -193,7 +202,9 @@ public final class UnbufferedChannel<E> extends Channel<E>
                 return drainAfterClosePoll();
             }
 
-            Object item = rendez.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            Object item = timeout <= 0L
+                    ? rendez.poll()
+                    : rendez.poll(Math.max(0, JavaTime.untilNanoTime(timeout, unit) - System.nanoTime()), TimeUnit.NANOSECONDS);
             if (item == null || item == POISON)
             {
                 return null;
