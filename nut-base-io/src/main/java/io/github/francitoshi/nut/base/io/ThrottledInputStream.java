@@ -73,6 +73,12 @@ public final class ThrottledInputStream extends FilterInputStream
         synchronized (lock)
         {
             int b = super.read();
+            // unthrottled fast path, except at EOF: nanosOnClose still
+            // applies. No clock reads, no parking
+            if (b != -1 && nanosPerByte == 0L && nanosPerLine == 0L)
+            {
+                return b;
+            }
             parkedNanos = applyDelays(b);
             return b;
         }

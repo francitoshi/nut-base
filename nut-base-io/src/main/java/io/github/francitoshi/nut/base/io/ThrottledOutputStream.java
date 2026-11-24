@@ -56,7 +56,11 @@ public final class ThrottledOutputStream extends FilterOutputStream
         synchronized (lock)
         {
             super.write(b);
-            applyDelays(b);
+            // unthrottled fast path: no clock reads, no parking
+            if (nanosPerByte != 0L || nanosPerLine != 0L)
+            {
+                applyDelays(b);
+            }
         }
     }
 
@@ -66,10 +70,43 @@ public final class ThrottledOutputStream extends FilterOutputStream
         synchronized (lock)
         {
             super.write(b, off, len);
-            for (int i = 0; i < len; i++)
+            // unthrottled fast path: no clock reads, no parking
+            if (nanosPerByte == 0L && nanosPerLine == 0L)
             {
-                applyDelays(b[off + i]);
+                return;
             }
+            if (average)
+            {
+                for (int i = 0; i < len; i++)
+                {
+                    this.byteNanoTime += this.nanosPerByte;
+                    if (b[off + i] == '\n')
+                    {
+                        this.lineNanoTime += this.nanosPerLine;
+                    }
+                }
+            }
+            else
+            {
+                // non-average mode clamps the schedule to the real time only
+                // once for the whole chunk: inside the chunk the per-byte
+                // parking of the per-byte loop would keep the real time
+                // aligned with the schedule anyway, so the arithmetic below
+                // is equivalent and pays a single clock read
+                long now = System.nanoTime();
+                this.byteNanoTime = Math.max(now, this.byteNanoTime);
+                this.lineNanoTime = Math.max(now, this.lineNanoTime);
+                for (int i = 0; i < len; i++)
+                {
+                    this.byteNanoTime += this.nanosPerByte;
+                    if (b[off + i] == '\n')
+                    {
+                        this.lineNanoTime += this.nanosPerLine;
+                    }
+                }
+            }
+            this.untilNanoTime = Math.max(this.byteNanoTime, this.lineNanoTime);
+            Pauses.parkUntilNanoTime(this.untilNanoTime);
         }
     }
 
