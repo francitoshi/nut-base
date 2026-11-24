@@ -92,6 +92,7 @@ subprojects
 
 wrapper 
 {
-    gradleVersion = "8.2"
+    gradleVersion = "8.14.8"
     distributionType = Wrapper.DistributionType.ALL
 }
+
