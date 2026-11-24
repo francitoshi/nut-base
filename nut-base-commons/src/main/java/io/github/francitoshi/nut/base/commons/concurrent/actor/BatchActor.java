@@ -478,6 +478,14 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
         }
 
         /**
+         * Park slice between quiesce passes in {@link #quiesceAndFlush()}:
+         * the timed read parks the caller instead of spinning (the same
+         * pattern as {@link #SHUTDOWN_SLICE_MILLIS}) and absorbs anything
+         * that arrives during the slice.
+         */
+        private static final long FLUSH_SLICE_MILLIS = 2;
+
+        /**
          * Public flush entry point: first absorbs every accepted message that
          * is still queued in the internal channel or in transit between the
          * worker's read and its push into the pending batch, then emits the
@@ -505,7 +513,17 @@ public class BatchActor<T> extends LinkableActor<T, List<T>>
                 {
                     break;
                 }
-                Thread.yield();
+                // Messages still in transit (a producer holds its counter
+                // entry but has not reached the channel yet): the timed read
+                // parks the caller for a bounded slice instead of spinning,
+                // and anything that arrives during the park is absorbed by
+                // the drain below.
+                m = channel.get(FLUSH_SLICE_MILLIS, TimeUnit.MILLISECONDS);
+                while (m != null)
+                {
+                    push(m);
+                    m = channel.get(0L, TimeUnit.NANOSECONDS);
+                }
             }
             flushPending();
         }
