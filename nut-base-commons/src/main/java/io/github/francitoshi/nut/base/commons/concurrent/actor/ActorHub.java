@@ -474,8 +474,12 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * The hub never resolves a pool rejection by running the task in the
      * caller: a submitted task waits until a worker accepts it, exactly the
      * semantics {@code doc/actor-rules.txt} R6 prescribes. The wait ends
-     * as soon as any worker finishes its current task and polls the pool's
-     * hand-off queue; an interrupted wait surfaces the original rejection.
+     * as soon as a worker accepts the task — through a spawn attempt or a
+     * worker polling the pool's hand-off queue — and it is <strong>not
+     * abortable by interruption</strong>: the interrupt is consumed and
+     * routed to the hub's onException (R8), and the wait continues. The only
+     * rejection {@code blockUntilAccepted} can report is a pool that is
+     * shut down.
      */
     @Override
     protected boolean onSubmissionRejected(Runnable task)
