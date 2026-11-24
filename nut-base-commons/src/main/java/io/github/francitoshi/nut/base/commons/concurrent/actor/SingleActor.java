@@ -13,8 +13,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.actor;
  * Thread demand: 1.
  * <p>
  * Instantiate it as an anonymous or named subclass and implement
- * {@link #receive(Object)} (and optionally {@link #terminate()} and
- * {@link #exception(Exception)}), e.g.:
+ * {@link #receive(Object)} (and optionally {@link #terminate()}), e.g.:
  * <pre>{@code
  * Actor<String> a = new SingleActor<String>(hub, 0)
  * {

@@ -431,7 +431,7 @@ public class ActorPool implements ActorLifecycle, Executor
      * The saturation policy of {@link ActorHub} pools: rejections throw, and
      * every submission path resolves them explicitly at the call site —
      * worker starts degrade (skip / dedicated thread, see
-     * {@code doc/actor-framework.md} R1–R3) and user submissions block until
+     * {@code doc/actor-rules.txt} R1–R3) and user submissions block until
      * a worker accepts them. No rejection may ever be resolved by running
      * the task in the caller, and no framework submission may ever block
      * inside a policy where it could not tell rejection from admission.
@@ -1017,7 +1017,9 @@ public class ActorPool implements ActorLifecycle, Executor
             }
             catch (InterruptedException ex)
             {
-                Thread.interrupted();
+                // the wait is not abortable: the flag is already cleared by
+                // catching the exception, the bookkeeping is undone and the
+                // interruption is routed to the hub's onException (R8)
                 if (tracker != null)
                 {
                     tracker.afterComplete();
@@ -1079,7 +1081,7 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Re-admits {@code task} by waiting until a pool worker accepts it. This
      * is the user-facing saturation semantics of the hub (R6 of
-     * {@code doc/actor-framework.md}): a submitted task is never dropped,
+     * {@code doc/actor-rules.txt}): a submitted task is never dropped,
      * never runs in the caller, and the caller waits for admission.
      * <p>
      * The wait alternates a spawn attempt (below the maximum the pool can
@@ -1138,7 +1140,9 @@ public class ActorPool implements ActorLifecycle, Executor
             }
             catch (InterruptedException ex)
             {
-                Thread.interrupted();
+                // the wait is not abortable: the flag is already cleared by
+                // catching the exception, the bookkeeping is undone and the
+                // interruption is routed to the hub's onException (R8)
                 if (tracker != null)
                 {
                     tracker.afterComplete();

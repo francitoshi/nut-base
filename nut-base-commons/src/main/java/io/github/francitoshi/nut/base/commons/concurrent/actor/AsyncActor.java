@@ -7,7 +7,6 @@ package io.github.francitoshi.nut.base.commons.concurrent.actor;
 
 import io.github.francitoshi.nut.base.commons.concurrent.atomic.AtomicCounterPair;
 import io.github.francitoshi.nut.base.commons.concurrent.channel.Channel;
-import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -132,22 +131,26 @@ abstract class AsyncActor<M> extends Actor<M>
         boolean queued = false;
         try
         {
-            // R1: accept() waits for mailbox room permanently. The channel
-            // aborts a put when the writer's thread is interrupted (marked
-            // and routed to the hub's onException, R8); the wait-for-room
-            // contract retries until the message is delivered.
+            // R1: accept() waits for mailbox room permanently. The blocking
+            // put yields false when the writer's thread is interrupted (the
+            // request is marked and routed to the hub's onException, R8) and
+            // the retry loop keeps waiting — the wait is not abortable by
+            // interruption. A put aborted by a close throws
+            // IllegalStateException, which is recorded and surfaced below.
             while (!queued)
             {
-                queued = channel.put(message, Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-                if (!queued && channel.isClosed())
+                try
+                {
+                    queued = channel.put(message);
+                }
+                catch (IllegalStateException ex)
                 {
                     // Not delivered: the actor or its channel was closed
                     // concurrently. The failure is recorded and surfaced to
                     // the caller instead of letting it believe the message
                     // was accepted.
-                    RuntimeException closed = new IllegalStateException("closed");
-                    handleException(closed);
-                    throw closed;
+                    handleException(ex);
+                    throw ex;
                 }
             }
         }
@@ -488,15 +491,9 @@ abstract class AsyncActor<M> extends Actor<M>
                 }
             }
 
-            // A blocked get()/put() that is interrupted makes the closeable
-            // channels close themselves, without going through this actor's
-            // own close path, so the actor's closed flag is still false here.
-            // Without this hook the workers would simply exit and the actor
-            // would be left open forever: never terminated (awaitTermination
-            // hangs) with no workers, and every later accept() failing
-            // against the closed channel with the exception silently
-            // swallowed by handleException.
-            closeIfClosedExternally();
+            // A close() that raced this drain already ran closeNow(): the
+            // actor's closed flag is set and the branch below terminates the
+            // workers in order, so no worker can strand here.
 
             boolean close = false;
             lock.lock();
@@ -572,44 +569,6 @@ abstract class AsyncActor<M> extends Actor<M>
             drain(0);
             doTerminate();
         }
-    }
-
-    /**
-     * Drives this actor through its normal close path when the channel was
-     * closed from outside this actor's own close paths. The closeable
-     * channels abort a blocked {@code get()}/{@code put()} when their thread
-     * is interrupted, and that abort closes the channel itself; the actor's
-     * {@code closed} flag stays false, so the state is unambiguous:
-     * {@code channel closed while the actor is open} can only come from such
-     * an external close.
-     * <p>
-     * The flag is claimed under the lock so exactly one caller proceeds;
-     * {@link #closeNow()} then runs outside the lock (as in
-     * {@link #workerDone(boolean)}) and is idempotent against the actor's own
-     * shutdown paths. Messages already buffered in a closed channel are still
-     * drained by the readers (the closeable channels yield buffered elements
-     * after the close), so no queued work is lost.
-     */
-    private void closeIfClosedExternally()
-    {
-        if (closed || terminated || !channel.isClosed())
-        {
-            return;
-        }
-        lock.lock();
-        try
-        {
-            if (closed || terminated)
-            {
-                return;
-            }
-            closed = true;
-        }
-        finally
-        {
-            lock.unlock();
-        }
-        closeNow();
     }
 
     protected void doTerminate()

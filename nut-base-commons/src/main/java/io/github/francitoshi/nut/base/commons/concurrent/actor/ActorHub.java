@@ -270,7 +270,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * The hub's backing pool always uses an <em>abort-style</em> saturation
      * policy: framework worker starts degrade explicitly (rush starts skip,
      * permanent workers get a dedicated thread — see
-     * {@code doc/actor-framework.md} R1–R3) and user submissions submitted
+     * {@code doc/actor-rules.txt} R1–R3) and user submissions submitted
      * through {@link #execute(Runnable)} wait until a worker accepts them,
      * never running in the caller and never being dropped.
      *
@@ -473,7 +473,7 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
     /**
      * The hub never resolves a pool rejection by running the task in the
      * caller: a submitted task waits until a worker accepts it, exactly the
-     * semantics {@code doc/actor-framework.md} R6 prescribes. The wait ends
+     * semantics {@code doc/actor-rules.txt} R6 prescribes. The wait ends
      * as soon as any worker finishes its current task and polls the pool's
      * hand-off queue; an interrupted wait surfaces the original rejection.
      */
@@ -573,10 +573,11 @@ public class ActorHub extends ActorPool implements ActorLifecycle, Executor
      * Actor is guaranteed a thread, and the remaining declared demand is a
      * target honoured on a best-effort basis within a rush budget of
      * {@code maxThreads} extra threads; when the budget is exhausted, rush
-     * starts degrade gracefully to inline drains in the producer thread (the
-     * saturation policy). The rush threads above the effective core are
-     * non-core and are reclaimed after the keep-alive time. The pool scales
-     * up as Actors register and back down as they terminate.
+     * starts are skipped and the queued messages wait for the permanent
+     * workers (R1/R2 of {@code doc/actor-rules.txt}). The rush threads above
+     * the effective core are non-core and are reclaimed after the keep-alive
+     * time. The pool scales up as Actors register and back down as they
+     * terminate.
      */
     private void adjustPoolToActors()
     {

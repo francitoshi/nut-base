@@ -9,8 +9,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Objects;
 import java.util.function.Consumer;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Wrapper stage that holds an inner flavor actor and forwards every
@@ -27,10 +25,7 @@ import java.util.logging.Logger;
  */
 public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
 {
-    private static final Logger LOG = Logger.getLogger(LinkableActor.class.getName());
-
     protected Actor<I> inner;
-
     protected volatile Consumer<F> next;
 
     private volatile Exception ex;
@@ -63,10 +58,10 @@ public abstract class LinkableActor<I,F> implements Consumer<I>, Linkable
     }
 
     /**
-     * Forwards {@code value} to the linked downstream stage. When no stage was
-     * linked with {@link #linkTo}, the message would silently vanish, so the
-     * drop is logged (and silenced by {@link #dryLogger()}): a forgotten link
-     * must not look like a working pipeline.
+     * Forwards {@code value} to the linked downstream stage. When no stage
+     * was linked with {@link #linkTo}, the value is silently dropped.
+     *
+     * @param value the value to forward
      */
     protected void forward(F value)
     {

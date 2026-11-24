@@ -202,7 +202,7 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
      * the actor's mailbox has room and then the message is queued and will
      * be processed — the wait always terminates, because the actor's
      * permanent worker keeps draining (see
-     * {@code doc/actor-framework.md} R2). The wait is <strong>not abortable
+     * {@code doc/actor-rules.txt} R2). The wait is <strong>not abortable
      * by interruption</strong>: the thread's interrupt is consumed and the
      * call keeps waiting. A thrown exception means the message was
      * <em>not</em> delivered and the caller may retry without risking a
@@ -210,7 +210,7 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
      * or its channel is closed, or the underlying failure that prevented the
      * actor from running the message at all (e.g. its executor refused to
      * start the worker). The failure is always recorded first
-     * ({@link #getException()}, {@link #exception(Exception)}).
+     * ({@link #getException()}, {@link #handleException}).
      *
      * @param message the message to deliver
      * @throws IllegalStateException if the actor or its channel is closed

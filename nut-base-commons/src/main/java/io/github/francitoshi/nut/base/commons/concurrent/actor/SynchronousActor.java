@@ -13,8 +13,7 @@ package io.github.francitoshi.nut.base.commons.concurrent.actor;
  * is synchronous.
  * <p>
  * Instantiate it as an anonymous or named subclass and implement
- * {@link #receive(Object)} (and optionally {@link #terminate()} and
- * {@link #exception(Exception)}):
+ * {@link #receive(Object)} (and optionally {@link #terminate()}):
  * <pre>{@code
  * Actor<String> a = new SynchronousActor<String>(hub)
  * {
