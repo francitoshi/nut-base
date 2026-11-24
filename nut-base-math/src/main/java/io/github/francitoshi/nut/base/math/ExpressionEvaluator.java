@@ -32,7 +32,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Evaluates arithmetic and string expressions such as
- * {@code poyito(sqrt(max($x * 2, $y + 5)))}.
+ * {@code sqrt(max($x * 2, $y + 5))}.
  *
  * <p><b>Variables</b> are referenced with a {@code $} prefix as in bash and are
  * registered through {@link #addVariable(String, Object)} or
@@ -51,20 +51,26 @@ import java.util.concurrent.atomic.AtomicLong;
  *
  * <p><b>Numbers</b>: integral literals are handled with {@link BigInteger} and
  * decimal literals with {@link BigDecimal}. The number of decimals configured
- * in the constructor is used to round the results of the arithmetic operations.
- * The {@code +} operator also concatenates {@link String}s or any value
- * converted to its {@link String} representation, mixing numbers and text.</p>
+ * in the constructor is used to round the decimal results of the arithmetic
+ * operations and function calls. The {@code +} operator also concatenates
+ * {@link String}s or any value converted to its {@link String} representation,
+ * mixing numbers and text. String literals are written between double quotes
+ * and support the escape sequences {@code \n}, {@code \t}, {@code \r},
+ * {@code \"} and {@code \\}.</p>
  *
  * <p>The supported operators are {@code + - * / %} and {@code ^}, with
- * parentheses and unary minus; precedence matches standard arithmetic.</p>
+ * parentheses and unary {@code -} and {@code +}; precedence matches standard
+ * arithmetic, and {@code ^} is right-associative, so {@code 2^3^2} is
+ * evaluated as {@code 2^(3^2)}.</p>
  *
  * <p><b>Results</b>: {@link #eval(String)} implements {@link Evaluator}; it
- * never throws a domain exception and returns a {@link Result} whose
- * {@code error} field is {@link ErrorType#NONE} on success and describes the
+ * never throws a domain exception and returns a {@link Evaluator.Result} whose
+ * {@code error} field is {@link Evaluator.ErrorType#NONE} on success and describes the
  * problem otherwise, including the position of the offending character when
- * available. The {@code interpretation} and {@code modifiedVariable} fields
- * are always {@code null}, this evaluator does not support them. A blank
- * expression does nothing: the result has a {@code null} value and no error.</p>
+ * available. The {@code interpretation}, {@code modifiedVariable} and
+ * {@code dependencies} fields are always {@code null}, this evaluator does not
+ * support them. A blank expression does nothing: the result has a {@code null}
+ * value and no error.</p>
  *
  * @author franci
  */
@@ -102,7 +108,7 @@ public class ExpressionEvaluator implements Evaluator
 
     /**
      * Constructs an {@code ExpressionEvaluator} rounding the decimal results of the
-     * arithmetic operations to the given number of decimals.
+     * arithmetic operations and function calls to the given number of decimals.
      *
      * @param decimals the number of decimals for the results; must not be negative
      * @throws IllegalArgumentException if {@code decimals} is negative
@@ -137,7 +143,8 @@ public class ExpressionEvaluator implements Evaluator
      *
      * @param variables the variables to register
      * @return this evaluator, for chaining
-     * @throws NullPointerException     if {@code variables} is {@code null}
+     * @throws NullPointerException     if {@code variables} is {@code null},
+     *                                  or any key or value is {@code null}
      * @throws IllegalArgumentException if any value is neither a {@link Number} nor a {@link String}
      */
     public ExpressionEvaluator addVariables(Map<String, ?> variables)
@@ -343,7 +350,7 @@ public class ExpressionEvaluator implements Evaluator
     }
 
     /**
-     * Evaluates the given expression and returns a {@link Result} with its
+     * Evaluates the given expression and returns a {@link Evaluator.Result} with its
      * value: a {@link BigInteger}, a {@link BigDecimal} or a {@link String}.
      * A blank expression does nothing: the result has a {@code null} value
      * and no error. Errors are reported in the result with the error type,

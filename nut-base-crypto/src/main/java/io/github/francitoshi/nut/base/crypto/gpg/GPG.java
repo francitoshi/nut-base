@@ -44,7 +44,7 @@ import java.util.regex.Pattern;
  * configuration setters ({@link #setDebug}, {@link #setArmor}, etc.) should
  * be called before any operation methods are invoked from concurrent threads.</p>
  *
- * <h3>Typical usage</h3>
+ * <h2>Typical usage</h2>
  * <pre>{@code
  * GPG gpg = new GPG().setArmor(true);
  * byte[] cipher = gpg.encryptAndSign(plaintext, signerFingerprint, passphrase, recipientFingerprint);
@@ -732,7 +732,7 @@ public class GPG
     * represents the numeric selection of the elliptic curve as presented by GnuPG
     * in its interactive menu.</p>
     *
-    * <h3>ECC capabilities</h3>
+    * <h4>ECC capabilities</h4>
     * <ul>
     *   <li>{@code sign=true} → signing key (ECDSA or EdDSA)</li>
     *   <li>{@code encrypt=true} → encryption key (ECDH)</li>
@@ -746,11 +746,12 @@ public class GPG
     *   <li>Signing/auth → ECDSA or EdDSA depending on curve</li>
     * </ul>
     *
-    * <h3>Curve selection ({@code ssbCurve})</h3>
+    * <h4>Curve selection ({@code ssbCurve})</h4>
     * <p>The value corresponds to the menu index shown by GnuPG when selecting
     * an ECC curve. Typical values (GnuPG 2.2+/2.4+) are:</p>
     *
     * <table border="1">
+    *   <caption>Typical curve values for {@code ssbCurve}</caption>
     *   <tr><th>Value</th><th>Curve</th><th>Usage</th></tr>
     *   <tr><td>1</td><td>Curve25519</td><td>Encryption (ECDH), recommended</td></tr>
     *   <tr><td>2</td><td>NIST P-256</td><td>Signing / Authentication</td></tr>
@@ -765,7 +766,7 @@ public class GPG
     * <p><b>Note:</b> These numeric values are not part of a stable API and may vary
     * depending on the installed GnuPG version and configuration.</p>
     *
-    * <h3>Recommended usage</h3>
+    * <h4>Recommended usage</h4>
     * <ul>
     *   <li>Encryption: {@code ssbCurve = 1} (Curve25519)</li>
     *   <li>Signing: Ed25519 (implicitly selected via Curve25519 in signing mode)</li>
@@ -1390,10 +1391,10 @@ public class GPG
      *
      * @param cipherdata Encrypted (and possibly signed) byte array.
      * @param passphrase Passphrase for the private key (or null to not use it).
-     * @return Map with: "decrypted" (decrypted byte[], "signer" (signer ID or
+     * @return Map with: "decrypted" ({@code byte[]}), "signer" (signer ID or
      * null), "signatureValid" (Boolean, true if the signature is valid, false
-     * if there is no signature or it is invalid), "recipients" (List<String>
-     * with recipient IDs/fingerprints).
+     * if there is no signature or it is invalid), "recipients"
+     * ({@code List<String>} with recipient IDs/fingerprints).
      * @throws IOException If GPG or I/O fails.
      * @throws InterruptedException If the GPG process is interrupted.
      */

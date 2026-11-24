@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * relleno/vacío/cabeza) - Descripción / etiqueta - Porcentaje completado -
  * Velocidad (iteraciones por segundo) - ETA (tiempo restante estimado) - Tiempo
  * transcurrido - Colores ANSI opcionales - Modo "spinner" cuando el total es
- * desconocido (max <= 0) - Thread-safe (Add/Set pueden llamarse desde varios
+ * desconocido (max &lt;= 0) - Thread-safe (Add/Set pueden llamarse desde varios
  * hilos) - Limpieza de la barra al terminar (opcional)
  *
  * Uso básico:
@@ -23,7 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * ProgressBar bar = new ProgressBar.Builder() .setMax(100)
  * .setDescription("Descargando") .build();
  *
- * for (int i = 0; i < 100; i++) { bar.add(1); Thread.sleep(50); } bar.finish();
+ * for (int i = 0; i &lt; 100; i++) { bar.add(1); Thread.sleep(50); } bar.finish();
  */
 public class ProgressBar implements AutoCloseable
 {

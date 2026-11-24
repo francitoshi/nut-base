@@ -53,7 +53,7 @@ import java.util.logging.Logger;
  * <h2>Proxy mode</h2>
  * Connects to an already-running Tor daemon. All connectivity helpers
  * ({@link #openConnection}, {@link #openSocket}, {@link #openSSLSocket},
- * {@link #toProxySelector}, {@link #applyGlobally}) are inherited from
+ * {@link #toProxySelector}, {@link #installGlobally}) are inherited from
  * {@link Socks5}.
  *
  * <h2>Managed mode</h2>

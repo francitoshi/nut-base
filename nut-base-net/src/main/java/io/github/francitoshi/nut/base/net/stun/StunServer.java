@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  *
  * <p>No external dependencies — pure Java 8 SE.
  *
- * <h3>Usage</h3>
+ * <h2>Usage</h2>
  * <pre>
  *   // Default port 3478, single-threaded:
  *   StunServer server = new StunServer();

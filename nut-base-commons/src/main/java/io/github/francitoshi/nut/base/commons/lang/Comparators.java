@@ -317,7 +317,7 @@ public abstract class Comparators
         int result = 0;
         for (int i = 0; i < b.length; i++)
         {
-            result = (int) (result | a[i] ^ b[i]);
+            result = result | a[i] ^ b[i];
         }
         return (result == 0);
     }

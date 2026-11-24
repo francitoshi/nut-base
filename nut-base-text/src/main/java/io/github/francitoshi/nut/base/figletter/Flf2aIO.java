@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 /**
  * Implementación de {@link FigIO} para el formato FIGlet (.flf).
  *
- * <h3>Reglas del formato FLF</h3>
+ * <h2>Reglas del formato FLF</h2>
  * <ul>
  * <li>Firma: {@code flf2a<hardblank>} — el hardblank está pegado a la
  * firma.</li>

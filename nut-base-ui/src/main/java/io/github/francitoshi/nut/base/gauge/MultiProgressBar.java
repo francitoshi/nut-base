@@ -19,7 +19,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * stacked at the bottom of the screen, using the same apt/dpkg-style
  * technique as a single-bar version of this class:
  *
- *  - The scroll region (DECSTBM, "ESC[<top>;<bottom>r") is narrowed so that
+ *  - The scroll region (DECSTBM, {@code "ESC[<top>;<bottom>r"}) is narrowed so that
  *    normal text (log()) scrolls only above the bars area; the bars area
  *    itself lives outside that region and is never touched by scrolling.
  *  - Each bar is drawn with absolute cursor addressing (save/restore cursor:

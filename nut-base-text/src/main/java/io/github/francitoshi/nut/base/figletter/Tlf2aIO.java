@@ -12,7 +12,7 @@ import java.util.*;
 /**
  * Implementación de {@link FigIO} para el formato TOIlet (.tlf).
  *
- * <h3>Diferencias con FLF</h3>
+ * <h2>Diferencias con FLF</h2>
  * <ul>
  * <li>Firma: {@code tlf2a<hardblank>} — el char pegado a la firma es el
  * <b>hardblank</b> (espacio protegido), típicamente {@code \x7f} (DEL).</li>

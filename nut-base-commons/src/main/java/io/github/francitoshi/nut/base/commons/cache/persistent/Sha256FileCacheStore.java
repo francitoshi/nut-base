@@ -971,6 +971,7 @@ public class Sha256FileCacheStore<K, V> implements CacheStore<K, V>
      */
     private static final class CorruptEntryException extends IOException
     {
+        private static final long serialVersionUID = 1L;
         CorruptEntryException(String message)
         {
             super(message);

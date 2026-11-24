@@ -36,7 +36,7 @@ import javax.net.ssl.SSLSocketFactory;
  * <li>obtain a {@link ProxySelector} scoped to this proxy
  * ({@link #toProxySelector}),</li>
  * <li>set / clear the JVM-wide SOCKS5 system properties
- * ({@link #applyGlobally} / {@link #removeGlobal}),</li>
+ * ({@link #installGlobally} / {@link #uninstallGlobally}),</li>
  * <li>probe whether the proxy port is reachable
  * ({@link #isProxyReachable}).</li>
  * </ul>

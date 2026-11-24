@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link ExpressionEvaluator}, are always served from the cache.</p>
  *
  * <p>Note that the wrapped evaluator must expose its variable usage through
- * the {@link Result#modifiedVariable} and {@link Result#dependencies}
+ * the {@link Evaluator.Result#modifiedVariable} and {@link Evaluator.Result#dependencies}
  * fields of its results for the invalidation to work; an evaluator that
  * changes its internal state without reporting it would produce stale cached
  * results.</p>

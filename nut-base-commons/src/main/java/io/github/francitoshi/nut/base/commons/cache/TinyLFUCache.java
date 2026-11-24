@@ -587,12 +587,10 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     private static class LRUCache<K, V>
     {
 
-        private int capacity;
         private final LinkedHashMap<K, V> map;
 
         LRUCache(int capacity)
         {
-            this.capacity = capacity;
             this.map = new LinkedHashMap<K,V>(capacity, 0.75f, true)
             {
                 @Override
@@ -653,7 +651,6 @@ public class TinyLFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
          * the overflow out explicitly via {@link #evict()}. */
         void setCapacity(int newCapacity)
         {
-            this.capacity = newCapacity;
         }
     }
 

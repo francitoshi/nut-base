@@ -6,7 +6,7 @@ import java.security.MessageDigest;
 /**
  * <p>
  * This class implements the RIPEMD-160 digest algorithm under the
- * {@link Digest} API.</p>
+ * {@link java.security.MessageDigest} API.</p>
  *
  * <pre>
  * ==========================(LICENSE BEGIN)============================
@@ -81,8 +81,7 @@ public final class RIPEMD160 extends MessageDigest
 
 
     /**
-     * @return 
-     * @see Digest
+     * @return a copy of this digest instance
      */
     @Override
     public RIPEMD160 clone()
@@ -101,7 +100,7 @@ public final class RIPEMD160 extends MessageDigest
     private static final int BLOCK_LENGTH = 64;
 
     /**
-     * @see DigestEngine
+     * Resets the internal state of the digest engine.
      */
     @Override
     protected void engineReset()
@@ -114,9 +113,8 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @param output
-     * @param outputOffset
-     * @see DigestEngine
+     * @param output the output buffer
+     * @param outputOffset the offset into the output buffer
      */
     private void doPadding(byte[] output, int outputOffset)
     {
@@ -188,8 +186,7 @@ public final class RIPEMD160 extends MessageDigest
     };
 
     /**
-     * @param data
-     * @see DigestEngine
+     * @param data the input block to process
      */
     private void processBlock(byte[] data)
     {
@@ -379,8 +376,7 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @return 
-     * @see Digest
+     * @return the digest value
      */
     @Override
     public byte[] digest()
@@ -392,9 +388,8 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @param input
-     * @return 
-     * @see Digest
+     * @param input the bytes to update the digest with
+     * @return the digest value
      */
     @Override
     public byte[] digest(byte[] input)
@@ -404,11 +399,10 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @param buf
-     * @param offset
-     * @param len
-     * @return 
-     * @see Digest
+     * @param buf the output buffer
+     * @param offset the offset into the output buffer
+     * @param len the maximum number of bytes to write
+     * @return the number of bytes written
      */
     @Override
     public int digest(byte[] buf, int offset, int len)
@@ -430,7 +424,7 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @see Digest
+     * Resets the digest to its initial state.
      */
     @Override
     public void reset()
@@ -441,7 +435,7 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @see Digest
+     * Updates the digest with a single byte.
      */
     @Override
     public void update(byte input)
@@ -456,7 +450,7 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @see Digest
+     * Updates the digest with the given byte array.
      */
     @Override
     public void update(byte[] input)
@@ -465,10 +459,9 @@ public final class RIPEMD160 extends MessageDigest
     }
 
     /**
-     * @param input
-     * @param offset
-     * @param len
-     * @see Digest
+     * @param input the input buffer
+     * @param offset the offset into the input buffer
+     * @param len the number of bytes to process
      */
     @Override
     public void update(byte[] input, int offset, int len)

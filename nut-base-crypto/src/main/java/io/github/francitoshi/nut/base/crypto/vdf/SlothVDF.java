@@ -121,7 +121,6 @@ public final class SlothVDF
      * QR.
      *
      * @param data input bytes
-     * @param p prime modulus
      * @return an integer in Z_p* that is a quadratic residue (has sqrt)
      */
     protected BigInteger hashToQuadraticResidue(byte[] data)
@@ -154,7 +153,7 @@ public final class SlothVDF
      * This gives a unique deterministic root.
      *
      * WARNING: This method assumes input a is a quadratic residue (i.e., sqrt
-     * exists). Use {@link #hashToQuadraticResidue(byte[], BigInteger)} to
+     * exists). Use {@link #hashToQuadraticResidue(byte[])} to
      * produce such values.
      *
      * @param a value in Z_p* (quadratic residue)

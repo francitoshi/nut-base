@@ -133,7 +133,8 @@ public class FigIO
      * deben detectarlo por los magic bytes {@code PK} y descomprimir
      * transparentemente.
      *
-     * @param is Stream de lectura posicionado al inicio del fichero
+     * @param name Nombre descriptivo de la fuente (usado en mensajes de error)
+     * @param in Stream de lectura posicionado al inicio del fichero
      * @return Mapa {@code codepoint → filas[]}, nunca {@code null}
      * @throws IOException si ocurre un error de E/S
      * @throws IllegalArgumentException si la cabecera no corresponde al formato
@@ -176,12 +177,6 @@ public class FigIO
      * @param glyphs Mapa {@code codepoint → filas[]} a serializar. Debe
      * contener al menos los 95 glifos ASCII 32-126; los glifos alemanes y los
      * etiquetados son opcionales.
-     * @param hardblank Carácter usado como espacio protegido dentro de los
-     * glifos (típicamente {@code '$'}). En TLF se escribe en la firma pero su
-     * rol en los datos es idéntico al de FLF.
-     * @param height Número de filas de cada glifo. Debe ser consistente con
-     * todos los arrays de {@code glyphs}.
-     * @param baseline Fila de la línea base (1-based, ≤ height).
      * @param comment Texto libre que se escribe como bloque de comentarios en
      * la cabecera. Puede ser {@code null} o vacío.
      * @param os Stream de escritura

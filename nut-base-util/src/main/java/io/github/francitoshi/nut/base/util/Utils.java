@@ -1306,7 +1306,7 @@ public abstract class Utils
      * The task starts immediately upon calling this method.
      *
      * <p>This is the static utility variant of
-     * {@link YourClass#async(Runnable) async(Runnable)}: it behaves identically
+     * {@code async(Runnable)}: it behaves identically
      * but uses the JVM-wide common pool instead of a dedicated {@link java.util.concurrent.ThreadPoolExecutor}.
      * Prefer this when no custom pool configuration is needed.</p>
      *

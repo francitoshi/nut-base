@@ -73,8 +73,8 @@ import java.util.function.Supplier;
  * while {@code 1 / 2 x} is {@code (1/2)*x}.</p>
  *
  * <p><b>Results</b>: {@link #eval(String)} never throws a domain exception;
- * it returns a {@link Result} whose {@code error} field is
- * {@link ErrorType#NONE} on success and describes the problem otherwise,
+ * it returns a {@link Evaluator.Result} whose {@code error} field is
+ * {@link Evaluator.ErrorType#NONE} on success and describes the problem otherwise,
  * including the position of the offending character. The
  * {@code interpretation} field holds the explicit form of the expression as
  * it was parsed, e.g. {@code 1 / (2 * x)} for {@code 1/2x}; juxtaposed groups
@@ -406,7 +406,7 @@ public class MathEvaluator implements Evaluator
     }
 
     /**
-     * Evaluates the given expression and returns a {@link Result} with its
+     * Evaluates the given expression and returns a {@link Evaluator.Result} with its
      * value as a {@link BigDecimal}. If the expression is an assignment such
      * as {@code x = 5 * 6} and {@code memory} is {@code true}, the value is
      * also kept for subsequent evaluations. A blank expression does nothing:

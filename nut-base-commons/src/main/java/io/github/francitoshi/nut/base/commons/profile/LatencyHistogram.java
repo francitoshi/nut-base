@@ -164,7 +164,7 @@ public final class LatencyHistogram
                 // midpoint interpolation: the best single-value guess under
                 // the uniform-spread assumption inside the bucket; it never
                 // reaches the bucket's upper bound
-                double estimate = lower + ((double) (offset - 0.5) / inBucket) * width;
+                double estimate = lower + ((offset - 0.5) / inBucket) * width;
 
                 // the edges of the distribution make the uniform assumption
                 // overshoot: no recorded value can lie outside [min, max]

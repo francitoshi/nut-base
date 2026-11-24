@@ -19,7 +19,7 @@ import java.util.Arrays;
 import java.util.function.Function;
 
 /**
- * <h1>Shared Key Identity Protocol (SKIP)</h1>
+ * <h2>Shared Key Identity Protocol (SKIP)</h2>
  * 
  * <p>SKIP provides a secure mechanism for encrypting and authenticating messages 
  * using a pre-shared secret. It utilizes AES-GCM for encryption and HMAC-SHA256 
@@ -32,7 +32,6 @@ import java.util.function.Function;
  *     <li>Memory safety: Defensive copying of secrets and explicit zeroing of sensitive arrays.</li>
  *     <li>Authentication: Constant-time HMAC comparison to prevent timing attacks.</li>
  * </ul>
- * </p>
  */
 public class SKIP
 {
@@ -208,7 +207,6 @@ public class SKIP
      *     <li>Temporal validation: Message must not be in the future and not older than 7 days.</li>
      *     <li>Integrity validation: HMAC is verified using constant-time comparison.</li>
      * </ol>
-     * </p>
      *
      * @param epochSecond The reply timestamp (number of seconds from the Java epoch of 1970-01-01T00:00:00Z).
      * @param payload The Base64 SKIP message string.
