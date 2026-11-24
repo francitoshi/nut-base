@@ -75,7 +75,7 @@ public abstract class Actor<M> implements Consumer<M>, Linkable
      * <p>
      * The returned actor is a concrete flavor whose {@link #receive} delegates
      * to {@code onMessage}, {@link #terminate} to {@code onTerminate} (when
-     * not {@code null}), and {@link #exception} to {@code onException} (when
+     * not {@code null}), and {@link #setOnException} to {@code onException} (when
      * not {@code null}).
      *
      * @param <M>       the message type

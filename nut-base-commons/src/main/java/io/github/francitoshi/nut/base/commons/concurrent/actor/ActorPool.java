@@ -878,7 +878,7 @@ public class ActorPool implements ActorLifecycle, Executor
     /**
      * Rejects execution when the backing pool is shut down. The saturation
      * policies disagree on this case: {@code CallerRunsPolicy} silently
-     * discards the task, which would leak a {@link Phaser} registration
+     * discards the task, which would leak a {@link TaskTracker} registration
      * ({@code waitForIdle()} would then hang forever), hang a
      * never-completing future, or strand an accepted message without any
      * worker to drain it.
@@ -1169,8 +1169,8 @@ public class ActorPool implements ActorLifecycle, Executor
 
     /**
      * Returns {@code true} if no task is currently active. When tracking is
-     * enabled this is an exact, lock-free check based on the {@link Phaser}
-     * registry; when disabled it relies on
+     * enabled this is an exact, lock-free check based on the {@link TaskTracker}
+     * counter; when disabled it relies on
      * {@link ThreadPoolExecutor#getActiveCount()}, which is an approximation.
      * Permanent background workers (see {@link #executeUntracked(Runnable)})
      * do not count as active tasks. Synchronous mode is always idle.
