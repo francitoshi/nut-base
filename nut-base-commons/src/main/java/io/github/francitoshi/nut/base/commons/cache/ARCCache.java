@@ -61,11 +61,10 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
     public V get(K key, Function<? super K, ? extends V> creator)
     {
         Node<K, V> node = map.get(key);
-        long now = System.nanoTime();
 
         if (node != null)
         {
-            if ((node.type == ListType.T1 || node.type == ListType.T2) && node.value != null && node.value.isExpired(now))
+            if ((node.type == ListType.T1 || node.type == ListType.T2) && node.value != null && node.value.isExpiredNow())
             {
                 removeNodeCompletely(node);
                 node = null;
@@ -89,7 +88,7 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
 
             // Case 2 & 3: Hit in B1 or B2. Adapt and readmit.
             V value = creator.apply(key);
-            long exp = calculateExpiration(now, ttlNanos);
+            long exp = calculateExpiration(ttlNanos);
             AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
 
             if (node.type == ListType.B1)
@@ -116,7 +115,7 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
         }
 
         V value = creator.apply(key);
-        long exp = calculateExpiration(now, ttlNanos);
+        long exp = calculateExpiration(ttlNanos);
         AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
 
         int l1Size = t1.size() + b1.size();
@@ -176,7 +175,7 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
 
         if (node.type == ListType.T1 || node.type == ListType.T2)
         {
-            if (node.value != null && node.value.isExpired(System.nanoTime()))
+            if (node.value != null && node.value.isExpiredNow())
             {
                 removeNodeCompletely(node);
                 return false;
@@ -190,7 +189,7 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
     @Override
     public void put(K key, V value)
     {
-        long exp = calculateExpiration(System.nanoTime(), ttlNanos);
+        long exp = calculateExpiration(ttlNanos);
         put(key, new AbstractCache.Item<>(value, exp));
     }
 
@@ -206,12 +205,10 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
 
     private void put(K key, AbstractCache.Item<V> item)
     {
-        long now = System.nanoTime();
-
         Node<K, V> node = map.get(key);
         if (node != null)
         {
-            if ((node.type == ListType.T1 || node.type == ListType.T2) && node.value != null && node.value.isExpired(now))
+            if ((node.type == ListType.T1 || node.type == ListType.T2) && node.value != null && node.value.isExpiredNow())
             {
                 removeNodeCompletely(node);
                 node = null;
@@ -384,9 +381,8 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
     @Override
     public void purgeExpired()
     {
-        long now = System.nanoTime();
-        purgeList(t1, now);
-        purgeList(t2, now);
+        purgeList(t1);
+        purgeList(t2);
     }
 
     /**
@@ -450,13 +446,13 @@ public class ARCCache<K, V> extends AbstractCache<K, V> implements Cache<K, V>
         return evicted;
     }
 
-    private void purgeList(DoublyLinkedList<K, V> list, long now)
+    private void purgeList(DoublyLinkedList<K, V> list)
     {
         Node<K, V> curr = list.head;
         while (curr != null)
         {
             Node<K, V> next = curr.next;
-            if (curr.value != null && curr.value.isExpired(now))
+            if (curr.value != null && curr.value.isExpiredNow())
             {
                 removeNodeCompletely(curr);
             }

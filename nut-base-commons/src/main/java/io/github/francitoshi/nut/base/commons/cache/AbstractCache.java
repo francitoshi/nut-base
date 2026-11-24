@@ -41,6 +41,20 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
             }
             return now - expirationNanoTime >= 0;
         }
+
+        /**
+         * Returns whether this item has expired as of now. Eternal items
+         * ({@code expirationNanoTime == Long.MAX_VALUE}) never read the
+         * clock, so a cache without time-to-live pays no {@code nanoTime}
+         * on its hot path; only items with a real deadline do.
+         *
+         * @return {@code true} if the item has a deadline and it has passed
+         */
+        public boolean isExpiredNow()
+        {
+            long exp = expirationNanoTime;
+            return exp != Long.MAX_VALUE && System.nanoTime() - exp >= 0;
+        }
     }
 
     protected static long calculateExpiration(long now, long ttlNanos)
@@ -55,6 +69,24 @@ public abstract class AbstractCache<K, V> implements Cache<K, V>
             return Long.MAX_VALUE;
         }
         return exp;
+    }
+
+    /**
+     * Calculates the expiration for a new item from the cache's
+     * time-to-live, reading the clock only when the time-to-live is real:
+     * an eternal cache ({@code ttlNanos == Long.MAX_VALUE}) pays no
+     * {@code nanoTime} on its write path.
+     *
+     * @param ttlNanos the time-to-live in nanos
+     * @return the expiration timestamp in {@link System#nanoTime()} space
+     */
+    protected static long calculateExpiration(long ttlNanos)
+    {
+        if (ttlNanos == Long.MAX_VALUE)
+        {
+            return Long.MAX_VALUE;
+        }
+        return calculateExpiration(System.nanoTime(), ttlNanos);
     }
 
     @Override

@@ -75,7 +75,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
         AbstractCache.Item<V> item = map.get(key);
         if (item != null)
         {
-            if (item.isExpired(System.nanoTime()))
+            if (item.isExpiredNow())
             {
                 map.remove(key);
             }
@@ -91,8 +91,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
         }
 
         V value = creator.apply(key);
-        long now = System.nanoTime();
-        long exp = calculateExpiration(now, ttlNanos);
+        long exp = calculateExpiration(ttlNanos);
         map.put(key, new AbstractCache.Item<>(value, exp));
         return value;
     }
@@ -105,7 +104,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
         {
             return false;
         }
-        if (item.isExpired(System.nanoTime()))
+        if (item.isExpiredNow())
         {
             map.remove(key);
             return false;
@@ -116,8 +115,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
     @Override
     public void put(K key, V value)
     {
-        long now = System.nanoTime();
-        long exp = calculateExpiration(now, ttlNanos);
+        long exp = calculateExpiration(ttlNanos);
         map.put(key, new AbstractCache.Item<>(value, exp));
     }
 
@@ -141,8 +139,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
     public int size()
     {
         // Clean up expired items lazily to make size as accurate as possible
-        long now = System.nanoTime();
-        map.values().removeIf(item -> item.isExpired(now));
+        map.values().removeIf(AbstractCache.Item::isExpiredNow);
         return map.size();
     }
 
@@ -161,8 +158,7 @@ public class HashMapCache<K, V> extends AbstractCache<K, V>
     @Override
     public void purgeExpired()
     {
-        long now = System.nanoTime();
-        map.values().removeIf(item -> item.isExpired(now));
+        map.values().removeIf(AbstractCache.Item::isExpiredNow);
     }
 
     /**

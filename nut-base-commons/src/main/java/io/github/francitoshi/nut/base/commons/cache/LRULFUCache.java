@@ -62,10 +62,9 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     public V get(K key, Function<? super K, ? extends V> creator)
     {
         Node<K, V> node = cache.get(key);
-        long now = System.nanoTime();
         if (node != null)
         {
-            if (node.value != null && node.value.isExpired(now))
+            if (node.value != null && node.value.isExpiredNow())
             {
                 removeNodeCompletely(node);
             }
@@ -82,7 +81,7 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
         }
 
         V value = creator.apply(key);
-        long exp = calculateExpiration(now, ttlNanos);
+        long exp = calculateExpiration(ttlNanos);
         AbstractCache.Item<V> item = new AbstractCache.Item<>(value, exp);
 
         if (cache.size() >= capacity)
@@ -110,7 +109,7 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
             return false;
         }
 
-        if (node.value != null && node.value.isExpired(System.nanoTime()))
+        if (node.value != null && node.value.isExpiredNow())
         {
             removeNodeCompletely(node);
             return false;
@@ -129,7 +128,7 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     @Override
     public void put(K key, V value)
     {
-        long exp = calculateExpiration(System.nanoTime(), ttlNanos);
+        long exp = calculateExpiration(ttlNanos);
         put(key, new AbstractCache.Item<>(value, exp));
     }
 
@@ -145,13 +144,11 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
 
     private void put(K key, AbstractCache.Item<V> item)
     {
-        long now = System.nanoTime();
-
         Node<K, V> node = cache.get(key);
 
         if (node != null)
         {
-            if (node.value != null && node.value.isExpired(now))
+            if (node.value != null && node.value.isExpiredNow())
             {
                 removeNodeCompletely(node);
                 node = null;
@@ -276,11 +273,10 @@ public class LRULFUCache<K, V> extends AbstractCache<K,V> implements Cache<K,V>
     @Override
     public void purgeExpired()
     {
-        long now = System.nanoTime();
         List<Node<K, V>> nodes = new ArrayList<>(cache.values());
         for (Node<K, V> node : nodes)
         {
-            if (node.value != null && node.value.isExpired(now))
+            if (node.value != null && node.value.isExpiredNow())
             {
                 removeNodeCompletely(node);
             }
