@@ -141,7 +141,9 @@ public class FanoutChannel<E> implements ChannelWriter<E>
      * @param value the value to broadcast
      * @return {@code true} if the value was written to all targets;
      *         {@code false} otherwise
-     * @throws IllegalStateException if this fan-out has been closed
+     * @throws IllegalStateException if this fan-out has been closed, or if a
+     *         target is closed and rejects the value (R13: it propagates the
+     *         target's exception to the producer)
      */
     @Override
     public boolean put(E value)
@@ -195,7 +197,9 @@ public class FanoutChannel<E> implements ChannelWriter<E>
      * @param unit    the time unit of the timeout
      * @return {@code true} if the value was written to all targets;
      *         {@code false} otherwise
-     * @throws IllegalStateException if this fan-out has been closed
+     * @throws IllegalStateException if this fan-out has been closed, or if a
+     *         target is closed and rejects the value (R13: it propagates the
+     *         target's exception to the producer)
      */
     @Override
     public boolean put(E value, long timeout, TimeUnit unit)

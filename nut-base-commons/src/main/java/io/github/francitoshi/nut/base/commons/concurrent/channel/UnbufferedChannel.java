@@ -60,44 +60,41 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public boolean put(E value)
     {
         Objects.requireNonNull(value, "value must not be null");
-        while (true)
+        synchronized (waitLock)
+        {
+            if (closed)
+            {
+                throw new IllegalStateException("closed");
+            }
+            writers.add(Thread.currentThread());
+        }
+        try
+        {
+            rendez.put(value);
+            return true;
+        }
+        catch (InterruptedException ex)
+        {
+            if (closed)
+            {
+                // woken by close(): the channel is closed for the
+                // producer, so the put fails loudly instead of passing
+                // itself off as a mere interruption
+                throw new IllegalStateException("closed");
+            }
+            // A writer's own interruption aborts the hand-off without
+            // delivering the value: mark the request, route it to the
+            // interruption listener and return false. The channel is
+            // left open.
+            handleInterruptedException(ex);
+            return false;
+        }
+        finally
         {
             synchronized (waitLock)
             {
-                if (closed)
-                {
-                    throw new IllegalStateException("closed");
-                }
-                writers.add(Thread.currentThread());
-            }
-            try
-            {
-                rendez.put(value);
-                return true;
-            }
-            catch (InterruptedException ex)
-            {
-                if (closed)
-                {
-                    // woken by close(): the channel is closed for the
-                    // producer, so the put fails loudly instead of passing
-                    // itself off as a mere interruption
-                    throw new IllegalStateException("closed");
-                }
-                // A writer's own interruption aborts the hand-off without
-                // delivering the value: mark the request, route it to the
-                // interruption listener and return false. The channel is
-                // left open.
-                handleInterruptedException(ex);
-                return false;
-            }
-            finally
-            {
-                synchronized (waitLock)
-                {
-                    writers.remove(Thread.currentThread());
-                    waitLock.notifyAll();
-                }
+                writers.remove(Thread.currentThread());
+                waitLock.notifyAll();
             }
         }
     }
@@ -108,41 +105,38 @@ public final class UnbufferedChannel<E> extends Channel<E>
     {
         Objects.requireNonNull(value, "value must not be null");
         long deadline = JavaTime.untilNanoTime(timeout, unit);
-        while (true)
+        synchronized (waitLock)
+        {
+            if (closed)
+            {
+                throw new IllegalStateException("closed");
+            }
+            writers.add(Thread.currentThread());
+        }
+        try
+        {
+            return rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+        }
+        catch (InterruptedException ex)
+        {
+            if (closed)
+            {
+                // woken by close(): see the blocking variant
+                throw new IllegalStateException("closed");
+            }
+            // A writer's own interruption aborts the put without
+            // delivering the value: mark the request, route it to the
+            // interruption listener and return false. The channel is
+            // left open.
+            handleInterruptedException(ex);
+            return false;
+        }
+        finally
         {
             synchronized (waitLock)
             {
-                if (closed)
-                {
-                    throw new IllegalStateException("closed");
-                }
-                writers.add(Thread.currentThread());
-            }
-            try
-            {
-                return rendez.offer(value, Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-            }
-            catch (InterruptedException ex)
-            {
-                if (closed)
-                {
-                    // woken by close(): see the blocking variant
-                    throw new IllegalStateException("closed");
-                }
-                // A writer's own interruption aborts the put without
-                // delivering the value: mark the request, route it to the
-                // interruption listener and return false. The channel is
-                // left open.
-                handleInterruptedException(ex);
-                return false;
-            }
-            finally
-            {
-                synchronized (waitLock)
-                {
-                    writers.remove(Thread.currentThread());
-                    waitLock.notifyAll();
-                }
+                writers.remove(Thread.currentThread());
+                waitLock.notifyAll();
             }
         }
     }
@@ -151,36 +145,33 @@ public final class UnbufferedChannel<E> extends Channel<E>
     @SuppressWarnings("unchecked")
     public E get()
     {
-        while (true)
+        if (closed)
+        {
+            return drainAfterClose();
+        }
+
+        gets.incrementAndGet();
+        try
         {
             if (closed)
             {
                 return drainAfterClose();
             }
 
-            gets.incrementAndGet();
-            try
-            {
-                if (closed)
-                {
-                    return drainAfterClose();
-                }
-
-                Object item = rendez.take();
-                return item == POISON ? null : (E) item;
-            }
-            catch (InterruptedException ex)
-            {
-                // A reader's own interruption aborts the read: mark the
-                // request, route it to the interruption listener and yield
-                // null. The channel is left open.
-                handleInterruptedException(ex);
-                return null;
-            }
-            finally
-            {
-                gets.decrementAndGet();
-            }
+            Object item = rendez.take();
+            return item == POISON ? null : (E) item;
+        }
+        catch (InterruptedException ex)
+        {
+            // A reader's own interruption aborts the read: mark the
+            // request, route it to the interruption listener and yield
+            // null. The channel is left open.
+            handleInterruptedException(ex);
+            return null;
+        }
+        finally
+        {
+            gets.decrementAndGet();
         }
     }
 
@@ -189,40 +180,37 @@ public final class UnbufferedChannel<E> extends Channel<E>
     public E get(long timeout, TimeUnit unit)
     {
         long deadline = JavaTime.untilNanoTime(timeout, unit);
-        while (true)
+        if (closed)
+        {
+            return drainAfterClosePoll();
+        }
+
+        gets.incrementAndGet();
+        try
         {
             if (closed)
             {
                 return drainAfterClosePoll();
             }
 
-            gets.incrementAndGet();
-            try
+            Object item = rendez.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
+            if (item == null || item == POISON)
             {
-                if (closed)
-                {
-                    return drainAfterClosePoll();
-                }
-
-                Object item = rendez.poll(Math.max(0, deadline - System.nanoTime()), TimeUnit.NANOSECONDS);
-                if (item == null || item == POISON)
-                {
-                    return null;
-                }
-                return (E) item;
-            }
-            catch (InterruptedException ex)
-            {
-                // A reader's own interruption aborts the read: mark the
-                // request, route it to the interruption listener and yield
-                // null. The channel is left open.
-                handleInterruptedException(ex);
                 return null;
             }
-            finally
-            {
-                gets.decrementAndGet();
-            }
+            return (E) item;
+        }
+        catch (InterruptedException ex)
+        {
+            // A reader's own interruption aborts the read: mark the
+            // request, route it to the interruption listener and yield
+            // null. The channel is left open.
+            handleInterruptedException(ex);
+            return null;
+        }
+        finally
+        {
+            gets.decrementAndGet();
         }
     }
 

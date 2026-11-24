@@ -82,7 +82,7 @@ abstract class AsyncActor<M> extends Actor<M>
         this.threads = threads;
         if (queueSize == 0)
         {
-            this.channel = Channel.of(0);
+            this.channel = Channel.unbuffered();
         }
         else
         {
